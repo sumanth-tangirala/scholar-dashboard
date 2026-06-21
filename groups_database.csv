@@ -9,3 +9,4 @@ Controller Composition|confirmed|Composing modular skills and controllers for co
 Formal Methods & STL|confirmed|Formal specification languages and synthesis methods for robot behavior|8|2026-03-31|Covers Signal Temporal Logic, STL semantics, formal synthesis, specification-based control
 Active Learning|confirmed|Efficient data collection and query strategies for robot learning|10|2026-03-31|Covers active sampling, human-in-the-loop, failure discovery, Bayesian active learning
 Planning & Control|confirmed|Motion planning and model-based control for robot tasks|3|2026-03-31|Covers MPC, trajectory optimization, sampling-based planning, TAMP
+World Models|suggested|Learned world models/simulators for robot policy evaluation, improvement, planning, and dynamics prediction|11|2026-06-21|Triggered by WEAVER, PLUME, iMaC, and WLA-0 world-model papers in the Jun 2026 email digest
