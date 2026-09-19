@@ -117,6 +117,12 @@ a { color: inherit; text-decoration: none; }
 /* TOP PAPERS */
 .top-papers { max-width: 1200px; margin: 0 auto; padding: 0 24px 24px; }
 .section-header { font-size: 20px; font-weight: 500; color: var(--accent); margin-bottom: 16px; }
+.section-header.clickable { display: flex; align-items: center; gap: 4px; cursor: pointer; transition: color 0.3s ease-in-out; }
+.section-header.clickable:hover .topic-label { text-decoration: underline; text-underline-offset: 3px; }
+.section-header.clickable svg { width: 20px; height: 20px; fill: currentColor; flex-shrink: 0; transition: transform 0.2s ease-in-out; }
+.section-header.clickable:hover svg { transform: translateX(3px); }
+.section-header .topic-extra { font-size: 13px; color: var(--text-muted); font-weight: 400; margin-left: auto; transition: color 0.2s ease-in-out; }
+.section-header.clickable:hover .topic-extra { color: var(--accent); }
 .top-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
 .top-card { background: var(--bg-surface); border: 1px solid rgba(255,255,255,0.18); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; transition: all 0.3s ease-in-out; box-shadow: 0 2px 6px rgba(0,0,0,0.45); overflow: hidden; cursor: pointer; }
 .top-card:hover { background: var(--bg-hover); box-shadow: 0 4px 8px rgba(0,0,0,0.55); border-color: rgba(255,255,255,0.3); transform: translateY(-2px); }
@@ -191,6 +197,76 @@ a { color: inherit; text-decoration: none; }
 .topic-item:hover .p-actions { opacity: 1; }
 .topic-item .p-actions.has-active { opacity: 1; }
 
+/* MAIN PAGE FEED — left-aligned briefing, lead story + side list, compact topic items */
+#sec-papers .briefing { align-items: flex-start; padding-top: 32px; }
+#sec-papers .briefing h2 { font-size: 30px; font-weight: 400; letter-spacing: -0.01em; }
+#sec-papers .briefing-date { display: block; font-size: 14px; color: var(--text-muted); margin-top: 4px; }
+#briefingNote { color: var(--text-secondary); }
+#sec-papers .filters { justify-content: flex-start; padding-top: 18px; }
+#topicsHeader { display: flex; align-items: center; gap: 12px; }
+#topicsHeader::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+.top-feature { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; align-items: stretch; }
+.top-feature.solo { grid-template-columns: 1fr; }
+.top-feature .top-lead { padding: 28px 30px 24px; border-radius: 12px; border-color: rgba(255,255,255,0.14); box-shadow: none; }
+.top-feature .top-lead:hover { transform: none; background: #181818; border-color: rgba(255,255,255,0.26); box-shadow: none; }
+.lead-headline { font-size: 25px; font-weight: 500; line-height: 1.25; letter-spacing: -0.01em; color: var(--text); margin-top: 14px; text-wrap: pretty; transition: color 0.15s; }
+.top-lead:hover .lead-headline { color: #fff; }
+.lead-title { font-size: 15px; color: var(--text-muted); margin-top: 10px; line-height: 1.4; }
+.lead-summary { font-size: 15px; color: var(--text-secondary); line-height: 1.65; margin-top: 16px; max-width: 64ch; display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
+.lead-authors { font-size: 13px; color: var(--text-muted); margin-top: 16px; }
+.lead-actions { margin-top: auto; padding-top: 20px; }
+
+.top-side { background: var(--bg-surface); border: 1px solid rgba(255,255,255,0.14); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
+.top-side .feed-item { flex: 1; }
+
+/* compact feed item (top side list + topic cards) */
+.feed-body { max-height: none; overflow: visible; padding: 0; }
+.topic-item.feed-item { display: block; padding: 15px 18px 14px 36px; border-top: 1px solid rgba(255,255,255,0.08); position: relative; gap: 0; }
+.topic-item.feed-item:first-child { border-top: none; }
+.topic-item.feed-item:hover { background: rgba(255,255,255,0.035); }
+/* unread / read marker, same language as the Top Papers reading rail */
+.feed-item::before { content: ''; position: absolute; left: 16px; top: 22px; width: 7px; height: 7px; box-sizing: border-box; border-radius: 50%; background: var(--accent); transition: transform 0.2s; }
+.feed-item.is-read::before { background: none; border: 1.5px solid rgba(251,177,60,0.6); }
+.feed-item:hover::before { transform: scale(1.3); }
+.f-headline { font-size: 15.5px; font-weight: 500; line-height: 1.38; color: var(--text); text-wrap: pretty; transition: color 0.15s; }
+.feed-item:hover .f-headline { color: #fff; }
+.f-title { font-size: 12.5px; color: var(--text-muted); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.f-meta { display: flex; align-items: center; gap: 12px; font-size: 12px; color: var(--text-muted); margin-top: 8px; min-width: 0; font-variant-numeric: tabular-nums; }
+.top-lead .f-meta { margin-top: 0; font-size: 12.5px; }
+.f-venue { color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; max-width: 200px; }
+.f-date { white-space: nowrap; }
+.f-star { color: var(--star); }
+.f-rel { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.f-rel i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.f-rel.rel-definitely { color: var(--green); }
+.f-rel.rel-probably { color: var(--yellow); }
+.f-rel.rel-mildly { color: var(--gray-badge); }
+/* in the Top Papers side list every item is a must-read; the label is noise there */
+.top-side .f-rel { display: none; }
+.f-actions { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 0.2s ease, opacity 0.15s ease, margin-top 0.2s ease; }
+.f-actions > div { overflow: hidden; min-height: 0; }
+.feed-item:hover .f-actions, .feed-item:focus-within .f-actions, .f-actions:has(.p-detail-panel.open) { grid-template-rows: 1fr; opacity: 1; margin-top: 12px; }
+.topic-item.feed-item.is-read, .top-lead.is-read { opacity: 0.55; }
+
+/* topic cards: quieter frame, header count on the right */
+.topics-grid .topic-card { border-color: rgba(255,255,255,0.14); border-radius: 12px; box-shadow: none; }
+.topics-grid .topic-title { padding: 16px 18px 12px; font-size: 16px; border-bottom-color: rgba(255,255,255,0.1); }
+.topics-grid .topic-title .topic-extra { transition: color 0.2s; }
+.topics-grid .topic-title:hover .topic-extra { color: var(--accent); }
+
+@media (max-width: 900px) { .top-feature { grid-template-columns: 1fr; } }
+@media (max-width: 600px) {
+  .top-feature .top-lead { padding: 22px 20px 20px; }
+  .lead-headline { font-size: 21px; }
+}
+@media (hover: none) {
+  .f-actions { grid-template-rows: 1fr; opacity: 1; margin-top: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .feed-item::before, .f-actions { transition: none; }
+}
+
 /* SEARCH RESULTS (flat list) */
 .search-results { max-width: 1200px; margin: 0 auto; padding: 0 24px 32px; }
 .search-results-header { font-size: 14px; color: var(--text-muted); margin-bottom: 12px; }
@@ -213,6 +289,86 @@ a { color: inherit; text-decoration: none; }
 .overlay-close:hover { background: var(--bg-hover); color: var(--text); }
 .overlay-body { overflow-y: auto; flex: 1; }
 .overlay-body .topic-item { padding: 14px 24px; }
+
+/* TOP PAPERS LIST — wide overlay: header with read progress, wrapping group chips, sticky time sections, reading rail */
+.overlay-content.top-mode { max-width: 1040px; }
+.overlay-heading { flex: 1; min-width: 0; }
+.overlay-header-tools:empty { display: none; }
+.overlay-header-tools { margin-right: 12px; }
+.overlay-content.top-mode .overlay-header { align-items: flex-start; padding: 22px 24px 16px; border-bottom: none; }
+.overlay-content.top-mode .overlay-header h3 { font-size: 22px; line-height: 1.25; }
+.overlay-content.top-mode .overlay-close { margin-top: -4px; }
+.overlay-sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; font-variant-numeric: tabular-nums; }
+.overlay-sub:empty { display: none; }
+.tl-progress { display: none; width: 220px; max-width: 100%; height: 3px; margin-top: 10px; border-radius: 3px; background: rgba(251,177,60,0.16); overflow: hidden; }
+.overlay-content.top-mode .tl-progress { display: block; }
+.tl-progress span { display: block; height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.4s ease; }
+
+.overlay-toolbar { display: none; padding: 0 24px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.overlay-content.top-mode .overlay-toolbar { display: block; }
+.tl-chips { display: flex; flex-wrap: wrap; gap: 6px 5px; }
+.tl-chip { flex-shrink: 0; background: rgba(255,255,255,0.055); border: 1px solid transparent; color: var(--text-secondary); font: inherit; font-size: 12px; padding: 3px 10px; border-radius: 999px; cursor: pointer; white-space: nowrap; transition: background 0.15s, color 0.15s, border-color 0.15s; }
+.tl-chip:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+.tl-chip .n { color: var(--text-muted); margin-left: 6px; font-variant-numeric: tabular-nums; transition: color 0.15s; }
+.tl-chip.active { background: var(--accent-dim); border-color: rgba(251,177,60,0.7); color: var(--accent); }
+.tl-chip.active .n { color: var(--accent); opacity: 0.75; }
+.tl-sort { display: flex; flex-shrink: 0; border: 1px solid var(--border); border-radius: 8px; padding: 2px; }
+.tl-sort button { background: none; border: none; color: var(--text-muted); font: inherit; font-size: 12.5px; padding: 3px 10px; border-radius: 6px; cursor: pointer; transition: background 0.15s, color 0.15s; }
+.tl-sort button:hover { color: var(--text); }
+.tl-sort button.active { background: rgba(255,255,255,0.1); color: var(--text); }
+
+.top-list { padding-bottom: 28px; }
+.tl-section { position: relative; }
+/* the reading rail: a hairline down the left of each section; each row puts a node on it */
+.tl-section::before { content: ''; position: absolute; left: 36px; top: 52px; bottom: 26px; width: 1px; background: rgba(251,177,60,0.25); }
+.tl-section-head { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 10px; padding: 18px 24px 10px; background: #000; }
+.tl-section-head::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 14px; background: linear-gradient(#000, rgba(0,0,0,0)); pointer-events: none; }
+.tl-section-head h4 { font-size: 14px; font-weight: 500; color: var(--accent); white-space: nowrap; }
+.tl-section-head .count { font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.tl-section-head .rule { flex: 1; height: 1px; background: var(--border); margin-left: 6px; }
+
+.overlay-body .top-list .top-row { display: grid; grid-template-columns: minmax(0, 1fr) 140px; column-gap: 28px; row-gap: 0; padding: 13px 20px 13px 52px; margin: 0 8px; border: none; border-radius: 10px; position: relative; }
+.overlay-body .top-list .top-row:hover { background: rgba(255,255,255,0.05); }
+.top-row::before { content: ''; position: absolute; left: 24px; top: 20px; width: 9px; height: 9px; box-sizing: border-box; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px #000; transition: background 0.2s, transform 0.2s; }
+.top-row.is-read::before { background: #000; border: 1.5px solid rgba(251,177,60,0.6); }
+.top-row:hover::before { transform: scale(1.3); }
+.overlay-body .top-list .top-row.is-read { opacity: 0.5; }
+.overlay-body .top-list .top-row.is-read:hover { opacity: 0.85; }
+.tr-main { min-width: 0; }
+.tr-headline { font-size: 16px; font-weight: 500; line-height: 1.38; color: var(--text); text-wrap: pretty; transition: color 0.15s; }
+.top-row:hover .tr-headline { color: #fff; }
+.tr-title { font-size: 13px; color: var(--text-muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tr-line { display: flex; align-items: center; gap: 12px; margin-top: 7px; font-size: 12.5px; color: var(--text-secondary); min-width: 0; }
+.tr-authors { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.tr-groups { display: flex; gap: 5px; flex-shrink: 0; }
+.tr-group { font-size: 11px; color: var(--text-muted); background: rgba(255,255,255,0.06); padding: 0 8px; border-radius: 999px; line-height: 19px; white-space: nowrap; }
+.tr-side { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; padding-top: 2px; font-size: 12px; color: var(--text-muted); white-space: nowrap; font-variant-numeric: tabular-nums; min-width: 0; text-align: right; }
+.tr-venue { color: var(--text-secondary); max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.tr-star { color: var(--star); font-size: 13px; line-height: 1; }
+.top-row .tr-actions { grid-column: 1 / -1; display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 0.2s ease, opacity 0.15s ease, margin-top 0.2s ease; }
+.top-row .tr-actions > div { overflow: hidden; min-height: 0; }
+.top-row:hover .tr-actions, .top-row:focus-within .tr-actions, .top-row .tr-actions:has(.p-detail-panel.open) { grid-template-rows: 1fr; opacity: 1; margin-top: 10px; }
+.tl-empty { text-align: center; padding: 64px 24px; color: var(--text-secondary); line-height: 2.4; }
+
+@media (max-width: 700px) {
+  .overlay-content { margin: 0; max-height: 100vh; border-radius: 0; border: none; }
+  .overlay-header, .overlay-toolbar, .overlay-content.top-mode .overlay-header { padding-left: 16px; padding-right: 16px; }
+  .overlay-content.top-mode .overlay-header { flex-wrap: wrap; }
+  .overlay-header-tools { order: 3; flex-basis: 100%; margin: 14px 0 0; }
+  .overlay-header-tools .tl-sort { display: inline-flex; }
+  .tl-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px; }
+  .tl-chips::-webkit-scrollbar { display: none; }
+  .tl-section-head { padding-left: 16px; padding-right: 16px; }
+  .tl-section::before { left: 24px; }
+  .overlay-body .top-list .top-row { grid-template-columns: 1fr; padding: 12px 12px 12px 36px; margin: 0 4px; }
+  .top-row::before { left: 16px; }
+  .tr-side { flex-direction: row; align-items: center; gap: 10px; margin-top: 6px; }
+  .tr-groups { display: none; }
+  .top-row .tr-actions { grid-template-rows: 1fr; opacity: 1; margin-top: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .top-row::before, .top-row .tr-actions, .tl-progress span { transition: none; }
+}
 
 /* [13] BADGES */
 .badge { display: inline-flex; align-items: center; justify-content: center; padding: 2px 10px; border-radius: 6px; font-size: 11px; font-weight: 500; box-sizing: border-box; transition: all 0.15s; }
@@ -514,7 +670,7 @@ a { color: inherit; text-decoration: none; }
   <div class="briefing">
     <div>
       <h2 id="briefingTitle">Recent Works</h2>
-      <span class="briefing-date" id="briefingDate"></span>
+      <p class="briefing-date"><span id="briefingDate"></span><span id="briefingNote"></span></p>
     </div>
   </div>
   <div class="filters" id="filtersBar">
@@ -612,9 +768,11 @@ a { color: inherit; text-decoration: none; }
   <div class="overlay-backdrop" onclick="closeOverlay()"></div>
   <div class="overlay-content">
     <div class="overlay-header">
-      <h3 id="overlayTitle"></h3>
-      <button class="overlay-close" onclick="closeOverlay()">&times;</button>
+      <div class="overlay-heading"><h3 id="overlayTitle"></h3><div class="overlay-sub" id="overlaySub"></div><div class="tl-progress" id="overlayProgress" role="progressbar" aria-label="Read progress"><span></span></div></div>
+      <div class="overlay-header-tools" id="overlayHeaderTools"></div>
+      <button class="overlay-close" onclick="closeOverlay()" aria-label="Close">&times;</button>
     </div>
+    <div class="overlay-toolbar" id="overlayToolbar"></div>
     <div class="overlay-body" id="overlayBody"></div>
   </div>
 </div>
@@ -1157,7 +1315,10 @@ function applyFilters() {
 
   const dates = allPapers.map(p=>p.date_found).filter(Boolean).sort();
   document.getElementById('briefingTitle').textContent = currentTab==='email'?'Email Digest':'Recent Works';
-  document.getElementById('briefingDate').textContent = dates.length ? formatDate(dates[dates.length-1]) : '';
+  document.getElementById('briefingDate').textContent = dates.length ? `Updated ${formatDate(dates[dates.length-1])}.` : '';
+  const weekAgo = Date.now() - 7 * 86400000;
+  const newMust = base.filter(p => p.date_found && new Date(p.date_found + 'T00:00:00') >= weekAgo && dynamicRelevance(p) === 'definitely').length;
+  document.getElementById('briefingNote').textContent = newMust ? ` ${newMust} new must-read ${newMust === 1 ? 'paper' : 'papers'} this week.` : '';
 
   renderPapers(papers);
 }
@@ -1170,8 +1331,7 @@ function renderPapers(papers) {
     return;
   }
   sortPapers(papers);
-  const top = papers.filter(p=>dynamicRelevance(p)==='definitely').slice(0,6);
-  renderTopPapers(top.length >= 2 ? top : papers.slice(0,6));
+  renderTopPapers(selectTopPapers(papers));
 
   const grouped = {};
   const _confirmedGroups = new Set(allGroups.filter(g => g.status === 'confirmed').map(g => norm(g.group_name)));
@@ -1189,18 +1349,31 @@ function renderPapers(papers) {
     return `<div class="topic-card">
       <div class="topic-title" onclick="openGroup('${escAttr(name)}')"><span class="topic-label">${esc(name)}</span>
         <svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
-        ${extra > 0 ? `<span class="topic-extra">+${extra} more</span>` : ''}
+        <span class="topic-extra">${extra > 0 ? `View all ${items.length}` : `${items.length} ${items.length === 1 ? 'paper' : 'papers'}`}</span>
       </div>
-      <div class="topic-body">${shown.map(topicItemHTML).join('')}</div>
+      <div class="topic-body feed-body">${shown.map(feedItemHTML).join('')}</div>
     </div>`;
   }).join('');
 }
 
+const MAX_TOP_CARDS = 5;  // lead + 4 in the side list
+/* Top papers = all "definitely" papers (already sorted); fall back to the full list if fewer than 2 */
+function selectTopPapers(sortedPapers) {
+  const top = sortedPapers.filter(p => dynamicRelevance(p) === 'definitely');
+  return top.length >= 2 ? top : sortedPapers;
+}
 function renderTopPapers(top) {
   if (!top.length) { document.getElementById('topStories').innerHTML=''; return; }
+  const extra = top.length - MAX_TOP_CARDS;
   document.getElementById('topStories').innerHTML = `
-    <div class="section-header">Top Papers</div>
-    <div class="top-grid">${top.slice(0,6).map(topCardHTML).join('')}</div>`;
+    <div class="section-header clickable" onclick="openTopList()" title="View all top papers as a list"><span class="topic-label">Top Papers</span>
+      <svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+      <span class="topic-extra">${extra > 0 ? `View all ${top.length}` : 'View as list'}</span>
+    </div>
+    <div class="top-feature ${top.length === 1 ? 'solo' : ''}">
+      ${topLeadHTML(top[0])}
+      ${top.length > 1 ? `<div class="top-side">${top.slice(1, MAX_TOP_CARDS).map(feedItemHTML).join('')}</div>` : ''}
+    </div>`;
 }
 
 function topCardHTML(p) {
@@ -1222,6 +1395,49 @@ function topCardHTML(p) {
       </div>
     </div>
   </div>`;
+}
+
+/* Shared bits for the main-page feed */
+function hasText(v) { return v && v.trim() && v !== 'not specified'; }
+function feedMetaHTML(p, showRel) {
+  const rel = dynamicRelevance(p), k = paperKey(p);
+  const venue = hasText(p.venue) ? p.venue : '';
+  return `<div class="f-meta">
+    ${showRel ? `<span class="f-rel rel-${rel}"><i></i>${relLabel(rel)}</span>` : ''}
+    ${venue ? `<span class="f-venue" title="${escAttr(venue)}">${esc(shortVenue(venue))}</span>` : ''}
+    ${paperDate(p) ? `<span class="f-date">${esc(paperDate(p))}</span>` : ''}
+    ${starSet.has(k) ? '<span class="f-star" title="Starred">&#9733;</span>' : ''}
+  </div>`;
+}
+function feedActionsHTML(p, withSummaryBtn) {
+  return `<div class="p-action-row">${withSummaryBtn ? summaryBtn(p) : ''} ${absBtn(p)} ${linkBtn(p)} <span class="p-actions has-active">${starBtn(p)} ${readBtn(p)} ${saveBtn(p)} ${deleteBtn(p)}</span></div>
+    <div class="p-detail-panel" data-summary="${hasText(p.summary)?dataAttr(p.summary):''}" data-abstract="${hasText(p.abstract)?dataAttr(p.abstract):''}"></div>`;
+}
+
+/* Lead story: large headline with the summary shown inline */
+function topLeadHTML(p) {
+  const k = paperKey(p), ir = readSet.has(k);
+  const showTitle = hasText(p.headline) && p.headline.trim() !== (p.title||'').trim();
+  return `<article class="top-card top-lead ${ir?'is-read':''}" onclick="openPaper('${escAttr(k)}', event)">
+    ${feedMetaHTML(p, false)}
+    <h3 class="lead-headline">${esc(p.headline||p.title)}</h3>
+    ${showTitle ? `<div class="lead-title">${esc(p.title)}</div>` : ''}
+    ${hasText(p.summary) ? `<p class="lead-summary">${esc(p.summary)}</p>` : ''}
+    ${hasText(p.authors) ? `<div class="lead-authors">${esc(p.authors)}</div>` : ''}
+    <div class="lead-actions">${feedActionsHTML(p, false)}</div>
+  </article>`;
+}
+
+/* Compact item: top-papers side list and topic cards. Actions reveal on hover. */
+function feedItemHTML(p) {
+  const k = paperKey(p), ir = readSet.has(k);
+  const showTitle = hasText(p.headline) && p.headline.trim() !== (p.title||'').trim();
+  return `<article class="topic-item feed-item ${ir?'is-read':''}" onclick="openPaper('${escAttr(k)}', event)">
+    <div class="f-headline">${esc(p.headline||p.title)}</div>
+    ${showTitle ? `<div class="f-title" title="${escAttr(p.title)}">${esc(p.title)}</div>` : ''}
+    ${feedMetaHTML(p, true)}
+    <div class="f-actions"><div>${feedActionsHTML(p, true)}</div></div>
+  </article>`;
 }
 
 function topicItemHTML(p) {
@@ -1462,6 +1678,11 @@ async function deletePaper(k, btn) {
 }
 
 function refresh() {
+  // Keep an open top list live (read rail, stars) without losing scroll position
+  if (_overlayGroupName === TOP_LIST_KEY && document.getElementById('overlay').classList.contains('open')) {
+    const ob = document.getElementById('overlayBody'), st = ob.scrollTop;
+    renderTopList(); ob.scrollTop = st;
+  }
   if (['all','email'].includes(currentTab)) applyFilters();
   else if (currentTab === 'library') renderLibrary();
   requestAnimationFrame(markTruncatedVenues);
@@ -1487,15 +1708,143 @@ let _overlayGroupName = null;
 function openGroup(name, skipHash) {
   if (_overlayGroupName === name && document.getElementById('overlay').classList.contains('open')) return;
   _overlayGroupName = name;
-  let papers = allPapers.filter(p => (p.theme_groups||'').split('|').map(norm).includes(name));
-  if (currentTab === 'email') papers = papers.filter(p => (p.source_mode||'').includes('email'));
-  if (currentRel !== 'all') papers = papers.filter(p => dynamicRelevance(p) === currentRel);
-  if (hideRead) papers = papers.filter(p => !readSet.has(paperKey(p)));
+  const papers = applyViewFilters(allPapers.filter(p => (p.theme_groups||'').split('|').map(norm).includes(name)));
   sortPapers(papers);
+  setOverlayTopMode(false);
   document.getElementById('overlayTitle').textContent = name + ` (${papers.length})`;
   document.getElementById('overlayBody').innerHTML = papers.map(topicItemHTML).join('');
   if (!skipHash) location.hash = '#group/' + encodeURIComponent(name);
   openOverlay();
+}
+/* Same filters as the main feed (tab, relevance pill, hide-read) */
+function applyViewFilters(papers, ignoreRead) {
+  if (currentTab === 'email') papers = papers.filter(p => (p.source_mode||'').includes('email'));
+  if (currentRel !== 'all') papers = papers.filter(p => dynamicRelevance(p) === currentRel);
+  if (hideRead && !ignoreRead) papers = papers.filter(p => !readSet.has(paperKey(p)));
+  return papers;
+}
+const TOP_LIST_KEY = '#top-list';  // sentinel for _overlayGroupName; can't collide with a group name
+let _topSort = 'added';   // 'added' | 'published'
+let _topGroup = null;     // normalized group name, or null for all
+function setOverlayTopMode(on) {
+  document.querySelector('#overlay .overlay-content').classList.toggle('top-mode', on);
+  if (!on) { document.getElementById('overlaySub').textContent = ''; document.getElementById('overlayToolbar').innerHTML = ''; document.getElementById('overlayHeaderTools').innerHTML = ''; }
+}
+function openTopList(skipHash) {
+  if (_overlayGroupName === TOP_LIST_KEY && document.getElementById('overlay').classList.contains('open')) return;
+  _overlayGroupName = TOP_LIST_KEY;
+  setOverlayTopMode(true);
+  renderTopList();
+  document.getElementById('overlayBody').scrollTop = 0;
+  if (!skipHash) location.hash = '#top';
+  openOverlay();
+}
+function setTopSort(v) { _topSort = v; renderTopList(); document.getElementById('overlayBody').scrollTop = 0; }
+function setTopGroup(g) { _topGroup = g; renderTopList(); document.getElementById('overlayBody').scrollTop = 0; }
+
+const _MONTHS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+/* "Mar 2026" -> 202603, "2026" -> 202600 */
+function pubKey(p) {
+  const s = (p.publishing_date||'').trim().toLowerCase();
+  const y = parseInt((s.match(/\d{4}/)||[])[0]) || 0;
+  const m = _MONTHS.indexOf(s.slice(0,3)) + 1;
+  return y * 100 + Math.max(m, 0);
+}
+function addedBucket(d) {
+  if (!d) return { key: '0', label: 'Date unknown' };
+  const days = Math.floor((new Date() - new Date(d + 'T00:00:00')) / 86400000);
+  if (days < 7) return { key: 'w0', label: 'This week' };
+  if (days < 14) return { key: 'w1', label: 'Last week' };
+  return { key: d.slice(0,7), label: new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) };
+}
+function publishedBucket(p) {
+  const k = pubKey(p);
+  if (!k) return { key: '0', label: 'Date unknown' };
+  const y = Math.floor(k / 100), m = k % 100;
+  if (!m) return { key: String(k), label: `${y}, month unknown` };
+  return { key: String(k), label: new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) };
+}
+
+function renderTopList() {
+  const confirmedSet = new Set(allGroups.filter(g => g.status === 'confirmed').map(g => norm(g.group_name)));
+  const groupsOf = p => (p.theme_groups||'').split('|').map(norm).filter(g => g && (!confirmedSet.size || confirmedSet.has(g)));
+  const base = selectTopPapers(sortPapers(applyViewFilters(allPapers.slice())));
+
+  // Chips: only groups that have papers in the current top set
+  const counts = {};
+  base.forEach(p => groupsOf(p).forEach(g => counts[g] = (counts[g]||0) + 1));
+  if (_topGroup && !counts[_topGroup]) _topGroup = null;
+  const chipNames = Object.keys(counts).sort((a,b) => {
+    const ia = GROUP_ORDER.indexOf(a), ib = GROUP_ORDER.indexOf(b);
+    return (ia===-1?999:ia) - (ib===-1?999:ib);
+  });
+  const chip = (g, label, n) => `<button class="tl-chip ${_topGroup===g?'active':''}" onclick="setTopGroup(${g===null?'null':`'${escAttr(g)}'`})">${esc(label)}<span class="n">${n}</span></button>`;
+  document.getElementById('overlayToolbar').innerHTML =
+    `<div class="tl-chips" role="toolbar" aria-label="Filter by group">${chip(null, 'All groups', base.length)}${chipNames.map(g => chip(g, g, counts[g])).join('')}</div>`;
+  document.getElementById('overlayHeaderTools').innerHTML = `
+    <div class="tl-sort" role="group" aria-label="Sort">
+      <button class="${_topSort==='added'?'active':''}" onclick="setTopSort('added')">Recently added</button>
+      <button class="${_topSort==='published'?'active':''}" onclick="setTopSort('published')">Newest published</button>
+    </div>`;
+
+  const papers = _topGroup ? base.filter(p => groupsOf(p).includes(_topGroup)) : base.slice();
+  if (_topSort === 'added') papers.sort((a,b) => (b.date_found||'').localeCompare(a.date_found||'') || pubKey(b) - pubKey(a));
+  else papers.sort((a,b) => pubKey(b) - pubKey(a) || (b.date_found||'').localeCompare(a.date_found||''));
+
+  // Read progress counts read papers too, even when "Hide read" filters them out of the list
+  let everyTop = selectTopPapers(sortPapers(applyViewFilters(allPapers.slice(), true)));
+  if (_topGroup) everyTop = everyTop.filter(p => groupsOf(p).includes(_topGroup));
+  const total = everyTop.length, read = everyTop.filter(p => readSet.has(paperKey(p))).length;
+  document.getElementById('overlayTitle').textContent = _topGroup ? `Top Papers in ${_topGroup}` : 'Top Papers';
+  document.getElementById('overlaySub').textContent = total
+    ? `${read} of ${total} read${hideRead && read ? ', read papers hidden' : ''}` : '';
+  const prog = document.getElementById('overlayProgress');
+  prog.firstElementChild.style.width = total ? `${Math.max(read / total * 100, read ? 1 : 0)}%` : '0';
+  prog.setAttribute('aria-valuenow', read); prog.setAttribute('aria-valuemax', total);
+
+  const body = document.getElementById('overlayBody');
+  if (!papers.length) {
+    body.innerHTML = `<div class="tl-empty">No top papers match your current filters.${_topGroup ? `<br><button class="tl-chip" onclick="setTopGroup(null)">Show all groups</button>` : ''}</div>`;
+    return;
+  }
+  const sections = [];
+  papers.forEach(p => {
+    const b = _topSort === 'added' ? addedBucket(p.date_found) : publishedBucket(p);
+    const last = sections[sections.length - 1];
+    if (last && last.key === b.key) last.items.push(p); else sections.push({ ...b, items: [p] });
+  });
+  body.innerHTML = `<div class="top-list">${sections.map(s => `
+    <section class="tl-section">
+      <div class="tl-section-head"><h4>${esc(s.label)}</h4><span class="count">${s.items.length}</span><span class="rule"></span></div>
+      ${s.items.map(p => topRowHTML(p, groupsOf(p).filter(g => g !== _topGroup))).join('')}
+    </section>`).join('')}</div>`;
+  requestAnimationFrame(markTruncatedVenues);
+}
+
+function topRowHTML(p, groups) {
+  const k = paperKey(p), ir = readSet.has(k);
+  const hasSummary = p.summary && p.summary.trim() && p.summary !== 'not specified';
+  const hasAbstract = p.abstract && p.abstract.trim() && p.abstract !== 'not specified';
+  const showTitle = p.headline && p.headline.trim() && p.headline.trim() !== (p.title||'').trim();
+  const venue = p.venue && p.venue !== 'not specified' ? p.venue : '';
+  return `<article class="topic-item top-row ${ir?'is-read':''}" onclick="openPaper('${escAttr(k)}', event)">
+    <div class="tr-main">
+      <div class="tr-headline">${esc(p.headline||p.title)}</div>
+      ${showTitle ? `<div class="tr-title" title="${escAttr(p.title)}">${esc(p.title)}</div>` : ''}
+      <div class="tr-line">
+        ${p.authors && p.authors!=='not specified' ? `<span class="tr-authors">${esc(p.authors)}</span>` : ''}
+        ${groups.length && groups.length < 4 ? `<span class="tr-groups">${groups.map(g => `<span class="tr-group">${esc(g)}</span>`).join('')}</span>` : ''}
+      </div>
+    </div>
+    <div class="tr-side">
+      ${venue ? `<span class="tr-venue" title="${escAttr(venue)}">${esc(shortVenue(venue))}</span>` : ''}
+      <span>${starSet.has(k) ? '<span class="tr-star" title="Starred">&#9733;</span> ' : ''}${paperDate(p) ? esc(paperDate(p)) : ''}</span>
+    </div>
+    <div class="tr-actions"><div>
+      <div class="p-action-row">${summaryBtn(p)} ${absBtn(p)} ${linkBtn(p)} <span class="p-actions has-active">${starBtn(p)} ${readBtn(p)} ${saveBtn(p)} ${deleteBtn(p)}</span></div>
+      <div class="p-detail-panel" data-summary="${hasSummary?dataAttr(p.summary):''}" data-abstract="${hasAbstract?dataAttr(p.abstract):''}"></div>
+    </div></div>
+  </article>`;
 }
 function openOverlay() {
   const ol = document.getElementById('overlay');
@@ -1517,7 +1866,7 @@ function closeOverlay(skipHistory) {
   /* fallback if transition doesn't fire */
   setTimeout(() => { ol.classList.remove('open', 'closing'); document.body.style.overflow = ''; }, 350);
   /* Navigate back to the tab if the user closed the overlay directly (not via hash change) */
-  if (!skipHistory && location.hash.startsWith('#group/')) {
+  if (!skipHistory && (location.hash.startsWith('#group/') || location.hash === '#top')) {
     history.back();
   }
 }
@@ -2403,6 +2752,16 @@ function applyHash() {
       openGroup(groupName, true);
       return;
     }
+  }
+
+  // Top papers list overlay route
+  if (hash === 'top') {
+    if (['all','email'].includes(currentTab)) {
+      document.getElementById('sec-papers').classList.add('active');
+      document.querySelectorAll('.nav-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === currentTab));
+    }
+    openTopList(true);
+    return;
   }
 
   // Close overlay if navigating away from a group route
