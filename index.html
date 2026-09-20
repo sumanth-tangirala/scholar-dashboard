@@ -317,23 +317,24 @@ a { color: inherit; text-decoration: none; }
 .tl-sort button:hover { color: var(--text); }
 .tl-sort button.active { background: rgba(255,255,255,0.1); color: var(--text); }
 
-.top-list { padding-bottom: 28px; }
+.paper-list { --list-bg: var(--bg); }
+.overlay-body .paper-list { --list-bg: #000; padding-bottom: 28px; }
 .tl-section { position: relative; }
 /* the reading rail: a hairline down the left of each section; each row puts a node on it */
 .tl-section::before { content: ''; position: absolute; left: 36px; top: 52px; bottom: 26px; width: 1px; background: rgba(251,177,60,0.25); }
-.tl-section-head { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 10px; padding: 18px 24px 10px; background: #000; }
-.tl-section-head::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 14px; background: linear-gradient(#000, rgba(0,0,0,0)); pointer-events: none; }
+.tl-section-head { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 10px; padding: 18px 24px 10px; background: var(--list-bg); }
+.tl-section-head::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 14px; background: linear-gradient(var(--list-bg), transparent); pointer-events: none; }
 .tl-section-head h4 { font-size: 14px; font-weight: 500; color: var(--accent); white-space: nowrap; }
 .tl-section-head .count { font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .tl-section-head .rule { flex: 1; height: 1px; background: var(--border); margin-left: 6px; }
 
-.overlay-body .top-list .top-row { display: grid; grid-template-columns: minmax(0, 1fr) 140px; column-gap: 28px; row-gap: 0; padding: 13px 20px 13px 52px; margin: 0 8px; border: none; border-radius: 10px; position: relative; }
-.overlay-body .top-list .top-row:hover { background: rgba(255,255,255,0.05); }
-.top-row::before { content: ''; position: absolute; left: 24px; top: 20px; width: 9px; height: 9px; box-sizing: border-box; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px #000; transition: background 0.2s, transform 0.2s; }
-.top-row.is-read::before { background: #000; border: 1.5px solid rgba(251,177,60,0.6); }
+.paper-list .top-row { display: grid; grid-template-columns: minmax(0, 1fr) 140px; column-gap: 28px; row-gap: 0; padding: 13px 20px 13px 52px; margin: 0 8px; border: none; border-radius: 10px; position: relative; }
+.paper-list .top-row:hover { background: rgba(255,255,255,0.05); }
+.top-row::before { content: ''; position: absolute; left: 24px; top: 20px; width: 9px; height: 9px; box-sizing: border-box; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px var(--list-bg); transition: background 0.2s, transform 0.2s; }
+.top-row.is-read::before { background: var(--list-bg); border: 1.5px solid rgba(251,177,60,0.6); }
 .top-row:hover::before { transform: scale(1.3); }
-.overlay-body .top-list .top-row.is-read { opacity: 0.5; }
-.overlay-body .top-list .top-row.is-read:hover { opacity: 0.85; }
+.paper-list .top-row.is-read { opacity: 0.5; }
+.paper-list .top-row.is-read:hover { opacity: 0.85; }
 .tr-main { min-width: 0; }
 .tr-headline { font-size: 16px; font-weight: 500; line-height: 1.38; color: var(--text); text-wrap: pretty; transition: color 0.15s; }
 .top-row:hover .tr-headline { color: #fff; }
@@ -348,6 +349,11 @@ a { color: inherit; text-decoration: none; }
 .top-row .tr-actions { grid-column: 1 / -1; display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 0.2s ease, opacity 0.15s ease, margin-top 0.2s ease; }
 .top-row .tr-actions > div { overflow: hidden; min-height: 0; }
 .top-row:hover .tr-actions, .top-row:focus-within .tr-actions, .top-row .tr-actions:has(.p-detail-panel.open) { grid-template-rows: 1fr; opacity: 1; margin-top: 10px; }
+.paper-list.flat .tl-section::before { top: 18px; bottom: 14px; }
+.search-results .paper-list, .interest-group-body .paper-list { padding: 4px 0 8px; }
+.search-results .paper-list .top-row, .interest-group-body .paper-list .top-row { padding-left: 48px; }
+.search-results .tl-section::before, .interest-group-body .tl-section::before { left: 30px; }
+.search-results .top-row::before, .interest-group-body .top-row::before { left: 18px; }
 .tl-empty { text-align: center; padding: 64px 24px; color: var(--text-secondary); line-height: 2.4; }
 
 @media (max-width: 700px) {
@@ -360,7 +366,7 @@ a { color: inherit; text-decoration: none; }
   .tl-chips::-webkit-scrollbar { display: none; }
   .tl-section-head { padding-left: 16px; padding-right: 16px; }
   .tl-section::before { left: 24px; }
-  .overlay-body .top-list .top-row { grid-template-columns: 1fr; padding: 12px 12px 12px 36px; margin: 0 4px; }
+  .paper-list .top-row { grid-template-columns: 1fr; padding: 12px 12px 12px 36px; margin: 0 4px; }
   .top-row::before { left: 16px; }
   .tr-side { flex-direction: row; align-items: center; gap: 10px; margin-top: 6px; }
   .tr-groups { display: none; }
@@ -1257,7 +1263,7 @@ function renderGlobalSearch(q) {
   }
 
   let html = `<div class="search-results-header">${matchedPapers.length} result${matchedPapers.length!==1?'s':''} for "${esc(q)}"</div>`;
-  html += `<div class="search-list">${matchedPapers.map(topicItemHTML).join('')}</div>`;
+  html += paperListHTML(matchedPapers);
 
   el.innerHTML = html;
 }
@@ -1331,7 +1337,10 @@ function renderPapers(papers) {
     return;
   }
   sortPapers(papers);
-  renderTopPapers(selectTopPapers(papers));
+  const top = selectTopPapers(papers);
+  renderTopPapers(top);
+  // Papers already shown above; topic cards prefer papers the reader hasn't seen yet
+  const shownAbove = new Set(top.slice(0, MAX_TOP_CARDS).map(paperKey));
 
   const grouped = {};
   const _confirmedGroups = new Set(allGroups.filter(g => g.status === 'confirmed').map(g => norm(g.group_name)));
@@ -1344,7 +1353,17 @@ function renderPapers(papers) {
 
   document.getElementById('topicsGrid').innerHTML = sorted.map(name => {
     const items = grouped[name];
-    const shown = items.slice(0, MAX_TOPIC_ITEMS);
+    // Fill each card with papers not shown above or in an earlier card; fall back to
+    // repeats only when a group has nothing else left, so cards are never empty.
+    const fresh = items.filter(p => !shownAbove.has(paperKey(p)));
+    const shown = fresh.slice(0, MAX_TOPIC_ITEMS);
+    if (shown.length < MAX_TOPIC_ITEMS) {
+      for (const p of items) {
+        if (shown.length >= MAX_TOPIC_ITEMS) break;
+        if (!shown.includes(p)) shown.push(p);
+      }
+    }
+    shown.forEach(p => shownAbove.add(paperKey(p)));
     const extra = items.length - shown.length;
     return `<div class="topic-card">
       <div class="topic-title" onclick="openGroup('${escAttr(name)}')"><span class="topic-label">${esc(name)}</span>
@@ -1438,27 +1457,6 @@ function feedItemHTML(p) {
     ${feedMetaHTML(p, true)}
     <div class="f-actions"><div>${feedActionsHTML(p, true)}</div></div>
   </article>`;
-}
-
-function topicItemHTML(p) {
-  const k = paperKey(p), ir = readSet.has(k);
-  const hasActive = starSet.has(k) || ir || paperInAnyList(k);
-  const hasSummary = p.summary && p.summary.trim() && p.summary !== 'not specified';
-  const hasAbstract = p.abstract && p.abstract.trim() && p.abstract !== 'not specified';
-  return `<div class="topic-item ${ir?'is-read':''}" onclick="openPaper('${escAttr(k)}', event)">
-    <div class="t-headline">${esc(p.headline||p.title)}</div>
-    <div class="p-title">${esc(p.title)}</div>
-    ${p.authors&&p.authors!=='not specified'?`<div class="p-authors">${esc(p.authors)}</div>`:''}
-    <div class="t-sub">
-      <div class="p-action-row">${summaryBtn(p)} ${absBtn(p)} ${linkBtn(p)} <span class="p-actions ${hasActive?'has-active':''}">${starBtn(p)} ${readBtn(p)} ${saveBtn(p)} ${deleteBtn(p)}</span></div>
-      <div class="p-detail-panel" data-summary="${hasSummary?dataAttr(p.summary):''}" data-abstract="${hasAbstract?dataAttr(p.abstract):''}"></div>
-      <div class="p-meta-row">
-        <span class="badge badge-${dynamicRelevance(p)}">${relLabel(dynamicRelevance(p))}</span>
-        <span class="badge badge-venue" data-full="${dataAttr(p.venue||'')}" onclick="event.stopPropagation();showVenueTooltip(this)">${esc(shortVenue(p.venue))}</span>
-        ${paperDate(p)?`<span class="dot"></span><span>${paperDate(p)}</span>`:''}
-      </div>
-    </div>
-  </div>`;
 }
 
 /* ===== ACTION BUTTONS ===== */
@@ -1678,11 +1676,8 @@ async function deletePaper(k, btn) {
 }
 
 function refresh() {
-  // Keep an open top list live (read rail, stars) without losing scroll position
-  if (_overlayGroupName === TOP_LIST_KEY && document.getElementById('overlay').classList.contains('open')) {
-    const ob = document.getElementById('overlayBody'), st = ob.scrollTop;
-    renderTopList(); ob.scrollTop = st;
-  }
+  // Keep an open overlay list live (read rail, stars) without losing scroll position
+  if (document.getElementById('overlay').classList.contains('open')) renderOpenList(true);
   if (['all','email'].includes(currentTab)) applyFilters();
   else if (currentTab === 'library') renderLibrary();
   requestAnimationFrame(markTruncatedVenues);
@@ -1708,13 +1703,22 @@ let _overlayGroupName = null;
 function openGroup(name, skipHash) {
   if (_overlayGroupName === name && document.getElementById('overlay').classList.contains('open')) return;
   _overlayGroupName = name;
-  const papers = applyViewFilters(allPapers.filter(p => (p.theme_groups||'').split('|').map(norm).includes(name)));
-  sortPapers(papers);
-  setOverlayTopMode(false);
-  document.getElementById('overlayTitle').textContent = name + ` (${papers.length})`;
-  document.getElementById('overlayBody').innerHTML = papers.map(topicItemHTML).join('');
+  setOverlayTopMode(true);
+  renderGroupList(name);
+  document.getElementById('overlayBody').scrollTop = 0;
   if (!skipHash) location.hash = '#group/' + encodeURIComponent(name);
   openOverlay();
+}
+function renderGroupList(name) {
+  const inGroup = p => (p.theme_groups||'').split('|').map(norm).includes(name);
+  const papers = sortForList(applyViewFilters(allPapers.filter(inGroup)));
+  document.getElementById('overlayTitle').textContent = name;
+  setListProgress(applyViewFilters(allPapers.filter(inGroup), true));
+  document.getElementById('overlayToolbar').innerHTML = '';
+  document.getElementById('overlayHeaderTools').innerHTML = sortToolsHTML();
+  document.getElementById('overlayBody').innerHTML = papers.length
+    ? paperListHTML(papers, { sections: true, hideGroup: name })
+    : '<div class="tl-empty">No papers in this group match your current filters.</div>';
 }
 /* Same filters as the main feed (tab, relevance pill, hide-read) */
 function applyViewFilters(papers, ignoreRead) {
@@ -1739,7 +1743,15 @@ function openTopList(skipHash) {
   if (!skipHash) location.hash = '#top';
   openOverlay();
 }
-function setTopSort(v) { _topSort = v; renderTopList(); document.getElementById('overlayBody').scrollTop = 0; }
+function setTopSort(v) { _topSort = v; renderOpenList(); document.getElementById('overlayBody').scrollTop = 0; }
+/* Re-render whichever overlay list is open (top papers or a category) */
+function renderOpenList(keepScroll) {
+  if (!_overlayGroupName) return false;
+  const body = document.getElementById('overlayBody'), st = body.scrollTop;
+  if (_overlayGroupName === TOP_LIST_KEY) renderTopList(); else renderGroupList(_overlayGroupName);
+  if (keepScroll) body.scrollTop = st;
+  return true;
+}
 function setTopGroup(g) { _topGroup = g; renderTopList(); document.getElementById('overlayBody').scrollTop = 0; }
 
 const _MONTHS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
@@ -1765,9 +1777,57 @@ function publishedBucket(p) {
   return { key: String(k), label: new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) };
 }
 
+/* Confirmed theme groups a paper belongs to */
+function groupsOfPaper(p) {
+  const confirmed = new Set(allGroups.filter(g => g.status === 'confirmed').map(g => norm(g.group_name)));
+  return (p.theme_groups||'').split('|').map(norm).filter(g => g && (!confirmed.size || confirmed.has(g)));
+}
+
+/* Rows with the reading rail, optionally split into date sections. Shared by the
+   Top Papers list, category overlays, Library and search. */
+function paperListHTML(papers, opts) {
+  const o = opts || {};
+  const row = p => topRowHTML(p, groupsOfPaper(p).filter(g => g !== o.hideGroup));
+  if (!o.sections) {
+    requestAnimationFrame(markTruncatedVenues);
+    return `<div class="paper-list flat"><section class="tl-section">${papers.map(row).join('')}</section></div>`;
+  }
+  const sections = [];
+  papers.forEach(p => {
+    const b = _topSort === 'added' ? addedBucket(p.date_found) : publishedBucket(p);
+    const last = sections[sections.length - 1];
+    if (last && last.key === b.key) last.items.push(p); else sections.push({ ...b, items: [p] });
+  });
+  return `<div class="paper-list">${sections.map(s => `
+    <section class="tl-section">
+      <div class="tl-section-head"><h4>${esc(s.label)}</h4><span class="count">${s.items.length}</span><span class="rule"></span></div>
+      ${s.items.map(row).join('')}
+    </section>`).join('')}</div>`;
+}
+
+/* Read progress in the overlay header; counts read papers even when they are filtered out */
+function setListProgress(everyPaper) {
+  const total = everyPaper.length, read = everyPaper.filter(p => readSet.has(paperKey(p))).length;
+  document.getElementById('overlaySub').textContent = total
+    ? `${read} of ${total} read${hideRead && read ? ', read papers hidden' : ''}` : '';
+  const prog = document.getElementById('overlayProgress');
+  prog.firstElementChild.style.width = total ? `${Math.max(read / total * 100, read ? 1 : 0)}%` : '0';
+  prog.setAttribute('aria-valuenow', read); prog.setAttribute('aria-valuemax', total);
+}
+function sortToolsHTML() {
+  return `<div class="tl-sort" role="group" aria-label="Sort">
+      <button class="${_topSort==='added'?'active':''}" onclick="setTopSort('added')">Recently added</button>
+      <button class="${_topSort==='published'?'active':''}" onclick="setTopSort('published')">Newest published</button>
+    </div>`;
+}
+function sortForList(papers) {
+  if (_topSort === 'added') papers.sort((a,b) => (b.date_found||'').localeCompare(a.date_found||'') || pubKey(b) - pubKey(a));
+  else papers.sort((a,b) => pubKey(b) - pubKey(a) || (b.date_found||'').localeCompare(a.date_found||''));
+  return papers;
+}
+
 function renderTopList() {
-  const confirmedSet = new Set(allGroups.filter(g => g.status === 'confirmed').map(g => norm(g.group_name)));
-  const groupsOf = p => (p.theme_groups||'').split('|').map(norm).filter(g => g && (!confirmedSet.size || confirmedSet.has(g)));
+  const groupsOf = groupsOfPaper;
   const base = selectTopPapers(sortPapers(applyViewFilters(allPapers.slice())));
 
   // Chips: only groups that have papers in the current top set
@@ -1781,44 +1841,18 @@ function renderTopList() {
   const chip = (g, label, n) => `<button class="tl-chip ${_topGroup===g?'active':''}" onclick="setTopGroup(${g===null?'null':`'${escAttr(g)}'`})">${esc(label)}<span class="n">${n}</span></button>`;
   document.getElementById('overlayToolbar').innerHTML =
     `<div class="tl-chips" role="toolbar" aria-label="Filter by group">${chip(null, 'All groups', base.length)}${chipNames.map(g => chip(g, g, counts[g])).join('')}</div>`;
-  document.getElementById('overlayHeaderTools').innerHTML = `
-    <div class="tl-sort" role="group" aria-label="Sort">
-      <button class="${_topSort==='added'?'active':''}" onclick="setTopSort('added')">Recently added</button>
-      <button class="${_topSort==='published'?'active':''}" onclick="setTopSort('published')">Newest published</button>
-    </div>`;
+  document.getElementById('overlayHeaderTools').innerHTML = sortToolsHTML();
 
-  const papers = _topGroup ? base.filter(p => groupsOf(p).includes(_topGroup)) : base.slice();
-  if (_topSort === 'added') papers.sort((a,b) => (b.date_found||'').localeCompare(a.date_found||'') || pubKey(b) - pubKey(a));
-  else papers.sort((a,b) => pubKey(b) - pubKey(a) || (b.date_found||'').localeCompare(a.date_found||''));
-
-  // Read progress counts read papers too, even when "Hide read" filters them out of the list
+  const papers = sortForList(_topGroup ? base.filter(p => groupsOf(p).includes(_topGroup)) : base.slice());
   let everyTop = selectTopPapers(sortPapers(applyViewFilters(allPapers.slice(), true)));
   if (_topGroup) everyTop = everyTop.filter(p => groupsOf(p).includes(_topGroup));
-  const total = everyTop.length, read = everyTop.filter(p => readSet.has(paperKey(p))).length;
   document.getElementById('overlayTitle').textContent = _topGroup ? `Top Papers in ${_topGroup}` : 'Top Papers';
-  document.getElementById('overlaySub').textContent = total
-    ? `${read} of ${total} read${hideRead && read ? ', read papers hidden' : ''}` : '';
-  const prog = document.getElementById('overlayProgress');
-  prog.firstElementChild.style.width = total ? `${Math.max(read / total * 100, read ? 1 : 0)}%` : '0';
-  prog.setAttribute('aria-valuenow', read); prog.setAttribute('aria-valuemax', total);
+  setListProgress(everyTop);
 
   const body = document.getElementById('overlayBody');
-  if (!papers.length) {
-    body.innerHTML = `<div class="tl-empty">No top papers match your current filters.${_topGroup ? `<br><button class="tl-chip" onclick="setTopGroup(null)">Show all groups</button>` : ''}</div>`;
-    return;
-  }
-  const sections = [];
-  papers.forEach(p => {
-    const b = _topSort === 'added' ? addedBucket(p.date_found) : publishedBucket(p);
-    const last = sections[sections.length - 1];
-    if (last && last.key === b.key) last.items.push(p); else sections.push({ ...b, items: [p] });
-  });
-  body.innerHTML = `<div class="top-list">${sections.map(s => `
-    <section class="tl-section">
-      <div class="tl-section-head"><h4>${esc(s.label)}</h4><span class="count">${s.items.length}</span><span class="rule"></span></div>
-      ${s.items.map(p => topRowHTML(p, groupsOf(p).filter(g => g !== _topGroup))).join('')}
-    </section>`).join('')}</div>`;
-  requestAnimationFrame(markTruncatedVenues);
+  body.innerHTML = papers.length
+    ? paperListHTML(papers, { sections: true, hideGroup: _topGroup })
+    : `<div class="tl-empty">No top papers match your current filters.${_topGroup ? `<br><button class="tl-chip" onclick="setTopGroup(null)">Show all groups</button>` : ''}</div>`;
 }
 
 function topRowHTML(p, groups) {
@@ -1882,7 +1916,7 @@ function toggleLibGroup(headerEl, key) {
 }
 function libGroupHTML(key, icon, label, papers, extra) {
   const collapsed = _collapsedLibGroups.has(key) ? ' collapsed' : '';
-  const body = papers.length ? papers.map(topicItemHTML).join('') : '<div class="library-list-empty">No papers in this list</div>';
+  const body = papers.length ? paperListHTML(papers) : '<div class="library-list-empty">No papers in this list</div>';
   return `<div class="interest-group${collapsed}"><div class="interest-group-inner"><div class="interest-group-header" onclick="toggleLibGroup(this,'${escAttr(key)}')">${icon} ${esc(label)} <span class="interest-group-count">${papers.length}</span>${extra||''}<svg class="chevron" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg></div><div class="interest-group-body">${body}</div></div></div>`;
 }
 function renderLibrary() {
