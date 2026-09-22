@@ -455,6 +455,46 @@ a { color: inherit; text-decoration: none; }
 }
 @media (prefers-reduced-motion: reduce) { .pd-bar-title, .pd-open, .pd-back svg { transition: none; } }
 
+/* PHONE FEED — one paper per screen, swipe up for the next */
+.tok, .tok-bar { display: none; }
+body.tok-mode .main-scroll { overflow: hidden; }
+body.tok-mode #sec-papers.active { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+body.tok-mode #sec-papers .briefing, body.tok-mode #sec-papers .filters, body.tok-mode #papersContent { display: none; }
+body.tok-mode .tok-bar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; flex-shrink: 0; border-bottom: 1px solid var(--border); position: relative; }
+body.tok-mode .tok { display: block; flex: 1; min-height: 0; overflow-y: auto; scroll-snap-type: y mandatory; overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; }
+.tok::-webkit-scrollbar { display: none; }
+.tok { scrollbar-width: none; }
+
+.tok-pills { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; flex: 1; min-width: 0; }
+.tok-pills::-webkit-scrollbar { display: none; }
+.tok-pill { flex-shrink: 0; background: rgba(255,255,255,0.055); border: 1px solid transparent; color: var(--text-secondary); font: inherit; font-size: 12.5px; padding: 4px 11px; border-radius: 999px; cursor: pointer; white-space: nowrap; }
+.tok-pill.active { background: var(--accent-dim); border-color: rgba(251,177,60,0.7); color: var(--accent); }
+.tok-count { font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; flex-shrink: 0; padding-left: 4px; }
+.tok-progress { position: absolute; left: 0; bottom: -1px; height: 2px; background: var(--accent); width: 0; transition: width 0.2s ease; }
+
+.tok-card { position: relative; height: 100%; scroll-snap-align: start; scroll-snap-stop: always; display: flex; flex-direction: column; padding: 20px 72px 18px 20px; overflow: hidden; }
+.tok-card::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 45%; background: var(--gc, var(--accent)); opacity: 0.07; pointer-events: none; -webkit-mask-image: linear-gradient(#000, transparent); mask-image: linear-gradient(#000, transparent); }
+.tok-topics { display: flex; flex-wrap: wrap; gap: 6px; position: relative; }
+.tok-topic { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-secondary); background: rgba(255,255,255,0.07); padding: 3px 10px; border-radius: 999px; }
+.tok-head { font-family: var(--serif); font-optical-sizing: auto; font-size: 27px; line-height: 1.22; font-weight: 500; color: #f2f2f4; margin-top: 16px; text-wrap: pretty; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; position: relative; }
+.tok-title { font-size: 13.5px; line-height: 1.4; color: var(--text-muted); margin-top: 10px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.tok-authors { font-size: 12.5px; color: var(--text-secondary); margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tok-summary { font-family: var(--serif); font-size: 17px; line-height: 1.55; color: #cfd0d5; margin-top: 16px; flex: 1; min-height: 0; overflow: hidden; -webkit-mask-image: linear-gradient(#000 78%, transparent); mask-image: linear-gradient(#000 78%, transparent); }
+.tok-foot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 12px; color: var(--text-muted); margin-top: 14px; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.tok-open { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; align-self: flex-start; padding: 9px 16px; border-radius: 999px; background: rgba(255,255,255,0.08); color: var(--text); font-size: 13.5px; font-weight: 500; border: none; font-family: inherit; flex-shrink: 0; }
+.tok-rail { position: absolute; right: 8px; bottom: 96px; display: flex; flex-direction: column; gap: 6px; z-index: 2; }
+.tok-act { width: 48px; height: 48px; border-radius: 50%; border: none; background: rgba(255,255,255,0.07); color: var(--text-secondary); font-size: 19px; display: flex; align-items: center; justify-content: center; text-decoration: none; }
+.tok-act span { font-size: 9px; margin-top: -2px; }
+.tok-act.on-star { color: var(--star); background: rgba(201,163,86,0.16); }
+.tok-act.on-read { color: var(--green); background: rgba(129,201,149,0.16); }
+.tok-act.on-list { color: var(--list); background: rgba(91,155,245,0.16); }
+.tok-act svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.tok-card.has-hint { padding-bottom: 46px; }
+.tok-hint { position: absolute; left: 0; right: 0; bottom: 14px; text-align: center; font-size: 12px; color: var(--text-muted); animation: tok-bob 1.8s ease-in-out infinite; pointer-events: none; }
+@keyframes tok-bob { 0%, 100% { transform: translateY(0); opacity: 0.75; } 50% { transform: translateY(-5px); opacity: 1; } }
+.tok-empty { height: 100%; display: flex; align-items: center; justify-content: center; padding: 32px; text-align: center; color: var(--text-secondary); }
+@media (prefers-reduced-motion: reduce) { .tok-hint { animation: none; } .tok-progress { transition: none; } }
+
 /* SEARCH RESULTS (flat list) */
 .search-results { max-width: 1200px; margin: 0 auto; padding: 0 24px 32px; }
 .search-results-header { font-size: 14px; color: var(--text-muted); margin-bottom: 12px; }
@@ -850,6 +890,8 @@ a { color: inherit; text-decoration: none; }
     <button class="pill" data-rel="mildly" onclick="toggleRel('mildly')">Tangential <span class="pill-count" id="stat-mild">0</span></button>
     <button class="pill pill-read" data-rel="hideread" onclick="toggleHideRead()"><span id="hideReadLabel">Show read</span> <span id="stat-read">0</span></button>
   </div>
+  <div class="tok-bar" id="tokBar"></div>
+  <div class="tok" id="tokFeed"></div>
   <div id="papersContent">
     <div class="top-papers" id="topStories"></div>
     <div class="section-header" id="topicsHeader" style="max-width:1200px;margin:0 auto;padding:8px 24px 12px;">Your topics</div>
@@ -1535,9 +1577,11 @@ function showGlobalSearch(q, fromHash) {
   // Hide all tab sections, show search section
   document.getElementById('sec-papers').classList.remove('active');
   document.getElementById('sec-library').classList.remove('active');
+  document.getElementById('sec-venues').classList.remove('active');
   document.getElementById('sec-interests').classList.remove('active');
   document.getElementById('sec-paper').classList.remove('active');
   document.getElementById('sec-search').classList.add('active');
+  document.body.classList.remove('tok-mode');
   _paperViewActive = false;
   // Deactivate tab highlight
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
@@ -1592,7 +1636,8 @@ function switchTab(tab, fromHash) {
   document.getElementById('sec-paper').classList.remove('active');
   _paperViewActive = false;
   if (paperTabs.includes(tab)) applyFilters();
-  else if (tab === 'library') renderLibrary();
+  else { document.body.classList.remove('tok-mode'); }
+  if (tab === 'library') renderLibrary();
   else if (tab === 'venues') renderVenues();
   else if (tab === 'interests') renderInterests();
 }
@@ -1634,7 +1679,95 @@ function applyFilters() {
   document.getElementById('briefingNote').textContent = newMust ? ` ${newMust} new must-read ${newMust === 1 ? 'paper' : 'papers'} this week.` : '';
   renderWeekPulse(base.filter(p => p.date_found && new Date(p.date_found + 'T00:00:00') >= weekAgo));
 
+  if (phoneFeedOn()) { renderTok(papers); return; }
   renderPapers(papers);
+}
+
+/* ===== PHONE FEED (one paper per screen) ===== */
+const TOK_BATCH = 12;
+let _tokPapers = [], _tokShown = 0, _tokLock = false, _tokHinted = false, _tokScrollTop = 0;
+function phoneFeedOn() {
+  const on = window.matchMedia('(max-width: 700px)').matches && ['all','email'].includes(currentTab) && !_paperViewActive && !_searchActive;
+  document.body.classList.toggle('tok-mode', on);
+  return on;
+}
+function renderTok(papers) {
+  _tokPapers = papers; _tokShown = 0;
+  const feed = document.getElementById('tokFeed');
+  document.getElementById('tokBar').innerHTML = `
+    <div class="tok-pills">
+      ${[['all','All'],['definitely','Must read'],['probably','Interesting'],['mildly','Tangential']].map(([r,label]) =>
+        `<button class="tok-pill ${currentRel===r?'active':''}" onclick="toggleRel('${r}')">${label}</button>`).join('')}
+      <button class="tok-pill ${hideRead?'':'active'}" onclick="toggleHideRead()">${hideRead ? 'Read hidden' : 'Read shown'}</button>
+    </div>
+    <span class="tok-count" id="tokCount"></span>
+    <span class="tok-progress" id="tokProgress"></span>`;
+  feed.innerHTML = papers.length ? '' : '<div class="tok-empty">No papers match your filters. Try another filter above.</div>';
+  if (!papers.length) { document.getElementById('tokCount').textContent = ''; return; }
+  tokAppend();
+  // Coming back from a paper: render enough cards to land where the reader left off
+  const back = _tokScrollTop; _tokScrollTop = 0;
+  feed.scrollTop = 0;
+  if (back > 0) {
+    let guard = 0;
+    while (feed.scrollHeight < back + feed.clientHeight && _tokShown < _tokPapers.length && guard++ < 200) tokAppend();
+    feed.scrollTop = back;
+  }
+  if (!feed._hooked) { feed.addEventListener('scroll', tokOnScroll, { passive: true }); feed._hooked = true; }
+  tokOnScroll();
+}
+function tokAppend() {
+  const feed = document.getElementById('tokFeed');
+  const next = _tokPapers.slice(_tokShown, _tokShown + TOK_BATCH);
+  feed.insertAdjacentHTML('beforeend', next.map((p, i) => tokCardHTML(p, _tokShown + i)).join(''));
+  _tokShown += next.length;
+}
+function tokOnScroll() {
+  const feed = document.getElementById('tokFeed');
+  const i = feed.clientHeight ? Math.round(feed.scrollTop / feed.clientHeight) : 0;
+  const total = _tokPapers.length;
+  const count = document.getElementById('tokCount'), bar = document.getElementById('tokProgress');
+  if (count) count.textContent = total ? `${Math.min(i + 1, total)} / ${total}` : '';
+  if (bar) bar.style.width = total ? `${(Math.min(i + 1, total) / total) * 100}%` : '0';
+  if (i > 0 && !_tokHinted) { _tokHinted = true; document.querySelectorAll('.tok-hint').forEach(h => h.remove()); document.querySelectorAll('.tok-card.has-hint').forEach(c => c.classList.remove('has-hint')); }
+  if (_tokShown < total && i >= _tokShown - 4) tokAppend();
+}
+function tokCardHTML(p, idx) {
+  const k = paperKey(p), ka = escAttr(k), ir = readSet.has(k);
+  const groups = groupsOfPaper(p);
+  const rel = dynamicRelevance(p);
+  const body = hasText(p.summary) ? p.summary : (hasText(p.abstract) ? p.abstract : '');
+  const showTitle = hasText(p.headline) && p.headline.trim() !== (p.title||'').trim();
+  const hint = idx === 0 && !_tokHinted;
+  return `<article class="tok-card ${hint?'has-hint':''}" style="--gc:${groups.length ? groupColor(groups[0]) : 'var(--accent)'}">
+    <div class="tok-topics">${groups.slice(0, 2).map(g => `<span class="tok-topic">${gdot(g)}${esc(g)}</span>`).join('')}</div>
+    <h2 class="tok-head" onclick="openPaper('${ka}', event)">${esc(p.headline || p.title)}</h2>
+    ${showTitle ? `<div class="tok-title">${esc(p.title)}</div>` : ''}
+    ${hasText(p.authors) ? `<div class="tok-authors">${esc(p.authors)}</div>` : ''}
+    ${body ? `<p class="tok-summary" onclick="openPaper('${ka}', event)">${esc(body)}</p>` : '<div class="tok-summary"></div>'}
+    <div class="tok-foot">
+      <span class="f-rel rel-${rel}"><i></i>${relLabel(rel)}</span>
+      ${hasText(p.venue) ? `<span>${esc(venueLabel(venueOf(p)))}</span>` : ''}
+      ${displayDate(p) ? `<span>${esc(displayDate(p))}</span>` : ''}
+    </div>
+    <button class="tok-open" onclick="openPaper('${ka}', event)">Read full paper</button>
+    <div class="tok-rail">
+      <button class="tok-act ${starSet.has(k)?'on-star':''}" onclick="tokAct(event,this,'star','${ka}')" aria-label="Star">&#9733;</button>
+      <button class="tok-act ${ir?'on-read':''}" onclick="tokAct(event,this,'read','${ka}')" aria-label="${ir?'Mark unread':'Mark read'}">&#10003;</button>
+      <button class="tok-act ${paperInAnyList(k)?'on-list':''}" onclick="tokAct(event,this,'list','${ka}')" aria-label="Save to list">&#9776;</button>
+      ${p.url ? `<a class="tok-act" href="${esc(p.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" aria-label="Open paper"><svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>` : ''}
+    </div>
+    ${hint ? '<div class="tok-hint">Swipe up for the next paper</div>' : ''}
+  </article>`;
+}
+/* Act on a card without re-rendering the feed, which would lose the reader's place */
+function tokAct(ev, btn, what, k) {
+  ev.stopPropagation();
+  _tokLock = true;
+  if (what === 'star') { toggleStar(k, btn); btn.classList.toggle('on-star', starSet.has(k)); }
+  else if (what === 'read') { toggleRead(k, btn); btn.classList.toggle('on-read', readSet.has(k)); btn.setAttribute('aria-label', readSet.has(k) ? 'Mark unread' : 'Mark read'); }
+  else { openSaveDD(btn, k); }
+  _tokLock = false;
 }
 
 /* ===== RENDER PAPERS ===== */
@@ -1993,6 +2126,7 @@ async function deletePaper(k, btn) {
 function refresh() {
   // Keep an open overlay list live (read rail, stars) without losing scroll position
   if (document.getElementById('overlay').classList.contains('open')) renderOpenList(true);
+  if (_tokLock) return;  // a phone-feed action already updated its own card
   if (['all','email'].includes(currentTab)) applyFilters();
   else if (currentTab === 'library') renderLibrary();
   requestAnimationFrame(markTruncatedVenues);
@@ -2868,6 +3002,7 @@ function showPaperDetail(id) {
 
   // Save scroll position before switching to detail view
   _savedScrollTop = document.getElementById('mainScroll').scrollTop;
+  if (document.body.classList.contains('tok-mode')) _tokScrollTop = document.getElementById('tokFeed').scrollTop;
 
   // Close group overlay if open (visually only, don't touch history)
   closeOverlay(true);
@@ -2879,6 +3014,7 @@ function showPaperDetail(id) {
   document.getElementById('sec-interests').classList.remove('active');
   document.getElementById('sec-search').classList.remove('active');
   document.getElementById('sec-paper').classList.add('active');
+  document.body.classList.remove('tok-mode');
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('mainScroll').scrollTop = 0;
 
@@ -3254,6 +3390,16 @@ function applyHash() {
   switchTab(tab, true);
 }
 window.addEventListener('hashchange', applyHash);
+
+/* Re-render when crossing the phone/desktop breakpoint */
+let _wasPhone = window.matchMedia('(max-width: 700px)').matches;
+window.addEventListener('resize', () => {
+  const isPhone = window.matchMedia('(max-width: 700px)').matches;
+  if (isPhone === _wasPhone) return;
+  _wasPhone = isPhone;
+  if (['all','email'].includes(currentTab) && !_paperViewActive) applyFilters();
+  else phoneFeedOn();
+}, { passive: true });
 
 document.addEventListener('DOMContentLoaded', () => { updateLoginBtn(); loadPapers(); loadInterests(); loadGroups(); });
 
