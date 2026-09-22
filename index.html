@@ -364,6 +364,95 @@ a { color: inherit; text-decoration: none; }
   .nav-tabs { margin: 0 -16px; padding: 0 4px; }
 }
 
+/* PAPER PAGE — one scrolling article with a slim sticky bar */
+.pd { --pd-w: 1080px; }
+.pd-bar { position: sticky; top: 0; z-index: 20; background: rgba(17,17,17,0.84); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid transparent; transition: border-color 0.2s; }
+.pd-bar.stuck { border-bottom-color: var(--border); }
+.pd-bar-inner { max-width: var(--pd-w); margin: 0 auto; padding: 8px 24px; display: flex; align-items: center; gap: 14px; min-height: 56px; }
+.pd-back { display: inline-flex; align-items: center; gap: 6px; background: none; border: none; color: var(--text-muted); font: inherit; font-size: 13.5px; cursor: pointer; padding: 6px 10px 6px 0; flex-shrink: 0; transition: color 0.15s; }
+.pd-back:hover { color: var(--accent); }
+.pd-back svg { width: 16px; height: 16px; fill: currentColor; transition: transform 0.15s; }
+.pd-back:hover svg { transform: translateX(-2px); }
+.pd-bar-title { flex: 1; min-width: 0; font-family: var(--serif); font-size: 16px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0; transform: translateY(4px); transition: opacity 0.2s, transform 0.2s; pointer-events: none; }
+.pd-bar.stuck .pd-bar-title { opacity: 1; transform: none; }
+.pd-actions { display: flex; align-items: center; gap: 2px; margin-left: auto; flex-shrink: 0; }
+.pd-act { width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; background: none; border: none; border-radius: 8px; color: var(--text-muted); font-size: 16px; cursor: pointer; transition: background 0.15s, color 0.15s; }
+.pd-act:hover { background: rgba(255,255,255,0.08); color: var(--text); }
+.pd-act.on-star { color: var(--star); }
+.pd-act.on-read { color: var(--green); }
+.pd-act.on-list { color: var(--list); }
+.pd-act.on-notes { color: var(--accent); }
+.pd-open { display: inline-flex; align-items: center; gap: 7px; margin-left: 8px; padding: 8px 15px; border-radius: 999px; background: var(--accent); color: #1a1406; font-size: 13.5px; font-weight: 600; text-decoration: none; white-space: nowrap; transition: background 0.15s, transform 0.15s; }
+.pd-open:hover { background: #ffc261; transform: translateY(-1px); }
+.pd-open svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+
+.pd-article { max-width: var(--pd-w); margin: 0 auto; padding: 24px 24px 80px; }
+.pd-head { max-width: 840px; }
+.pd-kicker { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; font-size: 13px; color: var(--text-muted); margin-bottom: 16px; font-variant-numeric: tabular-nums; }
+.pd-kicker .pd-venue { color: var(--accent); font-weight: 500; }
+.pd-title { font-family: var(--serif); font-optical-sizing: auto; font-size: 40px; line-height: 1.12; font-weight: 500; letter-spacing: -0.01em; color: #f2f2f4; text-wrap: balance; }
+.pd-dek { font-family: var(--serif); font-size: 21px; line-height: 1.45; color: var(--text-secondary); margin-top: 14px; text-wrap: pretty; }
+.pd-authors { font-size: 14.5px; color: var(--text-secondary); margin-top: 18px; line-height: 1.55; }
+.pd-head .why { margin-top: 20px; max-width: 72ch; font-size: 14px; }
+
+.pd-body { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 56px; margin-top: 32px; padding-top: 32px; border-top: 1px solid var(--border); align-items: start; }
+.pd-section + .pd-section { margin-top: 36px; }
+.pd-section h2 { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 12px; }
+.pd-prose { font-family: var(--serif); font-size: 19px; line-height: 1.65; color: #d4d5da; max-width: 68ch; text-wrap: pretty; }
+.pd-notes .pd-prose { font-family: inherit; font-size: 15px; white-space: pre-wrap; }
+.pd-edit { background: none; border: 1px solid var(--border); color: var(--text-muted); font: inherit; font-size: 12px; font-weight: 400; padding: 2px 10px; border-radius: 999px; cursor: pointer; transition: color 0.15s, border-color 0.15s; }
+.pd-edit:hover { color: var(--accent); border-color: var(--accent); }
+.pd-empty { color: var(--text-muted); font-size: 15px; }
+
+.pd-aside { position: sticky; top: 76px; display: flex; flex-direction: column; gap: 16px; }
+.pd-card { background: var(--bg-surface); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; padding: 18px; }
+.pd-card h3 { font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 12px; }
+.pd-facts { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 12px; font-size: 13.5px; line-height: 1.45; }
+.pd-facts dt { color: var(--text-muted); }
+.pd-facts dd { color: var(--text); min-width: 0; overflow-wrap: anywhere; }
+.pd-sub { display: block; font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.pd-info { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 14px; padding: 0 4px; transition: color 0.15s; }
+.pd-info:hover { color: var(--text); }
+.pd-matches { display: flex; flex-wrap: wrap; gap: 5px; }
+.pd-match { font-size: 12px; line-height: 1.4; color: var(--text-secondary); background: rgba(255,255,255,0.06); padding: 2px 8px; border-radius: 6px; }
+.pd-topics { display: flex; flex-wrap: wrap; gap: 6px; }
+.pd-topics .badge-group { background: rgba(255,255,255,0.06); border: 1px solid transparent; color: var(--text-secondary); font-size: 12px; height: 26px; padding: 0 10px; border-radius: 999px; gap: 6px; }
+.pd-topics .badge-group:hover { background: rgba(255,255,255,0.1); }
+.pd-topics .gdot { width: 7px; height: 7px; }
+.pd-topics .group-add-btn { height: 26px; border-radius: 999px; border-color: rgba(255,255,255,0.22); color: var(--text-muted); }
+.pd-topics:focus-within .group-add-wrap { opacity: 1; pointer-events: auto; }
+
+.pd-related { margin-top: 64px; padding-top: 32px; border-top: 1px solid var(--border); }
+.pd-related > h2 { font-family: var(--serif); font-size: 26px; font-weight: 500; margin-bottom: 20px; }
+.pd-rel-group + .pd-rel-group { margin-top: 28px; }
+.pd-rel-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.pd-rel-head h3 { font-size: 15px; font-weight: 500; color: var(--text); }
+.pd-rel-all { margin-left: auto; background: none; border: none; color: var(--text-muted); font: inherit; font-size: 13px; cursor: pointer; transition: color 0.15s; }
+.pd-rel-all:hover { color: var(--accent); }
+.pd-rel-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); background: var(--bg-surface); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; overflow: hidden; }
+.pd-rel-grid .topic-item.feed-item { border-top: 1px solid rgba(255,255,255,0.08); }
+.pd-rel-grid .topic-item.feed-item:nth-child(-n+2) { border-top: none; }
+.pd-rel-grid .feed-item:nth-child(odd) { border-right: 1px solid rgba(255,255,255,0.08); }
+
+@media (max-width: 900px) {
+  .pd-body { grid-template-columns: 1fr; gap: 28px; }
+  .pd-aside { position: static; }
+  .pd-title { font-size: 32px; }
+  .pd-rel-grid { grid-template-columns: 1fr; }
+  .pd-rel-grid .feed-item:nth-child(odd) { border-right: none; }
+  .pd-rel-grid .topic-item.feed-item:nth-child(2) { border-top: 1px solid rgba(255,255,255,0.08); }
+}
+@media (max-width: 600px) {
+  .pd-bar-inner, .pd-article { padding-left: 16px; padding-right: 16px; }
+  .pd-bar-inner { gap: 6px; }
+  .pd-act { width: 32px; }
+  .pd-open { padding: 7px 12px; margin-left: 4px; }
+  .pd-title { font-size: 28px; }
+  .pd-dek { font-size: 18px; }
+  .pd-prose { font-size: 17.5px; }
+}
+@media (prefers-reduced-motion: reduce) { .pd-bar-title, .pd-open, .pd-back svg { transition: none; } }
+
 /* SEARCH RESULTS (flat list) */
 .search-results { max-width: 1200px; margin: 0 auto; padding: 0 24px 32px; }
 .search-results-header { font-size: 14px; color: var(--text-muted); margin-bottom: 12px; }
@@ -487,7 +576,7 @@ a { color: inherit; text-decoration: none; }
 /* INTERESTS TAB */
 .tab-section { display: none; }
 .tab-section.active { display: block; }
-#sec-paper.active { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+#sec-paper.active { display: block; }
 .interests-header { }
 .interests-header .briefing { max-width: 1200px; margin: 0 auto; padding: 24px 24px 0; }
 .interests-header .interest-filter-chips { max-width: 1200px; margin: 0 auto; padding: 16px 24px; justify-content: center; }
@@ -635,21 +724,7 @@ a { color: inherit; text-decoration: none; }
 .btn-modal-danger:hover { background: rgba(242,139,130,0.1); }
 
 /* PAPER DETAIL PAGE */
-.paper-detail { display: flex; flex-direction: column; height: 100%; }
-.paper-detail-fixed { max-width: 800px; width: 100%; margin: 0 auto; padding: 10px 24px 0; flex-shrink: 0; border-bottom: 1px solid var(--border); }
-.paper-detail-scroll { flex: 1; overflow-y: overlay; }
-.paper-detail-scroll-inner { max-width: 800px; margin: 0 auto; padding: 0 24px 64px; }
-.paper-detail-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
-.paper-detail-back { display: inline-flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: 13px; cursor: pointer; background: none; border: none; padding: 6px 12px 6px 0; transition: color 0.2s; }
-.paper-detail-back:hover { color: var(--accent); }
-.paper-detail-back svg { width: 16px; height: 16px; fill: currentColor; }
-.paper-detail-headline { font-size: 20px; font-weight: 500; color: var(--accent); line-height: 1.4; margin-bottom: 28px; padding-bottom: 24px; border-bottom: 1px solid var(--border); padding-top: 24px; margin-left: -24px; margin-right: -24px; padding-left: 24px; padding-right: 24px; }
-.paper-detail-title { font-size: 26px; font-weight: 600; line-height: 1.35; margin-bottom: 16px; }
-.paper-detail-authors { font-size: 15px; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.5; }
-.paper-detail-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
 .paper-detail-tags { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; transition: gap 0.2s ease; }
-.paper-detail-tags:last-of-type { margin-bottom: 24px; }
-.paper-detail-tags-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-right: 2px; }
 .badge-group { background: #1e1a2e; color: #b8aed8; font-size: 11px; border: 1px solid #2e2845; }
 .badge-group-edit { display: inline-flex; align-items: center; gap: 3px; transition: padding 0.2s ease, background 0.2s ease; }
 .badge-group-edit:hover { background: #252040; }
@@ -667,12 +742,6 @@ a { color: inherit; text-decoration: none; }
 .group-add-dd .group-opt:hover { background: var(--hover-bg); color: var(--text-primary); }
 .group-add-dd .group-opt.disabled { opacity: 0.35; pointer-events: none; }
 .badge-interest { background: #1a1a2e; color: #8b8bef; font-size: 11px; border: 1px solid #2a2a4a; }
-.paper-detail-actions { display: flex; align-items: center; gap: 8px; }
-.paper-detail-actions .btn-icon { font-size: 18px; padding: 8px; }
-.paper-detail-actions .btn-link { font-size: 14px; padding: 6px 14px; order: 1; margin-left: 4px; }
-.paper-detail-section { margin-bottom: 28px; }
-.paper-detail-section-title { font-size: 17px; font-weight: 600; color: #fff; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 14px; }
-.paper-detail-section-body { font-size: 15px; color: var(--text-secondary); line-height: 1.7; }
 .notes-modal { position: fixed; bottom: 24px; right: 24px; width: 360px; height: 320px; min-width: 240px; min-height: 180px; background: var(--bg-surface); border: 1px solid rgba(255,255,255,0.18); border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,0.55); z-index: 9998; display: none; flex-direction: column; overflow: hidden; }
 .notes-resize-handle { position: absolute; bottom: 0; left: 0; width: 18px; height: 18px; cursor: nesw-resize; z-index: 2; }
 .notes-resize-handle::after { content: ''; position: absolute; bottom: 4px; left: 4px; width: 8px; height: 8px; border-left: 2px solid var(--text-muted); border-bottom: 2px solid var(--text-muted); opacity: 0.4; }
@@ -685,8 +754,6 @@ a { color: inherit; text-decoration: none; }
 .notes-modal textarea::placeholder { color: var(--text-muted); font-style: italic; }
 .btn-icon.has-notes { color: var(--accent); }
 .btn-triage-info { color: var(--text-muted); }
-.paper-detail-related { border-top: 1px solid var(--border); padding-top: 24px; }
-.paper-detail-related .paper-detail-section-title { margin-bottom: 18px; }
 .triage-anchor { display: inline-flex; }
 .relevance-popup { position: fixed; z-index: 200; width: 360px; max-height: 70vh; overflow-y: auto; animation: dropdown-in 0.15s ease forwards; pointer-events: auto; }
 .relevance-breakdown { background: var(--bg-surface); border: 1px solid rgba(255,255,255,0.18); border-radius: 10px; padding: 16px 18px; box-shadow: 0 12px 36px rgba(0,0,0,0.6); }
@@ -705,10 +772,6 @@ a { color: inherit; text-decoration: none; }
 .relevance-residual { font-size: 13px; color: var(--text-secondary); margin-bottom: 14px; padding: 8px 10px; background: rgba(255,255,255,0.03); border-radius: 6px; border-left: 3px solid var(--accent); }
 .relevance-residual.zero { border-left-color: var(--text-muted); opacity: 0.6; }
 .relevance-notes { font-size: 13px; color: var(--text-secondary); line-height: 1.6; font-style: italic; }
-.paper-detail-group-label { font-size: 17px; font-weight: 500; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 14px; margin-top: 16px; }
-.paper-detail-group-label:first-of-type { margin-top: 0; }
-.paper-related-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 16px; }
-.paper-related-grid:last-child { margin-bottom: 0; }
 
 /* SAVE BAR */
 .save-bar { position: fixed; top: 74px; right: 20px; background: var(--bg-surface); border: 1px solid rgba(255,255,255,0.12); padding: 10px 14px 15px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; z-index: 250; transform: translateY(-20px); opacity: 0; pointer-events: none; transition: transform 0.25s cubic-bezier(0.32,0.72,0,1), opacity 0.25s ease; box-shadow: 0 8px 32px rgba(0,0,0,0.5); border-radius: 10px; border-left: 3px solid rgba(255,255,255,0.35); max-width: 225px; }
@@ -1663,27 +1726,6 @@ function renderTopPapers(top) {
       ${topLeadHTML(top[0])}
       ${top.length > 1 ? `<div class="top-side">${top.slice(1, MAX_TOP_CARDS).map(feedItemHTML).join('')}</div>` : ''}
     </div>`;
-}
-
-function topCardHTML(p) {
-  const k = paperKey(p), ir = readSet.has(k);
-  const hasActive = starSet.has(k) || ir || paperInAnyList(k);
-  const hasSummary = p.summary && p.summary.trim() && p.summary !== 'not specified';
-  const hasAbstract = p.abstract && p.abstract.trim() && p.abstract !== 'not specified';
-  return `<div class="top-card ${ir?'is-read':''}" onclick="openPaper('${escAttr(k)}', event)">
-    <div class="p-headline">${esc(p.headline||p.title)}</div>
-    <div class="p-title">${esc(p.title)}</div>
-    ${p.authors&&p.authors!=='not specified'?`<div class="p-authors">${esc(p.authors)}</div>`:''}
-    <div class="p-meta">
-      <div class="p-action-row">${summaryBtn(p)} ${absBtn(p)} ${linkBtn(p)} <span class="p-actions ${hasActive?'has-active':''}">${starBtn(p)} ${readBtn(p)} ${saveBtn(p)} ${deleteBtn(p)}</span></div>
-      <div class="p-detail-panel" data-summary="${hasSummary?dataAttr(p.summary):''}" data-abstract="${hasAbstract?dataAttr(p.abstract):''}"></div>
-      <div class="p-meta-row">
-        <span class="badge badge-${dynamicRelevance(p)}">${relLabel(dynamicRelevance(p))}</span>
-        <span class="badge badge-venue" data-full="${dataAttr(p.venue||'')}" onclick="event.stopPropagation();showVenueTooltip(this)">${esc(shortVenue(p.venue))}</span>
-        ${paperDate(p)?`<span class="dot"></span><span>${paperDate(p)}</span>`:''}
-      </div>
-    </div>
-  </div>`;
 }
 
 /* Shared bits for the main-page feed */
@@ -2831,6 +2873,7 @@ function showPaperDetail(id) {
   // Hide all other sections
   document.getElementById('sec-papers').classList.remove('active');
   document.getElementById('sec-library').classList.remove('active');
+  document.getElementById('sec-venues').classList.remove('active');
   document.getElementById('sec-interests').classList.remove('active');
   document.getElementById('sec-search').classList.remove('active');
   document.getElementById('sec-paper').classList.add('active');
@@ -2841,89 +2884,106 @@ function showPaperDetail(id) {
 }
 
 function renderPaperDetail(p) {
-  const k = paperKey(p);
+  const k = paperKey(p), ka = escAttr(k);
   const ir = readSet.has(k), isStar = starSet.has(k), inAny = paperInAnyList(k);
-  const hasSummary = p.summary && p.summary.trim() && p.summary !== 'not specified';
-  const hasAbstract = p.abstract && p.abstract.trim() && p.abstract !== 'not specified';
-  const hasNotes = p.user_notes && p.user_notes.trim();
-  const hasAuthors = p.authors && p.authors !== 'not specified';
-
+  const hasNotes = hasText(p.user_notes);
+  const rel = dynamicRelevance(p);
+  const v = venueOf(p);
+  const why = parseWhy(p);
+  const again = `renderPaperDetail(allPapers.find(pp=>paperKey(pp)==='${ka}'))`;
   const showBack = history.length > 1;
-  let fixed = `<div class="paper-detail-toolbar">
-    ${showBack ? `<button class="paper-detail-back" onclick="paperBack()">
-      <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>Back
-    </button>` : ''}
-    <div class="paper-detail-actions">`;
-  if (p.url) fixed += `<a class="btn-link" href="${esc(p.url)}" target="_blank" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Open Paper</a>`;
-  fixed += `<button class="btn-icon ${isStar?'starred':''}" onclick="toggleStar('${escAttr(k)}',this);renderPaperDetail(allPapers.find(pp=>paperKey(pp)==='${escAttr(k)}'))" title="${isStar?'Unstar':'Star'}" style="font-size:18px">&#9733;</button>`;
-  fixed += `<button class="btn-icon is-read-btn ${ir?'done':''}" onclick="toggleRead('${escAttr(k)}',this);renderPaperDetail(allPapers.find(pp=>paperKey(pp)==='${escAttr(k)}'))" title="${ir?'Mark unread':'Mark as read'}" style="font-size:16px">&#10003;</button>`;
-  fixed += `<span class="save-anchor"><button class="btn-icon ${inAny?'done':''}" onclick="event.stopPropagation();openSaveDD(this,'${escAttr(k)}')" title="Add to list" style="${inAny?'color:var(--list)':''}font-size:16px">&#9776;</button></span>`;
-  fixed += `<button class="btn-icon ${hasNotes?'has-notes':''}" onclick="toggleNotesModal('${escAttr(k)}')" title="Notes" style="font-size:16px">&#9998;</button>`;
-  fixed += `<span class="triage-anchor" onmouseenter="showRelevancePopup(this,'${escAttr(k)}')" onmouseleave="hideRelevancePopup(this)"><button class="btn-icon btn-triage-info" title="Relevance breakdown" style="font-size:15px;">&#9432;</button></span>`;
-  fixed += `</div></div>`;
+  const shortDate = d => { try { return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); } catch (e) { return d; } };
 
-  fixed += `<div class="paper-detail-title">${esc(p.title)}</div>`;
+  // Sticky bar: back, title (appears once the heading scrolls away), actions
+  const bar = `<div class="pd-bar"><div class="pd-bar-inner">
+    ${showBack ? `<button class="pd-back" onclick="paperBack()"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>Back</button>` : ''}
+    <div class="pd-bar-title" aria-hidden="true">${esc(p.title)}</div>
+    <div class="pd-actions">
+      <button class="pd-act ${isStar?'on-star':''}" onclick="toggleStar('${ka}',this);${again}" title="${isStar?'Unstar':'Star'}" aria-label="${isStar?'Unstar':'Star'}">&#9733;</button>
+      <button class="pd-act ${ir?'on-read':''}" onclick="toggleRead('${ka}',this);${again}" title="${ir?'Mark unread':'Mark as read'}" aria-label="${ir?'Mark unread':'Mark as read'}">&#10003;</button>
+      <span class="save-anchor"><button class="pd-act ${inAny?'on-list':''}" onclick="event.stopPropagation();openSaveDD(this,'${ka}')" title="Add to list" aria-label="Add to list">&#9776;</button></span>
+      <button class="pd-act ${hasNotes?'on-notes':''}" onclick="toggleNotesModal('${ka}')" title="Notes" aria-label="Notes">&#9998;</button>
+      ${p.url ? `<a class="pd-open" href="${esc(p.url)}" target="_blank" rel="noopener">Open paper<svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>` : ''}
+    </div>
+  </div></div>`;
 
-  if (hasAuthors) {
-    fixed += `<div class="paper-detail-authors">${esc(p.authors)}</div>`;
-  }
+  // Heading: venue + date, real title, takeaway as the subheading, authors, why it's here
+  const dek = hasText(p.headline) && p.headline.trim() !== (p.title||'').trim() ? `<p class="pd-dek">${esc(p.headline)}</p>` : '';
+  const head = `<header class="pd-head">
+    <div class="pd-kicker">
+      ${hasText(p.venue) ? venueLinkHTML(p, 'pd-venue') : ''}
+      ${paperDate(p) ? `<span>${esc(paperDate(p))}</span>` : ''}
+      <span class="f-rel rel-${rel}"><i></i>${relLabel(rel)}</span>
+    </div>
+    <h1 class="pd-title">${esc(p.title)}</h1>
+    ${dek}
+    ${hasText(p.authors) ? `<div class="pd-authors">${esc(p.authors)}</div>` : ''}
+    ${whyHTML(p)}
+  </header>`;
 
-  // Meta badges
-  // Theme groups
-  const detailGroups = (p.theme_groups||'').split('|').map(s => s.trim()).filter(Boolean);
-  const groupBadges = detailGroups.map(g => `<span class="badge badge-group badge-group-edit">${esc(g)}<span class="group-remove" onclick="event.stopPropagation();removeGroupFromPaper('${escAttr(k)}','${escAttr(g)}')"><svg width="10" height="10" viewBox="0 0 10 10"><line x1="2" y1="2" x2="8" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="8" y1="2" x2="2" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span></span>`).join('');
-  const groupAddBtn = `<span class="group-add-wrap"><button class="group-add-btn" onclick="event.stopPropagation();toggleGroupAddDD(this,'${escAttr(k)}')">+ Add</button><div class="group-add-dd"></div></span>`;
-  fixed += `<div class="paper-detail-tags"><span class="paper-detail-tags-label">Topics</span>${groupBadges}${groupAddBtn}</div>`;
-  fixed += `<div class="paper-detail-meta">`;
-  fixed += `<span class="badge badge-${dynamicRelevance(p)}">${relLabel(dynamicRelevance(p))}</span>`;
-  if (p.venue) fixed += `<span class="badge badge-venue" style="max-width:none">${esc(p.venue)}</span>`;
-  if (p.source_mode) { const sm = p.source_mode.replace('web_survey','Web Survey').replace(/^email/,'Email').replace(/,Email/,', Email'); fixed += `<span class="badge badge-source">${esc(sm)}</span>`; }
-  if (paperDate(p)) fixed += `<span class="dot"></span><span style="font-size:13px;color:var(--text-muted)">${paperDate(p)}</span>`;
-  if (p.date_found) fixed += `<span class="dot"></span><span style="font-size:12px;color:var(--text-muted)">Added ${formatDate(p.date_found)}</span>`;
-  fixed += `</div>`;
+  // Reading column
+  let main = '';
+  if (hasText(p.summary)) main += `<section class="pd-section"><h2>Summary</h2><p class="pd-prose">${esc(p.summary)}</p></section>`;
+  if (hasText(p.abstract)) main += `<section class="pd-section"><h2>Abstract</h2><p class="pd-prose">${esc(p.abstract)}</p></section>`;
+  if (hasNotes) main += `<section class="pd-section pd-notes"><h2>Your notes <button class="pd-edit" onclick="toggleNotesModal('${ka}')">Edit</button></h2><p class="pd-prose">${esc(p.user_notes)}</p></section>`;
+  if (!main) main = `<p class="pd-empty">No summary or abstract yet. Open the paper to read it at the source.</p>`;
 
-  let scroll = '';
+  // Side panel: facts + editable topics
+  const sm = p.source_mode || '';
+  const via = sm.includes('email') && sm.includes('web_survey') ? 'Email alert and web survey'
+    : sm.includes('email') ? 'Email alert' : sm.includes('web_survey') ? 'Web survey' : '';
+  const matches = (p.matched_interests || '').split('|').map(x => x.trim()).filter(Boolean);
+  const facts = [];
+  if (hasText(p.venue)) facts.push(['Venue', `${venueLinkHTML(p, '')}${p.venue.trim() !== venueLabel(v) ? `<span class="pd-sub">${esc(p.venue)}</span>` : ''}`]);
+  if (paperDate(p)) facts.push(['Published', esc(paperDate(p))]);
+  if (p.date_found) facts.push(['Added', esc(shortDate(p.date_found))]);
+  if (via) facts.push(['Found via', `${via}${why && why.source ? `<span class="pd-sub">${esc(why.source)} alert</span>` : ''}`]);
+  facts.push(['Relevance', `<span class="f-rel rel-${rel}"><i></i>${relLabel(rel)}</span><span class="triage-anchor" onmouseenter="showRelevancePopup(this,'${ka}')" onmouseleave="hideRelevancePopup(this)"><button class="pd-info" title="How this was scored" aria-label="How this was scored">&#9432;</button></span>`]);
+  if (matches.length) facts.push(['Matches', `<span class="pd-matches">${matches.map(m => `<span class="pd-match">${esc(m)}</span>`).join('')}</span>`]);
 
-  // Headline + Summary
-  if (p.headline) {
-    scroll += `<div class="paper-detail-headline">${esc(p.headline)}</div>`;
-  }
-  if (hasSummary) {
-    scroll += `<div class="paper-detail-section">
-      <div class="paper-detail-section-title">Summary</div>
-      <div class="paper-detail-section-body">${esc(p.summary)}</div>
+  const groups = (p.theme_groups||'').split('|').map(x => x.trim()).filter(Boolean);
+  const x = `<svg width="10" height="10" viewBox="0 0 10 10"><line x1="2" y1="2" x2="8" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="8" y1="2" x2="2" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+  const topics = groups.map(g => `<span class="badge badge-group badge-group-edit">${gdot(norm(g))}${esc(g)}<span class="group-remove" title="Remove topic" onclick="event.stopPropagation();removeGroupFromPaper('${ka}','${escAttr(g)}')">${x}</span></span>`).join('');
+  const addBtn = `<span class="group-add-wrap"><button class="group-add-btn" onclick="event.stopPropagation();toggleGroupAddDD(this,'${ka}')">+ Add</button><div class="group-add-dd"></div></span>`;
+
+  const aside = `<aside class="pd-aside">
+    <div class="pd-card"><dl class="pd-facts">${facts.map(([t, d]) => `<dt>${t}</dt><dd>${d}</dd>`).join('')}</dl></div>
+    <div class="pd-card"><h3>Topics</h3><div class="pd-topics paper-detail-tags">${topics}${addBtn}</div></div>
+  </aside>`;
+
+  // Related: unread papers from the same topics, no paper shown twice
+  const seen = new Set([k]);
+  let related = '';
+  [...new Set(groups.map(norm))].forEach(g => {
+    const inGroup = allPapers.filter(pp => paperKey(pp) !== k && (pp.theme_groups||'').split('|').map(norm).includes(g));
+    const fresh = sortPapers(inGroup.filter(pp => !readSet.has(paperKey(pp)) && !seen.has(paperKey(pp)))).slice(0, 4);
+    if (!fresh.length) return;
+    fresh.forEach(pp => seen.add(paperKey(pp)));
+    related += `<div class="pd-rel-group">
+      <div class="pd-rel-head">${gdot(g)}<h3>${esc(g)}</h3><button class="pd-rel-all" onclick="openGroup('${escAttr(g)}')">View all ${inGroup.length + 1}</button></div>
+      <div class="pd-rel-grid">${fresh.map(feedItemHTML).join('')}</div>
     </div>`;
-  }
+  });
 
-  // Abstract
-  if (hasAbstract) {
-    scroll += `<div class="paper-detail-section">
-      <div class="paper-detail-section-title">Abstract</div>
-      <div class="paper-detail-section-body">${esc(p.abstract)}</div>
-    </div>`;
-  }
+  document.getElementById('paperDetail').innerHTML = `<div class="pd">${bar}
+    <article class="pd-article">
+      ${head}
+      <div class="pd-body"><div class="pd-main">${main}</div>${aside}</div>
+      ${related ? `<section class="pd-related"><h2>Related papers</h2>${related}</section>` : ''}
+    </article>
+  </div>`;
 
-  // Related works grouped by shared theme groups
-  const paperGroups = (p.theme_groups||'').split('|').map(s => s.trim()).filter(Boolean);
-  let relatedHTML = '';
-  for (const group of paperGroups) {
-    const gNorm = norm(group);
-    const related = allPapers.filter(pp => { const pk = paperKey(pp); return pk !== k && !readSet.has(pk) && (pp.theme_groups||'').split('|').map(norm).some(g => g === gNorm); });
-    if (related.length) {
-      sortPapers(related);
-      const shown = related.slice(0, 6);
-      relatedHTML += `<div class="paper-detail-group-label">${esc(group)}</div>
-        <div class="paper-related-grid">${shown.map(topCardHTML).join('')}</div>`;
-    }
+  if (!renderPaperDetail._scrollHooked) {
+    document.getElementById('mainScroll').addEventListener('scroll', updatePaperBar, { passive: true });
+    renderPaperDetail._scrollHooked = true;
   }
-  if (relatedHTML) {
-    scroll += `<div class="paper-detail-section paper-detail-related">
-      <div class="paper-detail-section-title">Related Papers</div>
-      ${relatedHTML}
-    </div>`;
-  }
-
-  document.getElementById('paperDetail').innerHTML = `<div class="paper-detail-fixed">${fixed}</div><div class="paper-detail-scroll"><div class="paper-detail-scroll-inner">${scroll}</div></div>`;
+  updatePaperBar();
+}
+/* Show the title in the sticky bar once the page heading has scrolled under it */
+function updatePaperBar() {
+  if (!_paperViewActive) return;
+  const bar = document.querySelector('.pd-bar'), h = document.querySelector('.pd-title');
+  if (bar && h) bar.classList.toggle('stuck', h.getBoundingClientRect().bottom < bar.getBoundingClientRect().bottom);
 }
 
 function removeGroupFromPaper(key, groupName) {
