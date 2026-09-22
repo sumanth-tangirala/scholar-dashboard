@@ -4,12 +4,20 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Scholar Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400&display=swap" rel="stylesheet">
 <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
 <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/js-sha256/0.9.0/sha256.min.js"></script>
 <style>
 :root {
+  /* topic-group identity: categorical slots in display_order, validated on #000/#111/#141414 */
+  --g1: #3987e5; --g2: #d95926; --g3: #199e70; --g4: #c98500;
+  --g5: #d55181; --g6: #008300; --g7: #9085e9; --g8: #e66767;
+  --g-other: rgba(216,217,221,0.45);
+  --serif: 'Newsreader', Georgia, 'Times New Roman', serif;
   --bg: #111111;
   --bg-surface: #141414;
   --bg-card: #2a2b2e;
@@ -266,6 +274,80 @@ a { color: inherit; text-decoration: none; }
 @media (prefers-reduced-motion: reduce) {
   .feed-item::before, .f-actions { transition: none; }
 }
+
+
+/* ===== READING TYPE, GROUP COLOR, WEEKLY PULSE, VENUES ===== */
+.lead-headline, .f-headline, .tr-headline, #sec-papers .briefing h2, #sec-venues .briefing h2 { font-family: var(--serif); font-optical-sizing: auto; }
+.lead-headline { font-size: 29px; font-weight: 500; line-height: 1.18; letter-spacing: -0.005em; }
+.f-headline { font-size: 17.5px; font-weight: 500; line-height: 1.3; }
+.tr-headline { font-size: 18px; font-weight: 500; line-height: 1.3; }
+#sec-papers .briefing h2, #sec-venues .briefing h2 { font-size: 36px; font-weight: 500; letter-spacing: -0.01em; line-height: 1.15; }
+
+.gdot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--gc, var(--g-other)); flex-shrink: 0; }
+.tr-group { display: inline-flex; align-items: center; gap: 6px; }
+.tr-group .gdot { width: 6px; height: 6px; }
+.tl-chip .gdot { width: 7px; height: 7px; margin-right: 7px; vertical-align: 1px; }
+.topics-grid .topic-card { border-top: 2px solid var(--gc, rgba(255,255,255,0.14)); }
+.topics-grid .topic-title { color: var(--text); gap: 8px; }
+.topics-grid .topic-title svg { color: var(--text-muted); transition: transform 0.2s, color 0.2s; }
+.topics-grid .topic-title:hover svg { color: var(--text); transform: translateX(2px); }
+
+/* why a paper is here, parsed from the triage note */
+.why { font-size: 13px; line-height: 1.5; color: var(--text-secondary); border-left: 2px solid rgba(251,177,60,0.55); padding: 1px 0 1px 10px; }
+.why .why-src { color: var(--text-muted); white-space: nowrap; }
+.lead-why { margin-top: 16px; font-size: 13.5px; }
+.tr-actions .why, .f-actions .why { margin-bottom: 10px; }
+
+/* weekly pulse: what arrived this week, by topic */
+.pulse { width: 100%; margin-top: 20px; }
+.pulse-cap { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
+.pulse-cap b { color: var(--text-secondary); font-weight: 500; }
+.pulse-bar { display: flex; gap: 2px; height: 10px; width: 100%; }
+.pulse-seg { position: relative; background: var(--gc, var(--g-other)); min-width: 4px; cursor: pointer; transition: opacity 0.15s, transform 0.15s; }
+.pulse-seg:first-child { border-radius: 4px 0 0 4px; }
+.pulse-seg:last-child { border-radius: 0 4px 4px 0; }
+.pulse-seg:only-child { border-radius: 4px; }
+.pulse-bar:hover .pulse-seg { opacity: 0.45; }
+.pulse-bar:hover .pulse-seg:hover, .pulse.hl .pulse-seg.on { opacity: 1; transform: scaleY(1.4); }
+.pulse.hl .pulse-seg:not(.on) { opacity: 0.35; }
+.pulse-seg::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%); background: var(--bg-card); border: 1px solid var(--border); color: var(--text); font-size: 12px; padding: 4px 9px; border-radius: 6px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.12s; z-index: 5; }
+.pulse-seg:hover::after { opacity: 1; }
+.pulse-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 12px; }
+.pulse-key { display: inline-flex; align-items: center; gap: 7px; background: none; border: none; font: inherit; font-size: 12.5px; color: var(--text-secondary); padding: 2px 0; cursor: pointer; transition: color 0.15s; }
+.pulse-key:hover { color: var(--text); }
+.pulse-key .n { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.pulse-key.static { cursor: default; }
+
+/* clickable venue names in rows */
+.v-link { cursor: pointer; border-radius: 3px; transition: color 0.15s; }
+.v-link:hover { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+
+/* VENUES TAB */
+#sec-venues .briefing { align-items: flex-start; padding-top: 32px; }
+.venues-wrap { max-width: 1200px; margin: 0 auto; padding: 8px 24px 48px; }
+.v-section { margin-top: 28px; }
+.v-section-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.v-section-head h3 { font-size: 18px; font-weight: 500; color: var(--accent); }
+.v-section-head .count { font-size: 13px; color: var(--text-muted); white-space: nowrap; }
+.v-section-head .rule { flex: 1; height: 1px; background: var(--border); }
+.v-row { display: grid; grid-template-columns: minmax(200px, 1.3fr) minmax(80px, 1fr) 44px minmax(0, 1.4fr); align-items: center; gap: 20px; padding: 12px 14px; margin: 0 -14px; border-radius: 10px; cursor: pointer; transition: background 0.15s; }
+.v-row:hover { background: rgba(255,255,255,0.045); }
+.v-name { min-width: 0; }
+.v-name strong { display: block; font-size: 15px; font-weight: 500; color: var(--text); transition: color 0.15s; }
+.v-row:hover .v-name strong { color: #fff; }
+.v-name span { display: block; font-size: 12.5px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+.v-bar { height: 6px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden; }
+.v-bar i { display: block; height: 100%; background: var(--accent); opacity: 0.8; border-radius: 4px; }
+.v-count { font-size: 14px; color: var(--text-secondary); text-align: right; font-variant-numeric: tabular-nums; }
+.v-years { display: flex; flex-wrap: wrap; gap: 5px; }
+.v-years .tl-chip { font-size: 12px; }
+@media (max-width: 800px) {
+  .v-row { grid-template-columns: 1fr 44px; row-gap: 8px; }
+  .v-bar { grid-column: 1 / -1; grid-row: 2; }
+  .v-years { grid-column: 1 / -1; }
+  .venues-wrap { padding-left: 16px; padding-right: 16px; }
+}
+@media (prefers-reduced-motion: reduce) { .pulse-seg, .pulse-seg::after { transition: none; } }
 
 /* SEARCH RESULTS (flat list) */
 .search-results { max-width: 1200px; margin: 0 auto; padding: 0 24px 32px; }
@@ -640,6 +722,7 @@ a { color: inherit; text-decoration: none; }
     <div class="nav-tabs">
       <button class="nav-tab active" data-tab="all" onclick="switchTab('all')">Recent Works</button>
       <button class="nav-tab" data-tab="email" onclick="switchTab('email')">Email Digest</button>
+      <button class="nav-tab" data-tab="venues" onclick="switchTab('venues')">Venues</button>
       <button class="nav-tab" data-tab="library" onclick="switchTab('library')">Library</button>
     </div>
     <div class="nav-search">
@@ -677,6 +760,7 @@ a { color: inherit; text-decoration: none; }
     <div>
       <h2 id="briefingTitle">Recent Works</h2>
       <p class="briefing-date"><span id="briefingDate"></span><span id="briefingNote"></span></p>
+      <div class="pulse" id="weekPulse"></div>
     </div>
   </div>
   <div class="filters" id="filtersBar">
@@ -691,6 +775,17 @@ a { color: inherit; text-decoration: none; }
     <div class="section-header" id="topicsHeader" style="max-width:1200px;margin:0 auto;padding:8px 24px 12px;">Your topics</div>
     <div class="topics-grid" id="topicsGrid"></div>
   </div>
+</div>
+
+<!-- VENUES TAB -->
+<div class="tab-section" id="sec-venues">
+  <div class="briefing">
+    <div>
+      <h2>Venues</h2>
+      <p class="briefing-date" id="venuesNote"></p>
+    </div>
+  </div>
+  <div class="venues-wrap" id="venuesContent"></div>
 </div>
 
 <!-- LIBRARY TAB -->
@@ -1083,6 +1178,127 @@ function revealContent() {
 }
 
 /* ===== HELPERS ===== */
+/* Group identity color: first 8 confirmed groups (display_order) get a slot, the rest stay neutral */
+function groupColor(g) {
+  const i = GROUP_ORDER.indexOf(g);
+  return i >= 0 && i < 8 ? `var(--g${i + 1})` : 'var(--g-other)';
+}
+function gdot(g) { return `<i class="gdot" style="--gc:${groupColor(g)}" aria-hidden="true"></i>`; }
+
+/* "Alert: Tomlin. High — CBFs + diffusion ... [residual -1: ...]" -> { reason, source } */
+function parseWhy(p) {
+  let n = (p.notes || '').replace(/\s+/g, ' ').trim();
+  if (!n) return null;
+  let source = '';
+  const a = n.match(/^Alert:\s*([^.]+)\.\s*/i);
+  if (a) { source = a[1].replace(/\s*\(.*?\)\s*/g, ' ').replace(/\bcitations?\b/ig, '').trim(); n = n.slice(a[0].length); }
+  n = n.replace(/\[residual[^\]]*\]?/ig, '').trim();
+  const t = n.match(/^(Core|High|Moderate|Low|Medium)\b\s*[—–-]+\s*/i);
+  if (t) n = n.slice(t[0].length);
+  n = n.replace(/\s*[—–]\s*$/, '').trim();
+  if (!n) return null;
+  return { reason: n.charAt(0).toUpperCase() + n.slice(1), source };
+}
+function whyHTML(p, cls) {
+  const w = parseWhy(p);
+  if (!w) return '';
+  return `<p class="why ${cls||''}">${esc(w.reason)}${w.source ? ` <span class="why-src">From your ${esc(w.source)} alert</span>` : ''}</p>`;
+}
+
+/* ----- Venue normalization: messy venue strings -> { name, full, kind, year } ----- */
+const VENUES = [
+  // conferences
+  ['ICRA', 'International Conference on Robotics and Automation', 'conference', /\bICRA\b|Conference on Robotics and Automation/i],
+  ['IROS', 'International Conference on Intelligent Robots and Systems', 'conference', /\bIROS\b|Intelligent Robots and Systems/i],
+  ['RSS', 'Robotics: Science and Systems', 'conference', /\bRSS\b|Robotics: Science and Systems/i],
+  ['CoRL', 'Conference on Robot Learning', 'conference', /\bCoRL\b|Conference on Robot Learning/i],
+  ['NeurIPS', 'Neural Information Processing Systems', 'conference', /NeurIPS|Neural Information Processing/i],
+  ['ICML', 'International Conference on Machine Learning', 'conference', /\bICML\b|International Conference on Machine Learning/i],
+  ['ICLR', 'International Conference on Learning Representations', 'conference', /\bICLR\b|Learning Representations/i],
+  ['L4DC', 'Learning for Dynamics and Control', 'conference', /L4DC|Learning for Dynamics and Control/i],
+  ['CDC', 'Conference on Decision and Control', 'conference', /\bCDC\b|Conference on Decision and Control/i],
+  ['ECC', 'European Control Conference', 'conference', /\bECC\b|European Control Conference/i],
+  ['CVPR', 'Computer Vision and Pattern Recognition', 'conference', /\bCVPR\b/i],
+  ['ECCV', 'European Conference on Computer Vision', 'conference', /\bECCV\b/i],
+  ['AAAI', 'AAAI Conference on Artificial Intelligence', 'conference', /\bAAAI\b/i],
+  ['IJCAI', 'International Joint Conference on Artificial Intelligence', 'conference', /\bIJCAI\b/i],
+  ['ICASSP', 'Acoustics, Speech and Signal Processing', 'conference', /\bICASSP\b/i],
+  ['EACL', 'European Chapter of the ACL', 'conference', /\bEACL\b/i],
+  ['WAFR', 'Workshop on the Algorithmic Foundations of Robotics', 'conference', /\bWAFR\b|Algorithmic Foundations of Robotics/i],
+  ['IFAC World Congress', '', 'conference', /IFAC World Congress/i],
+  ['CAV', 'Computer Aided Verification', 'conference', /\bCAV\b|Computer Aided Verification/i],
+  ['NeuS', 'Neuro-Symbolic Systems', 'conference', /\bNeuS\b/],
+  ['RV', 'Runtime Verification', 'conference', /^RV\b/],
+  ['COPA', 'Conformal and Probabilistic Prediction', 'conference', /\bCOPA\b/],
+  ['IV', 'IEEE Intelligent Vehicles Symposium', 'conference', /Intelligent Vehicles Symposium/i],
+  ['KDD', 'ACM SIGKDD', 'conference', /SIGKDD|\bKDD\b/],
+  ['ICIC', 'International Conference on Intelligent Computing', 'conference', /\bICIC\b/],
+  ['KSEM', 'Knowledge Science, Engineering and Management', 'conference', /\bKSEM\b/],
+  ['Eurocast', '', 'conference', /Eurocast/i],
+  ['CLAWAR', '', 'conference', /CLAWAR/i],
+  // journals
+  ['RA-L', 'IEEE Robotics and Automation Letters', 'journal', /RA-L|Robotics and Automation Letters/i],
+  ['T-RO', 'IEEE Transactions on Robotics', 'journal', /\bT-RO\b|Transactions on Robotics\b/i],
+  ['IJRR', 'International Journal of Robotics Research', 'journal', /\bIJRR\b|Journal of Robotics Research/i],
+  ['T-RL', 'Transactions on Robot Learning', 'journal', /\bT-RL\b|Transactions on Robot Learning/i],
+  ['RAS', 'Robotics and Autonomous Systems', 'journal', /Robotics and Autonomous Systems/i],
+  ['L-CSS', 'IEEE Control Systems Letters', 'journal', /L-CSS|Control Systems Letters/i],
+  ['TAC', 'IEEE Transactions on Automatic Control', 'journal', /Transactions on Automatic Control/i],
+  ['TASE', 'IEEE Transactions on Automation Science and Engineering', 'journal', /\bTASE\b|Automation Science and Engineering/i],
+  ['TMLR', 'Transactions on Machine Learning Research', 'journal', /Transactions on Machine Learning Research|\bTMLR\b/i],
+  ['TPAMI', 'IEEE Transactions on Pattern Analysis and Machine Intelligence', 'journal', /Pattern Analysis and Machine Intelligence/i],
+  ['T-Mech', 'IEEE/ASME Transactions on Mechatronics', 'journal', /Mechatronics/i],
+  ['Science Robotics', '', 'journal', /Science Robotics/i],
+  ['Automatica', '', 'journal', /Automatica/i],
+];
+const V_PREPRINT = { arxiv: 'arXiv', engrxiv: 'engrXiv', hal: 'HAL', openreview: 'OpenReview' };
+function _venueOf(p) {
+  const raw = (p.venue || '').trim();
+  const vy = (raw.match(/\b(20\d{2})\b/) || [])[1];
+  const py = (String(p.publishing_date || '').match(/\b(20\d{2})\b/) || [])[1];
+  const year = parseInt(vy || py) || null;
+  const out = (name, full, kind) => ({ name, full: full || '', kind, year });
+  if (!raw || raw === 'not specified') return out('Unknown venue', '', 'other');
+  if (/ph\.?\s?d|thesis|dissertation/i.test(raw)) return out('Theses', 'PhD theses and dissertations', 'other');
+  const known = VENUES.find(v => v[3].test(raw));
+  if (/workshop/i.test(raw) && !/Algorithmic Foundations/i.test(raw)) {
+    const conf = VENUES.find(v => v[2] === 'conference' && v[3].test(raw));
+    return conf ? out(`${conf[0]} Workshops`, `Workshops at ${conf[0]}`, 'workshop') : out('Other workshops', 'Standalone and unlisted workshops', 'workshop');
+  }
+  if (/submitted|submission/i.test(raw)) {
+    const k = Object.keys(V_PREPRINT).find(k => raw.toLowerCase().includes(k)) || 'arxiv';
+    return out(V_PREPRINT[k], 'Preprint, under submission', 'preprint');
+  }
+  if (known) return out(known[0], known[1], known[2]);
+  const pre = Object.keys(V_PREPRINT).find(k => raw.toLowerCase().includes(k));
+  if (pre || /^preprint$/i.test(raw)) return out(pre ? V_PREPRINT[pre] : 'Other preprints', '', 'preprint');
+  if (/^IEEE Transactions \(/i.test(raw)) return out('IEEE Transactions', 'Journal not identified', 'journal');
+  const clean = raw.replace(/\s*\(.*?\)\s*/g, ' ').replace(/\b20\d{2}\b/g, '').replace(/\s+/g, ' ').trim();
+  const journalish = /journal|transactions|letters|trans\.|proceedings|reports|science|sensors|entropy|biomimetic|neurocomputing|applications|practice|systems|control|intelligen|access|results|monitoring/i;
+  return out(clean || raw, '', journalish.test(clean) ? 'journal' : 'other');
+}
+const _venueCache = new WeakMap();
+function venueOf(p) {
+  let v = _venueCache.get(p);
+  if (!v) { v = _venueOf(p); _venueCache.set(p, v); }
+  return v;
+}
+/* Short label for rows: "RSS 2026", "RA-L", "arXiv" (preprints and journals skip the year) */
+function venueHasEditions(v) { return (v.kind === 'conference' || v.kind === 'workshop') && v.name !== 'Other workshops'; }
+function venueLabel(v) { return venueHasEditions(v) && v.year ? `${v.name} ${v.year}` : v.name; }
+/* Publication date, dropped when it is just a year the venue label already shows ("L4DC 2026") */
+function displayDate(p) {
+  const d = paperDate(p);
+  if (/^\d{4}$/.test(d) && hasText(p.venue) && venueLabel(venueOf(p)).endsWith(d)) return '';
+  return d;
+}
+function venueLinkHTML(p, cls) {
+  const v = venueOf(p);
+  if (v.name === 'Unknown venue') return '';
+  const yr = venueHasEditions(v) ? v.year : null;
+  return `<span class="${cls} v-link" title="${escAttr(p.venue || '')}" onclick="event.stopPropagation();openVenue('${escAttr(v.name)}'${yr ? ',' + yr : ''})">${esc(venueLabel(v))}</span>`;
+}
+
 function norm(g) { return GROUP_NORMALIZE[g] || g || 'Other'; }
 function relLabel(t) { return t === 'definitely' ? 'Must Read' : t === 'probably' ? 'Interesting' : 'Tangential'; }
 function esc(s) { if (!s) return ''; const el = document.createElement('span'); el.textContent = s; return el.innerHTML; }
@@ -1282,11 +1498,13 @@ function switchTab(tab, fromHash) {
   const paperTabs = ['all','email'];
   document.getElementById('sec-papers').classList.toggle('active', paperTabs.includes(tab));
   document.getElementById('sec-library').classList.toggle('active', tab === 'library');
+  document.getElementById('sec-venues').classList.toggle('active', tab === 'venues');
   document.getElementById('sec-interests').classList.toggle('active', tab === 'interests');
   document.getElementById('sec-paper').classList.remove('active');
   _paperViewActive = false;
   if (paperTabs.includes(tab)) applyFilters();
   else if (tab === 'library') renderLibrary();
+  else if (tab === 'venues') renderVenues();
   else if (tab === 'interests') renderInterests();
 }
 
@@ -1325,6 +1543,7 @@ function applyFilters() {
   const weekAgo = Date.now() - 7 * 86400000;
   const newMust = base.filter(p => p.date_found && new Date(p.date_found + 'T00:00:00') >= weekAgo && dynamicRelevance(p) === 'definitely').length;
   document.getElementById('briefingNote').textContent = newMust ? ` ${newMust} new must-read ${newMust === 1 ? 'paper' : 'papers'} this week.` : '';
+  renderWeekPulse(base.filter(p => p.date_found && new Date(p.date_found + 'T00:00:00') >= weekAgo));
 
   renderPapers(papers);
 }
@@ -1365,14 +1584,41 @@ function renderPapers(papers) {
     }
     shown.forEach(p => shownAbove.add(paperKey(p)));
     const extra = items.length - shown.length;
-    return `<div class="topic-card">
-      <div class="topic-title" onclick="openGroup('${escAttr(name)}')"><span class="topic-label">${esc(name)}</span>
+    return `<div class="topic-card" style="--gc:${groupColor(name)}">
+      <div class="topic-title" onclick="openGroup('${escAttr(name)}')">${gdot(name)}<span class="topic-label">${esc(name)}</span>
         <svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
         <span class="topic-extra">${extra > 0 ? `View all ${items.length}` : `${items.length} ${items.length === 1 ? 'paper' : 'papers'}`}</span>
       </div>
       <div class="topic-body feed-body">${shown.map(feedItemHTML).join('')}</div>
     </div>`;
   }).join('');
+}
+
+/* Stacked bar of this week's additions by topic; groups past the 8 color slots fold into "Other" */
+function renderWeekPulse(weekPapers) {
+  const el = document.getElementById('weekPulse');
+  if (!weekPapers.length) { el.innerHTML = ''; return; }
+  const counts = {};
+  weekPapers.forEach(p => groupsOfPaper(p).forEach(g => counts[g] = (counts[g] || 0) + 1));
+  const ordered = GROUP_ORDER.filter(g => counts[g]);
+  const colored = ordered.filter(g => GROUP_ORDER.indexOf(g) < 8);
+  const otherN = ordered.filter(g => GROUP_ORDER.indexOf(g) >= 8).reduce((n, g) => n + counts[g], 0);
+  const items = colored.map(g => ({ g, n: counts[g] }));
+  if (otherN) items.push({ g: null, n: otherN });
+  if (!items.length) { el.innerHTML = ''; return; }
+  const seg = it => `<div class="pulse-seg" style="flex-grow:${it.n};--gc:${it.g ? groupColor(it.g) : 'var(--g-other)'}" data-g="${escAttr(it.g || '')}" data-tip="${escAttr((it.g || 'Other topics') + ': ' + it.n)}" ${it.g ? `onclick="openGroup('${escAttr(it.g)}')"` : ''}></div>`;
+  const key = it => it.g
+    ? `<button class="pulse-key" onclick="openGroup('${escAttr(it.g)}')" onmouseenter="pulseHL('${escAttr(it.g)}')" onmouseleave="pulseHL(null)">${gdot(it.g)}${esc(it.g)} <span class="n">${it.n}</span></button>`
+    : `<span class="pulse-key static">${gdot('')}Other <span class="n">${it.n}</span></span>`;
+  el.innerHTML = `
+    <div class="pulse-cap"><b>${weekPapers.length} ${weekPapers.length === 1 ? 'paper' : 'papers'}</b> arrived this week, by topic</div>
+    <div class="pulse-bar" role="img" aria-label="${escAttr(items.map(it => (it.g || 'Other') + ' ' + it.n).join(', '))}">${items.map(seg).join('')}</div>
+    <div class="pulse-legend">${items.map(key).join('')}</div>`;
+}
+function pulseHL(g) {
+  const el = document.getElementById('weekPulse');
+  el.classList.toggle('hl', !!g);
+  el.querySelectorAll('.pulse-seg').forEach(s => s.classList.toggle('on', s.dataset.g === g));
 }
 
 const MAX_TOP_CARDS = 5;  // lead + 4 in the side list
@@ -1423,8 +1669,8 @@ function feedMetaHTML(p, showRel) {
   const venue = hasText(p.venue) ? p.venue : '';
   return `<div class="f-meta">
     ${showRel ? `<span class="f-rel rel-${rel}"><i></i>${relLabel(rel)}</span>` : ''}
-    ${venue ? `<span class="f-venue" title="${escAttr(venue)}">${esc(shortVenue(venue))}</span>` : ''}
-    ${paperDate(p) ? `<span class="f-date">${esc(paperDate(p))}</span>` : ''}
+    ${venue ? venueLinkHTML(p, 'f-venue') : ''}
+    ${displayDate(p) ? `<span class="f-date">${esc(displayDate(p))}</span>` : ''}
     ${starSet.has(k) ? '<span class="f-star" title="Starred">&#9733;</span>' : ''}
   </div>`;
 }
@@ -1442,6 +1688,7 @@ function topLeadHTML(p) {
     <h3 class="lead-headline">${esc(p.headline||p.title)}</h3>
     ${showTitle ? `<div class="lead-title">${esc(p.title)}</div>` : ''}
     ${hasText(p.summary) ? `<p class="lead-summary">${esc(p.summary)}</p>` : ''}
+    ${whyHTML(p, 'lead-why')}
     ${hasText(p.authors) ? `<div class="lead-authors">${esc(p.authors)}</div>` : ''}
     <div class="lead-actions">${feedActionsHTML(p, false)}</div>
   </article>`;
@@ -1455,7 +1702,7 @@ function feedItemHTML(p) {
     <div class="f-headline">${esc(p.headline||p.title)}</div>
     ${showTitle ? `<div class="f-title" title="${escAttr(p.title)}">${esc(p.title)}</div>` : ''}
     ${feedMetaHTML(p, true)}
-    <div class="f-actions"><div>${feedActionsHTML(p, true)}</div></div>
+    <div class="f-actions"><div>${whyHTML(p)}${feedActionsHTML(p, true)}</div></div>
   </article>`;
 }
 
@@ -1709,6 +1956,89 @@ function openGroup(name, skipHash) {
   if (!skipHash) location.hash = '#group/' + encodeURIComponent(name);
   openOverlay();
 }
+/* ----- Venues tab ----- */
+const V_KINDS = [['conference', 'Conferences'], ['journal', 'Journals'], ['workshop', 'Workshops'], ['preprint', 'Preprints'], ['other', 'Theses and other']];
+function renderVenues() {
+  const byVenue = {};
+  allPapers.forEach(p => {
+    const v = venueOf(p);
+    const e = byVenue[v.name] || (byVenue[v.name] = { name: v.name, full: v.full, kind: v.kind, n: 0, years: {} });
+    e.n++;
+    if (v.year) e.years[v.year] = (e.years[v.year] || 0) + 1;
+  });
+  const venues = Object.values(byVenue);
+  const peer = venues.filter(v => v.kind === 'conference' || v.kind === 'journal');
+  const peerN = peer.reduce((n, v) => n + v.n, 0);
+  document.getElementById('venuesNote').textContent =
+    `${peerN} papers from ${peer.length} conferences and journals, plus workshops and preprints. Pick a venue for all its papers, or a year for one edition.`;
+  document.getElementById('venuesContent').innerHTML = V_KINDS.map(([kind, label]) => {
+    const list = venues.filter(v => v.kind === kind).sort((a, b) => b.n - a.n || a.name.localeCompare(b.name));
+    if (!list.length) return '';
+    const max = list[0].n, total = list.reduce((n, v) => n + v.n, 0);
+    const row = v => {
+      const years = Object.keys(v.years).sort((a, b) => b - a);
+      const chips = years.length > 1 || kind === 'conference' || kind === 'workshop'
+        ? years.map(y => `<button class="tl-chip" onclick="event.stopPropagation();openVenue('${escAttr(v.name)}',${y})">${y}<span class="n">${v.years[y]}</span></button>`).join('')
+        : '';
+      return `<div class="v-row" onclick="openVenue('${escAttr(v.name)}')" title="All ${esc(v.name)} papers">
+        <div class="v-name"><strong>${esc(v.name)}</strong>${v.full ? `<span>${esc(v.full)}</span>` : ''}</div>
+        <div class="v-bar"><i style="width:${Math.max(v.n / max * 100, 2)}%"></i></div>
+        <div class="v-count">${v.n}</div>
+        <div class="v-years">${chips}</div>
+      </div>`;
+    };
+    return `<section class="v-section">
+      <div class="v-section-head"><h3>${label}</h3><span class="count">${total} ${total === 1 ? 'paper' : 'papers'}</span><span class="rule"></span></div>
+      ${list.map(row).join('')}
+    </section>`;
+  }).join('');
+}
+
+/* ----- Venue overlay: one venue, all years or a single year ----- */
+const VENUE_KEY = 'venue:';
+let _venueYear = null;
+function openVenue(name, year, skipHash) {
+  const key = VENUE_KEY + name;
+  if (_overlayGroupName === key && _venueYear === (year || null) && document.getElementById('overlay').classList.contains('open')) return;
+  _overlayGroupName = key;
+  _venueYear = year || null;
+  setOverlayTopMode(true);
+  renderVenueList();
+  document.getElementById('overlayBody').scrollTop = 0;
+  if (!skipHash) location.hash = venueHash(name, _venueYear);
+  openOverlay();
+}
+function venueHash(name, year) { return '#venue/' + encodeURIComponent(name) + (year ? '/' + year : ''); }
+function setVenueYear(y) {
+  _venueYear = y;
+  renderVenueList();
+  document.getElementById('overlayBody').scrollTop = 0;
+  history.replaceState(null, '', venueHash(_overlayGroupName.slice(VENUE_KEY.length), y));
+}
+function renderVenueList() {
+  const name = _overlayGroupName.slice(VENUE_KEY.length);
+  const all = allPapers.filter(p => venueOf(p).name === name);
+  const visible = hideRead ? all.filter(p => !readSet.has(paperKey(p))) : all;
+  const counts = {};
+  visible.forEach(p => { const y = venueOf(p).year; if (y) counts[y] = (counts[y] || 0) + 1; });
+  const years = Object.keys(counts).sort((a, b) => b - a).map(Number);
+  if (_venueYear && !counts[_venueYear]) _venueYear = null;
+  const inYear = p => !_venueYear || venueOf(p).year === _venueYear;
+  const papers = sortForList(visible.filter(inYear));
+  const full = all.length ? venueOf(all[0]).full : '';
+  document.getElementById('overlayTitle').textContent = `${name}${_venueYear ? ' ' + _venueYear : ''}`;
+  setListProgress(all.filter(inYear));
+  if (full) document.getElementById('overlaySub').textContent = `${full}. ` + document.getElementById('overlaySub').textContent;
+  const chip = (y, label, n) => `<button class="tl-chip ${_venueYear === y ? 'active' : ''}" onclick="setVenueYear(${y === null ? 'null' : y})">${label}<span class="n">${n}</span></button>`;
+  document.getElementById('overlayToolbar').innerHTML = years.length > 1
+    ? `<div class="tl-chips" role="toolbar" aria-label="Filter by year">${chip(null, 'All years', visible.length)}${years.map(y => chip(y, y, counts[y])).join('')}</div>`
+    : '';
+  document.getElementById('overlayHeaderTools').innerHTML = sortToolsHTML();
+  document.getElementById('overlayBody').innerHTML = papers.length
+    ? paperListHTML(papers, { sections: true })
+    : '<div class="tl-empty">No papers from this venue match your current filters.</div>';
+}
+
 function renderGroupList(name) {
   const inGroup = p => (p.theme_groups||'').split('|').map(norm).includes(name);
   const papers = sortForList(applyViewFilters(allPapers.filter(inGroup)));
@@ -1748,7 +2078,9 @@ function setTopSort(v) { _topSort = v; renderOpenList(); document.getElementById
 function renderOpenList(keepScroll) {
   if (!_overlayGroupName) return false;
   const body = document.getElementById('overlayBody'), st = body.scrollTop;
-  if (_overlayGroupName === TOP_LIST_KEY) renderTopList(); else renderGroupList(_overlayGroupName);
+  if (_overlayGroupName === TOP_LIST_KEY) renderTopList();
+  else if (_overlayGroupName.startsWith(VENUE_KEY)) renderVenueList();
+  else renderGroupList(_overlayGroupName);
   if (keepScroll) body.scrollTop = st;
   return true;
 }
@@ -1838,7 +2170,7 @@ function renderTopList() {
     const ia = GROUP_ORDER.indexOf(a), ib = GROUP_ORDER.indexOf(b);
     return (ia===-1?999:ia) - (ib===-1?999:ib);
   });
-  const chip = (g, label, n) => `<button class="tl-chip ${_topGroup===g?'active':''}" onclick="setTopGroup(${g===null?'null':`'${escAttr(g)}'`})">${esc(label)}<span class="n">${n}</span></button>`;
+  const chip = (g, label, n) => `<button class="tl-chip ${_topGroup===g?'active':''}" onclick="setTopGroup(${g===null?'null':`'${escAttr(g)}'`})">${g ? gdot(g) : ''}${esc(label)}<span class="n">${n}</span></button>`;
   document.getElementById('overlayToolbar').innerHTML =
     `<div class="tl-chips" role="toolbar" aria-label="Filter by group">${chip(null, 'All groups', base.length)}${chipNames.map(g => chip(g, g, counts[g])).join('')}</div>`;
   document.getElementById('overlayHeaderTools').innerHTML = sortToolsHTML();
@@ -1867,14 +2199,15 @@ function topRowHTML(p, groups) {
       ${showTitle ? `<div class="tr-title" title="${escAttr(p.title)}">${esc(p.title)}</div>` : ''}
       <div class="tr-line">
         ${p.authors && p.authors!=='not specified' ? `<span class="tr-authors">${esc(p.authors)}</span>` : ''}
-        ${groups.length && groups.length < 4 ? `<span class="tr-groups">${groups.map(g => `<span class="tr-group">${esc(g)}</span>`).join('')}</span>` : ''}
+        ${groups.length && groups.length < 4 ? `<span class="tr-groups">${groups.map(g => `<span class="tr-group">${gdot(g)}${esc(g)}</span>`).join('')}</span>` : ''}
       </div>
     </div>
     <div class="tr-side">
-      ${venue ? `<span class="tr-venue" title="${escAttr(venue)}">${esc(shortVenue(venue))}</span>` : ''}
-      <span>${starSet.has(k) ? '<span class="tr-star" title="Starred">&#9733;</span> ' : ''}${paperDate(p) ? esc(paperDate(p)) : ''}</span>
+      ${venue ? venueLinkHTML(p, 'tr-venue') : ''}
+      <span>${starSet.has(k) ? '<span class="tr-star" title="Starred">&#9733;</span> ' : ''}${esc(displayDate(p))}</span>
     </div>
     <div class="tr-actions"><div>
+      ${whyHTML(p)}
       <div class="p-action-row">${summaryBtn(p)} ${absBtn(p)} ${linkBtn(p)} <span class="p-actions has-active">${starBtn(p)} ${readBtn(p)} ${saveBtn(p)} ${deleteBtn(p)}</span></div>
       <div class="p-detail-panel" data-summary="${hasSummary?dataAttr(p.summary):''}" data-abstract="${hasAbstract?dataAttr(p.abstract):''}"></div>
     </div></div>
@@ -1900,7 +2233,7 @@ function closeOverlay(skipHistory) {
   /* fallback if transition doesn't fire */
   setTimeout(() => { ol.classList.remove('open', 'closing'); document.body.style.overflow = ''; }, 350);
   /* Navigate back to the tab if the user closed the overlay directly (not via hash change) */
-  if (!skipHistory && (location.hash.startsWith('#group/') || location.hash === '#top')) {
+  if (!skipHistory && (location.hash.startsWith('#group/') || location.hash.startsWith('#venue/') || location.hash === '#top')) {
     history.back();
   }
 }
@@ -2751,7 +3084,7 @@ function paperBack() {
 }
 
 /* ===== HASH-BASED ROUTING ===== */
-const VALID_TABS = ['all', 'email', 'library', 'interests'];
+const VALID_TABS = ['all', 'email', 'venues', 'library', 'interests'];
 function applyHash() {
   const hash = location.hash.slice(1); // remove '#'
 
@@ -2784,6 +3117,21 @@ function applyHash() {
         document.querySelectorAll('.nav-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === currentTab));
       }
       openGroup(groupName, true);
+      return;
+    }
+  }
+
+  // Venue overlay route: #venue/<name> or #venue/<name>/<year>
+  if (hash.startsWith('venue/')) {
+    const parts = hash.slice(6).split('/');
+    const year = /^\d{4}$/.test(parts[parts.length - 1]) && parts.length > 1 ? parseInt(parts.pop()) : null;
+    const name = decodeURIComponent(parts.join('/'));
+    if (name) {
+      const sec = ['all','email'].includes(currentTab) ? 'sec-papers' : 'sec-' + currentTab;
+      const secEl = document.getElementById(sec);
+      if (secEl) secEl.classList.add('active');
+      document.querySelectorAll('.nav-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === currentTab));
+      openVenue(name, year, true);
       return;
     }
   }
