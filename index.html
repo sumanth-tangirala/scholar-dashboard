@@ -461,6 +461,8 @@ body.tok-mode .main-scroll { overflow: hidden; }
 body.tok-mode #sec-papers.active { display: flex; flex-direction: column; height: 100%; min-height: 0; }
 body.tok-mode #sec-papers .briefing, body.tok-mode #sec-papers .filters, body.tok-mode #papersContent { display: none; }
 body.tok-mode .tok-bar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; flex-shrink: 0; border-bottom: 1px solid var(--border); position: relative; }
+body.tok-mode #tokWrap { display: flex; flex-direction: column; flex: 1; min-height: 0; position: relative; }
+#tokWrap { display: none; }
 body.tok-mode .tok { display: block; flex: 1; min-height: 0; overflow-y: auto; scroll-snap-type: y mandatory; overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; }
 .tok::-webkit-scrollbar { display: none; }
 .tok { scrollbar-width: none; }
@@ -472,7 +474,7 @@ body.tok-mode .tok { display: block; flex: 1; min-height: 0; overflow-y: auto; s
 .tok-count { font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; flex-shrink: 0; padding-left: 4px; }
 .tok-progress { position: absolute; left: 0; bottom: -1px; height: 2px; background: var(--accent); width: 0; transition: width 0.2s ease; }
 
-.tok-card { position: relative; height: 100%; scroll-snap-align: start; scroll-snap-stop: always; display: flex; flex-direction: column; padding: 20px 72px 18px 20px; overflow: hidden; }
+.tok-card { touch-action: pan-y; position: relative; z-index: 2; background: var(--bg); height: 100%; scroll-snap-align: start; scroll-snap-stop: always; display: flex; flex-direction: column; padding: 20px 72px 18px 20px; overflow: hidden; }
 .tok-card::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 45%; background: var(--gc, var(--accent)); opacity: 0.07; pointer-events: none; -webkit-mask-image: linear-gradient(#000, transparent); mask-image: linear-gradient(#000, transparent); }
 .tok-topics { display: flex; flex-wrap: wrap; gap: 6px; position: relative; }
 .tok-topic { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-secondary); background: rgba(255,255,255,0.07); padding: 3px 10px; border-radius: 999px; }
@@ -492,6 +494,15 @@ body.tok-mode .tok { display: block; flex: 1; min-height: 0; overflow-y: auto; s
 .tok-card.has-hint { padding-bottom: 46px; }
 .tok-hint { position: absolute; left: 0; right: 0; bottom: 14px; text-align: center; font-size: 12px; color: var(--text-muted); animation: tok-bob 1.8s ease-in-out infinite; pointer-events: none; }
 @keyframes tok-bob { 0%, 100% { transform: translateY(0); opacity: 0.75; } 50% { transform: translateY(-5px); opacity: 1; } }
+.tok-card.snapback { transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1); }
+.tok-card.is-read .tok-head, .tok-card.is-read .tok-summary { opacity: 0.6; }
+/* swipe cues sit in the space the card uncovers, so they stay put while the card moves */
+.tok-cues { display: none; }
+body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-events: none; z-index: 1; overflow: hidden; }
+.tok-cue { position: absolute; top: 50%; transform: translateY(-50%) scale(0.92); display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; padding: 10px 15px; border-radius: 999px; opacity: 0; transition: opacity 0.1s linear, transform 0.1s ease; white-space: nowrap; }
+.tok-cue.star { left: 14px; color: var(--star); background: rgba(201,163,86,0.2); }
+.tok-cue.read { right: 14px; color: var(--green); background: rgba(129,201,149,0.2); }
+.tok-cue.armed { transform: translateY(-50%) scale(1.06); }
 .tok-empty { height: 100%; display: flex; align-items: center; justify-content: center; padding: 32px; text-align: center; color: var(--text-secondary); }
 @media (prefers-reduced-motion: reduce) { .tok-hint { animation: none; } .tok-progress { transition: none; } }
 
@@ -891,7 +902,10 @@ body.tok-mode .tok { display: block; flex: 1; min-height: 0; overflow-y: auto; s
     <button class="pill pill-read" data-rel="hideread" onclick="toggleHideRead()"><span id="hideReadLabel">Show read</span> <span id="stat-read">0</span></button>
   </div>
   <div class="tok-bar" id="tokBar"></div>
-  <div class="tok" id="tokFeed"></div>
+  <div class="tok-wrap" id="tokWrap">
+    <div class="tok-cues"><span class="tok-cue star" id="tokCueStar">&#9733; Star</span><span class="tok-cue read" id="tokCueRead">&#10003; Mark read</span></div>
+    <div class="tok" id="tokFeed"></div>
+  </div>
   <div id="papersContent">
     <div class="top-papers" id="topStories"></div>
     <div class="section-header" id="topicsHeader" style="max-width:1200px;margin:0 auto;padding:8px 24px 12px;">Your topics</div>
@@ -1713,7 +1727,7 @@ function renderTok(papers) {
     while (feed.scrollHeight < back + feed.clientHeight && _tokShown < _tokPapers.length && guard++ < 200) tokAppend();
     feed.scrollTop = back;
   }
-  if (!feed._hooked) { feed.addEventListener('scroll', tokOnScroll, { passive: true }); feed._hooked = true; }
+  if (!feed._hooked) { feed.addEventListener('scroll', tokOnScroll, { passive: true }); tokBindGestures(feed); feed._hooked = true; }
   tokOnScroll();
 }
 function tokAppend() {
@@ -1739,7 +1753,7 @@ function tokCardHTML(p, idx) {
   const body = hasText(p.summary) ? p.summary : (hasText(p.abstract) ? p.abstract : '');
   const showTitle = hasText(p.headline) && p.headline.trim() !== (p.title||'').trim();
   const hint = idx === 0 && !_tokHinted;
-  return `<article class="tok-card ${hint?'has-hint':''}" style="--gc:${groups.length ? groupColor(groups[0]) : 'var(--accent)'}">
+  return `<article class="tok-card ${hint?'has-hint':''} ${ir?'is-read':''}" data-key="${ka}" style="--gc:${groups.length ? groupColor(groups[0]) : 'var(--accent)'}">
     <div class="tok-topics">${groups.slice(0, 2).map(g => `<span class="tok-topic">${gdot(g)}${esc(g)}</span>`).join('')}</div>
     <h2 class="tok-head" onclick="openPaper('${ka}', event)">${esc(p.headline || p.title)}</h2>
     ${showTitle ? `<div class="tok-title">${esc(p.title)}</div>` : ''}
@@ -1757,9 +1771,111 @@ function tokCardHTML(p, idx) {
       <button class="tok-act ${paperInAnyList(k)?'on-list':''}" onclick="tokAct(event,this,'list','${ka}')" aria-label="Save to list">&#9776;</button>
       ${p.url ? `<a class="tok-act" href="${esc(p.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" aria-label="Open paper"><svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>` : ''}
     </div>
-    ${hint ? '<div class="tok-hint">Swipe up for the next paper</div>' : ''}
+    ${hint ? '<div class="tok-hint">Swipe up for next &middot; right to star &middot; left to mark read</div>' : ''}
   </article>`;
 }
+/* ---- sideways gestures: right stars, left marks read, hold saves to a list ---- */
+const TOK_SWIPE_RATIO = 1 / 3;   // of the card width
+const TOK_HOLD_MS = 500;
+let _tokGesture = null;
+function tokBindGestures(feed) {
+  feed.addEventListener('pointerdown', tokDown);
+  feed.addEventListener('pointermove', tokMove);
+  feed.addEventListener('pointerup', tokUp);
+  feed.addEventListener('pointercancel', tokUp);
+}
+function tokDown(e) {
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  if (e.target.closest('button, a')) return;          // rail and "Read full paper" keep their taps
+  const card = e.target.closest('.tok-card');
+  if (!card) return;
+  card.classList.remove('snapback');
+  _tokGesture = {
+    card, id: e.pointerId, x0: e.clientX, y0: e.clientY, dx: 0, axis: null,
+    hold: setTimeout(() => {
+      if (!_tokGesture || _tokGesture.axis) return;
+      const g = _tokGesture; _tokGesture = null;
+      tokReset(g.card);
+      // the click that ends the hold would hit the document handler that closes the picker
+      document.addEventListener('click', e => { e.stopPropagation(); e.preventDefault(); }, { capture: true, once: true });
+      openSaveDD(g.card.querySelector('.tok-act'), g.card.dataset.key);
+      if (navigator.vibrate) navigator.vibrate(12);
+    }, TOK_HOLD_MS)
+  };
+}
+function tokMove(e) {
+  const g = _tokGesture;
+  if (!g || e.pointerId !== g.id) return;
+  const dx = e.clientX - g.x0, dy = e.clientY - g.y0;
+  if (!g.axis) {
+    if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.4) { g.axis = 'x'; clearTimeout(g.hold); }
+    else if (Math.abs(dx) > 10 || Math.abs(dy) > 10) { clearTimeout(g.hold); _tokGesture = null; return; }  // let it scroll
+    else return;
+  }
+  g.dx = dx;
+  const progress = Math.min(Math.abs(dx) / (g.card.clientWidth * TOK_SWIPE_RATIO), 1);
+  g.card.style.transform = `translateX(${dx}px) rotate(${dx * 0.015}deg)`;
+  tokCue(dx > 0 ? 'star' : 'read', progress);
+}
+function tokUp(e) {
+  const g = _tokGesture;
+  if (!g) return;
+  clearTimeout(g.hold);
+  _tokGesture = null;
+  if (g.axis !== 'x') { tokReset(g.card); return; }
+  if (Math.abs(g.dx) >= g.card.clientWidth * TOK_SWIPE_RATIO) tokCommit(g.card, g.dx > 0 ? 'star' : 'read');
+  else tokReset(g.card);
+}
+function tokCue(which, progress) {
+  const star = document.getElementById('tokCueStar'), read = document.getElementById('tokCueRead');
+  if (!star || !read) return;
+  const armed = progress >= 1;
+  star.style.opacity = which === 'star' ? progress : 0;
+  read.style.opacity = which === 'read' ? progress : 0;
+  star.classList.toggle('armed', armed && which === 'star');
+  read.classList.toggle('armed', armed && which === 'read');
+}
+function tokReset(card) {
+  card.classList.add('snapback');
+  card.style.transform = '';
+  tokCue('star', 0); tokCue('read', 0);
+  setTimeout(() => card.classList.remove('snapback'), 240);
+}
+function tokCommit(card, action) {
+  const k = card.dataset.key;
+  const apply = () => {
+    _tokLock = true;
+    if (action === 'star') {
+      toggleStar(k, null);
+      const on = starSet.has(k);
+      const btn = card.querySelector('.tok-act');
+      if (btn) btn.classList.toggle('on-star', on);
+      _tokLock = false;
+      return on ? 'Starred' : 'Unstarred';
+    }
+    toggleRead(k, null);
+    const on = readSet.has(k);
+    card.classList.toggle('is-read', on);
+    const btn = card.querySelectorAll('.tok-act')[1];
+    if (btn) { btn.classList.toggle('on-read', on); btn.setAttribute('aria-label', on ? 'Mark unread' : 'Mark read'); }
+    _tokLock = false;
+    return on ? 'Marked read' : 'Marked unread';
+  };
+  const msg = apply();
+  toast(msg, () => apply());
+  tokReset(card);
+  tokNext();
+}
+function tokNext() {
+  const feed = document.getElementById('tokFeed');
+  const h = feed.clientHeight;
+  const i = Math.round(feed.scrollTop / h);
+  if (i + 1 >= _tokShown && _tokShown < _tokPapers.length) tokAppend();
+  if (i + 1 >= _tokPapers.length) return;
+  const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  feed.scrollTo({ top: (i + 1) * h, behavior: smooth ? 'smooth' : 'auto' });
+}
+
 /* Act on a card without re-rendering the feed, which would lose the reader's place */
 function tokAct(ev, btn, what, k) {
   ev.stopPropagation();
