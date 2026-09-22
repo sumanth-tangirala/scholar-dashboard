@@ -349,6 +349,21 @@ a { color: inherit; text-decoration: none; }
 }
 @media (prefers-reduced-motion: reduce) { .pulse-seg, .pulse-seg::after { transition: none; } }
 
+/* NAV on narrow screens: brand on the first line, tabs on a full-width second row
+   that scrolls sideways instead of pushing the page wider than the screen */
+@media (max-width: 1080px) {
+  .nav-inner { flex-wrap: wrap; height: auto; column-gap: 16px; row-gap: 0; }
+  .nav-portfolio-link, .nav-brand, .nav-brand-sep { align-self: center; }
+  .nav-portfolio-link, .nav-brand { height: 50px; display: flex; align-items: center; }
+  .nav-search { margin-left: auto; }
+  .nav-tabs { order: 3; flex-basis: 100%; height: 44px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; margin: 0 -24px; padding: 0 12px; }
+  .nav-tabs::-webkit-scrollbar { display: none; }
+  .nav-tab { padding: 0 12px; flex-shrink: 0; }
+}
+@media (max-width: 600px) {
+  .nav-tabs { margin: 0 -16px; padding: 0 4px; }
+}
+
 /* SEARCH RESULTS (flat list) */
 .search-results { max-width: 1200px; margin: 0 auto; padding: 0 24px 32px; }
 .search-results-header { font-size: 14px; color: var(--text-muted); margin-bottom: 12px; }
@@ -907,7 +922,7 @@ a { color: inherit; text-decoration: none; }
 // Fetch CSVs directly from the GitHub raw endpoint so the site always shows
 // the latest DB without needing a build/deploy step. Set to '' (empty string)
 // to fall back to local relative paths (e.g. for offline/dev use).
-const CSV_BASE_URL = 'https://raw.githubusercontent.com/sumanth-tangirala/ScholarDashboard/main/';
+const CSV_BASE_URL = 'https://raw.githubusercontent.com/sumanth-tangirala/scholar-dashboard/main/';
 function csvUrl(name) {
   const base = CSV_BASE_URL || '';
   // Cache-buster: raw.githubusercontent.com caches aggressively (~5 min CDN TTL).
@@ -1090,14 +1105,23 @@ function listCount() { return Object.values(libraryLists).reduce((n, arr) => n +
 // style from the first row and will mis-parse files with MIXED CRLF/LF
 // endings, absorbing rows into adjacent field values.
 function normalizeNewlines(text) { return (text || '').replace(/\r\n?/g, '\n'); }
+// The raw CDN sometimes stalls on the cache-busted 2 MB papers file instead of failing,
+// which would leave the page on the skeleton forever; give up after this long.
+const CSV_FETCH_TIMEOUT_MS = 8000;
 async function fetchNormalized(url) {
   try {
-    const res = await fetch(url, { cache: 'no-store' });
-    if (!res.ok) throw new Error('fetch failed: ' + res.status);
-    return normalizeNewlines(await res.text());
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), CSV_FETCH_TIMEOUT_MS);
+    try {
+      const res = await fetch(url, { cache: 'no-store', signal: ctrl.signal });
+      if (!res.ok) throw new Error('fetch failed: ' + res.status);
+      return normalizeNewlines(await res.text());
+    } finally {
+      clearTimeout(timer);
+    }
   } catch (err) {
-    // Fallback: if we tried to fetch from the GitHub raw CDN and it failed
-    // (network down, offline, CDN hiccup), retry from the local relative path.
+    // Fallback: if we tried to fetch from the GitHub raw CDN and it failed or timed out
+    // (network down, offline, CDN stall), retry from the local relative path.
     if (CSV_BASE_URL && typeof url === 'string' && url.startsWith(CSV_BASE_URL)) {
       // Strip base + cache-buster querystring to recover the bare filename.
       const rel = url.slice(CSV_BASE_URL.length).split('?')[0];
@@ -2721,7 +2745,7 @@ function resetChanges() {
    Requires a fine-grained PAT stored in localStorage under 'gh_pat'.
    Scopes needed: Contents (read + write) on this repo only. */
 const GH_OWNER  = 'sumanth-tangirala';
-const GH_REPO   = 'ScholarDashboard';
+const GH_REPO   = 'scholar-dashboard';
 const GH_BRANCH = 'main';
 
 async function _ghPushFile(headers, filename, content, message) {

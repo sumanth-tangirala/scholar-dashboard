@@ -12,8 +12,12 @@ cd "$DIR"
 DATE="$(date '+%Y-%m-%d')"
 MESSAGE="${1:-"Update papers and interests database - $DATE"}"
 
-# Remove stale git lock files left by crashed/interrupted git processes.
-rm -f "$DIR/.git/index.lock" "$DIR/.git/HEAD.lock"
+# Remove git lock files left behind by crashed or interrupted git processes
+# (index.lock, HEAD.lock, refs/heads/main.lock, packed-refs.lock, ...).
+# Only locks older than 10 minutes are removed, so a git command that is
+# running right now (e.g. from an editor) is never interrupted.
+find "$DIR/.git" -name '*.lock' -type f -mmin +10 -print -delete 2>/dev/null \
+  | sed 's/^/==> Removed stale lock: /' || true
 
 echo "==> Staging changes..."
 git add papers_database.csv interests_database.csv groups_database.csv index.html CLAUDE.md
@@ -31,7 +35,7 @@ git commit -m "$MESSAGE"
 TOKEN_FILE="$DIR/.github_token"
 if [ -f "$TOKEN_FILE" ]; then
   TOKEN="$(cat "$TOKEN_FILE" | tr -d '[:space:]')"
-  HTTPS_REMOTE="https://${TOKEN}@github.com/sumanth-tangirala/ScholarDashboard.git"
+  HTTPS_REMOTE="https://${TOKEN}@github.com/sumanth-tangirala/scholar-dashboard.git"
   echo "==> Pulling remote changes (rebase)..."
   git pull --rebase "$HTTPS_REMOTE" main
   echo "==> Pushing via HTTPS (token auth)..."
@@ -42,4 +46,4 @@ else
   git push origin main
 fi
 
-echo "==> Done. Live at: https://www.sumanthtangirala.com/ScholarDashboard/"
+echo "==> Done. Live at: https://www.sumanthtangirala.com/scholar-dashboard/"

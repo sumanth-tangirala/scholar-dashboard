@@ -14,14 +14,18 @@ cd "$DIR"
 
 echo "==> [pull_from_github] Starting database sync from GitHub..."
 
-# Remove stale git lock files.
-rm -f "$DIR/.git/index.lock" "$DIR/.git/HEAD.lock"
+# Remove git lock files left behind by crashed or interrupted git processes
+# (index.lock, HEAD.lock, refs/heads/main.lock, packed-refs.lock, ...).
+# Only locks older than 10 minutes are removed, so a git command that is
+# running right now (e.g. from an editor) is never interrupted.
+find "$DIR/.git" -name '*.lock' -type f -mmin +10 -print -delete 2>/dev/null \
+  | sed 's/^/==> Removed stale lock: /' || true
 
 # Build authenticated HTTPS remote URL.
 TOKEN_FILE="$DIR/.github_token"
 if [ -f "$TOKEN_FILE" ]; then
   TOKEN="$(cat "$TOKEN_FILE" | tr -d '[:space:]')"
-  FETCH_REMOTE="https://${TOKEN}@github.com/sumanth-tangirala/ScholarDashboard.git"
+  FETCH_REMOTE="https://${TOKEN}@github.com/sumanth-tangirala/scholar-dashboard.git"
   echo "==> Using HTTPS (token auth) for fetch..."
 else
   echo "ERROR: .github_token not found at $TOKEN_FILE"
