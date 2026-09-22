@@ -41,6 +41,11 @@ Both modes write to a **single unified database** (`papers_database.csv`). The `
 - Generate a **headline takeaway** for each paper (stored in DB)
 - Deduplicate against existing DB entries; if a paper already exists from email, update `source_mode` to `"email,web_survey"` (don't create a duplicate)
 
+## URL rule: store permanent, year-specific links (both modes)
+- Some conference sites always show the *next* edition at their unversioned address, so those links break once the next year's site goes live. **RSS** is one: never store `https://roboticsconference.org/program/papers/{N}/`; always store the year-specific `https://roboticsconference.org/{YEAR}/program/papers/{N}/` (e.g. `/2026/` for RSS 2026). Apply the same idea to any conference site with a year-less program path.
+- Prefer permanent identifiers when one exists: arXiv abstract page, DOI, OpenReview forum.
+- Before saving a conference-page URL, check that it resolves (no 404) and shows the paper's title.
+
 ## Website / UI
 
 The website (`index.html`) has three tabs:
