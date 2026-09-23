@@ -131,7 +131,12 @@ a { color: inherit; text-decoration: none; }
 .pill:active { transform: scale(0.97); }
 .pill .pill-count { font-weight: 600; }
 .pill-sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
-.pill-read { margin-left: auto; min-width: 7.5rem; justify-content: center; }
+.pill-read { margin-left: auto; justify-content: center; gap: 8px; }
+/* the Hide read pill is a switch: the knob shows whether read papers are hidden */
+.pill-switch { position: relative; width: 24px; height: 14px; border-radius: 7px; background: rgba(255,255,255,0.22); flex-shrink: 0; transition: background 0.2s; }
+.pill-switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 10px; height: 10px; border-radius: 50%; background: var(--text); transition: transform 0.2s; }
+.pill-read.active .pill-switch { background: var(--accent); }
+.pill-read.active .pill-switch::after { transform: translateX(10px); background: #1a1406; }
 
 /* TOP PAPERS */
 .top-papers { max-width: 1200px; margin: 0 auto; padding: 0 24px 24px; }
@@ -516,6 +521,23 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .tok-cue.armed { transform: translateY(-50%) scale(1.06); }
 .tok-empty { height: 100%; display: flex; align-items: center; justify-content: center; padding: 32px; text-align: center; color: var(--text-secondary); }
 @media (prefers-reduced-motion: reduce) { .tok-hint { animation: none; } .tok-progress { transition: none; } }
+
+/* "New since your last visit" marker */
+.f-new { color: var(--accent); font-size: 11px; font-weight: 600; letter-spacing: 0.02em; }
+/* Email Digest: alert-source chips under the weekly bar */
+.alert-sources { margin-top: 18px; }
+.alert-sources .pulse-cap { margin-bottom: 8px; }
+.tl-chip.static { cursor: default; }
+.tl-chip.static:hover { background: rgba(255,255,255,0.055); color: var(--text-secondary); }
+/* Topic chips: stick to the top while scrolling the cards, and jump to one */
+.topic-jump { position: sticky; top: 0; z-index: 5; max-width: 1200px; margin: 0 auto 8px; padding: 8px 24px 10px; display: flex; flex-wrap: wrap; gap: 6px 5px; background: var(--bg); }
+.topic-jump:empty { display: none; }
+.topic-jump .gdot { width: 7px; height: 7px; margin-right: 7px; vertical-align: 1px; }
+.topic-card { transition: box-shadow 0.3s ease; }
+.topic-card.flash { animation: topic-flash 1.4s ease; }
+@keyframes topic-flash { 0%, 40% { box-shadow: 0 0 0 2px var(--gc, var(--accent)); } 100% { box-shadow: 0 0 0 0 transparent; } }
+@media (max-width: 900px) { .topic-jump { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; } .topic-jump::-webkit-scrollbar { display: none; } }
+@media (prefers-reduced-motion: reduce) { .topic-card.flash { animation: none; } }
 
 /* SEARCH RESULTS (flat list) */
 .search-results { max-width: 1200px; margin: 0 auto; padding: 0 24px 32px; }
@@ -921,6 +943,7 @@ body:has(#sec-paper.active) .save-bar { top: 124px; }
       <h2 id="briefingTitle">Recent Works</h2>
       <p class="briefing-date"><span id="briefingDate"></span><span id="briefingNote"></span></p>
       <div class="pulse" id="weekPulse"></div>
+      <div class="alert-sources" id="alertSources"></div>
     </div>
   </div>
   <div class="filters" id="filtersBar">
@@ -928,7 +951,7 @@ body:has(#sec-paper.active) .save-bar { top: 124px; }
     <button class="pill" data-rel="definitely" onclick="toggleRel('definitely')">Must Read <span class="pill-count" id="stat-def">0</span></button>
     <button class="pill" data-rel="probably" onclick="toggleRel('probably')">Interesting <span class="pill-count" id="stat-prob">0</span></button>
     <button class="pill" data-rel="mildly" onclick="toggleRel('mildly')">Tangential <span class="pill-count" id="stat-mild">0</span></button>
-    <button class="pill pill-read" data-rel="hideread" onclick="toggleHideRead()"><span id="hideReadLabel">Show read</span> <span id="stat-read">0</span></button>
+    <button class="pill pill-read active" data-rel="hideread" onclick="toggleHideRead()" aria-pressed="true" title="Hide papers you've marked read"><span class="pill-switch" aria-hidden="true"></span>Hide read <span class="pill-count" id="stat-read">0</span></button>
   </div>
   <div class="tok-bar" id="tokBar"></div>
   <div class="tok-wrap" id="tokWrap">
@@ -938,6 +961,7 @@ body:has(#sec-paper.active) .save-bar { top: 124px; }
   <div id="papersContent">
     <div class="top-papers" id="topStories"></div>
     <div class="section-header" id="topicsHeader" style="max-width:1200px;margin:0 auto;padding:8px 24px 12px;">Your topics</div>
+    <nav class="topic-jump" id="topicJump" aria-label="Jump to a topic"></nav>
     <div class="topics-grid" id="topicsGrid"></div>
   </div>
 </div>
@@ -1413,8 +1437,31 @@ function loadPapers() {
   if (CSV_BASE_URL) fetchNormalized(csvUrl('papers_database.csv')).then(t => { receivePapers(t, true); settle(); }).catch(settle);
   else settle();
 }
+/* Interests and topics are small; like papers they render from the local copy first and take
+   GitHub's copy when it differs. Relevance and topic colours depend on them, so whatever view is
+   showing re-renders once they land (papers usually arrive first). */
+function loadLocalThenGitHub(name, apply, label) {
+  let current = null;
+  const take = text => { if (text === current) return; current = text; apply(text); };
+  fetchLocal(name).then(t => { if (current === null) take(t); }).catch(() => {});
+  if (!CSV_BASE_URL) return;
+  fetchNormalized(csvUrl(name)).then(take).catch(err => {
+    if (current === null) toastError(`Could not load ${label} — ` + (err && err.message ? err.message : 'network error'));
+  });
+}
+function rerenderForMetadata() {
+  if (!_papersText || _paperViewActive) return;
+  if (document.getElementById('overlay').classList.contains('open')) { renderOpenList(true); return; }
+  if (['all','email'].includes(currentTab)) {
+    const feed = document.getElementById('tokFeed');
+    if (document.body.classList.contains('tok-mode') && feed && feed.scrollTop > 40) return;   // don't move a phone reader
+    applyFilters();
+  } else if (currentTab === 'venues') renderVenues();
+  else if (currentTab === 'library') renderLibrary();
+}
 function loadInterests() {
-  fetchNormalized(csvUrl('interests_database.csv')).then(text => {
+  loadLocalThenGitHub('interests_database.csv', text => {
+    if (_interestsDirty) writeBackup();
     const r = Papa.parse(text, { header: true, skipEmptyLines: true, newline: '\n' });
     allInterests = r.data.filter(i => i.interest_name && i.interest_name.trim());
     _loadedInterestNames = allInterests.map(i => i.interest_name);
@@ -1422,13 +1469,13 @@ function loadInterests() {
     if (b && b.interests) { allInterests = mergeBackupRows(allInterests, b.interests, 'interest_name'); _interestsDirty = true; announceRestore(b); }
     updateInterestsBadge();
     renderInterests();
-  }).catch(err => {
-    toastError('Could not load interests — ' + (err && err.message ? err.message : 'network error'));
-  });
+    rerenderForMetadata();
+  }, 'interests');
 }
 function loadGroups() {
-  const groupsUrl = csvUrl('groups_database.csv');
-  const onComplete = r => {
+  loadLocalThenGitHub('groups_database.csv', text => {
+    if (_groupsDirty) writeBackup();
+    const r = Papa.parse(text, { header: true, skipEmptyLines: true, delimiter: '|', newline: '\n' });
     allGroups = r.data.filter(g => g.group_name && g.group_name.trim());
     _loadedGroupNames = allGroups.map(g => g.group_name);
     const b = readBackup();
@@ -1436,27 +1483,8 @@ function loadGroups() {
     buildGroupOrder();
     updateInterestsBadge();
     renderInterests();
-  };
-  const reportFail = err => {
-    const detail = err && err.message ? err.message : 'network error';
-    toastError('Could not load groups — ' + detail);
-  };
-  Papa.parse(groupsUrl, {
-    download: true, header: true, skipEmptyLines: true, delimiter: '|',
-    complete: onComplete,
-    error: err => {
-      // Fallback to local relative path if the GitHub raw fetch failed.
-      if (CSV_BASE_URL && groupsUrl.startsWith(CSV_BASE_URL)) {
-        Papa.parse('groups_database.csv', {
-          download: true, header: true, skipEmptyLines: true, delimiter: '|',
-          complete: onComplete,
-          error: reportFail
-        });
-      } else {
-        reportFail(err);
-      }
-    }
-  });
+    rerenderForMetadata();
+  }, 'topics');
 }
 function buildGroupOrder() {
   GROUP_ORDER = allGroups
@@ -1474,11 +1502,41 @@ function revealContent() {
   setTimeout(() => { skel.style.display = 'none'; }, 400);
 }
 
+/* ===== NEW SINCE LAST VISIT =====
+   Remember the newest date_found seen on the previous visit. It's recorded only after the page has
+   been open 30 s, so a quick reload doesn't clear the "New" markers. */
+const LAST_SEEN_KEY = 'scholar_last_seen_v1';
+let _lastSeen = null;
+try { _lastSeen = localStorage.getItem(LAST_SEEN_KEY); } catch (e) {}
+const _visitStart = Date.now();
+function recordVisit() {
+  if (Date.now() - _visitStart < 30000 || !_papersFresh || !_papersFresh.latest) return;
+  try { localStorage.setItem(LAST_SEEN_KEY, _papersFresh.latest); } catch (e) {}
+}
+window.addEventListener('pagehide', recordVisit);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') recordVisit(); });
+function isNewSinceVisit(p) { return !!_lastSeen && (p.date_found || '') > _lastSeen; }
+
 /* ===== HELPERS ===== */
-/* Group identity color: first 8 confirmed groups (display_order) get a slot, the rest stay neutral */
+/* Group identity color: the 8 topics with the most papers get a colour, so busy core topics are never
+   grey. Slots follow display_order among those 8, so colours only change when a topic enters or
+   leaves the top 8, never because two coloured topics trade places. */
+let _colorSlots = null, _colorKey = '';
+function colorSlots() {
+  const key = GROUP_ORDER.join('|') + '#' + allPapers.length;
+  if (_colorSlots && _colorKey === key) return _colorSlots;
+  const counts = {};
+  allPapers.forEach(p => groupsOfPaper(p).forEach(g => counts[g] = (counts[g] || 0) + 1));
+  const colored = new Set(GROUP_ORDER.slice().sort((a, b) => (counts[b] || 0) - (counts[a] || 0)).slice(0, 8));
+  _colorSlots = {};
+  let slot = 0;
+  GROUP_ORDER.forEach(g => { if (colored.has(g)) _colorSlots[g] = ++slot; });
+  _colorKey = key;
+  return _colorSlots;
+}
 function groupColor(g) {
-  const i = GROUP_ORDER.indexOf(g);
-  return i >= 0 && i < 8 ? `var(--g${i + 1})` : 'var(--g-other)';
+  const slot = colorSlots()[g];
+  return slot ? `var(--g${slot})` : 'var(--g-other)';
 }
 function gdot(g) { return `<i class="gdot" style="--gc:${groupColor(g)}" aria-hidden="true"></i>`; }
 
@@ -1583,17 +1641,27 @@ function venueOf(p) {
 /* Short label for rows: "RSS 2026", "RA-L", "arXiv" (preprints and journals skip the year) */
 function venueHasEditions(v) { return (v.kind === 'conference' || v.kind === 'workshop') && v.name !== 'Other workshops'; }
 function venueLabel(v) { return venueHasEditions(v) && v.year ? `${v.name} ${v.year}` : v.name; }
+/* In paper rows, catch-all groups ("Other workshops", "Theses") show the paper's own venue instead */
+function rowVenueLabel(p) {
+  const v = venueOf(p);
+  if (v.name === 'Other workshops' || v.name === 'Other preprints') {
+    const own = (p.venue || '').replace(/\s*\((OpenReview|arXiv)\)\s*/ig, ' ').replace(/\s+/g, ' ').trim();
+    return own || v.name;
+  }
+  if (v.name === 'Theses') return 'PhD thesis';
+  return venueLabel(v);
+}
 /* Publication date, dropped when it is just a year the venue label already shows ("L4DC 2026") */
 function displayDate(p) {
   const d = paperDate(p);
-  if (/^\d{4}$/.test(d) && hasText(p.venue) && venueLabel(venueOf(p)).endsWith(d)) return '';
+  if (/^\d{4}$/.test(d) && hasText(p.venue) && rowVenueLabel(p).endsWith(d)) return '';
   return d;
 }
 function venueLinkHTML(p, cls) {
   const v = venueOf(p);
   if (v.name === 'Unknown venue') return '';
   const yr = venueHasEditions(v) ? v.year : null;
-  return `<span class="${cls} v-link" title="${escAttr(p.venue || '')}" onclick="event.stopPropagation();openVenue('${escAttr(v.name)}'${yr ? ',' + yr : ''})">${esc(venueLabel(v))}</span>`;
+  return `<span class="${cls} v-link" title="${escAttr(p.venue || '')}" onclick="event.stopPropagation();openVenue('${escAttr(v.name)}'${yr ? ',' + yr : ''})">${esc(rowVenueLabel(p))}</span>`;
 }
 
 function norm(g) { return GROUP_NORMALIZE[g] || g || 'Other'; }
@@ -1827,8 +1895,9 @@ function toggleRel(r) {
 }
 function toggleHideRead() {
   hideRead = !hideRead;
-  document.querySelector('.pill-read').classList.toggle('active', !hideRead);
-  document.getElementById('hideReadLabel').textContent = hideRead ? 'Show read' : 'Hide read';
+  const pill = document.querySelector('.pill-read');
+  pill.classList.toggle('active', hideRead);
+  pill.setAttribute('aria-pressed', hideRead ? 'true' : 'false');
   applyFilters();
 }
 
@@ -1851,7 +1920,12 @@ function applyFilters() {
   document.getElementById('briefingDate').textContent = dates.length ? `Updated ${formatDate(dates[dates.length-1])}.` : '';
   const weekAgo = Date.now() - 7 * 86400000;
   const newMust = base.filter(p => p.date_found && new Date(p.date_found + 'T00:00:00') >= weekAgo && dynamicRelevance(p) === 'definitely').length;
-  document.getElementById('briefingNote').textContent = newMust ? ` ${newMust} new must-read ${newMust === 1 ? 'paper' : 'papers'} this week.` : '';
+  const sinceVisit = base.filter(isNewSinceVisit).length;
+  const notes = [];
+  if (sinceVisit) notes.push(`${sinceVisit} new since your last visit`);
+  if (newMust) notes.push(`${newMust} new must-read ${newMust === 1 ? 'paper' : 'papers'} this week`);
+  document.getElementById('briefingNote').textContent = notes.length ? ' ' + notes.join(', ') + '.' : '';
+  renderAlertSources(currentTab === 'email' ? base : null);
   renderWeekPulse(base.filter(p => p.date_found && new Date(p.date_found + 'T00:00:00') >= weekAgo));
 
   if (phoneFeedOn()) { renderTok(papers); return; }
@@ -1873,7 +1947,7 @@ function renderTok(papers) {
     <div class="tok-pills">
       ${[['all','All'],['definitely','Must read'],['probably','Interesting'],['mildly','Tangential']].map(([r,label]) =>
         `<button class="tok-pill ${currentRel===r?'active':''}" onclick="toggleRel('${r}')">${label}</button>`).join('')}
-      <button class="tok-pill ${hideRead?'':'active'}" onclick="toggleHideRead()">${hideRead ? 'Read hidden' : 'Read shown'}</button>
+      <button class="tok-pill ${hideRead?'active':''}" onclick="toggleHideRead()" aria-pressed="${hideRead}">Hide read</button>
     </div>
     <span class="tok-count" id="tokCount"></span>
     <span class="tok-progress" id="tokProgress"></span>`;
@@ -1921,8 +1995,9 @@ function tokCardHTML(p, idx) {
     ${hasText(p.authors) ? `<div class="tok-authors">${esc(p.authors)}</div>` : ''}
     ${body ? `<p class="tok-summary" onclick="openPaper('${ka}', event)">${esc(body)}</p>` : '<div class="tok-summary"></div>'}
     <div class="tok-foot">
+      ${isNewSinceVisit(p) ? '<span class="f-new">New</span>' : ''}
       <span class="f-rel rel-${rel}"><i></i>${relLabel(rel)}</span>
-      ${hasText(p.venue) ? `<span>${esc(venueLabel(venueOf(p)))}</span>` : ''}
+      ${hasText(p.venue) ? `<span>${esc(rowVenueLabel(p))}</span>` : ''}
       ${displayDate(p) ? `<span>${esc(displayDate(p))}</span>` : ''}
     </div>
     <button class="tok-open" onclick="openPaper('${ka}', event)">Read full paper</button>
@@ -2055,7 +2130,7 @@ function renderPapers(papers) {
     return;
   }
   sortPapers(papers);
-  const top = selectTopPapers(papers);
+  const top = orderForLead(selectTopPapers(papers));
   renderTopPapers(top);
   // Papers already shown above; topic cards prefer papers the reader hasn't seen yet
   const shownAbove = new Set(top.slice(0, MAX_TOP_CARDS).map(paperKey));
@@ -2069,6 +2144,8 @@ function renderPapers(papers) {
     return (ia===-1?999:ia)-(ib===-1?999:ib);
   });
 
+  document.getElementById('topicJump').innerHTML = sorted.map(name =>
+    `<button class="tl-chip" onclick="jumpToTopic('${escAttr(name)}')">${gdot(name)}${esc(name)}<span class="n">${grouped[name].length}</span></button>`).join('');
   document.getElementById('topicsGrid').innerHTML = sorted.map(name => {
     const items = grouped[name];
     // Fill each card with papers not shown above or in an earlier card; fall back to
@@ -2083,7 +2160,7 @@ function renderPapers(papers) {
     }
     shown.forEach(p => shownAbove.add(paperKey(p)));
     const extra = items.length - shown.length;
-    return `<div class="topic-card" style="--gc:${groupColor(name)}">
+    return `<div class="topic-card" data-topic="${escAttr(name)}" style="--gc:${groupColor(name)}">
       <div class="topic-title" onclick="openGroup('${escAttr(name)}')">${gdot(name)}<span class="topic-label">${esc(name)}</span>
         <svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
         <span class="topic-extra">${extra > 0 ? `View all ${items.length}` : `${items.length} ${items.length === 1 ? 'paper' : 'papers'}`}</span>
@@ -2093,6 +2170,63 @@ function renderPapers(papers) {
   }).join('');
 }
 
+/* ----- Email Digest by alert source ("Alert: Bajcsy/Lindemann." in the triage note) ----- */
+const _alertCache = new WeakMap();
+function alertSourcesOf(p) {
+  let out = _alertCache.get(p);
+  if (out) return out;
+  const w = parseWhy(p);
+  out = !w || !w.source ? [] : [...new Set(w.source.split(/\s*(?:\/|,|&|\band\b|\+)\s*/)
+    .map(x => x.replace(/\b(related|new articles?|articles?|feed)\b/ig, '').replace(/-+$/, '').trim())
+    .filter(Boolean)
+    .map(x => /^[A-Z][a-z]+( [A-Z][a-z]+)?$/.test(x) ? x.split(' ').pop() : 'Keyword alerts'))];
+  _alertCache.set(p, out);
+  return out;
+}
+function renderAlertSources(emailPapers) {
+  const el = document.getElementById('alertSources');
+  if (!emailPapers) { el.innerHTML = ''; return; }
+  const counts = {};
+  emailPapers.forEach(p => alertSourcesOf(p).forEach(a => counts[a] = (counts[a] || 0) + 1));
+  const names = Object.keys(counts).sort((a, b) => counts[b] - counts[a] || a.localeCompare(b));
+  const main = names.filter(n => counts[n] >= 3), rest = names.filter(n => counts[n] < 3);
+  if (!main.length) { el.innerHTML = ''; return; }
+  const restN = rest.reduce((n, a) => n + counts[a], 0);
+  el.innerHTML = `<div class="pulse-cap">From your alerts</div>
+    <div class="tl-chips">${main.map(n => `<button class="tl-chip" onclick="openAlert('${escAttr(n)}')">${esc(n)}<span class="n">${counts[n]}</span></button>`).join('')}${restN ? `<span class="tl-chip static">Other alerts<span class="n">${restN}</span></span>` : ''}</div>`;
+}
+const ALERT_KEY = 'alert:';
+function openAlert(name, skipHash) {
+  _overlayGroupName = ALERT_KEY + name;
+  setOverlayTopMode(true);
+  renderAlertList();
+  document.getElementById('overlayBody').scrollTop = 0;
+  if (!skipHash) location.hash = '#alert/' + encodeURIComponent(name);
+  openOverlay();
+}
+function renderAlertList() {
+  const name = _overlayGroupName.slice(ALERT_KEY.length);
+  const inAlert = p => (p.source_mode || '').includes('email') && alertSourcesOf(p).includes(name);
+  const papers = sortForList(applyViewFilters(allPapers.filter(inAlert)));
+  document.getElementById('overlayTitle').textContent = name === 'Keyword alerts' ? name : `${name} alert`;
+  setListProgress(applyViewFilters(allPapers.filter(inAlert), true));
+  document.getElementById('overlayToolbar').innerHTML = '';
+  document.getElementById('overlayHeaderTools').innerHTML = sortToolsHTML();
+  document.getElementById('overlayBody').innerHTML = papers.length
+    ? paperListHTML(papers, { sections: true })
+    : '<div class="tl-empty">No papers from this alert match your current filters.</div>';
+}
+
+/* Scroll a topic card into view below the sticky chip row, and flash its edge so the eye lands on it */
+function jumpToTopic(name) {
+  const card = [...document.querySelectorAll('.topic-card')].find(c => c.dataset.topic === name);
+  if (!card) return;
+  const ms = document.getElementById('mainScroll');
+  const bar = document.getElementById('topicJump').getBoundingClientRect().height;
+  ms.scrollTo({ top: ms.scrollTop + card.getBoundingClientRect().top - ms.getBoundingClientRect().top - bar - 12, behavior: 'smooth' });
+  card.classList.remove('flash'); void card.offsetWidth; card.classList.add('flash');
+}
+
 /* Stacked bar of this week's additions by topic; groups past the 8 color slots fold into "Other" */
 function renderWeekPulse(weekPapers) {
   const el = document.getElementById('weekPulse');
@@ -2100,17 +2234,19 @@ function renderWeekPulse(weekPapers) {
   const counts = {};
   weekPapers.forEach(p => groupsOfPaper(p).forEach(g => counts[g] = (counts[g] || 0) + 1));
   const ordered = GROUP_ORDER.filter(g => counts[g]);
-  const colored = ordered.filter(g => GROUP_ORDER.indexOf(g) < 8);
-  const otherN = ordered.filter(g => GROUP_ORDER.indexOf(g) >= 8).reduce((n, g) => n + counts[g], 0);
+  const slots = colorSlots();
+  const colored = ordered.filter(g => slots[g]);
+  const otherN = ordered.filter(g => !slots[g]).reduce((n, g) => n + counts[g], 0);
   const items = colored.map(g => ({ g, n: counts[g] }));
   if (otherN) items.push({ g: null, n: otherN });
   if (!items.length) { el.innerHTML = ''; return; }
+  const tagTotal = items.reduce((n, it) => n + it.n, 0);
   const seg = it => `<div class="pulse-seg" style="flex-grow:${it.n};--gc:${it.g ? groupColor(it.g) : 'var(--g-other)'}" data-g="${escAttr(it.g || '')}" data-tip="${escAttr((it.g || 'Other topics') + ': ' + it.n)}" ${it.g ? `onclick="openGroup('${escAttr(it.g)}')"` : ''}></div>`;
   const key = it => it.g
     ? `<button class="pulse-key" onclick="openGroup('${escAttr(it.g)}')" onmouseenter="pulseHL('${escAttr(it.g)}')" onmouseleave="pulseHL(null)">${gdot(it.g)}${esc(it.g)} <span class="n">${it.n}</span></button>`
     : `<span class="pulse-key static">${gdot('')}Other <span class="n">${it.n}</span></span>`;
   el.innerHTML = `
-    <div class="pulse-cap"><b>${weekPapers.length} ${weekPapers.length === 1 ? 'paper' : 'papers'}</b> arrived this week, by topic</div>
+    <div class="pulse-cap"><b>${weekPapers.length} ${weekPapers.length === 1 ? 'paper' : 'papers'}</b> arrived this week${tagTotal > weekPapers.length ? `, tagged ${tagTotal} times across ${ordered.length} topics (a paper can have more than one)` : ', by topic'}</div>
     <div class="pulse-bar" role="img" aria-label="${escAttr(items.map(it => (it.g || 'Other') + ' ' + it.n).join(', '))}">${items.map(seg).join('')}</div>
     <div class="pulse-legend">${items.map(key).join('')}</div>`;
 }
@@ -2118,6 +2254,17 @@ function pulseHL(g) {
   const el = document.getElementById('weekPulse');
   el.classList.toggle('hl', !!g);
   el.querySelectorAll('.pulse-seg').forEach(s => s.classList.toggle('on', s.dataset.g === g));
+}
+
+/* The lead story shows its summary big; a snippet-only paper ("full abstract is behind IEEE Xplore")
+   makes a weak lead, so promote the first of the next few that has its real abstract. */
+function hasRealAbstract(p) {
+  const text = (p.abstract || '') + ' ' + (p.summary || '');
+  return hasText(p.abstract) && p.abstract.length >= 400 && !/snippet|truncated|not available|behind (the )?(ieee )?xplore|paywall/i.test(text);
+}
+function orderForLead(top) {
+  const i = top.slice(0, 10).findIndex(hasRealAbstract);
+  return i > 0 ? [top[i], ...top.slice(0, i), ...top.slice(i + 1)] : top;
 }
 
 const MAX_TOP_CARDS = 5;  // lead + 4 in the side list
@@ -2132,7 +2279,7 @@ function renderTopPapers(top) {
   document.getElementById('topStories').innerHTML = `
     <div class="section-header clickable" onclick="openTopList()" title="View all top papers as a list"><span class="topic-label">Top Papers</span>
       <svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
-      <span class="topic-extra">${extra > 0 ? `View all ${top.length}` : 'View as list'}</span>
+      <span class="topic-extra">${extra > 0 ? `View all ${top.length}${hideRead ? ' unread' : ''}` : 'View as list'}</span>
     </div>
     <div class="top-feature ${top.length === 1 ? 'solo' : ''}">
       ${topLeadHTML(top[0])}
@@ -2146,7 +2293,8 @@ function feedMetaHTML(p, showRel) {
   const rel = dynamicRelevance(p), k = paperKey(p);
   const venue = hasText(p.venue) ? p.venue : '';
   return `<div class="f-meta">
-    ${showRel ? `<span class="f-rel rel-${rel}"><i></i>${relLabel(rel)}</span>` : ''}
+    ${isNewSinceVisit(p) ? '<span class="f-new">New</span>' : ''}
+    ${showRel && rel !== 'definitely' ? `<span class="f-rel rel-${rel}"><i></i>${relLabel(rel)}</span>` : ''}
     ${venue ? venueLinkHTML(p, 'f-venue') : ''}
     ${displayDate(p) ? `<span class="f-date">${esc(displayDate(p))}</span>` : ''}
     ${starSet.has(k) ? '<span class="f-star" title="Starred">&#9733;</span>' : ''}
@@ -2560,6 +2708,7 @@ function renderOpenList(keepScroll) {
   const body = document.getElementById('overlayBody'), st = body.scrollTop;
   if (_overlayGroupName === TOP_LIST_KEY) renderTopList();
   else if (_overlayGroupName.startsWith(VENUE_KEY)) renderVenueList();
+  else if (_overlayGroupName.startsWith(ALERT_KEY)) renderAlertList();
   else renderGroupList(_overlayGroupName);
   if (keepScroll) body.scrollTop = st;
   return true;
@@ -2684,7 +2833,7 @@ function topRowHTML(p, groups) {
     </div>
     <div class="tr-side">
       ${venue ? venueLinkHTML(p, 'tr-venue') : ''}
-      <span>${starSet.has(k) ? '<span class="tr-star" title="Starred">&#9733;</span> ' : ''}${esc(displayDate(p))}</span>
+      <span>${isNewSinceVisit(p) ? '<span class="f-new">New</span> ' : ''}${starSet.has(k) ? '<span class="tr-star" title="Starred">&#9733;</span> ' : ''}${esc(displayDate(p))}</span>
     </div>
     <div class="tr-actions"><div>
       ${whyHTML(p)}
@@ -2713,7 +2862,7 @@ function closeOverlay(skipHistory) {
   /* fallback if transition doesn't fire */
   setTimeout(() => { ol.classList.remove('open', 'closing'); document.body.style.overflow = ''; }, 350);
   /* Navigate back to the tab if the user closed the overlay directly (not via hash change) */
-  if (!skipHistory && (location.hash.startsWith('#group/') || location.hash.startsWith('#venue/') || location.hash === '#top')) {
+  if (!skipHistory && (location.hash.startsWith('#group/') || location.hash.startsWith('#venue/') || location.hash.startsWith('#alert/') || location.hash === '#top')) {
     history.back();
   }
 }
@@ -3358,7 +3507,7 @@ function renderPaperDetail(p) {
     : sm.includes('email') ? 'Email alert' : sm.includes('web_survey') ? 'Web survey' : '';
   const matches = (p.matched_interests || '').split('|').map(x => x.trim()).filter(Boolean);
   const facts = [];
-  if (hasText(p.venue)) facts.push(['Venue', `${venueLinkHTML(p, '')}${p.venue.trim() !== venueLabel(v) ? `<span class="pd-sub">${esc(p.venue)}</span>` : ''}`]);
+  if (hasText(p.venue)) facts.push(['Venue', `${venueLinkHTML(p, '')}${p.venue.trim() !== rowVenueLabel(p) ? `<span class="pd-sub">${esc(p.venue)}</span>` : ''}`]);
   if (paperDate(p)) facts.push(['Published', esc(paperDate(p))]);
   if (p.date_found) facts.push(['Added', esc(shortDate(p.date_found))]);
   if (via) facts.push(['Found via', `${via}${why && why.source ? `<span class="pd-sub">${esc(why.source)} alert</span>` : ''}`]);
@@ -3679,6 +3828,18 @@ function applyHash() {
         document.querySelectorAll('.nav-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === currentTab));
       }
       openGroup(groupName, true);
+      return;
+    }
+  }
+
+  // Alert-source overlay route: #alert/<name> (opened from the Email Digest)
+  if (hash.startsWith('alert/')) {
+    const name = decodeURIComponent(hash.slice(6));
+    if (name) {
+      if (!['all','email'].includes(currentTab)) currentTab = 'email';
+      document.getElementById('sec-papers').classList.add('active');
+      document.querySelectorAll('.nav-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === currentTab));
+      openAlert(name, true);
       return;
     }
   }
