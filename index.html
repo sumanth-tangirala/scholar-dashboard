@@ -2,10 +2,16 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Scholar Dashboard</title>
 <meta name="description" content="Research papers from Google Scholar alerts and weekly surveys, ranked by Sumanth's research interests.">
 <meta name="theme-color" content="#000000">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Scholar">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23111111'/%3E%3Cg transform='translate(4 4)'%3E%3Cpath fill='%23fbb13c' d='M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -490,7 +496,15 @@ a { color: inherit; text-decoration: none; }
 body.tok-mode .main-scroll { overflow: hidden; }
 body.tok-mode #sec-papers.active { display: flex; flex-direction: column; height: 100%; min-height: 0; }
 body.tok-mode #sec-papers .briefing, body.tok-mode #sec-papers .filters, body.tok-mode #papersContent { display: none; }
-body.tok-mode .tok-bar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; flex-shrink: 0; border-bottom: 1px solid var(--border); position: relative; }
+body.tok-mode .tok-bar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; flex-shrink: 0; border-bottom: 1px solid var(--border); position: fixed; top: var(--nav-h, 107px); left: 0; right: 0; z-index: 90; background: rgba(17,17,17,0.94); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); transition: transform 0.25s ease; }
+body.tok-mode .navbar { position: fixed; top: 0; left: 0; right: 0; transition: transform 0.25s ease; }
+body.tok-mode .tok-card { padding-top: calc(var(--tok-top, 153px) + 18px); transition: padding-top 0.25s ease; }
+body.tok-mode.tok-immersive .navbar { transform: translateY(-100%); }
+body.tok-mode.tok-immersive .tok-bar { transform: translateY(calc(-1 * var(--tok-top, 153px) - 4px)); }
+body.tok-mode.tok-immersive .tok-card { padding-top: calc(env(safe-area-inset-top, 0px) + 22px); }
+/* a thin progress line stays visible while the bars are away */
+.tok-mini-progress { display: none; }
+body.tok-mode.tok-immersive .tok-mini-progress { display: block; position: fixed; top: env(safe-area-inset-top, 0px); left: 0; height: 2px; background: var(--accent); z-index: 95; transition: width 0.2s ease; }
 body.tok-mode #tokWrap { display: flex; flex-direction: column; flex: 1; min-height: 0; position: relative; }
 #tokWrap { display: none; }
 body.tok-mode .tok { display: block; flex: 1; min-height: 0; overflow-y: auto; scroll-snap-type: y mandatory; overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; }
@@ -534,7 +548,7 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .tok-cue.read { right: 14px; color: var(--green); background: rgba(129,201,149,0.2); }
 .tok-cue.armed { transform: translateY(-50%) scale(1.06); }
 .tok-empty { height: 100%; display: flex; align-items: center; justify-content: center; padding: 32px; text-align: center; color: var(--text-secondary); }
-@media (prefers-reduced-motion: reduce) { .tok-hint { animation: none; } .tok-progress { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .tok-hint { animation: none; } .tok-progress, .tok-mini-progress, body.tok-mode .navbar, body.tok-mode .tok-bar, body.tok-mode .tok-card { transition: none; } }
 
 /* "New since your last visit" marker */
 .f-new { color: var(--accent); font-size: 11px; font-weight: 600; letter-spacing: 0.02em; }
@@ -575,6 +589,11 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
   .feed-item:has(.p-detail-panel.open) .f-meta { visibility: visible; }
 }
 @media (hover: none) { .btn-why { display: none; } }
+
+/* keyboard focus on paper rows and other clickable blocks */
+.top-row:focus-visible, .feed-item:focus-visible, .top-lead:focus-visible, .v-row:focus-visible,
+.topic-title:focus-visible, .section-header.clickable:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.v-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
 
 /* keyboard triage selection */
 .top-row.kb-sel, .feed-item.kb-sel, .top-lead.kb-sel { outline: 2px solid var(--accent); outline-offset: -2px; }
@@ -986,7 +1005,7 @@ body:has(#sec-paper.active) .save-bar { top: 124px; }
   <div class="nav-inner">
     <a href="https://sumanthtangirala.com" target="_blank" class="nav-portfolio-link">Sumanth Tangirala</a>
     <div class="nav-brand-sep"></div>
-    <div class="nav-brand" onclick="switchTab('all')" style="cursor:pointer">
+    <div class="nav-brand" role="link" tabindex="0" aria-label="Scholar home" onclick="switchTab('all')" style="cursor:pointer">
       <svg viewBox="0 0 24 24"><path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/></svg>
       Scholar
     </div>
@@ -1045,6 +1064,7 @@ body:has(#sec-paper.active) .save-bar { top: 124px; }
     <button class="pill pill-read active" data-rel="hideread" onclick="toggleHideRead()" aria-pressed="true" title="Hide papers you've marked read"><span class="pill-switch" aria-hidden="true"></span>Hide read <span class="pill-count" id="stat-read">0</span></button>
   </div>
   <div class="tok-bar" id="tokBar"></div>
+  <div class="tok-mini-progress" id="tokMiniProgress"></div>
   <div class="tok-wrap" id="tokWrap">
     <div class="tok-cues"><span class="tok-cue star" id="tokCueStar">&#9733; Star</span><span class="tok-cue read" id="tokCueRead">&#10003; Mark read</span></div>
     <div class="tok" id="tokFeed"></div>
@@ -1763,7 +1783,7 @@ function venueLinkHTML(p, cls) {
   const v = venueOf(p);
   if (v.name === 'Unknown venue') return '';
   const yr = venueHasEditions(v) ? v.year : null;
-  return `<span class="${cls} v-link" title="${escAttr(p.venue || '')}" onclick="event.stopPropagation();openVenue('${escAttr(v.name)}'${yr ? ',' + yr : ''})">${esc(rowVenueLabel(p))}</span>`;
+  return `<span class="${cls} v-link" role="link" tabindex="0" title="${escAttr(p.venue || '')}" onclick="event.stopPropagation();openVenue('${escAttr(v.name)}'${yr ? ',' + yr : ''})">${esc(rowVenueLabel(p))}</span>`;
 }
 
 function norm(g) { return GROUP_NORMALIZE[g] || g || 'Other'; }
@@ -2101,8 +2121,20 @@ let _tokPapers = [], _tokShown = 0, _tokLock = false, _tokHinted = false, _tokSc
 function phoneFeedOn() {
   const on = window.matchMedia('(max-width: 700px)').matches && ['all','email'].includes(currentTab) && !_paperViewActive && !_searchActive;
   document.body.classList.toggle('tok-mode', on);
+  if (!on) document.body.classList.remove('tok-immersive');
   return on;
 }
+/* Measure the floating nav + filter bar so cards can pad their tops by exactly that much */
+function tokMeasureBars() {
+  if (!document.body.classList.contains('tok-mode')) return;
+  const nav = document.querySelector('.navbar').getBoundingClientRect().height;
+  const bar = document.getElementById('tokBar').getBoundingClientRect().height;
+  document.body.style.setProperty('--nav-h', nav + 'px');
+  document.body.style.setProperty('--tok-top', (nav + bar) + 'px');
+}
+/* Swiping forward tucks the bars away; swiping back (or reaching the first card) brings them back */
+let _tokLastTop = 0;
+function tokImmersive(on) { document.body.classList.toggle('tok-immersive', on); }
 function renderTok(papers) {
   _tokPapers = papers; _tokShown = 0;
   const feed = document.getElementById('tokFeed');
@@ -2126,6 +2158,9 @@ function renderTok(papers) {
     feed.scrollTop = back;
   }
   if (!feed._hooked) { feed.addEventListener('scroll', tokOnScroll, { passive: true }); tokBindGestures(feed); feed._hooked = true; }
+  tokImmersive(false);
+  _tokLastTop = feed.scrollTop;
+  requestAnimationFrame(tokMeasureBars);
   tokOnScroll();
 }
 function tokAppend() {
@@ -2137,6 +2172,14 @@ function tokAppend() {
 function tokOnScroll() {
   const feed = document.getElementById('tokFeed');
   const i = feed.clientHeight ? Math.round(feed.scrollTop / feed.clientHeight) : 0;
+  const dy = feed.scrollTop - _tokLastTop;
+  if (Math.abs(dy) > 12) {
+    tokImmersive(dy > 0 && i > 0);
+    _tokLastTop = feed.scrollTop;
+  }
+  if (i === 0 && feed.scrollTop < 20) tokImmersive(false);
+  const mini = document.getElementById('tokMiniProgress');
+  if (mini) mini.style.width = _tokPapers.length ? `${(Math.min(i + 1, _tokPapers.length) / _tokPapers.length) * 100}%` : '0';
   const total = _tokPapers.length;
   const count = document.getElementById('tokCount'), bar = document.getElementById('tokProgress');
   if (count) count.textContent = total ? `${Math.min(i + 1, total)} / ${total}` : '';
@@ -2324,7 +2367,7 @@ function renderPapers(papers) {
     shown.forEach(p => shownAbove.add(paperKey(p)));
     const extra = items.length - shown.length;
     return `<div class="topic-card" data-topic="${escAttr(name)}" style="--gc:${groupColor(name)}">
-      <div class="topic-title" onclick="openGroup('${escAttr(name)}')">${gdot(name)}<span class="topic-label">${esc(name)}</span>
+      <div class="topic-title" role="button" tabindex="0" onclick="openGroup('${escAttr(name)}')">${gdot(name)}<span class="topic-label">${esc(name)}</span>
         <svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
         <span class="topic-extra">${extra > 0 ? `View all ${items.length}` : `${items.length} ${items.length === 1 ? 'paper' : 'papers'}`}</span>
       </div>
@@ -2440,7 +2483,7 @@ function renderTopPapers(top) {
   if (!top.length) { document.getElementById('topStories').innerHTML=''; return; }
   const extra = top.length - MAX_TOP_CARDS;
   document.getElementById('topStories').innerHTML = `
-    <div class="section-header clickable" onclick="openTopList()" title="View all top papers as a list"><span class="topic-label">Top Papers</span>
+    <div class="section-header clickable" role="button" tabindex="0" onclick="openTopList()" title="View all top papers as a list"><span class="topic-label">Top Papers</span>
       <svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
       <span class="topic-extra">${extra > 0 ? `View all ${top.length}${hideRead ? ' unread' : ''}` : 'View as list'}</span>
     </div>
@@ -2472,7 +2515,7 @@ function feedActionsHTML(p, withSummaryBtn) {
 function topLeadHTML(p) {
   const k = paperKey(p), ir = readSet.has(k);
   const showTitle = hasText(p.headline) && p.headline.trim() !== (p.title||'').trim();
-  return `<article class="top-card top-lead ${ir?'is-read':''}" data-key="${escAttr(k)}" onclick="openPaper('${escAttr(k)}', event)">
+  return `<article class="top-card top-lead ${ir?'is-read':''}" tabindex="0" data-key="${escAttr(k)}" onclick="openPaper('${escAttr(k)}', event)">
     ${feedMetaHTML(p, false)}
     <h3 class="lead-headline">${esc(p.headline||p.title)}</h3>
     ${showTitle ? `<div class="lead-title">${esc(p.title)}</div>` : ''}
@@ -2487,7 +2530,7 @@ function topLeadHTML(p) {
 function feedItemHTML(p) {
   const k = paperKey(p), ir = readSet.has(k);
   const showTitle = hasText(p.headline) && p.headline.trim() !== (p.title||'').trim();
-  return `<article class="topic-item feed-item ${ir?'is-read':''}" data-key="${escAttr(k)}" onclick="openPaper('${escAttr(k)}', event)">
+  return `<article class="topic-item feed-item ${ir?'is-read':''}" tabindex="0" data-key="${escAttr(k)}" onclick="openPaper('${escAttr(k)}', event)">
     <div class="f-headline">${esc(p.headline||p.title)}</div>
     ${showTitle ? `<div class="f-title" title="${escAttr(p.title)}">${esc(p.title)}</div>` : ''}
     ${feedMetaHTML(p, true)}
@@ -2781,7 +2824,7 @@ function renderVenues() {
     const years = Object.keys(v.years).sort((a, b) => b - a);
     const chips = years.map(y => `<button class="tl-chip" onclick="event.stopPropagation();openVenue('${escAttr(v.name)}',${y})">${y}<span class="n">${v.years[y]}</span></button>`).join('');
     const bar = v.kind === 'preprint' ? '<div class="v-bar none"></div>' : `<div class="v-bar"><i style="width:${Math.max(v.n / barMax * 100, 1.5)}%"></i></div>`;
-    return `<div class="v-row" onclick="openVenue('${escAttr(v.name)}')" title="All ${esc(v.name)} papers">
+    return `<div class="v-row" role="button" tabindex="0" onclick="openVenue('${escAttr(v.name)}')" title="All ${esc(v.name)} papers">
       <div class="v-name"><strong>${esc(v.name)}</strong>${v.full ? `<span>${esc(v.full)}</span>` : ''}</div>
       ${bar}
       <div class="v-count">${v.n}</div>
@@ -3001,7 +3044,7 @@ function topRowHTML(p, groups) {
   const hasAbstract = p.abstract && p.abstract.trim() && p.abstract !== 'not specified';
   const showTitle = p.headline && p.headline.trim() && p.headline.trim() !== (p.title||'').trim();
   const venue = p.venue && p.venue !== 'not specified' ? p.venue : '';
-  return `<article class="topic-item top-row ${ir?'is-read':''}" data-key="${escAttr(k)}" onclick="openPaper('${escAttr(k)}', event)">
+  return `<article class="topic-item top-row ${ir?'is-read':''}" tabindex="0" data-key="${escAttr(k)}" onclick="openPaper('${escAttr(k)}', event)">
     <div class="tr-main">
       <div class="tr-headline">${esc(p.headline||p.title)}</div>
       ${showTitle ? `<div class="tr-title" title="${escAttr(p.title)}">${esc(p.title)}</div>` : ''}
@@ -3083,6 +3126,15 @@ document.addEventListener('keydown', e => {
     const land = e.key === 'x' && readSet.has(key) ? (fresh.find(r => r.dataset.key === nextKey) || fresh.find(r => r.dataset.key === key)) : fresh.find(r => r.dataset.key === key);
     kbSelect(land || fresh[Math.min(i, fresh.length - 1)]);
   }
+});
+
+/* Enter (or Space) on a focusable block with a click handler, e.g. a paper row, acts like a click */
+document.addEventListener('keydown', e => {
+  if ((e.key !== 'Enter' && e.key !== ' ') || e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
+  const t = e.target;
+  if (!t || !t.hasAttribute || !t.hasAttribute('onclick') || t.tabIndex < 0 || /^(BUTTON|A|INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
+  e.preventDefault();
+  t.click();
 });
 
 /* Tab stays inside the open pop-up */
@@ -4210,6 +4262,7 @@ window.addEventListener('hashchange', applyHash);
 
 /* Re-render when crossing the phone/desktop breakpoint */
 let _wasPhone = window.matchMedia('(max-width: 700px)').matches;
+window.addEventListener('resize', () => { requestAnimationFrame(tokMeasureBars); }, { passive: true });
 window.addEventListener('resize', () => {
   const isPhone = window.matchMedia('(max-width: 700px)').matches;
   if (isPhone === _wasPhone) return;
