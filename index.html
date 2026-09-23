@@ -539,6 +539,57 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 @media (max-width: 900px) { .topic-jump { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; } .topic-jump::-webkit-scrollbar { display: none; } }
 @media (prefers-reduced-motion: reduce) { .topic-card.flash { animation: none; } }
 
+/* Lists and topic cards: with a mouse, actions appear in place of the venue/date instead of growing
+   the row, so moving down a list never makes it jump. Touch screens keep the always-visible actions. */
+@media (hover: hover) {
+  .paper-list .top-row .tr-actions, .f-actions { display: block; grid-template-rows: none; opacity: 1; margin-top: 0; transition: none; }
+  .paper-list .top-row:hover .tr-actions, .paper-list .top-row:focus-within .tr-actions, .paper-list .top-row .tr-actions:has(.p-detail-panel.open),
+  .feed-item:hover .f-actions, .feed-item:focus-within .f-actions, .f-actions:has(.p-detail-panel.open) { margin-top: 0; }
+  .paper-list .top-row .tr-actions > div, .f-actions > div { overflow: visible; }
+  .tr-actions .why, .f-actions .why { display: none; }
+  .paper-list .top-row .tr-actions .p-action-row { position: absolute; top: 12px; right: 18px; width: 158px; flex-wrap: wrap; justify-content: flex-end; gap: 4px; opacity: 0; pointer-events: none; transition: opacity 0.12s; }
+  .feed-item .f-actions .p-action-row { position: absolute; right: 16px; bottom: 11px; gap: 4px; opacity: 0; pointer-events: none; transition: opacity 0.12s; }
+  .paper-list .top-row:hover .p-action-row, .paper-list .top-row:focus-within .p-action-row,
+  .feed-item:hover .p-action-row, .feed-item:focus-within .p-action-row { opacity: 1; pointer-events: auto; }
+  .paper-list .top-row:hover .tr-side, .paper-list .top-row:focus-within .tr-side,
+  .feed-item:hover .f-meta, .feed-item:focus-within .f-meta { visibility: hidden; }
+  .paper-list .top-row .p-action-row .btn-abs, .paper-list .top-row .p-action-row .btn-link,
+  .feed-item .p-action-row .btn-abs, .feed-item .p-action-row .btn-link { font-size: 11.5px; padding: 1px 7px; }
+  .paper-list .top-row .p-action-row .p-actions, .feed-item .p-action-row .p-actions { margin-left: 2px; }
+  /* once Summary / Why / Abstract is open, the buttons sit under it so they can close it */
+  .feed-item .f-actions:has(.p-detail-panel.open) .p-action-row { position: static; opacity: 1; pointer-events: auto; margin-top: 10px; }
+  .feed-item:has(.p-detail-panel.open) .f-meta { visibility: visible; }
+}
+@media (hover: none) { .btn-why { display: none; } }
+
+/* keyboard triage selection */
+.top-row.kb-sel, .feed-item.kb-sel, .top-lead.kb-sel { outline: 2px solid var(--accent); outline-offset: -2px; }
+.top-row.kb-sel { border-radius: 10px; }
+
+/* paper page: previous / next within the list it was opened from */
+.pd-act:disabled { opacity: 0.3; cursor: default; }
+.pd-act:disabled:hover { background: none; color: var(--text-muted); }
+.pd-nav-prev, .pd-nav-next { font-size: 22px; line-height: 1; }
+.pd-nav-pos { font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; padding: 0 2px; min-width: 44px; text-align: center; }
+.pd-nav-sep { width: 1px; height: 20px; background: var(--border); margin: 0 6px; }
+.pd-next { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; align-items: center; column-gap: 16px; width: 100%; margin-top: 48px; padding: 18px 22px; text-align: left; background: var(--bg-surface); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; color: inherit; font: inherit; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+.pd-next:hover { border-color: rgba(251,177,60,0.5); background: #181818; }
+.pd-next-label { grid-column: 1; font-size: 12.5px; color: var(--text-muted); }
+.pd-next-title { grid-column: 1; font-family: var(--serif); font-size: 19px; font-weight: 500; color: var(--text); margin-top: 3px; line-height: 1.3; }
+.pd-next-arrow { grid-column: 2; grid-row: 1 / 3; font-size: 28px; color: var(--accent); transition: transform 0.15s; }
+.pd-next:hover .pd-next-arrow { transform: translateX(3px); }
+@media (max-width: 600px) {
+  .pd-bar-title { display: none; }          /* item 21: no room for it next to the actions */
+  .pd-nav-pos, .pd-nav-sep { display: none; }
+  .pd-back-label, .pd-open-full { display: none; }   /* room for previous/next on a phone-width bar */
+  .pd-open .pd-open-short { display: inline; }
+}
+.pd-open-short { display: none; }
+
+/* paper page topics: "+ Add" always visible, and the list fits without scrolling inside */
+.pd-topics .group-add-wrap { opacity: 1; pointer-events: auto; }
+.pd-topics .group-add-dd { max-height: none; overflow: visible; }
+
 /* SEARCH RESULTS (flat list) */
 .search-results { max-width: 1200px; margin: 0 auto; padding: 0 24px 32px; }
 .search-results-header { font-size: 14px; color: var(--text-muted); margin-bottom: 12px; }
@@ -557,7 +608,7 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .overlay.closing .overlay-content { opacity: 0; transform: translateY(24px); }
 .overlay-header { padding: 20px 24px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); flex-shrink: 0; }
 .overlay-header h3 { font-size: 18px; font-weight: 500; color: var(--accent); }
-.overlay-close { background: none; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: all 0.15s; }
+.overlay-close { background: none; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.15s, color 0.15s; }
 .overlay-close:hover { background: var(--bg-hover); color: var(--text); }
 .overlay-body { overflow-y: auto; flex: 1; }
 .overlay-body .topic-item { padding: 14px 24px; }
@@ -838,7 +889,10 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .notes-resize-handle { position: absolute; bottom: 0; left: 0; width: 18px; height: 18px; cursor: nesw-resize; z-index: 2; }
 .notes-resize-handle::after { content: ''; position: absolute; bottom: 4px; left: 4px; width: 8px; height: 8px; border-left: 2px solid var(--text-muted); border-bottom: 2px solid var(--text-muted); opacity: 0.4; }
 .notes-modal.open { display: flex; }
-.notes-modal-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--border-subtle); font-size: 13px; font-weight: 600; color: var(--text-secondary); letter-spacing: 0.5px; text-transform: uppercase; user-select: none; cursor: move; }
+.notes-modal-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--border-subtle); font-size: 13px; font-weight: 600; color: var(--text-secondary); user-select: none; cursor: move; gap: 12px; }
+.notes-head { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.notes-head strong { font-size: 13.5px; font-weight: 600; color: var(--text); flex-shrink: 0; }
+.notes-paper { font-weight: 400; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .notes-modal-close { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 18px; padding: 0 4px; transition: color 0.15s; }
 .notes-modal-close:hover { color: var(--text); }
 .notes-modal-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 14px 10px 22px; border-top: 1px solid var(--border-subtle); min-height: 40px; }
@@ -1056,7 +1110,7 @@ body:has(#sec-paper.active) .save-bar { top: 124px; }
 <!-- [1] GROUP OVERLAY — with backdrop element -->
 <div class="overlay" id="overlay">
   <div class="overlay-backdrop" onclick="closeOverlay()"></div>
-  <div class="overlay-content">
+  <div class="overlay-content" role="dialog" aria-modal="true" aria-labelledby="overlayTitle">
     <div class="overlay-header">
       <div class="overlay-heading"><h3 id="overlayTitle"></h3><div class="overlay-sub" id="overlaySub"></div><div class="tl-progress" id="overlayProgress" role="progressbar" aria-label="Read progress"><span></span></div></div>
       <div class="overlay-header-tools" id="overlayHeaderTools"></div>
@@ -1069,7 +1123,7 @@ body:has(#sec-paper.active) .save-bar { top: 124px; }
 
 <div class="notes-modal" id="notesModal">
   <div class="notes-modal-header" id="notesModalDrag">
-    <span>Notes</span>
+    <span class="notes-head"><strong>Notes</strong><span class="notes-paper" id="notesPaper"></span></span>
     <button class="notes-modal-close" onclick="closeNotesModal()" title="Close" aria-label="Close notes">&times;</button>
   </div>
   <textarea id="notesModalArea" placeholder="Add your notes..." oninput="debouncedSaveNote();updateNotesFooter()"></textarea>
@@ -1553,6 +1607,14 @@ function parseWhy(p) {
   n = n.replace(/\s*[—–]\s*$/, '').trim();
   if (!n) return null;
   return { reason: n.charAt(0).toUpperCase() + n.slice(1), source };
+}
+function whyBtn(p) {
+  if (!parseWhy(p)) return '';
+  return `<button class="btn-abs btn-why" data-detail="why" onclick="event.stopPropagation();toggleDetail(this,'why')" title="Why this paper is here">Why</button>`;
+}
+function whyText(p) {
+  const w = parseWhy(p);
+  return w ? w.reason + (w.source ? ` (from your ${w.source} alert)` : '') : '';
 }
 function whyHTML(p, cls) {
   const w = parseWhy(p);
@@ -2301,15 +2363,15 @@ function feedMetaHTML(p, showRel) {
   </div>`;
 }
 function feedActionsHTML(p, withSummaryBtn) {
-  return `<div class="p-action-row">${withSummaryBtn ? summaryBtn(p) : ''} ${absBtn(p)} ${linkBtn(p)} <span class="p-actions has-active">${starBtn(p)} ${readBtn(p)} ${saveBtn(p)} ${deleteBtn(p)}</span></div>
-    <div class="p-detail-panel" data-summary="${hasText(p.summary)?dataAttr(p.summary):''}" data-abstract="${hasText(p.abstract)?dataAttr(p.abstract):''}"></div>`;
+  return `<div class="p-action-row">${withSummaryBtn ? summaryBtn(p) + ' ' + whyBtn(p) : ''} ${absBtn(p)} ${linkBtn(p)} <span class="p-actions has-active">${starBtn(p)} ${readBtn(p)} ${saveBtn(p)} ${deleteBtn(p)}</span></div>
+    <div class="p-detail-panel" data-summary="${hasText(p.summary)?dataAttr(p.summary):''}" data-abstract="${hasText(p.abstract)?dataAttr(p.abstract):''}" data-why="${dataAttr(whyText(p))}"></div>`;
 }
 
 /* Lead story: large headline with the summary shown inline */
 function topLeadHTML(p) {
   const k = paperKey(p), ir = readSet.has(k);
   const showTitle = hasText(p.headline) && p.headline.trim() !== (p.title||'').trim();
-  return `<article class="top-card top-lead ${ir?'is-read':''}" onclick="openPaper('${escAttr(k)}', event)">
+  return `<article class="top-card top-lead ${ir?'is-read':''}" data-key="${escAttr(k)}" onclick="openPaper('${escAttr(k)}', event)">
     ${feedMetaHTML(p, false)}
     <h3 class="lead-headline">${esc(p.headline||p.title)}</h3>
     ${showTitle ? `<div class="lead-title">${esc(p.title)}</div>` : ''}
@@ -2324,7 +2386,7 @@ function topLeadHTML(p) {
 function feedItemHTML(p) {
   const k = paperKey(p), ir = readSet.has(k);
   const showTitle = hasText(p.headline) && p.headline.trim() !== (p.title||'').trim();
-  return `<article class="topic-item feed-item ${ir?'is-read':''}" onclick="openPaper('${escAttr(k)}', event)">
+  return `<article class="topic-item feed-item ${ir?'is-read':''}" data-key="${escAttr(k)}" onclick="openPaper('${escAttr(k)}', event)">
     <div class="f-headline">${esc(p.headline||p.title)}</div>
     ${showTitle ? `<div class="f-title" title="${escAttr(p.title)}">${esc(p.title)}</div>` : ''}
     ${feedMetaHTML(p, true)}
@@ -2381,7 +2443,7 @@ function toggleDetail(btn, type) {
     panel.textContent = '';
   } else {
     // Show requested type
-    const text = type === 'summary' ? panel.dataset.summary : panel.dataset.abstract;
+    const text = type === 'summary' ? panel.dataset.summary : type === 'why' ? panel.dataset.why : panel.dataset.abstract;
     panel.textContent = text;
     panel.dataset.activeType = type;
     panel.classList.add('open');
@@ -2822,7 +2884,7 @@ function topRowHTML(p, groups) {
   const hasAbstract = p.abstract && p.abstract.trim() && p.abstract !== 'not specified';
   const showTitle = p.headline && p.headline.trim() && p.headline.trim() !== (p.title||'').trim();
   const venue = p.venue && p.venue !== 'not specified' ? p.venue : '';
-  return `<article class="topic-item top-row ${ir?'is-read':''}" onclick="openPaper('${escAttr(k)}', event)">
+  return `<article class="topic-item top-row ${ir?'is-read':''}" data-key="${escAttr(k)}" onclick="openPaper('${escAttr(k)}', event)">
     <div class="tr-main">
       <div class="tr-headline">${esc(p.headline||p.title)}</div>
       ${showTitle ? `<div class="tr-title" title="${escAttr(p.title)}">${esc(p.title)}</div>` : ''}
@@ -2837,21 +2899,102 @@ function topRowHTML(p, groups) {
     </div>
     <div class="tr-actions"><div>
       ${whyHTML(p)}
-      <div class="p-action-row">${summaryBtn(p)} ${absBtn(p)} ${linkBtn(p)} <span class="p-actions has-active">${starBtn(p)} ${readBtn(p)} ${saveBtn(p)} ${deleteBtn(p)}</span></div>
-      <div class="p-detail-panel" data-summary="${hasSummary?dataAttr(p.summary):''}" data-abstract="${hasAbstract?dataAttr(p.abstract):''}"></div>
+      <div class="p-action-row">${summaryBtn(p)} ${whyBtn(p)} ${absBtn(p)} ${linkBtn(p)} <span class="p-actions has-active">${starBtn(p)} ${readBtn(p)} ${saveBtn(p)} ${deleteBtn(p)}</span></div>
+      <div class="p-detail-panel" data-summary="${hasSummary?dataAttr(p.summary):''}" data-abstract="${hasAbstract?dataAttr(p.abstract):''}" data-why="${dataAttr(whyText(p))}"></div>
     </div></div>
   </article>`;
 }
+let _overlayReturnFocus = null;
 function openOverlay() {
   const ol = document.getElementById('overlay');
+  if (!ol.classList.contains('open')) _overlayReturnFocus = document.activeElement;
   ol.classList.remove('closing');
   ol.classList.add('open');
   document.getElementById('mainScroll').style.overflow = 'hidden';
+  setTimeout(() => { if (ol.classList.contains('open') && !ol.contains(document.activeElement)) ol.querySelector('.overlay-close').focus({ preventScroll: true }); }, 30);
 }
+/* ===== KEYBOARD TRIAGE: j/k move, o or Enter open, x mark read and move on, s star =====
+   Works in the open pop-up list, search results, Library and the desktop home page; on a paper
+   page j/k step to the next/previous paper of the list it was opened from. */
+let _kbKey = null, _kbHinted = false;
+function kbRows() {
+  let scope = null;
+  if (document.getElementById('overlay').classList.contains('open')) scope = document.getElementById('overlayBody');
+  else if (_searchActive) scope = document.getElementById('sec-search');
+  else if (currentTab === 'library') scope = document.getElementById('sec-library');
+  else if (['all', 'email'].includes(currentTab) && !document.body.classList.contains('tok-mode')) scope = document.getElementById('papersContent');
+  if (!scope) return [];
+  return [...scope.querySelectorAll('.top-row[data-key], .feed-item[data-key], .top-lead[data-key]')].filter(e => e.offsetParent !== null);
+}
+function kbSelect(el) {
+  document.querySelectorAll('.kb-sel').forEach(e => e.classList.remove('kb-sel'));
+  if (!el) { _kbKey = null; return; }
+  _kbKey = el.dataset.key;
+  el.classList.add('kb-sel');
+  el.setAttribute('tabindex', '-1');
+  el.focus({ preventScroll: true });
+  el.scrollIntoView({ block: 'nearest', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+}
+document.addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const t = e.target;
+  if (t && (/^(INPUT|TEXTAREA|SELECT|BUTTON|A)$/.test(t.tagName) || t.isContentEditable)) return;
+  if (document.querySelector('.auth-overlay.open, .notes-modal.open')) return;
+  if (_paperViewActive) {
+    if (e.key === 'j' || e.key === 'k') {
+      const b = document.querySelector(e.key === 'j' ? '.pd-nav-next' : '.pd-nav-prev');
+      if (b && !b.disabled) { e.preventDefault(); b.click(); }
+    }
+    return;
+  }
+  if (!['j', 'k', 'o', 'Enter', 'x', 's'].includes(e.key)) return;
+  const rows = kbRows();
+  if (!rows.length) return;
+  let i = rows.indexOf(document.activeElement);
+  if (i < 0) i = rows.findIndex(r => r.dataset.key === _kbKey);
+  if ((e.key === 'Enter' || e.key === 'o' || e.key === 'x' || e.key === 's') && i < 0) return;
+  e.preventDefault();
+  if (!_kbHinted) { _kbHinted = true; toast('Keys: j / k move, o open, x mark read, s star', null, { duration: 5000 }); }
+  const key = i >= 0 ? rows[i].dataset.key : null;
+  if (e.key === 'j') kbSelect(rows[i < 0 ? 0 : Math.min(i + 1, rows.length - 1)]);
+  else if (e.key === 'k') kbSelect(rows[i < 0 ? 0 : Math.max(i - 1, 0)]);
+  else if (e.key === 'o' || e.key === 'Enter') openPaper(key, { target: rows[i] });
+  else if (e.key === 'x' || e.key === 's') {
+    const nextKey = rows[i + 1] ? rows[i + 1].dataset.key : null;
+    if (e.key === 'x') toggleRead(key, null); else toggleStar(key, null);
+    const fresh = kbRows();
+    const land = e.key === 'x' && readSet.has(key) ? (fresh.find(r => r.dataset.key === nextKey) || fresh.find(r => r.dataset.key === key)) : fresh.find(r => r.dataset.key === key);
+    kbSelect(land || fresh[Math.min(i, fresh.length - 1)]);
+  }
+});
+
+/* Tab stays inside the open pop-up */
+document.addEventListener('keydown', e => {
+  const ol = document.getElementById('overlay');
+  if (e.key !== 'Tab' || !ol.classList.contains('open')) return;
+  const f = [...ol.querySelectorAll('.overlay-content button, .overlay-content a[href], .overlay-content [tabindex]:not([tabindex="-1"])')].filter(x => x.offsetParent !== null && !x.disabled);
+  if (!f.length) return;
+  const first = f[0], last = f[f.length - 1];
+  if (!ol.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
+  else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+});
 function closeOverlay(skipHistory) {
   const ol = document.getElementById('overlay');
   if (!ol.classList.contains('open')) return;
   _overlayGroupName = null;
+  // Give focus back to what opened the pop-up; closing often re-renders the view underneath,
+  // so fall back to the replacement element with the same class and text.
+  const back = _overlayReturnFocus; _overlayReturnFocus = null;
+  if (back && back !== document.body) {
+    const cls = back.className, txt = back.textContent;
+    setTimeout(() => {
+      if (_paperViewActive) return;
+      const el = document.contains(back) ? back
+        : [...document.querySelectorAll(back.tagName)].find(e => e.className === cls && e.textContent === txt && e.offsetParent !== null);
+      if (el) el.focus({ preventScroll: true });
+    }, 120);
+  }
   ol.classList.add('closing');
   const onEnd = () => {
     ol.classList.remove('open', 'closing');
@@ -3419,7 +3562,24 @@ async function pushToGitHub() {
 
 /* ===== PAPER DETAIL PAGE ===== */
 let _paperViewActive = false;
+/* Previous/next on the paper page follow the list the paper was opened from */
+let _navList = null;   // { keys: [...], label }
+function captureNavList(fromEl) {
+  const scope = fromEl && fromEl.closest && fromEl.closest('.paper-list, #papersContent, .pd-rel-grid, .tok');
+  if (!scope) return;
+  const keys = [...new Set([...scope.querySelectorAll('[data-key]')].map(e => e.dataset.key))];
+  let label;
+  if (fromEl.closest('#overlay')) label = document.getElementById('overlayTitle').textContent;
+  else if (fromEl.closest('#sec-search')) label = 'search results';
+  else if (fromEl.closest('#sec-library')) label = 'your Library';
+  else if (fromEl.closest('.pd-rel-grid')) label = 'related papers';
+  else label = currentTab === 'email' ? 'Email Digest' : 'Recent Works';
+  _navList = keys.length > 1 ? { keys, label } : null;
+}
+/* Step to another paper without adding history, so Back still returns to the list */
+function goPaper(key) { if (key) location.replace('#paper/' + encodeURIComponent(key)); }
 function openPaper(id, event) {
+  if (event && event.target) captureNavList(event.target);
   const paperId = encodeURIComponent(id);
   if (event && (event.metaKey || event.ctrlKey)) {
     window.open(location.pathname + '#paper/' + paperId, '_blank');
@@ -3433,10 +3593,9 @@ let _savedScrollTop = 0;
 function showPaperDetail(id) {
   const p = allPapers.find(pp => pp.id === id);
   if (!p) { applyHash(); return; }
+  // Save the list's scroll position, but not when stepping from one paper to the next
+  if (!_paperViewActive) _savedScrollTop = document.getElementById('mainScroll').scrollTop;
   _paperViewActive = true;
-
-  // Save scroll position before switching to detail view
-  _savedScrollTop = document.getElementById('mainScroll').scrollTop;
   if (document.body.classList.contains('tok-mode')) _tokScrollTop = document.getElementById('tokFeed').scrollTop;
 
   // Close group overlay if open (visually only, don't touch history)
@@ -3465,18 +3624,34 @@ function renderPaperDetail(p) {
   const why = parseWhy(p);
   const again = `renderPaperDetail(allPapers.find(pp=>paperKey(pp)==='${ka}'))`;
   const showBack = history.length > 1;
+  // previous / next within the list this paper was opened from
+  const nav = _navList && _navList.keys.includes(k) ? _navList : null;
+  const ni = nav ? nav.keys.indexOf(k) : -1;
+  const prevK = ni > 0 ? nav.keys[ni - 1] : null, nextK = nav && ni < nav.keys.length - 1 ? nav.keys[ni + 1] : null;
+  const nextP = nextK ? allPapers.find(pp => paperKey(pp) === nextK) : null;
+  const navHTML = nav ? `
+      <button class="pd-act pd-nav-prev" ${prevK ? `onclick="goPaper('${escAttr(prevK)}')"` : 'disabled'} title="Previous in ${escAttr(nav.label)} (k)" aria-label="Previous paper">&#8249;</button>
+      <span class="pd-nav-pos">${ni + 1} / ${nav.keys.length}</span>
+      <button class="pd-act pd-nav-next" ${nextK ? `onclick="goPaper('${escAttr(nextK)}')"` : 'disabled'} title="Next in ${escAttr(nav.label)} (j)" aria-label="Next paper">&#8250;</button>
+      <span class="pd-nav-sep"></span>` : '';
+  const nextCard = nextP ? `<button class="pd-next" onclick="goPaper('${escAttr(nextK)}')">
+      <span class="pd-next-label">Next in ${esc(nav.label)}</span>
+      <span class="pd-next-title">${esc(nextP.headline || nextP.title)}</span>
+      <span class="pd-next-arrow" aria-hidden="true">&#8250;</span>
+    </button>` : '';
   const shortDate = d => { try { return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); } catch (e) { return d; } };
 
   // Sticky bar: back, title (appears once the heading scrolls away), actions
   const bar = `<div class="pd-bar"><div class="pd-bar-inner">
-    ${showBack ? `<button class="pd-back" onclick="paperBack()"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>Back</button>` : ''}
+    ${showBack ? `<button class="pd-back" onclick="paperBack()"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg><span class="pd-back-label">Back</span></button>` : ''}
     <div class="pd-bar-title" aria-hidden="true">${esc(p.title)}</div>
     <div class="pd-actions">
+      ${navHTML}
       <button class="pd-act ${isStar?'on-star':''}" onclick="toggleStar('${ka}',this);${again}" title="${isStar?'Unstar':'Star'}" aria-label="${isStar?'Unstar':'Star'}">&#9733;</button>
       <button class="pd-act ${ir?'on-read':''}" onclick="toggleRead('${ka}',this);${again}" title="${ir?'Mark unread':'Mark as read'}" aria-label="${ir?'Mark unread':'Mark as read'}">&#10003;</button>
       <span class="save-anchor"><button class="pd-act ${inAny?'on-list':''}" onclick="event.stopPropagation();openSaveDD(this,'${ka}')" title="Add to list" aria-label="Add to list">&#9776;</button></span>
       <button class="pd-act ${hasNotes?'on-notes':''}" onclick="toggleNotesModal('${ka}')" title="Notes" aria-label="Notes">&#9998;</button>
-      ${p.url ? `<a class="pd-open" href="${esc(p.url)}" target="_blank" rel="noopener">Open paper<svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>` : ''}
+      ${p.url ? `<a class="pd-open" href="${esc(p.url)}" target="_blank" rel="noopener"><span class="pd-open-full">Open paper</span><span class="pd-open-short">Open</span><svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>` : ''}
     </div>
   </div></div>`;
 
@@ -3542,6 +3717,7 @@ function renderPaperDetail(p) {
     <article class="pd-article">
       ${head}
       <div class="pd-body"><div class="pd-main">${main}</div>${aside}</div>
+      ${nextCard}
       ${related ? `<section class="pd-related"><h2>Related papers</h2>${related}</section>` : ''}
     </article>
   </div>`;
@@ -3699,6 +3875,7 @@ function toggleNotesModal(key) {
   const p = allPapers.find(pp => paperKey(pp) === key);
   const area = document.getElementById('notesModalArea');
   area.value = desanitizeNote(p?.user_notes || '');
+  document.getElementById('notesPaper').textContent = p ? (p.headline || p.title) : '';
   modal.classList.add('open');
   updateNotesFooter();
   document.getElementById('notesStatus').textContent = '';
