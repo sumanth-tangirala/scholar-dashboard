@@ -104,6 +104,14 @@ a { color: inherit; text-decoration: none; }
 .nav-search input { width: 100%; padding: 8px 12px 8px 36px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 24px; color: var(--text); font-size: 13px; outline: none; transition: border-color 0.3s ease-in-out; }
 .nav-search input:focus { border-color: var(--accent); }
 .nav-search input::placeholder { color: var(--text-muted); }
+.nav-search-toggle { display: none; }
+@media (max-width: 600px) {
+  .nav-search-toggle { display: inline-flex; align-items: center; justify-content: center; margin-left: auto; width: 40px; height: 40px; border-radius: 50%; border: none; background: none; color: var(--text-secondary); cursor: pointer; transition: background 0.15s, color 0.15s; }
+  .nav-search-toggle:hover, body.search-open .nav-search-toggle { background: rgba(255,255,255,0.08); color: var(--text); }
+  .nav-search-toggle svg { width: 20px; height: 20px; fill: currentColor; }
+  body.search-open .nav-search { order: 4; flex-basis: 100%; width: 100%; margin: 0 0 10px; }
+  body.search-open .nav-search input { font-size: 16px; padding: 10px 14px 10px 38px; }   /* 16px stops iOS zooming in */
+}
 .nav-search svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; fill: var(--text-muted); }
 
 /* BRIEFING */
@@ -693,6 +701,12 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 
 /* LIBRARY TAB */
 .library-wrap { max-width: 1200px; margin: 0 auto; padding: 24px; }
+/* Library header: left-aligned title like the other pages, actions beside it, wrapping below on phones */
+.lib-head { max-width: 1200px; margin: 0 auto; padding: 32px 24px 0; display: flex; align-items: center; justify-content: space-between; gap: 12px 16px; flex-wrap: wrap; }
+.lib-head h2 { font-family: var(--serif); font-optical-sizing: auto; font-size: 36px; font-weight: 500; letter-spacing: -0.01em; line-height: 1.15; }
+.lib-head-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.lib-head-actions button { font-size: 14px; padding: 8px 16px; }
+@media (max-width: 600px) { .lib-head { padding: 24px 16px 0; } .library-wrap { padding: 16px; } }
 .library-section { margin-bottom: 24px; }
 .library-section-header { font-size: 16px; font-weight: 500; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
 .library-section-header .star-icon { color: var(--star); }
@@ -703,9 +717,9 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .library-actions button.danger:hover { border-color: #f28b82; color: #f28b82; }
 .library-rename-input { background: var(--bg); border: 1px solid var(--accent); color: var(--text); font-size: 14px; padding: 2px 8px; border-radius: 6px; outline: none; width: 200px; }
 .library-empty { padding: 40px; text-align: center; color: var(--text-muted); font-size: 14px; }
-.btn-interests { font-size: 15px; padding: 10px 22px; border-radius: 10px; border: 1px solid var(--border); background: transparent; color: var(--text-secondary); cursor: pointer; transition: all 0.15s; position: absolute; right: 24px; top: 45px; transform: translateY(-50%); }
+.btn-interests { font-size: 15px; padding: 10px 22px; border-radius: 10px; border: 1px solid var(--border); background: transparent; color: var(--text-secondary); cursor: pointer; transition: all 0.15s; }
 .btn-interests:hover { border-color: var(--accent); color: var(--accent); }
-.btn-new-list { font-size: 15px; padding: 10px 22px; border-radius: 10px; border: 1px solid var(--border); background: transparent; color: var(--text-secondary); cursor: pointer; transition: all 0.15s; position: absolute; left: 24px; top: 45px; transform: translateY(-50%); }
+.btn-new-list { font-size: 15px; padding: 10px 22px; border-radius: 10px; border: 1px solid var(--border); background: transparent; color: var(--text-secondary); cursor: pointer; transition: all 0.15s; }
 .btn-new-list:hover { border-color: var(--accent); color: var(--accent); }
 .library-list-empty { padding: 20px; text-align: center; color: var(--text-muted); font-size: 13px; font-style: italic; }
 
@@ -744,7 +758,7 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 
 /* RESPONSIVE */
 @media (max-width: 900px) { .topics-grid { grid-template-columns: repeat(2, 1fr); } .top-grid { grid-template-columns: 1fr; } .skel-top-grid { grid-template-columns: 1fr; } .skel-topics { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 600px) { .topics-grid { grid-template-columns: 1fr; } .top-grid { grid-template-columns: 1fr; } .nav-search { display: none; } .nav-inner { padding: 0 16px; gap: 12px; } .briefing, .filters, .top-papers, .topics-grid { padding-left: 16px; padding-right: 16px; } .skel-topics { grid-template-columns: 1fr; } .skel-top-grid { grid-template-columns: 1fr; } }
+@media (max-width: 600px) { .topics-grid { grid-template-columns: 1fr; } .top-grid { grid-template-columns: 1fr; } .nav-search { display: none; } body.search-open .nav-search { display: block; } .nav-inner { padding: 0 16px; gap: 12px; } .briefing, .filters, .top-papers, .topics-grid { padding-left: 16px; padding-right: 16px; } .skel-topics { grid-template-columns: 1fr; } .skel-top-grid { grid-template-columns: 1fr; } }
 
 /* AUTH */
 .nav-login-btn { display: flex; align-items: center; justify-content: center; padding: 6px; border-radius: 50%; width: 32px; height: 32px; border: 1px solid var(--border); background: transparent; color: var(--text-secondary); font-size: 13px; cursor: pointer; transition: all 0.15s; flex-shrink: 0; margin-left: 12px; }
@@ -802,6 +816,11 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .notes-modal-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--border-subtle); font-size: 13px; font-weight: 600; color: var(--text-secondary); letter-spacing: 0.5px; text-transform: uppercase; user-select: none; cursor: move; }
 .notes-modal-close { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 18px; padding: 0 4px; transition: color 0.15s; }
 .notes-modal-close:hover { color: var(--text); }
+.notes-modal-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 14px 10px 22px; border-top: 1px solid var(--border-subtle); min-height: 40px; }
+.notes-status { font-size: 12px; color: var(--text-muted); }
+.notes-delete { background: none; border: none; font: inherit; font-size: 12.5px; color: var(--text-muted); cursor: pointer; padding: 4px 6px; border-radius: 6px; transition: color 0.15s, background 0.15s; }
+.notes-delete:hover { color: #ff6b6b; background: rgba(255,107,107,0.1); }
+.notes-delete[hidden] { display: none; }
 .notes-modal textarea { flex: 1; width: 100%; background: transparent; border: none; color: var(--text-secondary); font-size: 14px; line-height: 1.6; padding: 12px 14px; resize: none; font-family: inherit; min-height: 160px; }
 .notes-modal textarea:focus { outline: none; }
 .notes-modal textarea::placeholder { color: var(--text-muted); font-style: italic; }
@@ -832,6 +851,12 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .save-bar.visible { transform: translateY(0); opacity: 1; pointer-events: auto; }
 .save-bar-msg { font-size: 12px; color: var(--text-muted); white-space: nowrap; flex: 1; margin-bottom: 10px; }
 .save-bar-msg strong { color: var(--text); font-size: 13.5px; }
+.save-bar-sub { display: block; margin-top: 2px; font-size: 12px; color: var(--text-muted); }
+.save-bar .save-bar-msg { white-space: normal; padding-right: 22px; }
+.save-bar .btn-dismiss-bar { position: absolute; top: 10px; right: 10px; }
+/* on the paper page, sit below its sticky action bar instead of over "Open paper" */
+body:has(#sec-paper.active) .save-bar { top: 124px; }
+.save-bar-btns .btn-save-csv { white-space: nowrap; }
 .btn-save-csv { padding: 5px 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.18); border-radius: 6px; color: var(--text); font-size: 12px; font-weight: 500; cursor: pointer; transition: background 0.15s; flex: 1; text-align: center; margin: 0 2px; }
 .btn-save-csv:hover { background: rgba(255,255,255,0.18); }
 .save-bar-btns .btn-save-csv:first-child { background: rgba(255,255,255,0.88); color: #202124; font-weight: 600; border-color: transparent; }
@@ -856,6 +881,7 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
       <button class="nav-tab" data-tab="venues" onclick="switchTab('venues')">Venues</button>
       <button class="nav-tab" data-tab="library" onclick="switchTab('library')">Library</button>
     </div>
+    <button class="nav-search-toggle" id="navSearchToggle" onclick="toggleMobileSearch()" aria-label="Search" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg></button>
     <div class="nav-search">
       <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
       <input type="text" id="searchInput" placeholder="Search papers and authors..." oninput="debouncedSearch()" onpaste="setTimeout(debouncedSearch,0)">
@@ -926,12 +952,12 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 
 <!-- LIBRARY TAB -->
 <div class="tab-section" id="sec-library">
-  <div style="position:relative;max-width:1200px;margin:0 auto;padding:24px 24px 0;">
-    <div class="briefing" style="padding:0;">
-      <h2>Library</h2>
+  <div class="lib-head">
+    <h2>Library</h2>
+    <div class="lib-head-actions">
+      <button class="btn-new-list" onclick="createNewList()">+ New list</button>
+      <button class="btn-interests" onclick="switchTab('interests')">Topics &amp; Interests <span class="tab-badge" id="interestsBadge" style="display:none">0</span></button>
     </div>
-    <button class="btn-new-list" onclick="createNewList()">+ New List</button>
-    <button class="btn-interests" onclick="switchTab('interests')">Topics &amp; Interests <span class="tab-badge" id="interestsBadge" style="display:none">0</span></button>
   </div>
   <div class="library-wrap" id="libraryContent"></div>
 </div>
@@ -1017,12 +1043,13 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 <div class="notes-modal" id="notesModal">
   <div class="notes-modal-header" id="notesModalDrag">
     <span>Notes</span>
-    <div style="display:flex;gap:4px;align-items:center;">
-      <button class="notes-modal-close" onclick="deleteNote()" title="Delete note" style="font-size:14px;">&#128465;</button>
-      <button class="notes-modal-close" onclick="closeNotesModal()" title="Close">&times;</button>
-    </div>
+    <button class="notes-modal-close" onclick="closeNotesModal()" title="Close" aria-label="Close notes">&times;</button>
   </div>
-  <textarea id="notesModalArea" placeholder="Add your notes..." oninput="debouncedSaveNote()"></textarea>
+  <textarea id="notesModalArea" placeholder="Add your notes..." oninput="debouncedSaveNote();updateNotesFooter()"></textarea>
+  <div class="notes-modal-foot">
+    <span class="notes-status" id="notesStatus"></span>
+    <button class="notes-delete" id="notesDelete" onclick="deleteNote()">Delete note</button>
+  </div>
   <div class="notes-resize-handle" id="notesResizeHandle"></div>
 </div>
 
@@ -1030,7 +1057,7 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 
 <!-- SAVE BAR -->
 <div class="save-bar" id="saveBar">
-  <span class="save-bar-msg"><strong>Unsaved changes</strong></span>
+  <span class="save-bar-msg"><strong>Unsaved changes</strong><span class="save-bar-sub">Kept in this browser until you push</span></span>
   <button class="btn-dismiss-bar" onclick="hideSaveBar()" title="Dismiss">&times;</button>
   <div class="save-bar-btns">
     <button class="btn-save-csv" onclick="pushToGitHub()" id="btnPushGH">Push to GitHub</button>
@@ -1051,13 +1078,16 @@ function csvUrl(name) {
   return base + name + bust;
 }
 
+// Legacy or variant spellings -> the canonical group_name in groups_database.csv,
+// so every page shows the same name the data uses.
 const GROUP_NORMALIZE = {
-  'Safety & Verification': 'Verification & Safety',
+  'Verification & Safety': 'Safety & Verification',
+  'Safety & Imitation Learning': 'Safety & Verification',
   'Conformal Prediction / Verification': 'Conformal Prediction',
   'Conformal Prediction / Uncertainty': 'Conformal Prediction',
-  'Safety & Imitation Learning': 'Verification & Safety',
-  'Diffusion Models / Safety': 'Diffusion/Flow Matching Policies',
-  'Flow Matching / RL': 'Diffusion/Flow Matching Policies',
+  'Diffusion Models / Safety': 'Diffusion & Flow Policies',
+  'Flow Matching / RL': 'Diffusion & Flow Policies',
+  'Diffusion/Flow Matching Policies': 'Diffusion & Flow Policies',
   'Safe RL': 'Reinforcement Learning',
 };
 let GROUP_ORDER = []; // Populated dynamically from groups_database.csv
@@ -1214,6 +1244,74 @@ function flushStateToCSV() {
   });
 }
 
+/* ===== LOCAL BACKUP of unpushed changes =====
+   Edits live in memory until "Push to GitHub". Keep a copy in this browser so a reload or a
+   closed tab doesn't lose them: only the fields people edit are stored for papers, so papers a
+   digest run added in the meantime still come through when the backup is re-applied. */
+const LOCAL_BACKUP_KEY = 'scholar_unpushed_v1';
+const EDITABLE_FIELDS = ['is_read', 'is_starred', 'user_lists', 'user_notes', 'theme_groups'];
+let _loadedPaperFields = new Map();              // id -> editable fields as loaded, to diff against
+let _loadedInterestNames = [], _loadedGroupNames = [];
+let _backupTimer = null, _restoreAnnounced = false;
+function anyDirty() { return _stateDirty || _interestsDirty || _groupsDirty; }
+function paperFields(p) { const o = {}; EDITABLE_FIELDS.forEach(f => o[f] = p[f] || ''); return o; }
+function scheduleBackup() { clearTimeout(_backupTimer); _backupTimer = setTimeout(writeBackup, 250); }
+function writeBackup() {
+  try {
+    // A clean page (still loading, or a second tab) must never erase another session's backup;
+    // only a successful push or Reset clears it (clearBackup).
+    if (!anyDirty()) return;
+    const b = { savedAt: new Date().toISOString() };
+    if (_stateDirty) {
+      flushStateToCSV();
+      const present = new Set(), papers = {};
+      allPapers.forEach(p => {
+        present.add(p.id);
+        const now = paperFields(p), was = _loadedPaperFields.get(p.id);
+        if (!was || JSON.stringify(now) !== JSON.stringify(was)) papers[p.id] = now;
+      });
+      b.papers = papers;
+      b.deleted = [..._loadedPaperFields.keys()].filter(id => !present.has(id));
+    }
+    if (_interestsDirty) b.interests = { rows: allInterests, loadedNames: _loadedInterestNames };
+    if (_groupsDirty) b.groups = { rows: allGroups, loadedNames: _loadedGroupNames };
+    localStorage.setItem(LOCAL_BACKUP_KEY, JSON.stringify(b));
+  } catch (e) { /* storage full or blocked: the leave-page warning still applies */ }
+}
+function readBackup() { try { return JSON.parse(localStorage.getItem(LOCAL_BACKUP_KEY) || 'null'); } catch (e) { return null; } }
+function clearBackup() { clearTimeout(_backupTimer); try { localStorage.removeItem(LOCAL_BACKUP_KEY); } catch (e) {} }
+/* Saved rows win; rows added to the CSV since the backup was taken are kept */
+function mergeBackupRows(remote, saved, key) {
+  const savedNames = new Set(saved.rows.map(r => r[key]));
+  const knewAbout = new Set(saved.loadedNames || []);
+  return saved.rows.concat(remote.filter(r => !savedNames.has(r[key]) && !knewAbout.has(r[key])));
+}
+function announceRestore(b) {
+  showSaveBar();
+  if (_restoreAnnounced) return;
+  _restoreAnnounced = true;
+  const when = b && b.savedAt ? new Date(b.savedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+  toast(`Restored unsaved changes from this browser${when ? ' (' + when + ')' : ''}. Push to GitHub to keep them.`, null, { duration: 7000 });
+}
+function restorePapersFromBackup() {
+  _loadedPaperFields = new Map(allPapers.map(p => [p.id, paperFields(p)]));
+  const b = readBackup();
+  if (!b || (!b.papers && !b.deleted)) return;
+  const gone = new Set(b.deleted || []);
+  allPapers = allPapers.filter(p => !gone.has(p.id));
+  allPapers.forEach(p => { const o = b.papers && b.papers[p.id]; if (o) Object.assign(p, o); });
+  _stateDirty = true;
+  announceRestore(b);
+}
+window.addEventListener('pagehide', writeBackup);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') writeBackup(); });
+window.addEventListener('beforeunload', e => {
+  if (!anyDirty()) return;
+  writeBackup();
+  e.preventDefault();
+  e.returnValue = '';
+});
+
 function persistRead()   { flushStateToCSV(); _stateDirty = true; showSaveBar(); }
 function persistStars()  { flushStateToCSV(); _stateDirty = true; showSaveBar(); }
 function persistLists()  { flushStateToCSV(); _stateDirty = true; showSaveBar(); }
@@ -1257,6 +1355,7 @@ function loadPapers() {
   fetchNormalized(csvUrl('papers_database.csv')).then(text => {
     const r = Papa.parse(text, { header: true, skipEmptyLines: true, newline: '\n' });
     allPapers = r.data.filter(p => p.title && p.title.trim());
+    restorePapersFromBackup();
     bootstrapStateFromCSV();
     updateLibraryBadge();
     applyHash();
@@ -1271,6 +1370,9 @@ function loadInterests() {
   fetchNormalized(csvUrl('interests_database.csv')).then(text => {
     const r = Papa.parse(text, { header: true, skipEmptyLines: true, newline: '\n' });
     allInterests = r.data.filter(i => i.interest_name && i.interest_name.trim());
+    _loadedInterestNames = allInterests.map(i => i.interest_name);
+    const b = readBackup();
+    if (b && b.interests) { allInterests = mergeBackupRows(allInterests, b.interests, 'interest_name'); _interestsDirty = true; announceRestore(b); }
     updateInterestsBadge();
     renderInterests();
   }).catch(err => {
@@ -1281,6 +1383,9 @@ function loadGroups() {
   const groupsUrl = csvUrl('groups_database.csv');
   const onComplete = r => {
     allGroups = r.data.filter(g => g.group_name && g.group_name.trim());
+    _loadedGroupNames = allGroups.map(g => g.group_name);
+    const b = readBackup();
+    if (b && b.groups) { allGroups = mergeBackupRows(allGroups, b.groups, 'group_name'); _groupsDirty = true; announceRestore(b); }
     buildGroupOrder();
     updateInterestsBadge();
     renderInterests();
@@ -1585,8 +1690,16 @@ function debouncedSearch() {
 
 /* ===== GLOBAL SEARCH (cross-category) ===== */
 let _searchActive = false;
+/* Phone: the search box sits behind a button in the nav */
+function toggleMobileSearch(force) {
+  const open = typeof force === 'boolean' ? force : !document.body.classList.contains('search-open');
+  document.body.classList.toggle('search-open', open);
+  document.getElementById('navSearchToggle').setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open) setTimeout(() => document.getElementById('searchInput').focus(), 0);
+}
 function showGlobalSearch(q, fromHash) {
   _searchActive = true;
+  document.body.classList.add('search-open');   // on phones, keep the search row visible with its results
   if (!fromHash) location.hash = '#search?q=' + encodeURIComponent(q);
   // Hide all tab sections, show search section
   document.getElementById('sec-papers').classList.remove('active');
@@ -1638,6 +1751,7 @@ function switchTab(tab, fromHash) {
     _searchActive = false;
     document.getElementById('searchInput').value = '';
     document.getElementById('sec-search').classList.remove('active');
+    toggleMobileSearch(false);
   }
   currentTab = tab;
   if (!fromHash) location.hash = tab === 'interests' ? '#interests/' + currentIGTab : '#' + tab;
@@ -2203,8 +2317,8 @@ function updateListIcon(key) {
 function closeSaveDD() {
   if (_activeSaveDD) { _activeSaveDD.el.remove(); _activeSaveDD = null; }
 }
-document.addEventListener('click', () => { closeSaveDD(); closeAbsPopup(); closeVenueTooltip(); });
-document.getElementById('mainScroll').addEventListener('scroll', () => { closeSaveDD(); closeAbsPopup(); closeVenueTooltip(); }, { passive: true });
+document.addEventListener('click', () => { closeSaveDD(); closeAbsPopup(); closeVenueTooltip(); closeRelevancePopup(); });
+document.getElementById('mainScroll').addEventListener('scroll', () => { closeSaveDD(); closeAbsPopup(); closeVenueTooltip(); closeRelevancePopup(); }, { passive: true });
 
 /* [5] Micro-interaction: pop animation on toggle */
 function toggleStar(k, btn) {
@@ -2266,6 +2380,7 @@ function updateInterestsBadge() {
 /* [1] GROUP OVERLAY — animated open/close */
 let _overlayGroupName = null;
 function openGroup(name, skipHash) {
+  name = norm(name);   // old links may use a legacy spelling
   if (_overlayGroupName === name && document.getElementById('overlay').classList.contains('open')) return;
   _overlayGroupName = name;
   setOverlayTopMode(true);
@@ -2555,7 +2670,7 @@ function closeOverlay(skipHistory) {
     history.back();
   }
 }
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeOverlay(); closeAbsPopup(); closeSaveDD(); closeLoginModal(); _resolveGeneric(null); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeRelevancePopup(); closeOverlay(); closeAbsPopup(); closeSaveDD(); closeLoginModal(); _resolveGeneric(null); } });
 
 /* ===== LIBRARY ===== */
 let _collapsedLibGroups = new Set(['all', 'read']);
@@ -3016,7 +3131,7 @@ function _doToastUndo() {
   if (_toastTimer) { clearTimeout(_toastTimer); _toastTimer = null; }
 }
 
-function showSaveBar() { document.getElementById('saveBar').classList.add('visible'); }
+function showSaveBar() { document.getElementById('saveBar').classList.add('visible'); scheduleBackup(); }
 function hideSaveBar() { document.getElementById('saveBar').classList.remove('visible'); }
 
 function _triggerDownload(content, filename, type) {
@@ -3030,6 +3145,7 @@ function _triggerDownload(content, filename, type) {
 function resetChanges() {
   if (!confirm('Discard all unsaved changes and reload from the CSV files?')) return;
   _stateDirty = false; _interestsDirty = false; _groupsDirty = false;
+  clearBackup();
   hideSaveBar();
   loadPapers(); loadInterests(); loadGroups();
   toast('Changes discarded — reloaded from CSV files');
@@ -3088,6 +3204,10 @@ async function pushToGitHub() {
       await _ghPushFile(headers, 'groups_database.csv', Papa.unparse(allGroups, {delimiter:'|'}), 'Update groups_database.csv from dashboard');
 
     _stateDirty = false; _interestsDirty = false; _groupsDirty = false;
+    clearBackup();
+    _loadedPaperFields = new Map(allPapers.map(p => [p.id, paperFields(p)]));
+    _loadedInterestNames = allInterests.map(i => i.interest_name);
+    _loadedGroupNames = allGroups.map(g => g.group_name);
     hideSaveBar();
     toast('Saved to GitHub ✓');
   } catch (e) {
@@ -3192,7 +3312,7 @@ function renderPaperDetail(p) {
   if (paperDate(p)) facts.push(['Published', esc(paperDate(p))]);
   if (p.date_found) facts.push(['Added', esc(shortDate(p.date_found))]);
   if (via) facts.push(['Found via', `${via}${why && why.source ? `<span class="pd-sub">${esc(why.source)} alert</span>` : ''}`]);
-  facts.push(['Relevance', `<span class="f-rel rel-${rel}"><i></i>${relLabel(rel)}</span><span class="triage-anchor" onmouseenter="showRelevancePopup(this,'${ka}')" onmouseleave="hideRelevancePopup(this)"><button class="pd-info" title="How this was scored" aria-label="How this was scored">&#9432;</button></span>`]);
+  facts.push(['Relevance', `<span class="f-rel rel-${rel}"><i></i>${relLabel(rel)}</span><span class="triage-anchor" onmouseenter="showRelevancePopup(this,'${ka}')" onmouseleave="hideRelevancePopup(this)"><button class="pd-info" title="How this was scored" aria-label="How this was scored" aria-expanded="false" onclick="toggleRelevancePopup(event,this.parentElement,'${ka}')">&#9432;</button></span>`]);
   if (matches.length) facts.push(['Matches', `<span class="pd-matches">${matches.map(m => `<span class="pd-match">${esc(m)}</span>`).join('')}</span>`]);
 
   const groups = (p.theme_groups||'').split('|').map(x => x.trim()).filter(Boolean);
@@ -3263,25 +3383,61 @@ function addGroupToPaper(key, groupName) {
 }
 
 let _relPopupTimer = null;
-function showRelevancePopup(anchor, key) {
+function showRelevancePopup(anchor, key, pinned) {
+  // touch screens fire a fake hover on tap; there the tap (toggleRelevancePopup) is the only way in
+  if (!pinned && !window.matchMedia('(hover: hover)').matches) return;
   clearTimeout(_relPopupTimer);
-  document.querySelectorAll('.relevance-popup').forEach(el => el.remove());
+  closeRelevancePopup();
   const p = allPapers.find(pp => paperKey(pp) === key);
   if (!p) return;
   const rect = anchor.getBoundingClientRect();
   const popup = document.createElement('div');
   popup.className = 'relevance-popup';
+  popup.setAttribute('role', 'dialog');
+  popup.setAttribute('aria-label', 'How this paper was scored');
+  if (pinned) popup.dataset.pinned = '1';
   popup.innerHTML = buildRelevanceBreakdown(p);
+  // Keep it on-screen: fit the width to narrow screens, and open upward when there's no room below
+  const w = Math.min(360, window.innerWidth - 24);
+  popup.style.width = w + 'px';
+  popup.style.left = Math.max(12, Math.min(rect.right - w, window.innerWidth - w - 12)) + 'px';
   popup.style.top = (rect.bottom + 8) + 'px';
-  popup.style.right = (window.innerWidth - rect.right) + 'px';
   popup.addEventListener('mouseenter', () => clearTimeout(_relPopupTimer));
-  popup.addEventListener('mouseleave', () => { _relPopupTimer = setTimeout(() => popup.remove(), 150); });
+  popup.addEventListener('mouseleave', () => { if (!popup.dataset.pinned) _relPopupTimer = setTimeout(() => popup.remove(), 150); });
+  popup.addEventListener('click', e => e.stopPropagation());
   document.body.appendChild(popup);
+  // Below if it fits, else above if it fits, else the roomier side, shortened to fit (it scrolls inside).
+  // Never over the (i) button itself, or the next click would land on the pop-up instead.
+  const h = popup.getBoundingClientRect().height;
+  const below = window.innerHeight - rect.bottom - 16, above = rect.top - 16;
+  if (h > below) {
+    if (h <= above || above > below) {
+      const fit = Math.min(h, above);
+      popup.style.maxHeight = fit + 'px';
+      popup.style.top = (rect.top - 8 - fit) + 'px';
+    } else {
+      popup.style.maxHeight = below + 'px';
+    }
+  }
+  const btn = anchor.querySelector('button');
+  if (btn) btn.setAttribute('aria-expanded', 'true');
 }
 function hideRelevancePopup(anchor) {
   _relPopupTimer = setTimeout(() => {
-    document.querySelectorAll('.relevance-popup').forEach(el => el.remove());
+    document.querySelectorAll('.relevance-popup:not([data-pinned])').forEach(el => el.remove());
+    if (!document.querySelector('.relevance-popup')) document.querySelectorAll('.pd-info[aria-expanded]').forEach(b => b.setAttribute('aria-expanded', 'false'));
   }, 150);
+}
+/* Click or tap the (i) button: opens the breakdown and keeps it open until a click outside, scroll or Esc */
+function toggleRelevancePopup(ev, anchor, key) {
+  ev.stopPropagation();
+  const open = document.querySelector('.relevance-popup[data-pinned]');
+  if (open) { closeRelevancePopup(); return; }
+  showRelevancePopup(anchor, key, true);
+}
+function closeRelevancePopup() {
+  document.querySelectorAll('.relevance-popup').forEach(el => el.remove());
+  document.querySelectorAll('.pd-info[aria-expanded]').forEach(b => b.setAttribute('aria-expanded', 'false'));
 }
 
 function sanitizeNote(s) { return s.replace(/\|/g, '/').replace(/,/g, ';').replace(/\r\n|\r|\n/g, ' // ').replace(/"/g, "'"); }
@@ -3300,12 +3456,27 @@ function deleteNote() {
   if (!_notesKey) return;
   const p = allPapers.find(pp => paperKey(pp) === _notesKey);
   if (!p) return;
+  clearTimeout(_notesSaveTimer);
+  const prev = p.user_notes || '';
+  const area = document.getElementById('notesModalArea');
+  if (!prev && !area.value.trim()) { closeNotesModal(); return; }   // nothing to delete
   p.user_notes = '';
-  document.getElementById('notesModalArea').value = '';
+  area.value = '';
   _stateDirty = true; showSaveBar();
   renderPaperDetail(p);
   closeNotesModal();
-  toast('Note deleted');
+  toast('Note deleted', () => {
+    p.user_notes = prev;
+    _stateDirty = true; showSaveBar();
+    if (_paperViewActive) renderPaperDetail(p);
+  });
+}
+/* Footer shows "Saved" after typing, and offers delete only when there is something to delete */
+function updateNotesFooter(saved) {
+  const area = document.getElementById('notesModalArea');
+  document.getElementById('notesDelete').hidden = !area.value.trim();
+  const st = document.getElementById('notesStatus');
+  st.textContent = saved ? 'Saved in this browser' : (area.value.trim() ? 'Saving…' : '');
 }
 
 let _notesSaveTimer = null;
@@ -3316,6 +3487,7 @@ function debouncedSaveNote() {
     saveNote(_notesKey, document.getElementById('notesModalArea').value);
     const p = allPapers.find(pp => paperKey(pp) === _notesKey);
     if (p) renderPaperDetail(p);
+    updateNotesFooter(true);
   }, 300);
 }
 
@@ -3329,6 +3501,8 @@ function toggleNotesModal(key) {
   const area = document.getElementById('notesModalArea');
   area.value = desanitizeNote(p?.user_notes || '');
   modal.classList.add('open');
+  updateNotesFooter();
+  document.getElementById('notesStatus').textContent = '';
   area.focus();
 }
 function closeNotesModal() {
