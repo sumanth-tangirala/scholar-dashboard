@@ -353,6 +353,20 @@ a { color: inherit; text-decoration: none; }
 .v-row:hover .v-name strong { color: #fff; }
 .v-name span { display: block; font-size: 12.5px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
 .v-bar { height: 6px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden; }
+.v-bar.none { background: none; }
+.v-toolbar { position: sticky; top: 0; z-index: 5; max-width: 1200px; margin: 0 auto; padding: 14px 24px 10px; display: flex; align-items: center; gap: 12px; background: var(--bg); }
+.v-jump { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; min-width: 0; }
+.v-filter { width: 220px; flex-shrink: 0; padding: 7px 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 999px; color: var(--text); font: inherit; font-size: 13px; outline: none; transition: border-color 0.2s; }
+.v-filter:focus { border-color: var(--accent); }
+.v-section { scroll-margin-top: 64px; }
+.v-more { margin: 6px 0 0 -2px; background: none; border: none; color: var(--text-muted); font: inherit; font-size: 13px; padding: 6px 2px; cursor: pointer; transition: color 0.15s; }
+.v-more:hover { color: var(--accent); }
+@media (max-width: 800px) {
+  .v-toolbar { flex-direction: column; align-items: stretch; padding: 12px 16px 10px; }
+  .v-jump { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .v-jump::-webkit-scrollbar { display: none; }
+  .v-filter { width: 100%; font-size: 16px; }
+}
 .v-bar i { display: block; height: 100%; background: var(--accent); opacity: 0.8; border-radius: 4px; }
 .v-count { font-size: 14px; color: var(--text-secondary); text-align: right; font-variant-numeric: tabular-nums; }
 .v-years { display: flex; flex-wrap: wrap; gap: 5px; }
@@ -591,6 +605,11 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .pd-topics .group-add-dd { max-height: none; overflow: visible; }
 
 /* SEARCH RESULTS (flat list) */
+.search-filters { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.search-results mark { background: rgba(251,177,60,0.22); color: inherit; border-radius: 3px; padding: 0 1px; }
+.search-empty { line-height: 1.6; max-width: 560px; margin: 48px auto; }
+.search-empty strong { display: block; color: var(--text); margin-bottom: 6px; }
+.search-results-header .v-more { margin: 0 0 0 8px; padding: 0 2px; }
 .search-results { max-width: 1200px; margin: 0 auto; padding: 0 24px 32px; }
 .search-results-header { font-size: 14px; color: var(--text-muted); margin-bottom: 12px; }
 /* [9] Softer card rendering */
@@ -1045,6 +1064,10 @@ body:has(#sec-paper.active) .save-bar { top: 124px; }
       <h2>Venues</h2>
       <p class="briefing-date" id="venuesNote"></p>
     </div>
+  </div>
+  <div class="v-toolbar" id="venuesToolbar">
+    <nav class="v-jump" id="venuesJump" aria-label="Jump to a section"></nav>
+    <input type="search" class="v-filter" id="venuesFilter" placeholder="Filter venues" aria-label="Filter venues" oninput="renderVenues()">
   </div>
   <div class="venues-wrap" id="venuesContent"></div>
 </div>
@@ -1893,7 +1916,8 @@ function toggleMobileSearch(force) {
 }
 function showGlobalSearch(q, fromHash) {
   _searchActive = true;
-  document.body.classList.add('search-open');   // on phones, keep the search row visible with its results
+  // on phones, keep the search row visible with its results (desktop always shows the box)
+  if (window.matchMedia('(max-width: 600px)').matches) document.body.classList.add('search-open');
   if (!fromHash) location.hash = '#search?q=' + encodeURIComponent(q);
   // Hide all tab sections, show search section
   document.getElementById('sec-papers').classList.remove('active');
@@ -1914,28 +1938,78 @@ function hideGlobalSearch() {
   document.getElementById('sec-search').classList.remove('active');
   switchTab(currentTab);
 }
-function renderGlobalSearch(q) {
-  const tokens = q.split(/\s+/).filter(Boolean);
-  const matchTokens = (text) => tokens.every(t => text.includes(t));
-
-  // Search papers
-  const matchedPapers = allPapers.filter(p => {
-    const s = [p.title,p.authors,p.headline,p.summary,p.abstract,p.venue,p.user_notes].filter(Boolean).join(' ').toLowerCase();
-    return matchTokens(s);
+/* Search ranks by where the words match (headline/title, then authors, then venue, then summary/abstract/
+   notes), highlights them, and narrows with chips: relevance, unread, topic, year. */
+let _searchFilters = { rel: 'all', unread: false, topic: null, year: null };
+let _lastSearchQ = '';
+function setSearchFilter(key, value) {
+  _searchFilters[key] = _searchFilters[key] === value ? (key === 'rel' ? 'all' : key === 'unread' ? false : null) : value;
+  renderGlobalSearch(_lastSearchQ);
+}
+function clearSearchFilters() { _searchFilters = { rel: 'all', unread: false, topic: null, year: null }; renderGlobalSearch(_lastSearchQ); }
+function searchScore(p, tokens) {
+  const low = v => (v || '').toLowerCase();
+  const head = low(p.headline) + ' ' + low(p.title), auth = low(p.authors), ven = low(p.venue);
+  const body = [p.summary, p.abstract, p.user_notes].map(low).join(' ');
+  let score = 0;
+  for (const t of tokens) {
+    if (head.includes(t)) score += 4;
+    else if (auth.includes(t)) score += 3;
+    else if (ven.includes(t)) score += 2;
+    else if (body.includes(t)) score += 1;
+    else return 0;
+  }
+  return score;
+}
+function highlightTokens(root, tokens) {
+  if (!tokens.length) return;
+  const re = new RegExp('(' + tokens.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')', 'gi');
+  root.querySelectorAll('.tr-headline, .tr-title, .tr-authors').forEach(el => {
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(n => {
+      if (!re.test(n.nodeValue)) return;
+      re.lastIndex = 0;
+      const span = document.createElement('span');
+      span.innerHTML = esc(n.nodeValue).replace(re, '<mark>$1</mark>');
+      n.replaceWith(...span.childNodes);
+    });
   });
-  sortPapers(matchedPapers);
-
+}
+function renderGlobalSearch(q) {
+  if (q !== _lastSearchQ) { _searchFilters.topic = null; _searchFilters.year = null; }
+  _lastSearchQ = q;
+  const tokens = q.split(/\s+/).filter(Boolean);
+  const scored = allPapers.map(p => ({ p, s: searchScore(p, tokens) })).filter(x => x.s > 0);
   const el = document.getElementById('globalSearchResults');
-
-  if (!matchedPapers.length) {
-    el.innerHTML = `<div class="empty-state">No results for "${esc(q)}"</div>`;
+  if (!scored.length) {
+    el.innerHTML = `<div class="tl-empty search-empty"><strong>No papers match "${esc(q)}".</strong>Try fewer words, an author's last name, or a venue like RSS or L4DC. Search looks at titles, headlines, authors, venues, summaries, abstracts and your notes.</div>`;
     return;
   }
-
-  let html = `<div class="search-results-header">${matchedPapers.length} result${matchedPapers.length!==1?'s':''} for "${esc(q)}"</div>`;
-  html += paperListHTML(matchedPapers);
-
+  // chips reflect everything the words match; filters then narrow the list
+  const all = scored.map(x => x.p);
+  const f = _searchFilters;
+  const topicCounts = {}, yearCounts = {};
+  all.forEach(p => { groupsOfPaper(p).forEach(g => topicCounts[g] = (topicCounts[g] || 0) + 1); const y = pubKey(p) ? Math.floor(pubKey(p) / 100) : null; if (y) yearCounts[y] = (yearCounts[y] || 0) + 1; });
+  const keep = p => (f.rel === 'all' || dynamicRelevance(p) === f.rel) && (!f.unread || !readSet.has(paperKey(p)))
+    && (!f.topic || groupsOfPaper(p).includes(f.topic)) && (!f.year || Math.floor(pubKey(p) / 100) === f.year);
+  const shown = scored.filter(x => keep(x.p));
+  shown.sort((a, b) => b.s - a.s || (REL_ORDER[dynamicRelevance(a.p)] ?? 9) - (REL_ORDER[dynamicRelevance(b.p)] ?? 9) || pubKey(b.p) - pubKey(a.p));
+  const chip = (key, value, label, n) => `<button class="tl-chip ${f[key] === value ? 'active' : ''}" onclick="setSearchFilter('${key}', ${typeof value === 'string' ? `'${escAttr(value)}'` : value})">${key === 'topic' ? gdot(value) : ''}${esc(label)}${n != null ? `<span class="n">${n}</span>` : ''}</button>`;
+  const rels = [['definitely', 'Must Read'], ['probably', 'Interesting'], ['mildly', 'Tangential']].filter(([r]) => all.some(p => dynamicRelevance(p) === r));
+  const topics = GROUP_ORDER.filter(g => topicCounts[g]);
+  const years = Object.keys(yearCounts).map(Number).sort((a, b) => b - a);
+  const active = f.rel !== 'all' || f.unread || f.topic || f.year;
+  let html = `<div class="search-results-header">${shown.length === all.length ? `${all.length} result${all.length !== 1 ? 's' : ''}` : `${shown.length} of ${all.length} results`} for "${esc(q)}"${active ? ` <button class="v-more" onclick="clearSearchFilters()">Clear filters</button>` : ''}</div>
+    <div class="search-filters">
+      <div class="tl-chips">${rels.map(([r, l]) => chip('rel', r, l, all.filter(p => dynamicRelevance(p) === r).length)).join('')}${chip('unread', true, 'Unread only', null)}</div>
+      ${topics.length > 1 ? `<div class="tl-chips">${topics.map(g => chip('topic', g, g, topicCounts[g])).join('')}</div>` : ''}
+      ${years.length > 1 ? `<div class="tl-chips">${years.map(y => chip('year', y, String(y), yearCounts[y])).join('')}</div>` : ''}
+    </div>`;
+  html += shown.length ? paperListHTML(shown.map(x => x.p)) : `<div class="tl-empty">No results with these filters. <button class="v-more" onclick="clearSearchFilters()">Clear filters</button></div>`;
   el.innerHTML = html;
+  highlightTokens(el, tokens);
 }
 
 /* [6] TAB SWITCHING — crossfade */
@@ -2675,6 +2749,11 @@ function openGroup(name, skipHash) {
 }
 /* ----- Venues tab ----- */
 const V_KINDS = [['conference', 'Conferences'], ['journal', 'Journals'], ['workshop', 'Workshops'], ['preprint', 'Preprints'], ['other', 'Theses and other']];
+/* Venues: each section shows venues with 3+ papers and folds the long tail of one-offs behind a
+   "Show N smaller venues" button; the filter box searches all of them. Bars share one scale across
+   peer-reviewed venues, workshops and other; preprints get no bars because arXiv (~790) dwarfs everything. */
+const V_MIN_SHOWN = 3;
+let _venuesOpen = new Set();
 function renderVenues() {
   const byVenue = {};
   allPapers.forEach(p => {
@@ -2688,25 +2767,36 @@ function renderVenues() {
   const peerN = peer.reduce((n, v) => n + v.n, 0);
   document.getElementById('venuesNote').textContent =
     `${peerN} papers from ${peer.length} conferences and journals, plus workshops and preprints. Pick a venue for all its papers, or a year for one edition.`;
-  document.getElementById('venuesContent').innerHTML = V_KINDS.map(([kind, label]) => {
-    const list = venues.filter(v => v.kind === kind).sort((a, b) => b.n - a.n || a.name.localeCompare(b.name));
-    if (!list.length) return '';
-    const max = list[0].n, total = list.reduce((n, v) => n + v.n, 0);
-    const row = v => {
-      const years = Object.keys(v.years).sort((a, b) => b - a);
-      const chips = years.length > 1 || kind === 'conference' || kind === 'workshop'
-        ? years.map(y => `<button class="tl-chip" onclick="event.stopPropagation();openVenue('${escAttr(v.name)}',${y})">${y}<span class="n">${v.years[y]}</span></button>`).join('')
-        : '';
-      return `<div class="v-row" onclick="openVenue('${escAttr(v.name)}')" title="All ${esc(v.name)} papers">
-        <div class="v-name"><strong>${esc(v.name)}</strong>${v.full ? `<span>${esc(v.full)}</span>` : ''}</div>
-        <div class="v-bar"><i style="width:${Math.max(v.n / max * 100, 2)}%"></i></div>
-        <div class="v-count">${v.n}</div>
-        <div class="v-years">${chips}</div>
-      </div>`;
-    };
-    return `<section class="v-section">
-      <div class="v-section-head"><h3>${label}</h3><span class="count">${total} ${total === 1 ? 'paper' : 'papers'}</span><span class="rule"></span></div>
-      ${list.map(row).join('')}
+  const q = (document.getElementById('venuesFilter').value || '').trim().toLowerCase();
+  const matches = v => !q || v.name.toLowerCase().includes(q) || (v.full || '').toLowerCase().includes(q);
+  const barMax = Math.max(1, ...venues.filter(v => v.kind !== 'preprint').map(v => v.n));
+  const sections = V_KINDS.map(([kind, label]) => ({ kind, label, list: venues.filter(v => v.kind === kind && matches(v)).sort((a, b) => b.n - a.n || a.name.localeCompare(b.name)) })).filter(x => x.list.length);
+  document.getElementById('venuesJump').innerHTML = sections.map(x =>
+    `<button class="tl-chip" onclick="document.getElementById('vs-${x.kind}').scrollIntoView({behavior:'smooth',block:'start'})">${x.label}<span class="n">${x.list.reduce((n, v) => n + v.n, 0)}</span></button>`).join('');
+  if (!sections.length) {
+    document.getElementById('venuesContent').innerHTML = `<div class="tl-empty">No venue matches "${esc(q)}".</div>`;
+    return;
+  }
+  const row = v => {
+    const years = Object.keys(v.years).sort((a, b) => b - a);
+    const chips = years.map(y => `<button class="tl-chip" onclick="event.stopPropagation();openVenue('${escAttr(v.name)}',${y})">${y}<span class="n">${v.years[y]}</span></button>`).join('');
+    const bar = v.kind === 'preprint' ? '<div class="v-bar none"></div>' : `<div class="v-bar"><i style="width:${Math.max(v.n / barMax * 100, 1.5)}%"></i></div>`;
+    return `<div class="v-row" onclick="openVenue('${escAttr(v.name)}')" title="All ${esc(v.name)} papers">
+      <div class="v-name"><strong>${esc(v.name)}</strong>${v.full ? `<span>${esc(v.full)}</span>` : ''}</div>
+      ${bar}
+      <div class="v-count">${v.n}</div>
+      <div class="v-years">${chips}</div>
+    </div>`;
+  };
+  document.getElementById('venuesContent').innerHTML = sections.map(({ kind, label, list }) => {
+    const total = list.reduce((n, v) => n + v.n, 0);
+    const main = q || _venuesOpen.has(kind) ? list : list.filter((v, i) => v.n >= V_MIN_SHOWN || i < 5);
+    const rest = list.length - main.length;
+    return `<section class="v-section" id="vs-${kind}">
+      <div class="v-section-head"><h3>${label}</h3><span class="count">${total} ${total === 1 ? 'paper' : 'papers'} across ${list.length} ${list.length === 1 ? 'venue' : 'venues'}</span><span class="rule"></span></div>
+      ${main.map(row).join('')}
+      ${rest > 0 ? `<button class="v-more" onclick="_venuesOpen.add('${kind}');renderVenues()">Show ${rest} smaller ${rest === 1 ? 'venue' : 'venues'} (${list.slice(main.length).reduce((n, v) => n + v.n, 0)} papers)</button>` : ''}
+      ${!q && _venuesOpen.has(kind) && list.some(v => v.n < V_MIN_SHOWN) && list.length > 5 ? `<button class="v-more" onclick="_venuesOpen.delete('${kind}');renderVenues()">Show fewer</button>` : ''}
     </section>`;
   }).join('');
 }
