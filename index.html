@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Scholar Dashboard</title>
+<meta name="description" content="Research papers from Google Scholar alerts and weekly surveys, ranked by Sumanth's research interests.">
+<meta name="theme-color" content="#000000">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23111111'/%3E%3Cg transform='translate(4 4)'%3E%3Cpath fill='%23fbb13c' d='M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400&display=swap" rel="stylesheet">
@@ -1351,20 +1354,64 @@ async function fetchNormalized(url) {
     throw err;
   }
 }
+/* Papers load in two steps so the page never waits on GitHub: the copy served next to the page
+   renders right away, then GitHub's copy (which also carries edits pushed from other devices)
+   replaces it when it is newer. Newer = later date_found, then more rows; on a tie GitHub wins. */
+let _papersText = null, _papersFresh = null;
+function parsePapers(text) {
+  return Papa.parse(text, { header: true, skipEmptyLines: true, newline: '\n' }).data.filter(p => p.title && p.title.trim());
+}
+function freshnessOf(rows) {
+  let latest = '';
+  rows.forEach(p => { if ((p.date_found || '') > latest) latest = p.date_found; });
+  return { latest, n: rows.length };
+}
+function isOlder(a, b) { return a.latest < b.latest || (a.latest === b.latest && a.n < b.n); }
+function applyPapers(rows, text) {
+  if (anyDirty()) writeBackup();   // edits made meanwhile are re-applied by restorePapersFromBackup
+  allPapers = rows;
+  _papersText = text;
+  _papersFresh = freshnessOf(rows);
+  restorePapersFromBackup();
+  bootstrapStateFromCSV();
+  updateLibraryBadge();
+}
+/* Swapping data under someone mid-scroll or mid-read is jarring; only do it quietly at the top */
+function quietSwapOK() {
+  if (_paperViewActive || _searchActive || document.getElementById('overlay').classList.contains('open')) return false;
+  if (document.getElementById('mainScroll').scrollTop > 40) return false;
+  const feed = document.getElementById('tokFeed');
+  return !(document.body.classList.contains('tok-mode') && feed && feed.scrollTop > 40);
+}
+function receivePapers(text, fromGitHub) {
+  if (text === _papersText) return;
+  const rows = parsePapers(text);
+  if (!rows.length) return;
+  if (!_papersText) { applyPapers(rows, text); applyHash(); revealContent(); return; }
+  const fresh = freshnessOf(rows);
+  if (!(isOlder(_papersFresh, fresh) || (fromGitHub && !isOlder(fresh, _papersFresh)))) return;
+  const swap = () => { applyPapers(rows, text); applyHash(); };
+  if (quietSwapOK()) { swap(); return; }
+  const added = fresh.n - _papersFresh.n;
+  toast(added > 0 ? `${added} new ${added === 1 ? 'paper' : 'papers'} available` : 'Updated papers available', swap, { actionLabel: 'Show', duration: 12000 });
+}
+async function fetchLocal(name) {
+  const res = await fetch(name, { cache: 'no-store' });
+  if (!res.ok) throw new Error('fetch failed: ' + res.status);
+  return normalizeNewlines(await res.text());
+}
 function loadPapers() {
-  fetchNormalized(csvUrl('papers_database.csv')).then(text => {
-    const r = Papa.parse(text, { header: true, skipEmptyLines: true, newline: '\n' });
-    allPapers = r.data.filter(p => p.title && p.title.trim());
-    restorePapersFromBackup();
-    bootstrapStateFromCSV();
-    updateLibraryBadge();
-    applyHash();
-    revealContent();
-  }).catch(err => {
+  let pending = 2, lastErr = null;
+  const settle = err => {
+    if (err) lastErr = err;
+    if (--pending > 0 || _papersText) return;
     document.getElementById('topStories').innerHTML = '<div class="empty-state">Could not load papers_database.csv</div>';
-    toastError('Could not load papers — ' + (err && err.message ? err.message : 'network error'));
+    toastError('Could not load papers — ' + (lastErr && lastErr.message ? lastErr.message : 'network error'));
     revealContent();
-  });
+  };
+  fetchLocal('papers_database.csv').then(t => { receivePapers(t, false); settle(); }).catch(settle);
+  if (CSV_BASE_URL) fetchNormalized(csvUrl('papers_database.csv')).then(t => { receivePapers(t, true); settle(); }).catch(settle);
+  else settle();
 }
 function loadInterests() {
   fetchNormalized(csvUrl('interests_database.csv')).then(text => {
@@ -3115,7 +3162,9 @@ function toast(msg, undoFn, opts) {
   _toastUndo = undoFn || null;
   t.classList.toggle('error', !!(opts && opts.error));
   const duration = (opts && opts.duration) || (opts && opts.error ? 6000 : 4000);
-  if (undoFn) {
+  if (undoFn && opts && opts.actionLabel) {
+    t.innerHTML = `<span class="toast-msg">${msg}</span><button class="toast-undo" onclick="_doToastUndo()">${opts.actionLabel}</button>`;
+  } else if (undoFn) {
     t.innerHTML = `<span class="toast-msg">${msg}</span><button class="toast-undo" onclick="_doToastUndo()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>Undo</button>`;
   } else {
     t.innerHTML = `<span class="toast-msg">${msg}</span>`;
@@ -3147,6 +3196,7 @@ function resetChanges() {
   _stateDirty = false; _interestsDirty = false; _groupsDirty = false;
   clearBackup();
   hideSaveBar();
+  _papersText = null;
   loadPapers(); loadInterests(); loadGroups();
   toast('Changes discarded — reloaded from CSV files');
 }
