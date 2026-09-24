@@ -568,28 +568,6 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 @media (max-width: 900px) { .topic-jump { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; } .topic-jump::-webkit-scrollbar { display: none; } }
 @media (prefers-reduced-motion: reduce) { .topic-card.flash { animation: none; } }
 
-/* Lists and topic cards: with a mouse, actions appear in place of the venue/date instead of growing
-   the row, so moving down a list never makes it jump. Touch screens keep the always-visible actions. */
-@media (hover: hover) {
-  .paper-list .top-row .tr-actions, .f-actions { display: block; grid-template-rows: none; opacity: 1; margin-top: 0; transition: none; }
-  .paper-list .top-row:hover .tr-actions, .paper-list .top-row:focus-within .tr-actions, .paper-list .top-row .tr-actions:has(.p-detail-panel.open),
-  .feed-item:hover .f-actions, .feed-item:focus-within .f-actions, .f-actions:has(.p-detail-panel.open) { margin-top: 0; }
-  .paper-list .top-row .tr-actions > div, .f-actions > div { overflow: visible; }
-  .tr-actions .why, .f-actions .why { display: none; }
-  .paper-list .top-row .tr-actions .p-action-row { position: absolute; top: 12px; right: 18px; width: 158px; flex-wrap: wrap; justify-content: flex-end; gap: 4px; opacity: 0; pointer-events: none; transition: opacity 0.12s; }
-  .feed-item .f-actions .p-action-row { position: absolute; right: 16px; bottom: 11px; gap: 4px; opacity: 0; pointer-events: none; transition: opacity 0.12s; }
-  .paper-list .top-row:hover .p-action-row, .paper-list .top-row:focus-within .p-action-row,
-  .feed-item:hover .p-action-row, .feed-item:focus-within .p-action-row { opacity: 1; pointer-events: auto; }
-  .paper-list .top-row:hover .tr-side, .paper-list .top-row:focus-within .tr-side,
-  .feed-item:hover .f-meta, .feed-item:focus-within .f-meta { visibility: hidden; }
-  .paper-list .top-row .p-action-row .btn-abs, .paper-list .top-row .p-action-row .btn-link,
-  .feed-item .p-action-row .btn-abs, .feed-item .p-action-row .btn-link { font-size: 11.5px; padding: 1px 7px; }
-  .paper-list .top-row .p-action-row .p-actions, .feed-item .p-action-row .p-actions { margin-left: 2px; }
-  /* once Summary / Why / Abstract is open, the buttons sit under it so they can close it */
-  .feed-item .f-actions:has(.p-detail-panel.open) .p-action-row { position: static; opacity: 1; pointer-events: auto; margin-top: 10px; }
-  .feed-item:has(.p-detail-panel.open) .f-meta { visibility: visible; }
-}
-@media (hover: none) { .btn-why { display: none; } }
 
 /* keyboard focus on paper rows and other clickable blocks */
 .top-row:focus-visible, .feed-item:focus-visible, .top-lead:focus-visible, .v-row:focus-visible,
@@ -1669,14 +1647,6 @@ function parseWhy(p) {
   if (!n) return null;
   return { reason: n.charAt(0).toUpperCase() + n.slice(1), source };
 }
-function whyBtn(p) {
-  if (!parseWhy(p)) return '';
-  return `<button class="btn-abs btn-why" data-detail="why" onclick="event.stopPropagation();toggleDetail(this,'why')" title="Why this paper is here">Why</button>`;
-}
-function whyText(p) {
-  const w = parseWhy(p);
-  return w ? w.reason + (w.source ? ` (from your ${w.source} alert)` : '') : '';
-}
 function whyHTML(p, cls) {
   const w = parseWhy(p);
   if (!w) return '';
@@ -2508,8 +2478,8 @@ function feedMetaHTML(p, showRel) {
   </div>`;
 }
 function feedActionsHTML(p, withSummaryBtn) {
-  return `<div class="p-action-row">${withSummaryBtn ? summaryBtn(p) + ' ' + whyBtn(p) : ''} ${absBtn(p)} ${linkBtn(p)} <span class="p-actions has-active">${starBtn(p)} ${readBtn(p)} ${saveBtn(p)} ${deleteBtn(p)}</span></div>
-    <div class="p-detail-panel" data-summary="${hasText(p.summary)?dataAttr(p.summary):''}" data-abstract="${hasText(p.abstract)?dataAttr(p.abstract):''}" data-why="${dataAttr(whyText(p))}"></div>`;
+  return `<div class="p-action-row">${withSummaryBtn ? summaryBtn(p) : ''} ${absBtn(p)} ${linkBtn(p)} <span class="p-actions has-active">${starBtn(p)} ${readBtn(p)} ${saveBtn(p)} ${deleteBtn(p)}</span></div>
+    <div class="p-detail-panel" data-summary="${hasText(p.summary)?dataAttr(p.summary):''}" data-abstract="${hasText(p.abstract)?dataAttr(p.abstract):''}"></div>`;
 }
 
 /* Lead story: large headline with the summary shown inline */
@@ -2588,7 +2558,7 @@ function toggleDetail(btn, type) {
     panel.textContent = '';
   } else {
     // Show requested type
-    const text = type === 'summary' ? panel.dataset.summary : type === 'why' ? panel.dataset.why : panel.dataset.abstract;
+    const text = type === 'summary' ? panel.dataset.summary : panel.dataset.abstract;
     panel.textContent = text;
     panel.dataset.activeType = type;
     panel.classList.add('open');
@@ -3060,8 +3030,8 @@ function topRowHTML(p, groups) {
     </div>
     <div class="tr-actions"><div>
       ${whyHTML(p)}
-      <div class="p-action-row">${summaryBtn(p)} ${whyBtn(p)} ${absBtn(p)} ${linkBtn(p)} <span class="p-actions has-active">${starBtn(p)} ${readBtn(p)} ${saveBtn(p)} ${deleteBtn(p)}</span></div>
-      <div class="p-detail-panel" data-summary="${hasSummary?dataAttr(p.summary):''}" data-abstract="${hasAbstract?dataAttr(p.abstract):''}" data-why="${dataAttr(whyText(p))}"></div>
+      <div class="p-action-row">${summaryBtn(p)} ${absBtn(p)} ${linkBtn(p)} <span class="p-actions has-active">${starBtn(p)} ${readBtn(p)} ${saveBtn(p)} ${deleteBtn(p)}</span></div>
+      <div class="p-detail-panel" data-summary="${hasSummary?dataAttr(p.summary):''}" data-abstract="${hasAbstract?dataAttr(p.abstract):''}"></div>
     </div></div>
   </article>`;
 }
