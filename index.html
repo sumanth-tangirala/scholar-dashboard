@@ -19,7 +19,6 @@
 <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
 <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js" defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/js-sha256/0.9.0/sha256.min.js"></script>
 <style>
 :root {
   /* topic-group identity: categorical slots in display_order, validated on #000/#111/#141414 */
@@ -871,10 +870,6 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 @media (max-width: 600px) { .topics-grid { grid-template-columns: 1fr; } .top-grid { grid-template-columns: 1fr; } .nav-search { display: none; } body.search-open .nav-search { display: block; } .nav-inner { padding: 0 16px; gap: 12px; } .briefing, .filters, .top-papers, .topics-grid { padding-left: 16px; padding-right: 16px; } .skel-topics { grid-template-columns: 1fr; } .skel-top-grid { grid-template-columns: 1fr; } }
 
 /* AUTH */
-.nav-login-btn { display: flex; align-items: center; justify-content: center; padding: 6px; border-radius: 50%; width: 32px; height: 32px; border: 1px solid var(--border); background: transparent; color: var(--text-secondary); font-size: 13px; cursor: pointer; transition: all 0.15s; flex-shrink: 0; margin-left: 12px; }
-.nav-login-btn:hover { background: var(--bg-hover); color: var(--text); }
-.nav-login-btn.authed { }
-.nav-login-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
 .auth-overlay { position: fixed; inset: 0; z-index: 400; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0); visibility: hidden; pointer-events: none; transition: background 0.2s ease; }
 .auth-overlay.open { background: rgba(0,0,0,0.65); visibility: visible; pointer-events: auto; }
 .auth-modal { background: #000000ee; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.2); border-radius: 14px; padding: 32px; width: 340px; box-shadow: 0 16px 48px rgba(0,0,0,0.65); opacity: 0; transform: translateY(20px) scale(0.97); transition: opacity 0.22s ease, transform 0.22s ease; }
@@ -967,8 +962,22 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .save-bar-sub { display: block; margin-top: 2px; font-size: 12px; color: var(--text-muted); }
 .save-bar .save-bar-msg { white-space: normal; padding-right: 22px; }
 .save-bar .btn-dismiss-bar { position: absolute; top: 10px; right: 10px; }
-/* on the paper page, sit below its sticky action bar instead of over "Open paper" */
-body:has(#sec-paper.active) .save-bar { top: 124px; }
+/* The bar sits where it covers no controls: bottom-left on desktop (the toast is bottom-centre and the
+   notes panel bottom-right); a full-width strip at the bottom on phones, with the swipe cards, their
+   action rail and the toast lifted above it while it shows. */
+.save-bar { top: auto; right: auto; bottom: 24px; left: 24px; transform: translateY(20px); max-width: 280px; }
+.save-bar.visible { transform: translateY(0); }
+@media (max-width: 700px) {
+  .save-bar { left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); max-width: none; flex-wrap: nowrap; padding: 10px 12px; }
+  .save-bar .save-bar-msg { margin-bottom: 0; padding-right: 0; }
+  .save-bar .save-bar-sub { display: none; }
+  .save-bar .save-bar-btns { width: auto; }
+  .save-bar .btn-dismiss-bar { position: static; order: 3; }
+  body:has(.save-bar.visible) .toast { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+  body:has(.save-bar.visible) .toast:not(.show) { transform: translateX(-50%) translateY(200px); }   /* hidden fully off-screen when lifted */
+  body.tok-mode:has(.save-bar.visible) .tok-card { padding-bottom: 84px; }
+  body.tok-mode:has(.save-bar.visible) .tok-rail { bottom: 170px; }
+}
 .save-bar-btns .btn-save-csv { white-space: nowrap; }
 .btn-save-csv { padding: 5px 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.18); border-radius: 6px; color: var(--text); font-size: 12px; font-weight: 500; cursor: pointer; transition: background 0.15s; flex: 1; text-align: center; margin: 0 2px; }
 .btn-save-csv:hover { background: rgba(255,255,255,0.18); }
@@ -1114,22 +1123,6 @@ body:has(#sec-paper.active) .save-bar { top: 124px; }
 
 </div><!-- /.main-scroll -->
 
-<!-- AUTH MODAL -->
-<div class="auth-overlay" id="authOverlay" onclick="handleAuthOverlayClick(event)">
-  <div class="auth-modal" onclick="event.stopPropagation()">
-    <div class="auth-modal-title">&#128274; Scholar Dashboard</div>
-    <div class="auth-modal-sub">Enter your passkey to enable actions.</div>
-    <div class="auth-input-wrap">
-      <input class="auth-input" id="authInput" type="password" placeholder="Passkey" onkeydown="if(event.key==='Enter')submitPasskey()">
-      <button class="auth-toggle-vis" onclick="togglePasskeyVis()" title="Show / hide passkey">
-        <svg id="visIcon" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-      </button>
-    </div>
-    <div class="auth-error" id="authError"></div>
-    <button class="auth-submit" onclick="submitPasskey()">Unlock</button>
-  </div>
-</div>
-
 <!-- GENERIC PROMPT / CONFIRM MODAL -->
 <div class="auth-overlay" id="genericOverlay" onclick="handleGenericOverlayClick(event)">
   <div class="auth-modal" onclick="event.stopPropagation()">
@@ -1230,101 +1223,6 @@ function dynamicRelevance(p) {
   return SCORE_TO_REL[final] || 'mildly';
 }
 const MAX_TOPIC_ITEMS = 3;
-
-/* ===== AUTH ===== */
-const AUTH_HASH = 'b48acf8efc8ea1d7fee376c8e12a358dc56844f8123018fbe9ccfd87ffe3f4d5';
-const AUTH_COOKIE = 'scholar_auth';
-const AUTH_COOKIE_DAYS = 3650; // ~10 years (permanent)
-
-async function hashPasskey(str) {
-  // Use js-sha256 CDN lib (works on HTTP + HTTPS, no secure-context requirement).
-  // Fall back to SubtleCrypto (HTTPS only) if the CDN lib didn't load.
-  if (typeof sha256 === 'function') return sha256(str);
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
-}
-function setCookie(name, val, days) {
-  const exp = new Date(Date.now() + days * 864e5).toUTCString();
-  document.cookie = `${name}=${val};expires=${exp};path=/;SameSite=Strict`;
-}
-function getCookie(name) {
-  return document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith(name+'='))?.split('=')[1] ?? null;
-}
-function isAuthed() { return true; }
-
-function updateLoginBtn() {
-  const btn = document.getElementById('loginBtn');
-  const icon = document.getElementById('loginIcon');
-  if (!btn) return;
-  if (isAuthed()) {
-    btn.classList.add('authed');
-    btn.title = 'Unlocked — click to lock';
-    icon.innerHTML = '<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/>';
-  } else {
-    btn.classList.remove('authed');
-    btn.title = 'Click to unlock';
-    icon.innerHTML = '<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>';
-  }
-}
-
-function lockDashboard() {
-  document.cookie = `${AUTH_COOKIE}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;SameSite=Strict`;
-  updateLoginBtn();
-  toast('Locked');
-}
-
-let _authCallback = null;
-function requireAuth(cb) {
-  if (isAuthed()) { cb(); return; }
-  _authCallback = cb;
-  openLoginModal();
-}
-function openLoginModal() {
-  const input = document.getElementById('authInput');
-  input.value = '';
-  input.classList.remove('error');
-  input.type = 'password';
-  document.getElementById('visIcon').innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
-  document.getElementById('authError').textContent = '';
-  document.getElementById('authOverlay').classList.add('open');
-  setTimeout(() => input.focus(), 120);
-}
-function closeLoginModal() {
-  document.getElementById('authOverlay').classList.remove('open');
-  _authCallback = null;
-}
-function handleAuthOverlayClick(e) {
-  if (e.target === document.getElementById('authOverlay')) closeLoginModal();
-}
-async function submitPasskey() {
-  const val = document.getElementById('authInput').value;
-  const hash = await hashPasskey(val);
-  if (hash === AUTH_HASH) {
-    setCookie(AUTH_COOKIE, AUTH_HASH, AUTH_COOKIE_DAYS);
-    closeLoginModal();
-    updateLoginBtn();
-    toast('Unlocked \u2713');
-    if (_authCallback) { const cb = _authCallback; _authCallback = null; cb(); }
-  } else {
-    const input = document.getElementById('authInput');
-    input.classList.add('error');
-    document.getElementById('authError').textContent = 'Incorrect passkey. Try again.';
-    input.value = '';
-    setTimeout(() => input.classList.remove('error'), 600);
-    setTimeout(() => input.focus(), 50);
-  }
-}
-function togglePasskeyVis() {
-  const input = document.getElementById('authInput');
-  const icon = document.getElementById('visIcon');
-  if (input.type === 'password') {
-    input.type = 'text';
-    icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>';
-  } else {
-    input.type = 'password';
-    icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
-  }
-}
 
 /* ===== STATE ===== */
 let allPapers = [], allInterests = [], allGroups = [];
@@ -2629,7 +2527,6 @@ function markTruncatedVenues() {
 /* ===== SAVE DROPDOWN ===== */
 let _activeSaveDD = null;
 function openSaveDD(btn, key) {
-  if (!isAuthed()) { requireAuth(() => openSaveDD(btn, key)); return; }
   closeSaveDD();
   const rect = btn.getBoundingClientRect();
   const dd = document.createElement('div');
@@ -2694,7 +2591,6 @@ document.getElementById('mainScroll').addEventListener('scroll', () => { closeSa
 
 /* [5] Micro-interaction: pop animation on toggle */
 function toggleStar(k, btn) {
-  if (!isAuthed()) { requireAuth(() => toggleStar(k, btn)); return; }
   closeSaveDD();
   starSet.has(k)?starSet.delete(k):starSet.add(k);
   persistStars(); updateLibraryBadge();
@@ -2702,7 +2598,6 @@ function toggleStar(k, btn) {
   refresh();
 }
 function toggleRead(k, btn) {
-  if (!isAuthed()) { requireAuth(() => toggleRead(k, btn)); return; }
   closeSaveDD();
   readSet.has(k)?readSet.delete(k):readSet.add(k);
   persistRead();
@@ -2711,7 +2606,6 @@ function toggleRead(k, btn) {
 }
 
 async function deletePaper(k, btn) {
-  if (!isAuthed()) { requireAuth(() => deletePaper(k, btn)); return; }
   const p = allPapers.find(x => paperKey(x) === k);
   const label = p ? (p.title || k) : k;
   const ok = await showConfirm(`Delete paper?`, label, 'Delete', true);
@@ -3149,7 +3043,7 @@ function closeOverlay(skipHistory) {
     history.back();
   }
 }
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeRelevancePopup(); closeOverlay(); closeAbsPopup(); closeSaveDD(); closeLoginModal(); _resolveGeneric(null); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeRelevancePopup(); closeOverlay(); closeAbsPopup(); closeSaveDD(); _resolveGeneric(null); } });
 
 /* ===== LIBRARY ===== */
 let _collapsedLibGroups = new Set(['all', 'read']);
@@ -3214,7 +3108,6 @@ function renderLibrary() {
 
 /* Library list management */
 async function createNewList() {
-  if (!isAuthed()) { requireAuth(() => createNewList()); return; }
   const name = await showPrompt('New list', null, 'List name');
   if (!name) return;
   const trimmed = name.trim();
@@ -3417,7 +3310,6 @@ function gDrop(e) {
   _dragCounters.delete(e.currentTarget);
   const target = e.currentTarget.dataset.group;
   if (!_draggedGroup || _draggedGroup === target) return;
-  if (!isAuthed()) { requireAuth(() => {}); return; }
   /* Reorder: move dragged group to target's position */
   const so = {suggested:0,confirmed:1,rejected:2};
   const ordered = [...allGroups].sort((a,b) => (so[a.status] ?? 9) - (so[b.status] ?? 9) || (parseInt(a.display_order)||999) - (parseInt(b.display_order)||999));
@@ -3463,7 +3355,6 @@ function interestCardHTML(i) {
   return `<div class="interest-card"><div class="interest-info"><div class="interest-name">${esc(i.interest_name)}</div>${related}${notes}<div class="interest-meta">${statusBadge}${relBadge}${priBadge}</div></div>${actions}</div>`;
 }
 function updateI(name, status) {
-  if (!isAuthed()) { requireAuth(() => updateI(name, status)); return; }
   const i = allInterests.find(x=>x.interest_name===name);
   if (!i) return;
   const prev = i.status;
@@ -3475,7 +3366,6 @@ function updateI(name, status) {
   toast(`"${name}" ${status==='confirmed'?'approved':'removed'}`, () => { updateI(name, prev); });
 }
 function updateG(name, status) {
-  if (!isAuthed()) { requireAuth(() => updateG(name, status)); return; }
   const g = allGroups.find(x => x.group_name === name);
   if (!g) return;
   const prev = g.status;
@@ -3519,7 +3409,6 @@ function toggleInterestDropdown(e, name, field) {
   setTimeout(() => document.addEventListener('click', _onInterestDDOutside, true), 0);
 }
 function updateInterestField(name, field, value) {
-  if (!isAuthed()) { requireAuth(() => updateInterestField(name, field, value)); return; }
   const i = allInterests.find(x=>x.interest_name===name); if (!i) return;
   const prev = field==='relevance' ? i.relevance_mapping : i.priority_level;
   if (field==='relevance') i.relevance_mapping = value;
@@ -3680,7 +3569,6 @@ async function _ghPushFile(headers, filename, content, message) {
 }
 
 async function pushToGitHub() {
-  if (!isAuthed()) { requireAuth(() => pushToGitHub()); return; }
   if (!_stateDirty && !_interestsDirty && !_groupsDirty) return;
 
   let pat = localStorage.getItem('gh_pat');
@@ -3898,7 +3786,6 @@ function updatePaperBar() {
 }
 
 function removeGroupFromPaper(key, groupName) {
-  if (!isAuthed()) { requireAuth(() => removeGroupFromPaper(key, groupName)); return; }
   const p = allPapers.find(pp => paperKey(pp) === key);
   if (!p) return;
   const groups = (p.theme_groups||'').split('|').map(s => s.trim()).filter(g => g && g !== groupName);
@@ -3908,7 +3795,6 @@ function removeGroupFromPaper(key, groupName) {
 }
 
 function addGroupToPaper(key, groupName) {
-  if (!isAuthed()) { requireAuth(() => addGroupToPaper(key, groupName)); return; }
   const p = allPapers.find(pp => paperKey(pp) === key);
   if (!p) return;
   const groups = (p.theme_groups||'').split('|').map(s => s.trim()).filter(Boolean);
@@ -4030,7 +3916,6 @@ function debouncedSaveNote() {
 
 let _notesKey = null;
 function toggleNotesModal(key) {
-  if (!isAuthed()) { requireAuth(() => toggleNotesModal(key)); return; }
   const modal = document.getElementById('notesModal');
   if (_notesKey === key && modal.classList.contains('open')) { closeNotesModal(); return; }
   _notesKey = key;
@@ -4242,7 +4127,7 @@ window.addEventListener('resize', () => {
   else phoneFeedOn();
 }, { passive: true });
 
-document.addEventListener('DOMContentLoaded', () => { updateLoginBtn(); loadPapers(); loadInterests(); loadGroups(); });
+document.addEventListener('DOMContentLoaded', () => { loadPapers(); loadInterests(); loadGroups(); });
 
 
 </script>
