@@ -24,6 +24,7 @@
   /* topic-group identity: categorical slots in display_order, validated on #000/#111/#141414 */
   --g1: #3987e5; --g2: #d95926; --g3: #199e70; --g4: #c98500;
   --g5: #d55181; --g6: #008300; --g7: #9085e9; --g8: #e66767;
+  --g9: #1fa5c4; --g10: #a8773a; --g11: #a9b33a; --g12: #c46fd6;
   --g-other: rgba(216,217,221,0.45);
   --serif: 'Newsreader', Georgia, 'Times New Roman', serif;
   --bg: #111111;
@@ -246,6 +247,12 @@ a { color: inherit; text-decoration: none; }
 .lead-summary { font-size: 15px; color: var(--text-secondary); line-height: 1.65; margin-top: 16px; max-width: 64ch; display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
 .lead-authors { font-size: 13px; color: var(--text-muted); margin-top: 16px; }
 .lead-actions { margin-top: auto; padding-top: 20px; }
+.lead-acts { gap: 6px; align-items: center; }
+.btn-icon.btn-labelled { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border: 1px solid var(--border); border-radius: 999px; font-size: 13px; line-height: 1.2; }
+.btn-icon.btn-labelled:hover { border-color: rgba(255,255,255,0.28); color: var(--text); background: rgba(255,255,255,0.04); }
+.save-anchor > .btn-icon.btn-labelled { font-size: 13px; padding-bottom: 5px; }
+.btn-label { font-family: var(--sans, inherit); font-size: 12.5px; }
+.lead-acts-sep { width: 1px; height: 18px; background: var(--border); margin: 0 4px 0 8px; }
 
 .top-side { background: var(--bg-surface); border: 1px solid rgba(255,255,255,0.14); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
 .top-side .feed-item { flex: 1; }
@@ -1551,19 +1558,22 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 function isNewSinceVisit(p) { return !!_lastSeen && (p.date_found || '') > _lastSeen; }
 
 /* ===== HELPERS ===== */
-/* Group identity color: the 8 topics with the most papers get a colour, so busy core topics are never
-   grey. Slots follow display_order among those 8, so colours only change when a topic enters or
-   leaves the top 8, never because two coloured topics trade places. */
+/* Group identity color: the 12 topics with the most papers each get their own colour (the first 8
+   are the most distinct, so busy topics get those). Slots follow display_order within each band, so
+   colours only change when a topic enters or leaves a band, never because two topics trade places. */
 let _colorSlots = null, _colorKey = '';
 function colorSlots() {
   const key = GROUP_ORDER.join('|') + '#' + allPapers.length;
   if (_colorSlots && _colorKey === key) return _colorSlots;
   const counts = {};
   allPapers.forEach(p => groupsOfPaper(p).forEach(g => counts[g] = (counts[g] || 0) + 1));
-  const colored = new Set(GROUP_ORDER.slice().sort((a, b) => (counts[b] || 0) - (counts[a] || 0)).slice(0, 8));
+  const byCount = GROUP_ORDER.slice().sort((a, b) => (counts[b] || 0) - (counts[a] || 0));
+  const top8 = new Set(byCount.slice(0, 8)), next4 = new Set(byCount.slice(8, 12));
   _colorSlots = {};
   let slot = 0;
-  GROUP_ORDER.forEach(g => { if (colored.has(g)) _colorSlots[g] = ++slot; });
+  GROUP_ORDER.forEach(g => { if (top8.has(g)) _colorSlots[g] = ++slot; });
+  slot = 8;
+  GROUP_ORDER.forEach(g => { if (next4.has(g)) _colorSlots[g] = ++slot; });
   _colorKey = key;
   return _colorSlots;
 }
@@ -1679,17 +1689,21 @@ function venueLabel(v) { return venueHasEditions(v) && v.year ? `${v.name} ${v.y
 /* In paper rows, catch-all groups ("Other workshops", "Theses") show the paper's own venue instead */
 function rowVenueLabel(p) {
   const v = venueOf(p);
-  if (v.name === 'Other workshops' || v.name === 'Other preprints') {
+  if (v.kind === 'workshop' || v.name === 'Other preprints') {
     const own = (p.venue || '').replace(/\s*\((OpenReview|arXiv)\)\s*/ig, ' ').replace(/\s+/g, ' ').trim();
     return own || v.name;
   }
   if (v.name === 'Theses') return 'PhD thesis';
   return venueLabel(v);
 }
-/* Publication date, dropped when it is just a year the venue label already shows ("L4DC 2026") */
+/* Publication date, dropped when the venue label already dates the paper: a conference or
+   workshop edition ("RSS 2026", not "RSS 2026 · Jul 2026"), or a bare year it already shows */
 function displayDate(p) {
   const d = paperDate(p);
-  if (/^\d{4}$/.test(d) && hasText(p.venue) && rowVenueLabel(p).endsWith(d)) return '';
+  if (!hasText(p.venue)) return d;
+  const v = venueOf(p);
+  if (venueHasEditions(v) && v.year) return '';
+  if (/^\d{4}$/.test(d) && rowVenueLabel(p).endsWith(d)) return '';
   return d;
 }
 function venueLinkHTML(p, cls) {
@@ -2388,11 +2402,7 @@ function renderWeekPulse(weekPapers) {
   const counts = {};
   weekPapers.forEach(p => groupsOfPaper(p).forEach(g => counts[g] = (counts[g] || 0) + 1));
   const ordered = GROUP_ORDER.filter(g => counts[g]);
-  const slots = colorSlots();
-  const colored = ordered.filter(g => slots[g]);
-  const otherN = ordered.filter(g => !slots[g]).reduce((n, g) => n + counts[g], 0);
-  const items = colored.map(g => ({ g, n: counts[g] }));
-  if (otherN) items.push({ g: null, n: otherN });
+  const items = ordered.map(g => ({ g, n: counts[g] }));
   if (!items.length) { el.innerHTML = ''; return; }
   const tagTotal = items.reduce((n, it) => n + it.n, 0);
   const seg = it => `<div class="pulse-seg" style="flex-grow:${it.n};--gc:${it.g ? groupColor(it.g) : 'var(--g-other)'}" data-g="${escAttr(it.g || '')}" data-tip="${escAttr((it.g || 'Other topics') + ': ' + it.n)}" ${it.g ? `onclick="openGroup('${escAttr(it.g)}')"` : ''}></div>`;
@@ -2454,8 +2464,11 @@ function feedMetaHTML(p, showRel) {
     ${starSet.has(k) ? '<span class="f-star" title="Starred">&#9733;</span>' : ''}
   </div>`;
 }
-function feedActionsHTML(p, withSummaryBtn) {
-  return `<div class="p-action-row">${withSummaryBtn ? summaryBtn(p) : ''} ${absBtn(p)} ${linkBtn(p)} <span class="p-actions has-active">${starBtn(p)} ${readBtn(p)} ${saveBtn(p)} ${deleteBtn(p)}</span></div>
+function feedActionsHTML(p, withSummaryBtn, labelled) {
+  const acts = labelled
+    ? `<span class="p-actions has-active lead-acts">${starBtn(p, true)} ${readBtn(p, true)} ${saveBtn(p, true)}<span class="lead-acts-sep"></span>${deleteBtn(p)}</span>`
+    : `<span class="p-actions has-active">${starBtn(p)} ${readBtn(p)} ${saveBtn(p)} ${deleteBtn(p)}</span>`;
+  return `<div class="p-action-row">${withSummaryBtn ? summaryBtn(p) : ''} ${absBtn(p)} ${linkBtn(p)} ${acts}</div>
     <div class="p-detail-panel" data-summary="${hasText(p.summary)?dataAttr(p.summary):''}" data-abstract="${hasText(p.abstract)?dataAttr(p.abstract):''}"></div>`;
 }
 
@@ -2470,7 +2483,7 @@ function topLeadHTML(p) {
     ${hasText(p.summary) ? `<p class="lead-summary">${esc(p.summary)}</p>` : ''}
     ${whyHTML(p, 'lead-why')}
     ${hasText(p.authors) ? `<div class="lead-authors">${esc(p.authors)}</div>` : ''}
-    <div class="lead-actions">${feedActionsHTML(p, false)}</div>
+    <div class="lead-actions">${feedActionsHTML(p, false, true)}</div>
   </article>`;
 }
 
@@ -2487,18 +2500,20 @@ function feedItemHTML(p) {
 }
 
 /* ===== ACTION BUTTONS ===== */
-function starBtn(p) {
+/* labelled = the lead card's bigger buttons with words beside the icons */
+const btnLabel = (on, a, b) => `<span class="btn-label">${on ? a : b}</span>`;
+function starBtn(p, labelled) {
   const k = paperKey(p), on = starSet.has(k);
-  return `<button class="btn-icon ${on?'starred':''}" onclick="event.preventDefault();event.stopPropagation();toggleStar('${escAttr(k)}',this)" title="${on?'Unstar':'Star'}">&#9733;</button>`;
+  return `<button class="btn-icon ${labelled?'btn-labelled':''} ${on?'starred':''}" onclick="event.preventDefault();event.stopPropagation();toggleStar('${escAttr(k)}',this)" title="${on?'Unstar':'Star'}">&#9733;${labelled ? btnLabel(on, 'Starred', 'Star') : ''}</button>`;
 }
-function readBtn(p) {
+function readBtn(p, labelled) {
   const k = paperKey(p), on = readSet.has(k);
-  return `<button class="btn-icon is-read-btn ${on?'done':''}" onclick="event.preventDefault();event.stopPropagation();toggleRead('${escAttr(k)}',this)" title="${on?'Mark unread':'Mark as read'}">&#10003;</button>`;
+  return `<button class="btn-icon ${labelled?'btn-labelled':''} is-read-btn ${on?'done':''}" onclick="event.preventDefault();event.stopPropagation();toggleRead('${escAttr(k)}',this)" title="${on?'Mark unread':'Mark as read'}">&#10003;${labelled ? btnLabel(on, 'Read', 'Mark read') : ''}</button>`;
 }
-function saveBtn(p) {
+function saveBtn(p, labelled) {
   const k = paperKey(p), inAny = paperInAnyList(k);
   return `<span class="save-anchor">
-    <button class="btn-icon ${inAny?'done':''}" onclick="event.preventDefault();event.stopPropagation();openSaveDD(this,'${escAttr(k)}')" title="Add to list" style="${inAny?'color:var(--list)':''}">&#9776;</button>
+    <button class="btn-icon ${labelled?'btn-labelled':''} ${inAny?'done':''}" onclick="event.preventDefault();event.stopPropagation();openSaveDD(this,'${escAttr(k)}')" title="Add to list" style="${inAny?'color:var(--list)':''}">&#9776;${labelled ? btnLabel(inAny, 'In a list', 'Save to list') : ''}</button>
   </span>`;
 }
 function deleteBtn(p) {
