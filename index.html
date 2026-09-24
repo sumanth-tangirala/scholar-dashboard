@@ -431,6 +431,13 @@ a { color: inherit; text-decoration: none; }
 .pd-bar-title { flex: 1; min-width: 0; font-family: var(--serif); font-size: 16px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0; transform: translateY(4px); transition: opacity 0.2s, transform 0.2s; pointer-events: none; }
 .pd-bar.stuck .pd-bar-title { opacity: 1; transform: none; }
 .pd-actions { display: flex; align-items: center; gap: 2px; margin-left: auto; flex-shrink: 0; }
+.pd-act-label { display: none; }
+@media (min-width: 1000px) {
+  .pd-act { width: auto !important; padding: 0 10px; gap: 6px; }
+  .pd-act-label { display: inline; font-size: 13px; }
+  .pd-bar.stuck .pd-act-label { display: none; }
+  .pd-bar.stuck .pd-act { width: 36px !important; padding: 0; }
+}
 .pd-act { width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; background: none; border: none; border-radius: 8px; color: var(--text-muted); font-size: 16px; cursor: pointer; transition: background 0.15s, color 0.15s; }
 .pd-act:hover { background: rgba(255,255,255,0.08); color: var(--text); }
 .pd-act.on-star { color: var(--star); }
@@ -450,6 +457,9 @@ a { color: inherit; text-decoration: none; }
 .pd-dek { font-family: var(--serif); font-size: 22px; font-weight: 500; line-height: 1.4; color: var(--accent); margin-top: 16px; padding-left: 16px; border-left: 3px solid rgba(251,177,60,0.45); text-wrap: pretty; }
 .pd-authors { font-size: 14.5px; color: var(--text-secondary); margin-top: 18px; line-height: 1.55; }
 /* the takeaway above already carries the accent bar; keep this a quiet note */
+.pd-why { margin-top: 18px; }
+.pd-why-label { display: block; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; }
+.pd-head .pd-why .why { margin-top: 0; }
 .pd-head .why { margin-top: 18px; max-width: 72ch; font-size: 13.5px; color: var(--text-muted); border-left: none; padding-left: 0; }
 
 .pd-body { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 56px; margin-top: 32px; padding-top: 32px; border-top: 1px solid var(--border); align-items: start; }
@@ -471,7 +481,10 @@ a { color: inherit; text-decoration: none; }
 .pd-info { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 14px; padding: 0 4px; transition: color 0.15s; }
 .pd-info:hover { color: var(--text); }
 .pd-matches { display: flex; flex-wrap: wrap; gap: 5px; }
-.pd-match { font-size: 12px; line-height: 1.4; color: var(--text-secondary); background: rgba(255,255,255,0.06); padding: 2px 8px; border-radius: 6px; }
+.pd-match { font: inherit; font-size: 12px; line-height: 1.4; color: var(--text-secondary); background: rgba(255,255,255,0.06); padding: 2px 8px; border-radius: 6px; border: 1px solid transparent; cursor: pointer; text-align: left; transition: border-color 0.15s, color 0.15s; }
+.pd-match:hover { color: var(--text); border-color: rgba(255,255,255,0.22); }
+.badge-link { font: inherit; font-size: 11px; cursor: pointer; border: 1px solid transparent; transition: border-color 0.15s, color 0.15s; }
+.badge-link:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
 .pd-topics { display: flex; flex-wrap: wrap; gap: 6px; }
 .pd-topics .badge-group { background: rgba(255,255,255,0.06); border: 1px solid transparent; color: var(--text-secondary); font-size: 12px; height: 26px; padding: 0 10px; border-radius: 999px; gap: 6px; }
 .pd-topics .badge-group:hover { background: rgba(255,255,255,0.1); }
@@ -482,6 +495,10 @@ a { color: inherit; text-decoration: none; }
 .pd-related { margin-top: 64px; padding-top: 32px; border-top: 1px solid var(--border); }
 .pd-related > h2 { font-family: var(--serif); font-size: 26px; font-weight: 500; margin-bottom: 20px; }
 .pd-rel-group + .pd-rel-group { margin-top: 28px; }
+.pd-rel-more { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 22px; font-size: 13px; color: var(--text-muted); }
+.pd-rel-topic { display: inline-flex; align-items: center; gap: 7px; font: inherit; font-size: 12.5px; color: var(--text-secondary); background: rgba(255,255,255,0.05); border: 1px solid transparent; padding: 4px 11px; border-radius: 999px; cursor: pointer; transition: border-color 0.15s, color 0.15s; }
+.pd-rel-topic:hover { color: var(--text); border-color: rgba(255,255,255,0.22); }
+.pd-rel-topic .n { color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .pd-rel-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 .pd-rel-head h3 { font-size: 15px; font-weight: 500; color: var(--text); }
 .pd-rel-all { margin-left: auto; background: none; border: none; color: var(--text-muted); font: inherit; font-size: 13px; cursor: pointer; transition: color 0.15s; }
@@ -752,9 +769,10 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .tab-section.active { display: block; }
 #sec-paper.active { display: block; }
 .interests-header { }
-.interests-header .briefing { max-width: 1200px; margin: 0 auto; padding: 24px 24px 0; }
-.interests-header .interest-filter-chips { max-width: 1200px; margin: 0 auto; padding: 16px 24px; justify-content: center; }
-.ig-toggle-wrap { max-width: 1200px; margin: 0 auto; padding: 12px 24px 0; text-align: center; }
+.interests-header .briefing { max-width: 1200px; margin: 0 auto; padding: 32px 24px 0; align-items: flex-start; }
+.interests-header .briefing h2 { font-family: var(--serif); font-optical-sizing: auto; font-size: 36px; font-weight: 500; letter-spacing: -0.01em; line-height: 1.15; }
+.interests-header .interest-filter-chips { max-width: 1200px; margin: 0 auto; padding: 16px 24px; justify-content: flex-start; }
+.ig-toggle-wrap { max-width: 1200px; margin: 0 auto; padding: 16px 24px 0; text-align: left; }
 .ig-toggle { display: inline-flex; background: var(--bg-surface); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; overflow: hidden; }
 .ig-toggle-btn { background: none; border: none; color: var(--text-muted); font-size: 13px; font-weight: 500; padding: 7px 18px; cursor: pointer; transition: background .15s, color .15s; position: relative; }
 .ig-toggle-btn.active { background: var(--accent); color: #202124; }
@@ -792,6 +810,9 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .interest-name .gdot { margin-right: 8px; vertical-align: 1px; }
 .ig-legend { max-width: 1200px; margin: 0 auto 14px; padding: 0 24px; font-size: 12.5px; line-height: 2; color: var(--text-muted); }
 .ig-legend .badge { vertical-align: 1px; }
+.ig-legend strong { color: var(--text); font-weight: 500; }
+.ig-link { color: var(--accent); text-decoration: none; border-bottom: 1px solid rgba(251,177,60,0.35); transition: border-color 0.15s; }
+.ig-link:hover { border-color: var(--accent); }
 .ig-empty { line-height: 1.6; max-width: 520px; margin: 48px auto; color: var(--text-secondary); }
 .ig-empty strong { display: block; color: var(--text); margin-bottom: 4px; }
 .badge-editable::after { content: '\25BE'; margin-left: 5px; opacity: 0.6; font-size: 9px; }
@@ -1121,7 +1142,7 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 <!-- INTERESTS TAB -->
 <div class="tab-section" id="sec-interests">
   <div class="interests-header">
-    <div class="briefing"><h2>Research Topics &amp; Interests</h2></div>
+    <div class="briefing"><h2>Topics &amp; Interests</h2></div>
     <div class="ig-toggle-wrap">
       <div class="ig-toggle">
         <button class="ig-toggle-btn active" data-igtab="groups" onclick="switchIGTab('groups')">Topics <span class="ig-badge" id="igBadgeGroups" style="display:none">0</span></button>
@@ -2978,6 +2999,7 @@ function renderOpenList(keepScroll) {
   else if (_overlayGroupName.startsWith(VENUE_KEY)) renderVenueList();
   else if (_overlayGroupName.startsWith(ALERT_KEY)) renderAlertList();
   else if (_overlayGroupName === LATEST_KEY) renderLatestList();
+  else if (_overlayGroupName.startsWith(INTEREST_KEY)) renderInterestList();
   else renderGroupList(_overlayGroupName);
   if (keepScroll) body.scrollTop = st;
   return true;
@@ -3454,7 +3476,7 @@ function renderInterests() {
   const r = (map,k) => k in map ? map[k] : 9;
   Object.values(grouped).forEach(a => a.sort((x,y)=> r(so,x.status)-r(so,y.status) || r(ro,x.relevance_mapping)-r(ro,y.relevance_mapping) || r(po,x.priority_level)-r(po,y.priority_level)));
   const sugN = allInterests.filter(i=>i.status==='suggested').length;
-  let html = `<p class="ig-legend"><span class="badge badge-definitely">Must Read</span> <span class="badge badge-probably">Interesting</span> <span class="badge badge-mildly">Tangential</span> sets how papers matching an interest rank. <span class="badge badge-priority">core</span> to <span class="badge badge-priority">low-moderate</span> is your own priority. Click either on an interest to change it.</p>`;
+  let html = `<p class="ig-legend"><strong>Interests</strong> decide how papers rank; each paper lists the ones it matches. They are separate from <a href="#interests/groups" class="ig-link">Topics</a>, which only group papers for browsing.</p><p class="ig-legend"><span class="badge badge-definitely">Must Read</span> <span class="badge badge-probably">Interesting</span> <span class="badge badge-mildly">Tangential</span> sets how papers matching an interest rank. <span class="badge badge-priority">core</span> to <span class="badge badge-priority">low-moderate</span> is your own priority. Click either on an interest to change it.</p>`;
   if (sugN > 0 && currentIStatus === 'all') html += `<div style="padding:12px 20px;margin-bottom:16px;background:var(--purple-bg);border:1px solid var(--purple);border-radius:8px;font-size:13px;color:var(--purple);">${sugN} suggested interest${sugN>1?'s':''} from recent papers</div>`;
   ['Application Areas','Methods'].forEach(cat => {
     if (!grouped[cat]) return;
@@ -3478,7 +3500,7 @@ function renderGroupsTab(main) {
   const so = {suggested:0,confirmed:1,rejected:2};
   groups = [...groups].sort((a,b) => (so[a.status]||9) - (so[b.status]||9) || (parseInt(a.display_order)||999) - (parseInt(b.display_order)||999));
   const sugN = allGroups.filter(g=>g.status==='suggested').length;
-  let html = '';
+  let html = `<p class="ig-legend"><strong>Topics</strong> group papers for browsing: the cards on Recent Works and the chips on each paper. They don't change ranking; that is what <a href="#interests/interests" class="ig-link">Interests</a> do. Drag a topic to reorder the cards.</p>`;
   if (sugN > 0 && currentIStatus === 'all') html += `<div style="padding:12px 20px;margin-bottom:16px;background:var(--purple-bg);border:1px solid var(--purple);border-radius:8px;font-size:13px;color:var(--purple);">${sugN} suggested topic${sugN>1?'s':''} from recent papers</div>`;
   html += '<div class="interest-group"><div class="interest-group-inner" style="padding:10px 0">';
   html += groups.map(g => groupCardHTML(g, true)).join('');
@@ -3568,7 +3590,43 @@ function interestCardHTML(i) {
     : '';
   const showStatus = currentIStatus === 'all' || i.status === 'suggested';
   const statusBadge = showStatus && i.status ? `<span class="badge badge-${i.status}">${i.status.charAt(0).toUpperCase()+i.status.slice(1)}</span>` : '';
-  return `<div class="interest-card"><div class="interest-info"><div class="interest-name">${esc(i.interest_name)}</div>${related}${notes}<div class="interest-meta">${statusBadge}${relBadge}${priBadge}</div></div>${actions}</div>`;
+  const n = interestPaperCount(i.interest_name);
+  const count = n ? `<button class="badge badge-venue badge-link" onclick="event.stopPropagation();openInterest('${escAttr(i.interest_name)}')" title="List the papers that match this interest">${n} paper${n !== 1 ? 's' : ''}</button>` : '<span class="badge badge-venue">No papers yet</span>';
+  return `<div class="interest-card"><div class="interest-info"><div class="interest-name">${esc(i.interest_name)}</div>${related}${notes}<div class="interest-meta">${statusBadge}${relBadge}${priBadge}${count}</div></div>${actions}</div>`;
+}
+function matchesOf(p) { return (p.matched_interests || '').split('|').map(x => x.trim()).filter(Boolean); }
+let _interestCounts = null, _interestCountsKey = null;
+function interestPaperCount(name) {
+  if (_interestCountsKey !== allPapers) {
+    _interestCounts = {};
+    allPapers.forEach(p => matchesOf(p).forEach(m => _interestCounts[m] = (_interestCounts[m] || 0) + 1));
+    _interestCountsKey = allPapers;
+  }
+  return _interestCounts[name] || 0;
+}
+/* Papers matching one interest, as an overlay list (from Interests and the paper page) */
+const INTEREST_KEY = 'interest:';
+function openInterest(name, skipHash) {
+  _overlayGroupName = INTEREST_KEY + name;
+  setOverlayTopMode(true);
+  renderInterestList();
+  document.getElementById('overlayBody').scrollTop = 0;
+  if (!skipHash) location.hash = '#interest/' + encodeURIComponent(name);
+  openOverlay();
+}
+function renderInterestList() {
+  const name = _overlayGroupName.slice(INTEREST_KEY.length);
+  const inI = p => matchesOf(p).includes(name);
+  const papers = sortForList(applyViewFilters(allPapers.filter(inI)));
+  const i = allInterests.find(x => x.interest_name === name);
+  document.getElementById('overlayTitle').textContent = name;
+  setListProgress(applyViewFilters(allPapers.filter(inI), true));
+  if (i) document.getElementById('overlaySub').textContent = `${relLabel(i.relevance_mapping || 'mildly')} interest. ` + document.getElementById('overlaySub').textContent;
+  document.getElementById('overlayToolbar').innerHTML = '';
+  document.getElementById('overlayHeaderTools').innerHTML = sortToolsHTML();
+  document.getElementById('overlayBody').innerHTML = papers.length
+    ? paperListHTML(papers, { sections: true })
+    : '<div class="tl-empty">No papers matching this interest fit your current filters.</div>';
 }
 function updateI(name, status) {
   const i = allInterests.find(x=>x.interest_name===name);
@@ -3938,6 +3996,52 @@ async function pushToGitHub(auto) {
   }
 }
 
+/* ===== RELATED PAPERS =====
+   Score every other paper against this one: shared authors count most, then distinctive title and
+   headline words, then shared interests; rare words and rare interests weigh more (IDF). */
+const REL_STOP = new Set('a an the for of with via using in on to and or from by is are be can will has have not but as at new novel toward towards learning learned robot robots robotic robotics based model models policy policies control system systems approach method methods framework data driven through under its their we our this that these than into over via'.split(' '));
+let _relIndex = null, _relIndexKey = null;
+function relTokens(p) {
+  const words = ((p.title || '') + ' ' + (p.headline || '')).toLowerCase().replace(/[^a-z0-9\s-]/g, ' ').split(/[\s-]+/)
+    .filter(w => w.length > 2 && !REL_STOP.has(w));
+  return new Set(words);
+}
+function relAuthors(p) {
+  if (!hasText(p.authors)) return new Set();
+  return new Set(p.authors.split(/,|\band\b/).map(a => a.trim().split(/\s+/).pop().toLowerCase().replace(/[^a-z]/g, '')).filter(a => a.length > 2));
+}
+function relIndex() {
+  if (_relIndexKey === allPapers) return _relIndex;
+  const df = {}, idf = {}, docs = new Map(), n = allPapers.length;
+  allPapers.forEach(p => {
+    const d = { words: relTokens(p), authors: relAuthors(p), interests: new Set(matchesOf(p)) };
+    docs.set(p, d);
+    d.words.forEach(w => df['w:' + w] = (df['w:' + w] || 0) + 1);
+    d.interests.forEach(m => df['i:' + m] = (df['i:' + m] || 0) + 1);
+  });
+  Object.keys(df).forEach(t => idf[t] = Math.log(n / df[t]));
+  _relIndex = { docs, idf }; _relIndexKey = allPapers;
+  return _relIndex;
+}
+function relatedTo(p, limit) {
+  const { docs, idf } = relIndex();
+  const me = docs.get(p) || { words: relTokens(p), authors: relAuthors(p), interests: new Set(matchesOf(p)) };
+  const k = paperKey(p);
+  const scored = [];
+  allPapers.forEach(q => {
+    if (paperKey(q) === k) return;
+    const d = docs.get(q);
+    let sc = 0;
+    d.authors.forEach(a => { if (me.authors.has(a)) sc += 3; });
+    d.words.forEach(w => { if (me.words.has(w)) sc += idf['w:' + w] || 0; });
+    d.interests.forEach(m => { if (me.interests.has(m)) sc += 0.5 * (idf['i:' + m] || 0); });
+    if (normTitle(q.title) === normTitle(p.title)) return;   // the same paper twice
+    if (sc > 0) scored.push([q, sc - (readSet.has(paperKey(q)) ? 1 : 0)]);
+  });
+  return scored.sort((a, b) => b[1] - a[1]).slice(0, limit).map(x => x[0]);
+}
+function normTitle(t) { return (t || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
+
 /* ===== PAPER DETAIL PAGE ===== */
 let _paperViewActive = false;
 /* Previous/next on the paper page follow the list the paper was opened from */
@@ -4025,10 +4129,10 @@ function renderPaperDetail(p) {
     <div class="pd-bar-title" aria-hidden="true">${esc(p.title)}</div>
     <div class="pd-actions">
       ${navHTML}
-      <button class="pd-act ${isStar?'on-star':''}" onclick="toggleStar('${ka}',this);${again}" title="${isStar?'Unstar':'Star'}" aria-label="${isStar?'Unstar':'Star'}">&#9733;</button>
-      <button class="pd-act ${ir?'on-read':''}" onclick="toggleRead('${ka}',this);${again}" title="${ir?'Mark unread':'Mark as read'}" aria-label="${ir?'Mark unread':'Mark as read'}">&#10003;</button>
-      <span class="save-anchor"><button class="pd-act ${inAny?'on-list':''}" onclick="event.stopPropagation();openSaveDD(this,'${ka}')" title="Add to list" aria-label="Add to list">&#9776;</button></span>
-      <button class="pd-act ${hasNotes?'on-notes':''}" onclick="toggleNotesModal('${ka}')" title="Notes" aria-label="Notes">&#9998;</button>
+      <button class="pd-act ${isStar?'on-star':''}" onclick="toggleStar('${ka}',this);${again}" title="${isStar?'Unstar':'Star'}" aria-label="${isStar?'Unstar':'Star'}">&#9733;<span class="pd-act-label">${isStar?'Starred':'Star'}</span></button>
+      <button class="pd-act ${ir?'on-read':''}" onclick="toggleRead('${ka}',this);${again}" title="${ir?'Mark unread':'Mark as read'}" aria-label="${ir?'Mark unread':'Mark as read'}">&#10003;<span class="pd-act-label">${ir?'Read':'Mark read'}</span></button>
+      <span class="save-anchor"><button class="pd-act ${inAny?'on-list':''}" onclick="event.stopPropagation();openSaveDD(this,'${ka}')" title="Add to list" aria-label="Add to list">&#9776;<span class="pd-act-label">${inAny?'In a list':'Save'}</span></button></span>
+      <button class="pd-act ${hasNotes?'on-notes':''}" onclick="toggleNotesModal('${ka}')" title="Notes" aria-label="Notes">&#9998;<span class="pd-act-label">Notes</span></button>
       ${p.url ? `<a class="pd-open" href="${esc(p.url)}" target="_blank" rel="noopener"><span class="pd-open-full">Open paper</span><span class="pd-open-short">Open</span><svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>` : ''}
     </div>
   </div></div>`;
@@ -4044,7 +4148,7 @@ function renderPaperDetail(p) {
     <h1 class="pd-title">${esc(p.title)}</h1>
     ${dek}
     ${hasText(p.authors) ? `<div class="pd-authors">${esc(p.authors)}</div>` : ''}
-    ${whyHTML(p)}
+    ${parseWhy(p) ? `<div class="pd-why"><span class="pd-why-label">Why it's here</span>${whyHTML(p)}</div>` : ''}
   </header>`;
 
   // Reading column
@@ -4065,7 +4169,7 @@ function renderPaperDetail(p) {
   if (p.date_found) facts.push(['Added', esc(shortDate(p.date_found))]);
   if (via) facts.push(['Found via', `${via}${why && why.source ? `<span class="pd-sub">${esc(why.source)} alert</span>` : ''}`]);
   facts.push(['Relevance', `<span class="f-rel rel-${rel}"><i></i>${relLabel(rel)}</span><span class="triage-anchor" onmouseenter="showRelevancePopup(this,'${ka}')" onmouseleave="hideRelevancePopup(this)"><button class="pd-info" title="How this was scored" aria-label="How this was scored" aria-expanded="false" onclick="toggleRelevancePopup(event,this.parentElement,'${ka}')">&#9432;</button></span>`]);
-  if (matches.length) facts.push(['Matches', `<span class="pd-matches">${matches.map(m => `<span class="pd-match">${esc(m)}</span>`).join('')}</span>`]);
+  if (matches.length) facts.push(['Matches', `<span class="pd-matches">${matches.map(m => `<button class="pd-match" onclick="openInterest('${escAttr(m)}')" title="Papers that match ${escAttr(m)}">${esc(m)}</button>`).join('')}</span>`]);
 
   const groups = (p.theme_groups||'').split('|').map(x => x.trim()).filter(Boolean);
   const x = `<svg width="10" height="10" viewBox="0 0 10 10"><line x1="2" y1="2" x2="8" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="8" y1="2" x2="2" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
@@ -4077,19 +4181,15 @@ function renderPaperDetail(p) {
     <div class="pd-card"><h3>Topics</h3><div class="pd-topics paper-detail-tags">${topics}${addBtn}</div></div>
   </aside>`;
 
-  // Related: unread papers from the same topics, no paper shown twice
-  const seen = new Set([k]);
+  // Related: the papers closest to this one (shared authors, title words, interests), then links to its topics
+  const rel6 = relatedTo(p, 6);
   let related = '';
-  [...new Set(groups.map(norm))].forEach(g => {
-    const inGroup = allPapers.filter(pp => paperKey(pp) !== k && (pp.theme_groups||'').split('|').map(norm).includes(g));
-    const fresh = sortPapers(inGroup.filter(pp => !readSet.has(paperKey(pp)) && !seen.has(paperKey(pp)))).slice(0, 4);
-    if (!fresh.length) return;
-    fresh.forEach(pp => seen.add(paperKey(pp)));
-    related += `<div class="pd-rel-group">
-      <div class="pd-rel-head">${gdot(g)}<h3>${esc(g)}</h3><button class="pd-rel-all" onclick="openGroup('${escAttr(g)}')">View all ${inGroup.length + 1}</button></div>
-      <div class="pd-rel-grid">${fresh.map(feedItemHTML).join('')}</div>
-    </div>`;
-  });
+  if (rel6.length) related += `<div class="pd-rel-group"><div class="pd-rel-grid">${rel6.map(feedItemHTML).join('')}</div></div>`;
+  const topicLinks = [...new Set(groups.map(norm))].map(g => {
+    const n = allPapers.filter(pp => (pp.theme_groups||'').split('|').map(norm).includes(g)).length;
+    return `<button class="pd-rel-topic" onclick="openGroup('${escAttr(g)}')">${gdot(g)}${esc(g)}<span class="n">${n}</span></button>`;
+  }).join('');
+  if (topicLinks) related += `<div class="pd-rel-more"><span>More in</span>${topicLinks}</div>`;
 
   document.getElementById('paperDetail').innerHTML = `<div class="pd">${bar}
     <article class="pd-article">
@@ -4407,6 +4507,19 @@ function applyHash() {
       if (secEl) secEl.classList.add('active');
       document.querySelectorAll('.nav-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === currentTab));
       openVenue(name, year, true);
+      return;
+    }
+  }
+
+  // Interest overlay route: #interest/<name> (opened from Interests or a paper's Matches)
+  if (hash.startsWith('interest/')) {
+    const name = decodeURIComponent(hash.slice(9));
+    if (name) {
+      const sec = ['all','email'].includes(currentTab) ? 'sec-papers' : 'sec-' + currentTab;
+      const secEl = document.getElementById(sec);
+      if (secEl) secEl.classList.add('active');
+      document.querySelectorAll('.nav-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === currentTab));
+      openInterest(name, true);
       return;
     }
   }
