@@ -150,7 +150,7 @@ Run targeted searches grouped by research interest:
 0. **Pull from GitHub** — **ALWAYS the first step.** Run `bash pull_from_github.sh` from the project directory. This fetches the latest `papers_database.csv` and `interests_database.csv` from GitHub, ensuring the task starts with up-to-date data regardless of what previous sessions pushed. If this script exits non-zero, **abort immediately** and notify the user — do not proceed with stale or missing data.
 1. **Load interests** — Read `interests_database.csv` as the sole source of truth for filtering, ranking, and search query construction. Use confirmed interests (status="confirmed") for active filtering; use their `relevance_mapping` column for tier assignment. Ignore rejected interests. Treat suggested interests as "mildly" relevant.
 2. **Source** — Gather raw paper list (from emails or web sources above)
-3. **Deduplicate** — Remove papers already in the database or appearing multiple times. If a paper exists from a different source, update `source_mode` to reflect both sources.
+3. **Deduplicate** — Remove papers already in the database or appearing multiple times. If a paper exists from a different source, update `source_mode` to reflect both sources. **Match on the paper itself, never on the generated `id`**: the same paper gets a different slug when the author or title words are parsed differently (e.g. `wan-2026-free-checker` vs `wan-2026-no-free`). Treat a paper as already present if its arXiv ID / DOI / OpenReview ID matches, or its title matches after lowercasing and stripping punctuation. Rows with `is_hidden="true"` count as present: the user hid them, so never add them again.
 4. **Filter & score** — For each paper, determine which confirmed interests from `interests_database.csv` it matches and record them in `matched_interests` (pipe-separated, exact `interest_name` values). Assign a `residual_score` (integer, typically -1, 0, or +1) to fine-tune relevance beyond what the interests alone capture. The website computes dynamic relevance as: `max(matched interest relevance_mapping scores) + residual_score`, clamped to [1,3] and mapped to definitely/probably/mildly. Also set the static `relevance_tier` column as a snapshot fallback.
 5. **Group** — Assign `theme_groups` (pipe-separated) to each paper using the live canonical list from `groups_database.csv` (confirmed entries only, sorted by `display_order`). Default to 1–2 groups; add a third only when the paper makes a genuine, substantial contribution to a third cluster. Hard cap: 5.
    - **If a paper fits an existing confirmed group**, use its exact `group_name` from `groups_database.csv`.
@@ -192,6 +192,7 @@ Maintain a CSV file (`papers_database.csv`) with these columns:
 | `is_read` | `"true"` or `"false"` — set by the user in the dashboard. **Never overwrite** when appending new papers; leave as `"false"` for new rows. |
 | `is_starred` | `"true"` or `"false"` — set by the user in the dashboard. **Never overwrite** when appending new papers; leave as `"false"` for new rows. |
 | `user_lists` | Pipe-separated (`\|`) list names the user has saved this paper to (e.g. `"reading-list\|important"`). **Never overwrite** when appending new papers; leave empty for new rows. |
+| `is_hidden` | `"true"` when the user hid the paper in the dashboard (it disappears from every view but stays in the CSV so it is never re-added). **Never overwrite**; leave empty for new rows. The column appears once the first paper is hidden. |
 
 ---
 
@@ -266,6 +267,8 @@ Relevance is computed **dynamically at display time** by the website, not baked 
 2. Find the highest `relevance_mapping` score among matching confirmed interests (definitely=3, probably=2, mildly=1)
 3. Add the paper's `residual_score`
 4. Clamp to [1,3] and map back: 3→definitely ("Must Read"), 2→probably ("Interesting"), 1→mildly ("Tangential")
+5. **Must Read has to be earned:** a 3 stays Must Read only if the paper matches **two or more** confirmed "definitely" interests, or has `residual_score` +1. Otherwise it shows as Interesting. (This keeps Must Read to roughly the top fifth of the database.)
+6. **Top Papers order:** Must Read papers are ranked by `(best interest score + 0.5 per extra Must Read interest + residual) × 0.5^(days since date_found / 90)`, so strong papers stay near the top for about a season. The list can also be viewed by week.
 5. If `matched_interests` is empty, fall back to the static `relevance_tier` column
 
 ### Residual score guidelines:

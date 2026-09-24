@@ -197,7 +197,8 @@ a { color: inherit; text-decoration: none; }
 .btn-icon.starred { color: var(--star); }
 .btn-icon.is-read-btn { font-size: 12px; }
 .btn-icon.is-read-btn.done { color: var(--green); }
-.btn-icon.btn-delete:hover { color: #ff6b6b; background: none; }
+.btn-icon.btn-delete:hover { color: var(--text); background: none; }
+.btn-icon.btn-restore:hover { color: var(--green); background: none; }
 .btn-icon.pop { animation: pop 0.3s ease; }
 .btn-icon.pop-sm { animation: pop-sm 0.25s ease; }
 
@@ -948,6 +949,7 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .relevance-score-val.sc-2 { color: var(--yellow); }
 .relevance-score-val.sc-1 { color: var(--text-muted); }
 .relevance-score-label { font-size: 13px; color: var(--text-muted); line-height: 1.3; }
+.relevance-formula-note { font-size: 12px; color: var(--text-muted); margin-top: 6px; line-height: 1.45; }
 .relevance-formula { font-size: 12px; color: var(--text-muted); font-family: 'SF Mono', 'Fira Code', monospace; margin-bottom: 14px; padding: 8px 10px; background: rgba(0,0,0,0.25); border-radius: 6px; }
 .relevance-interests { margin-bottom: 14px; }
 .relevance-interests-title { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
@@ -1214,23 +1216,57 @@ const REL_SCORE = { definitely: 3, probably: 2, mildly: 1 };
 const SCORE_TO_REL = { 3: 'definitely', 2: 'probably', 1: 'mildly' };
 
 /* Dynamic relevance: computed from matched_interests × current interest settings + residual_score */
-function dynamicRelevance(p) {
+/* How a paper's matched interests score: the best tier, how many Must Read interests it hits,
+   and the triage residual */
+function relevanceParts(p) {
   const mi = (p.matched_interests || '').split('|').map(s => s.trim()).filter(Boolean);
-  if (!mi.length) return p.relevance_tier || 'mildly';
-  let maxScore = 0;
+  let maxScore = 0, nMust = 0;
   for (const name of mi) {
     const i = allInterests.find(x => x.interest_name === name && x.status === 'confirmed');
-    if (i) maxScore = Math.max(maxScore, REL_SCORE[i.relevance_mapping] || 1);
+    if (!i) continue;
+    const sc = REL_SCORE[i.relevance_mapping] || 1;
+    maxScore = Math.max(maxScore, sc);
+    if (sc === 3) nMust++;
   }
-  if (maxScore === 0) return p.relevance_tier || 'mildly'; // none confirmed → fall back to static
-  const residual = parseFloat(p.residual_score) || 0;
-  const final = Math.max(1, Math.min(3, Math.round(maxScore + residual)));
+  return { mi, maxScore, nMust, residual: parseFloat(p.residual_score) || 0 };
+}
+/* Must Read has to be earned twice over: two or more Must Read interests, or a +1 residual.
+   A single Must Read match on its own reads as Interesting. */
+function mustReadEarned(parts) { return parts.nMust >= 2 || parts.residual > 0; }
+function dynamicRelevance(p) {
+  const parts = relevanceParts(p);
+  if (!parts.mi.length || parts.maxScore === 0) return p.relevance_tier || 'mildly'; // none confirmed → static fallback
+  let final = Math.max(1, Math.min(3, Math.round(parts.maxScore + parts.residual)));
+  if (final === 3 && !mustReadEarned(parts)) final = 2;
   return SCORE_TO_REL[final] || 'mildly';
+}
+/* Top Papers order: base score, halved for every 90 days since the paper was added, so strong
+   older papers stay near the top for a season while this week's still surface */
+const TOP_HALF_LIFE_DAYS = 90;
+function topScore(p) {
+  const parts = relevanceParts(p);
+  const base = (parts.maxScore || REL_SCORE[p.relevance_tier] || 1) + 0.5 * Math.max(0, parts.nMust - 1) + parts.residual;
+  const age = p.date_found ? Math.max(0, (Date.now() - new Date(p.date_found + 'T00:00:00')) / 86400000) : 365;
+  return base * Math.pow(0.5, age / TOP_HALF_LIFE_DAYS);
+}
+function byTopScore(arr) {
+  const sc = new Map(arr.map(p => [p, topScore(p)]));
+  return arr.sort((a, b) => sc.get(b) - sc.get(a) || (b.date_found || '').localeCompare(a.date_found || ''));
 }
 const MAX_TOPIC_ITEMS = 3;
 
 /* ===== STATE ===== */
 let allPapers = [], allInterests = [], allGroups = [];
+/* Papers you hid stay in the CSV (so a digest run never adds them again) but live outside
+   allPapers, so no view shows them; Library lists them for restoring */
+let _hiddenPapers = [];
+function isHiddenRow(p) { return p.is_hidden === 'true'; }
+function everyPaper() { return allPapers.concat(_hiddenPapers); }
+function splitHidden() {
+  const rows = everyPaper();
+  _hiddenPapers = rows.filter(isHiddenRow);
+  allPapers = rows.filter(p => !isHiddenRow(p));
+}
 let currentTab = 'all', currentRel = 'all', currentIStatus = 'suggested', currentIGTab = 'groups', hideRead = true;
 let readSet = new Set();
 let starSet = new Set();
@@ -1272,7 +1308,7 @@ function flushStateToCSV() {
    closed tab doesn't lose them: only the fields people edit are stored for papers, so papers a
    digest run added in the meantime still come through when the backup is re-applied. */
 const LOCAL_BACKUP_KEY = 'scholar_unpushed_v1';
-const EDITABLE_FIELDS = ['is_read', 'is_starred', 'user_lists', 'user_notes', 'theme_groups'];
+const EDITABLE_FIELDS = ['is_read', 'is_starred', 'user_lists', 'user_notes', 'theme_groups', 'is_hidden'];
 let _loadedPaperFields = new Map();              // id -> editable fields as loaded, to diff against
 let _loadedInterestNames = [], _loadedGroupNames = [];
 let _backupTimer = null, _restoreAnnounced = false;
@@ -1288,7 +1324,7 @@ function writeBackup() {
     if (_stateDirty) {
       flushStateToCSV();
       const present = new Set(), papers = {};
-      allPapers.forEach(p => {
+      everyPaper().forEach(p => {
         present.add(p.id);
         const now = paperFields(p), was = _loadedPaperFields.get(p.id);
         if (!was || JSON.stringify(now) !== JSON.stringify(was)) papers[p.id] = now;
@@ -1322,7 +1358,7 @@ function restorePapersFromBackup() {
   if (!b || (!b.papers && !b.deleted)) return;
   const gone = new Set(b.deleted || []);
   allPapers = allPapers.filter(p => !gone.has(p.id));
-  allPapers.forEach(p => { const o = b.papers && b.papers[p.id]; if (o) Object.assign(p, o); });
+  everyPaper().forEach(p => { const o = b.papers && b.papers[p.id]; if (o) Object.assign(p, o); });
   _stateDirty = true;
   announceRestore(b);
 }
@@ -1389,10 +1425,11 @@ function freshnessOf(rows) {
 function isOlder(a, b) { return a.latest < b.latest || (a.latest === b.latest && a.n < b.n); }
 function applyPapers(rows, text) {
   if (anyDirty()) writeBackup();   // edits made meanwhile are re-applied by restorePapersFromBackup
-  allPapers = rows;
+  allPapers = rows; _hiddenPapers = [];
   _papersText = text;
   _papersFresh = freshnessOf(rows);
   restorePapersFromBackup();
+  splitHidden();
   bootstrapStateFromCSV();
   updateLibraryBadge();
 }
@@ -1756,7 +1793,9 @@ function buildRelevanceBreakdown(p) {
     // Formula
     const clamped = Math.max(1, Math.min(3, maxBase + residual));
     const scoreList = scores.join(', ');
-    html += `<div class="relevance-formula">max(${scoreList}) + ${residual >= 0 ? residual : '(' + residual + ')'} = ${maxBase + residual}${(maxBase + residual) !== clamped ? ' \u2192 clamped to ' + clamped : ''}</div>`;
+    const demoted = clamped === 3 && finalScore === 2;
+    html += `<div class="relevance-formula">max(${scoreList}) + ${residual >= 0 ? residual : '(' + residual + ')'} = ${maxBase + residual}${(maxBase + residual) !== clamped ? ' \u2192 clamped to ' + clamped : ''}${demoted ? ' \u2192 2' : ''}</div>`;
+    if (demoted) html += `<div class="relevance-formula-note">Must Read needs two or more Must Read interests, or a +1 residual.</div>`;
   } else {
     html += `<div class="relevance-interests"><div class="relevance-interests-title">Matched Interests</div><div style="font-size:13px;color:var(--text-muted);font-style:italic;">No matched interests \u2014 using static fallback (${esc(p.relevance_tier || 'mildly')})</div></div>`;
   }
@@ -2383,10 +2422,10 @@ function orderForLead(top) {
 }
 
 const MAX_TOP_CARDS = 5;  // lead + 4 in the side list
-/* Top papers = all "definitely" papers (already sorted); fall back to the full list if fewer than 2 */
+/* Top papers = all Must Read papers, best score first; fall back to the full list if fewer than 2 */
 function selectTopPapers(sortedPapers) {
   const top = sortedPapers.filter(p => dynamicRelevance(p) === 'definitely');
-  return top.length >= 2 ? top : sortedPapers;
+  return top.length >= 2 ? byTopScore(top) : sortedPapers;
 }
 function renderTopPapers(top) {
   if (!top.length) { document.getElementById('topStories').innerHTML=''; return; }
@@ -2464,7 +2503,8 @@ function saveBtn(p) {
 }
 function deleteBtn(p) {
   const k = paperKey(p);
-  return `<button class="btn-icon btn-delete" onclick="event.preventDefault();event.stopPropagation();deletePaper('${escAttr(k)}',this)" title="Delete paper"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button>`;
+  if (isHiddenRow(p)) return `<button class="btn-icon btn-restore" onclick="event.preventDefault();event.stopPropagation();unhidePaper('${escAttr(k)}')" title="Restore paper"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg></button>`;
+  return `<button class="btn-icon btn-delete" onclick="event.preventDefault();event.stopPropagation();hidePaper('${escAttr(k)}')" title="Hide paper (you can restore it from Library)"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button>`;
 }
 
 function summaryBtn(p) {
@@ -2645,17 +2685,29 @@ function toggleRead(k, btn) {
   refresh();
 }
 
-async function deletePaper(k, btn) {
+/* Hiding keeps the row (marked is_hidden) so the paper can come back and a digest run
+   won't re-add it; stars, reads and lists stay on the row for when it is restored */
+function hidePaper(k) {
   const p = allPapers.find(x => paperKey(x) === k);
-  const label = p ? (p.title || k) : k;
-  const ok = await showConfirm(`Delete paper?`, label, 'Delete', true);
-  if (!ok) return;
+  if (!p) return;
   closeSaveDD();
-  allPapers = allPapers.filter(x => paperKey(x) !== k);
-  readSet.delete(k); starSet.delete(k);
-  Object.values(libraryLists).forEach(arr => { const i = arr.indexOf(k); if (i >= 0) arr.splice(i, 1); });
+  flushStateToCSV();
+  p.is_hidden = 'true';
+  splitHidden();
   _stateDirty = true; showSaveBar();
-  toast(`Deleted "${p ? p.title : k}"`);
+  toast(`Hidden "${esc(p.headline || p.title)}"`, () => unhidePaper(k));
+  refresh();
+}
+function unhidePaper(k) {
+  const p = _hiddenPapers.find(x => paperKey(x) === k);
+  if (!p) return;
+  p.is_hidden = '';
+  splitHidden();
+  if (p.is_read === 'true') readSet.add(k);
+  if (p.is_starred === 'true') starSet.add(k);
+  (p.user_lists || '').split('|').filter(Boolean).forEach(name => { (libraryLists[name] = libraryLists[name] || []).includes(k) || libraryLists[name].push(k); });
+  _stateDirty = true; showSaveBar();
+  toast(`Restored "${esc(p.headline || p.title)}"`);
   refresh();
 }
 
@@ -2882,7 +2934,7 @@ function paperListHTML(papers, opts) {
   }
   const sections = [];
   papers.forEach(p => {
-    const b = _topSort === 'added' ? addedBucket(p.date_found) : publishedBucket(p);
+    const b = o.bucket ? o.bucket(p) : _topSort === 'added' ? addedBucket(p.date_found) : publishedBucket(p);
     const last = sections[sections.length - 1];
     if (last && last.key === b.key) last.items.push(p); else sections.push({ ...b, items: [p] });
   });
@@ -2914,6 +2966,32 @@ function sortForList(papers) {
   return papers;
 }
 
+let _topView = (() => { try { return localStorage.getItem('scholar_top_view') || 'ranked'; } catch (e) { return 'ranked'; } })();
+function setTopView(v) {
+  _topView = v;
+  try { localStorage.setItem('scholar_top_view', v); } catch (e) {}
+  renderTopList(); document.getElementById('overlayBody').scrollTop = 0;
+}
+function topViewToolsHTML() {
+  return `<div class="tl-sort" role="group" aria-label="Order">
+      <button class="${_topView==='ranked'?'active':''}" onclick="setTopView('ranked')" title="Best score first: relevance, fading by half every 90 days since added">Ranked</button>
+      <button class="${_topView==='week'?'active':''}" onclick="setTopView('week')" title="Newest week first, best score first within each week">By week</button>
+    </div>`;
+}
+/* Week a paper was added, Monday-based: "This week", "Last week", then "Sep 7 – 13" */
+function weekBucket(d) {
+  if (!d) return { key: '0', label: 'Date unknown' };
+  const day = new Date(d + 'T00:00:00'), mon = new Date(day);
+  mon.setDate(day.getDate() - ((day.getDay() + 6) % 7));
+  const now = new Date(), thisMon = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7));
+  const weeks = Math.round((thisMon - mon) / (7 * 86400000));
+  const key = mon.toISOString().slice(0, 10);
+  if (weeks <= 0) return { key, label: 'This week' };
+  if (weeks === 1) return { key, label: 'Last week' };
+  const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+  const md = x => x.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return { key, label: mon.getMonth() === sun.getMonth() ? `${md(mon)} \u2013 ${sun.getDate()}` : `${md(mon)} \u2013 ${md(sun)}` };
+}
 function renderTopList() {
   const groupsOf = groupsOfPaper;
   const base = selectTopPapers(sortPapers(applyViewFilters(allPapers.slice())));
@@ -2929,9 +3007,13 @@ function renderTopList() {
   const chip = (g, label, n) => `<button class="tl-chip ${_topGroup===g?'active':''}" onclick="setTopGroup(${g===null?'null':`'${escAttr(g)}'`})">${g ? gdot(g) : ''}${esc(label)}<span class="n">${n}</span></button>`;
   document.getElementById('overlayToolbar').innerHTML =
     `<div class="tl-chips" role="toolbar" aria-label="Filter by group">${chip(null, 'All groups', base.length)}${chipNames.map(g => chip(g, g, counts[g])).join('')}</div>`;
-  document.getElementById('overlayHeaderTools').innerHTML = sortToolsHTML();
+  document.getElementById('overlayHeaderTools').innerHTML = topViewToolsHTML();
 
-  const papers = sortForList(_topGroup ? base.filter(p => groupsOf(p).includes(_topGroup)) : base.slice());
+  let papers = byTopScore(_topGroup ? base.filter(p => groupsOf(p).includes(_topGroup)) : base.slice());
+  if (_topView === 'week') {
+    const wk = new Map(papers.map(p => [p, weekBucket(p.date_found).key]));
+    papers = papers.map((p, i) => [p, i]).sort((a, b) => wk.get(b[0]).localeCompare(wk.get(a[0])) || a[1] - b[1]).map(x => x[0]);
+  }
   let everyTop = selectTopPapers(sortPapers(applyViewFilters(allPapers.slice(), true)));
   if (_topGroup) everyTop = everyTop.filter(p => groupsOf(p).includes(_topGroup));
   document.getElementById('overlayTitle').textContent = _topGroup ? `Top Papers in ${_topGroup}` : 'Top Papers';
@@ -2939,7 +3021,7 @@ function renderTopList() {
 
   const body = document.getElementById('overlayBody');
   body.innerHTML = papers.length
-    ? paperListHTML(papers, { sections: true, hideGroup: _topGroup })
+    ? paperListHTML(papers, _topView === 'week' ? { sections: true, bucket: p => weekBucket(p.date_found), hideGroup: _topGroup } : { hideGroup: _topGroup })
     : `<div class="tl-empty">No top papers match your current filters.${_topGroup ? `<br><button class="tl-chip" onclick="setTopGroup(null)">Show all groups</button>` : ''}</div>`;
 }
 
@@ -3127,6 +3209,7 @@ function renderLibrary() {
       html += libGroupHTML('list-'+name, '&#9776;', name, papers, actions);
     });
     if (read.length) html += libGroupHTML('read', '&#10003;', 'Read', read);
+    if (_hiddenPapers.length) html += libGroupHTML('hidden', '&#8856;', 'Hidden', sortPapers(_hiddenPapers.slice()));
     const MON = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
     function pubDateVal(p) {
       const s = (p.publishing_date||'').trim().toLowerCase();
@@ -3664,7 +3747,7 @@ function mergePapers(text) {
   const r = Papa.parse(text, { header: true, skipEmptyLines: true });   // line endings detected
   const fields = r.meta.fields.slice();
   flushStateToCSV();
-  const mine = new Map(allPapers.map(p => [p.id, p]));
+  const mine = new Map(everyPaper().map(p => [p.id, p]));
   let adopted = false;
   const rows = r.data.filter(row => {
     const p = row.id && mine.get(row.id);
@@ -3678,7 +3761,7 @@ function mergePapers(text) {
     return true;
   });
   EDITABLE_FIELDS.forEach(f => { if (!fields.includes(f) && rows.some(x => x[f])) fields.push(f); });
-  if (adopted) { bootstrapStateFromCSV(); refresh(); }
+  if (adopted) { splitHidden(); bootstrapStateFromCSV(); refresh(); }
   return { csv: toCSV(rows, { columns: fields }), rows };
 }
 /* Interests and topics: this page's rows, plus rows added on GitHub that this page never saw */
@@ -3722,7 +3805,7 @@ async function pushToGitHub(auto) {
       const { rows } = await _ghMergePush(headers, 'papers_database.csv', mergePapers, 'Update papers_database.csv from dashboard');
       // The edits just saved are the new baseline; anything changed since stays unsaved
       const saved = new Map(rows.filter(x => x.id).map(x => [x.id, paperFields(x)]));
-      _loadedPaperFields = new Map(allPapers.map(p => [p.id, saved.get(p.id) || paperFields(p)]));
+      _loadedPaperFields = new Map(everyPaper().map(p => [p.id, saved.get(p.id) || paperFields(p)]));
     }
     if (_interestsDirty) {
       const { rows } = await _ghMergePush(headers, 'interests_database.csv', mergeRows(allInterests, _loadedInterestNames, 'interest_name'), 'Update interests_database.csv from dashboard');
@@ -3794,7 +3877,7 @@ function openPaper(id, event) {
 let _savedScrollTop = 0;
 
 function showPaperDetail(id) {
-  const p = allPapers.find(pp => pp.id === id);
+  const p = allPapers.find(pp => pp.id === id) || _hiddenPapers.find(pp => pp.id === id);
   if (!p) { applyHash(); return; }
   // Save the list's scroll position, but not when stepping from one paper to the next
   if (!_paperViewActive) _savedScrollTop = document.getElementById('mainScroll').scrollTop;
