@@ -199,6 +199,12 @@ a { color: inherit; text-decoration: none; }
 .btn-icon.is-read-btn { font-size: 12px; }
 .btn-icon.is-read-btn.done { color: var(--green); }
 .btn-icon.btn-delete:hover { color: var(--text); background: none; }
+.lib-icon { display: inline-flex; justify-content: center; width: 18px; margin-right: 8px; }
+.lib-hint { border: 1px dashed var(--border); border-radius: 12px; padding: 16px 20px; margin: 0 0 18px; font-size: 13.5px; line-height: 1.6; color: var(--text-secondary); }
+.lib-hint strong { color: var(--text); }
+.lib-hint-btn { background: none; border: 1px solid var(--border); color: var(--text); font: inherit; font-size: 12.5px; padding: 2px 10px; border-radius: 999px; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+.lib-hint-btn:hover { border-color: rgba(255,255,255,0.3); background: rgba(255,255,255,0.05); }
+.tr-venue-line { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; justify-content: flex-end; }
 .btn-icon.btn-restore:hover { color: var(--green); background: none; }
 .btn-icon.pop { animation: pop 0.3s ease; }
 .btn-icon.pop-sm { animation: pop-sm 0.25s ease; }
@@ -235,6 +241,7 @@ a { color: inherit; text-decoration: none; }
 #briefingNote { color: var(--text-secondary); }
 #sec-papers .filters { justify-content: flex-start; padding-top: 18px; }
 #topicsHeader { display: flex; align-items: center; gap: 12px; }
+.section-header .section-sub { font-size: 14px; font-weight: 400; color: var(--text-muted); margin-left: 2px; }
 #topicsHeader::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
 .top-feature { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; align-items: stretch; }
@@ -247,6 +254,7 @@ a { color: inherit; text-decoration: none; }
 .lead-summary { font-size: 15px; color: var(--text-secondary); line-height: 1.65; margin-top: 16px; max-width: 64ch; display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
 .lead-authors { font-size: 13px; color: var(--text-muted); margin-top: 16px; }
 .lead-actions { margin-top: auto; padding-top: 20px; }
+.top-lead .f-venue { max-width: none; }
 .lead-acts { gap: 6px; align-items: center; }
 .btn-icon.btn-labelled { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border: 1px solid var(--border); border-radius: 999px; font-size: 13px; line-height: 1.2; }
 .btn-icon.btn-labelled:hover { border-color: rgba(255,255,255,0.28); color: var(--text); background: rgba(255,255,255,0.04); }
@@ -2292,11 +2300,14 @@ function tokAct(ev, btn, what, k) {
 
 /* ===== RENDER PAPERS ===== */
 function renderPapers(papers) {
+  document.getElementById('topicsHeader').textContent = currentTab === 'email' ? 'Your alerts' : 'Your topics';
   if (!papers.length) {
     document.getElementById('topStories').innerHTML = '<div class="empty-state">No papers match your filters.</div>';
     document.getElementById('topicsGrid').innerHTML = '';
+    document.getElementById('topicJump').innerHTML = '';
     return;
   }
+  if (currentTab === 'email') { renderEmailPapers(papers); return; }
   sortPapers(papers);
   const top = orderForLead(selectTopPapers(papers));
   renderTopPapers(top);
@@ -2336,6 +2347,68 @@ function renderPapers(papers) {
       <div class="topic-body feed-body">${shown.map(feedItemHTML).join('')}</div>
     </div>`;
   }).join('');
+}
+
+/* ----- Email Digest: the latest digest up top, then one card per alert ----- */
+/* Papers from the most recent digest: everything added within a week of the newest email paper */
+function latestDigestOf(papers) {
+  const latest = papers.reduce((m, p) => (p.date_found || '') > m ? p.date_found : m, '');
+  if (!latest) return { papers: [], date: '' };
+  const cut = new Date(new Date(latest + 'T00:00:00') - 6 * 86400000).toISOString().slice(0, 10);
+  return { papers: papers.filter(p => (p.date_found || '') >= cut), date: latest };
+}
+function shortDate(d) { try { return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); } catch (e) { return d; } }
+function renderEmailPapers(papers) {
+  const dig = latestDigestOf(papers);
+  const top = orderForLead(byTopScore(dig.papers.slice()));
+  renderTopPapers(top, { title: 'Latest digest', sub: dig.date ? shortDate(dig.date) : '', open: 'openLatestDigest()', tip: 'View every paper from the latest digest' });
+  const shownAbove = new Set(top.slice(0, MAX_TOP_CARDS).map(paperKey));
+  // one card per alert with 3+ papers (as in the chips above); the rest share an "Other alerts" card
+  const byAlert = {};
+  papers.forEach(p => alertSourcesOf(p).forEach(a => (byAlert[a] = byAlert[a] || []).push(p)));
+  const OTHER = 'Other alerts';
+  Object.keys(byAlert).forEach(a => { if (byAlert[a].length < 3) { byAlert[OTHER] = (byAlert[OTHER] || []).concat(byAlert[a].filter(p => !(byAlert[OTHER] || []).includes(p))); delete byAlert[a]; } });
+  const tail = n => n === OTHER ? 2 : n === 'Keyword alerts' ? 1 : 0;
+  const names = Object.keys(byAlert).sort((a, b) => tail(a) - tail(b) || byAlert[b].length - byAlert[a].length || a.localeCompare(b));
+  document.getElementById('topicJump').innerHTML = '';
+  document.getElementById('topicsGrid').innerHTML = names.map(name => {
+    const items = sortForFeed(byAlert[name].slice());
+    // like topic cards: prefer papers not already shown above or in an earlier card
+    const shown = items.filter(p => !shownAbove.has(paperKey(p))).slice(0, MAX_TOPIC_ITEMS);
+    for (const p of items) { if (shown.length >= MAX_TOPIC_ITEMS) break; if (!shown.includes(p)) shown.push(p); }
+    shown.forEach(p => shownAbove.add(paperKey(p)));
+    const extra = items.length - shown.length;
+    const newest = items[0] && items[0].date_found ? `latest ${shortDate(items[0].date_found)}` : '';
+    return `<div class="topic-card alert-card" data-topic="${escAttr(name)}" style="--gc:var(--accent)">
+      <div class="topic-title" ${name === OTHER ? '' : `role="button" tabindex="0" onclick="openAlert('${escAttr(name)}')"`}><span class="topic-label">${esc(name === 'Keyword alerts' || name === OTHER ? name : name + ' alert')}</span>
+        ${name === OTHER ? '' : '<svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>'}
+        <span class="topic-extra">${extra > 0 && name !== OTHER ? `View all ${items.length}` : `${items.length} ${items.length === 1 ? 'paper' : 'papers'}`}${newest ? ` \u00b7 ${newest}` : ''}</span>
+      </div>
+      <div class="topic-body feed-body">${shown.map(feedItemHTML).join('')}</div>
+    </div>`;
+  }).join('');
+}
+const LATEST_KEY = '#latest-digest';
+function openLatestDigest(skipHash) {
+  _overlayGroupName = LATEST_KEY;
+  setOverlayTopMode(true);
+  renderLatestList();
+  document.getElementById('overlayBody').scrollTop = 0;
+  if (!skipHash) location.hash = '#latest';
+  openOverlay();
+}
+function renderLatestList() {
+  const email = allPapers.filter(p => (p.source_mode || '').includes('email'));
+  const dig = latestDigestOf(email);
+  const inDigest = new Set(dig.papers.map(paperKey));
+  const papers = byTopScore(applyViewFilters(email.filter(p => inDigest.has(paperKey(p)))));
+  document.getElementById('overlayTitle').textContent = `Latest digest${dig.date ? ', ' + shortDate(dig.date) : ''}`;
+  setListProgress(dig.papers);
+  document.getElementById('overlayToolbar').innerHTML = '';
+  document.getElementById('overlayHeaderTools').innerHTML = '';
+  document.getElementById('overlayBody').innerHTML = papers.length
+    ? paperListHTML(papers)
+    : '<div class="tl-empty">Nothing from the latest digest matches your current filters.</div>';
 }
 
 /* ----- Email Digest by alert source ("Alert: Bajcsy/Lindemann." in the triage note) ----- */
@@ -2395,7 +2468,7 @@ function jumpToTopic(name) {
   card.classList.remove('flash'); void card.offsetWidth; card.classList.add('flash');
 }
 
-/* Stacked bar of this week's additions by topic; groups past the 8 color slots fold into "Other" */
+/* Stacked bar of this week's additions, one segment per topic */
 function renderWeekPulse(weekPapers) {
   const el = document.getElementById('weekPulse');
   if (!weekPapers.length) { el.innerHTML = ''; return; }
@@ -2437,11 +2510,12 @@ function selectTopPapers(sortedPapers) {
   const top = sortedPapers.filter(p => dynamicRelevance(p) === 'definitely');
   return top.length >= 2 ? byTopScore(top) : sortedPapers;
 }
-function renderTopPapers(top) {
+function renderTopPapers(top, opts) {
+  const o = opts || { title: 'Top Papers', open: 'openTopList()', tip: 'View all top papers as a list' };
   if (!top.length) { document.getElementById('topStories').innerHTML=''; return; }
   const extra = top.length - MAX_TOP_CARDS;
   document.getElementById('topStories').innerHTML = `
-    <div class="section-header clickable" role="button" tabindex="0" onclick="openTopList()" title="View all top papers as a list"><span class="topic-label">Top Papers</span>
+    <div class="section-header clickable" role="button" tabindex="0" onclick="${o.open}" title="${escAttr(o.tip)}"><span class="topic-label">${esc(o.title)}</span>${o.sub ? `<span class="section-sub">${esc(o.sub)}</span>` : ''}
       <svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
       <span class="topic-extra">${extra > 0 ? `View all ${top.length}${hideRead ? ' unread' : ''}` : 'View as list'}</span>
     </div>
@@ -2857,7 +2931,7 @@ function renderVenueList() {
     : '';
   document.getElementById('overlayHeaderTools').innerHTML = sortToolsHTML();
   document.getElementById('overlayBody').innerHTML = papers.length
-    ? paperListHTML(papers, { sections: true })
+    ? paperListHTML(papers, { sections: true, hideVenue: true })
     : '<div class="tl-empty">No papers from this venue match your current filters.</div>';
 }
 
@@ -2903,6 +2977,7 @@ function renderOpenList(keepScroll) {
   if (_overlayGroupName === TOP_LIST_KEY) renderTopList();
   else if (_overlayGroupName.startsWith(VENUE_KEY)) renderVenueList();
   else if (_overlayGroupName.startsWith(ALERT_KEY)) renderAlertList();
+  else if (_overlayGroupName === LATEST_KEY) renderLatestList();
   else renderGroupList(_overlayGroupName);
   if (keepScroll) body.scrollTop = st;
   return true;
@@ -2942,7 +3017,7 @@ function groupsOfPaper(p) {
    Top Papers list, category overlays, Library and search. */
 function paperListHTML(papers, opts) {
   const o = opts || {};
-  const row = p => topRowHTML(p, groupsOfPaper(p).filter(g => g !== o.hideGroup));
+  const row = p => topRowHTML(p, groupsOfPaper(p).filter(g => g !== o.hideGroup), o);
   if (!o.sections) {
     requestAnimationFrame(markTruncatedVenues);
     return `<div class="paper-list flat"><section class="tl-section">${papers.map(row).join('')}</section></div>`;
@@ -3040,7 +3115,8 @@ function renderTopList() {
     : `<div class="tl-empty">No top papers match your current filters.${_topGroup ? `<br><button class="tl-chip" onclick="setTopGroup(null)">Show all groups</button>` : ''}</div>`;
 }
 
-function topRowHTML(p, groups) {
+function topRowHTML(p, groups, o) {
+  o = o || {};
   const k = paperKey(p), ir = readSet.has(k);
   const hasSummary = p.summary && p.summary.trim() && p.summary !== 'not specified';
   const hasAbstract = p.abstract && p.abstract.trim() && p.abstract !== 'not specified';
@@ -3056,8 +3132,8 @@ function topRowHTML(p, groups) {
       </div>
     </div>
     <div class="tr-side">
-      ${venue ? venueLinkHTML(p, 'tr-venue') : ''}
-      <span>${isNewSinceVisit(p) ? '<span class="f-new">New</span> ' : ''}${starSet.has(k) ? '<span class="tr-star" title="Starred">&#9733;</span> ' : ''}${esc(displayDate(p))}</span>
+      <span class="tr-venue-line">${starSet.has(k) ? '<span class="tr-star" title="Starred">&#9733;</span>' : ''}${venue && !o.hideVenue ? venueLinkHTML(p, 'tr-venue') : ''}</span>
+      <span>${isNewSinceVisit(p) ? '<span class="f-new">New</span> ' : ''}${esc(o.hideVenue ? (paperDate(p) || venueOf(p).year || '') : displayDate(p))}</span>
     </div>
     <div class="tr-actions"><div>
       ${whyHTML(p)}
@@ -3201,7 +3277,7 @@ function libGroupHTML(key, icon, label, papers, extra) {
   _libPapers[key] = papers;
   const collapsed = _collapsedLibGroups.has(key) ? ' collapsed' : '';
   const body = collapsed ? '' : libBodyHTML(papers);
-  return `<div class="interest-group${collapsed}"><div class="interest-group-inner"><div class="interest-group-header" onclick="toggleLibGroup(this,'${escAttr(key)}')">${icon} ${esc(label)} <span class="interest-group-count">${papers.length}</span>${extra||''}<svg class="chevron" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg></div><div class="interest-group-body">${body}</div></div></div>`;
+  return `<div class="interest-group${collapsed}"><div class="interest-group-inner"><div class="interest-group-header" onclick="toggleLibGroup(this,'${escAttr(key)}')"><span class="lib-icon" aria-hidden="true">${icon}</span>${esc(label)} <span class="interest-group-count">${papers.length}</span>${extra||''}<svg class="chevron" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg></div><div class="interest-group-body">${body}</div></div></div>`;
 }
 function renderLibrary() {
   _libPapers = {};
@@ -3217,12 +3293,13 @@ function renderLibrary() {
     html = '<div class="library-empty">No papers in the database yet.</div>';
   } else {
     if (starred.length) html += libGroupHTML('starred', '&#9733;', 'Starred', starred);
-    if (noted.length) html += libGroupHTML('noted', '&#128221;', 'Notes', noted);
+    if (noted.length) html += libGroupHTML('noted', '&#9998;', 'Notes', noted);
     listNames.forEach(name => {
       const papers = allPapers.filter(p => libraryLists[name].includes(paperKey(p)));
       const actions = `<span class="library-actions" onclick="event.stopPropagation()"><button onclick="renameList('${escAttr(name)}')">Rename</button><button onclick="showCopyDD(this,'${escAttr(name)}')">Copy to...</button><button class="danger" onclick="deleteList('${escAttr(name)}')">Delete</button></span>`;
       html += libGroupHTML('list-'+name, '&#9776;', name, papers, actions);
     });
+    if (!listNames.length) html += `<div class="lib-hint"><strong>Lists</strong> keep papers together for a project, a talk or a reading group. Make one with <button class="lib-hint-btn" onclick="createNewList()">+ New list</button>, then add papers with the &#9776; button on any paper${window.matchMedia('(max-width: 700px)').matches ? ', or hold a card in the feed' : ''}.</div>`;
     if (read.length) html += libGroupHTML('read', '&#10003;', 'Read', read);
     if (_hiddenPapers.length) html += libGroupHTML('hidden', '&#8856;', 'Hidden', sortPapers(_hiddenPapers.slice()));
     const MON = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
@@ -3239,7 +3316,7 @@ function renderLibrary() {
       if (r !== 0) return r;
       return (a.title||'').localeCompare(b.title||'');
     });
-    html += libGroupHTML('all', '&#128218;', 'All', allSorted);
+    html += libGroupHTML('all', '&#9636;', 'All papers', allSorted);
   }
   document.getElementById('libraryContent').innerHTML = html;
 }
@@ -4332,6 +4409,15 @@ function applyHash() {
       openVenue(name, year, true);
       return;
     }
+  }
+
+  // Latest email digest overlay route
+  if (hash === 'latest') {
+    currentTab = 'email';
+    document.getElementById('sec-papers').classList.add('active');
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === currentTab));
+    openLatestDigest(true);
+    return;
   }
 
   // Top papers list overlay route
