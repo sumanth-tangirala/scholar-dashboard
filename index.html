@@ -1170,7 +1170,7 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 
 <!-- SAVE BAR -->
 <div class="save-bar" id="saveBar">
-  <span class="save-bar-msg"><strong>Unsaved changes</strong><span class="save-bar-sub">Kept in this browser until you push</span></span>
+  <span class="save-bar-msg"><strong id="saveBarTitle">Unsaved changes</strong><span class="save-bar-sub" id="saveBarSub">Kept in this browser until you push</span></span>
   <button class="btn-dismiss-bar" onclick="hideSaveBar()" title="Dismiss">&times;</button>
   <div class="save-bar-btns">
     <button class="btn-save-csv" onclick="pushToGitHub()" id="btnPushGH">Push to GitHub</button>
@@ -1309,7 +1309,7 @@ function announceRestore(b) {
   if (_restoreAnnounced) return;
   _restoreAnnounced = true;
   const when = b && b.savedAt ? new Date(b.savedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
-  toast(`Restored unsaved changes from this browser${when ? ' (' + when + ')' : ''}. Push to GitHub to keep them.`, null, { duration: 7000 });
+  toast(`Restored unsaved changes from this browser${when ? ' (' + when + ')' : ''}. ${hasPAT() ? 'Saving them to GitHub now.' : 'Push to GitHub to keep them.'}`, null, { duration: 7000 });
 }
 function restorePapersFromBackup() {
   _loadedPaperFields = new Map(allPapers.map(p => [p.id, paperFields(p)]));
@@ -3523,7 +3523,19 @@ function _doToastUndo() {
   if (_toastTimer) { clearTimeout(_toastTimer); _toastTimer = null; }
 }
 
-function showSaveBar() { document.getElementById('saveBar').classList.add('visible'); scheduleBackup(); }
+function showSaveBar() {
+  _editGen++;
+  document.getElementById('saveBar').classList.add('visible');
+  scheduleBackup();
+  if (_pushing) return;
+  if (hasPAT()) { setSaveBar('Saving to GitHub…', 'Saves a few seconds after your last change', 'Save now'); scheduleAutoPush(); }
+  else setSaveBar('Unsaved changes', 'Kept in this browser until you push', 'Push to GitHub');
+}
+function setSaveBar(title, sub, btnText) {
+  document.getElementById('saveBarTitle').textContent = title;
+  document.getElementById('saveBarSub').textContent = sub;
+  if (btnText) document.getElementById('btnPushGH').textContent = btnText;
+}
 function hideSaveBar() { document.getElementById('saveBar').classList.remove('visible'); }
 
 function _triggerDownload(content, filename, type) {
@@ -3551,62 +3563,162 @@ const GH_OWNER  = 'sumanth-tangirala';
 const GH_REPO   = 'scholar-dashboard';
 const GH_BRANCH = 'main';
 
-async function _ghPushFile(headers, filename, content, message) {
-  const apiUrl = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${filename}`;
-  const getRes = await fetch(`${apiUrl}?ref=${GH_BRANCH}&_=${Date.now()}`, { headers, cache: 'no-store' });
-  if (!getRes.ok) throw new Error(`GitHub GET ${filename} failed: ${getRes.status}`);
-  const { sha } = await getRes.json();
+/* ===== AUTO-SAVE =====
+   With a token saved, edits go to GitHub a few seconds after the last change. Every push starts
+   from the file as it is on GitHub right now and applies only this browser's edits on top, so
+   papers, interests or topics a digest run pushed in the meantime are never overwritten. */
+const AUTO_PUSH_DELAY = 5000, AUTO_PUSH_RETRY = 30000;
+let _autoPushTimer = null, _pushing = false, _pushAgain = false, _editGen = 0;
+function hasPAT() { try { return !!localStorage.getItem('gh_pat'); } catch (e) { return false; } }
+function scheduleAutoPush(delay) {
+  if (!hasPAT()) return;
+  clearTimeout(_autoPushTimer);
+  _autoPushTimer = setTimeout(() => pushToGitHub(true), delay || AUTO_PUSH_DELAY);
+}
+window.addEventListener('online', () => { if (anyDirty()) scheduleAutoPush(1000); });
+/* Leaving the tab: save now rather than wait out the delay */
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && anyDirty() && hasPAT()) pushToGitHub(true); });
+
+function _ghFileUrl(filename) { return `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${filename}`; }
+function _ghFail(res, what) {
+  if (res.status === 401) { localStorage.removeItem('gh_pat'); const e = new Error('GitHub rejected the token, so it was removed. Push once to enter a new one.'); e.fatal = true; return e; }
+  const e = new Error(`GitHub ${what} failed (${res.status})`);
+  e.conflict = res.status === 409 || res.status === 422;
+  return e;
+}
+/* The file as it is on GitHub now. The papers file is over 1 MB, which the contents endpoint
+   won't inline, so the text comes from the blob its sha points at. */
+async function _ghGetFile(headers, filename) {
+  const res = await fetch(`${_ghFileUrl(filename)}?ref=${GH_BRANCH}&_=${Date.now()}`, { headers, cache: 'no-store' });
+  if (!res.ok) throw _ghFail(res, `read of ${filename}`);
+  const { sha } = await res.json();
+  const blob = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/git/blobs/${sha}`, { headers, cache: 'no-store' });
+  if (!blob.ok) throw _ghFail(blob, `read of ${filename}`);
+  const bin = atob((await blob.json()).content.replace(/\n/g, ''));
+  return { sha, text: new TextDecoder().decode(Uint8Array.from(bin, c => c.charCodeAt(0))) };
+}
+async function _ghPutFile(headers, filename, content, sha, message) {
   const b64 = btoa(unescape(encodeURIComponent(content)));
-  const putRes = await fetch(apiUrl, {
+  const res = await fetch(_ghFileUrl(filename), {
     method: 'PUT', headers: { ...headers, 'Content-Type': 'application/json' },
     body: JSON.stringify({ message, content: b64, sha, branch: GH_BRANCH })
   });
-  if (!putRes.ok) {
-    const err = await putRes.json().catch(() => ({}));
-    if (putRes.status === 401) { localStorage.removeItem('gh_pat'); throw new Error('Invalid PAT — cleared. Try again.'); }
-    throw new Error(err.message || `GitHub PUT ${filename} failed: ${putRes.status}`);
+  if (!res.ok) throw _ghFail(res, `save of ${filename}`);
+}
+/* Read, merge, write; if someone else wrote the file in between, merge again */
+async function _ghMergePush(headers, filename, merge, message) {
+  for (let attempt = 0; ; attempt++) {
+    const { sha, text } = await _ghGetFile(headers, filename);
+    const out = merge(text);
+    try { await _ghPutFile(headers, filename, out.csv, sha, message); return out; }
+    catch (e) { if (!e.conflict || attempt >= 2) throw e; }
   }
 }
+/* CSVs end with a line break so a digest run's appended row starts on its own line */
+function toCSV(rows, opts) { return Papa.unparse(rows, opts) + '\r\n'; }
 
-async function pushToGitHub() {
-  if (!_stateDirty && !_interestsDirty && !_groupsDirty) return;
+/* Papers: only fields changed here are written into GitHub's rows. A field changed on GitHub
+   but not here (a digest run re-grouping a paper) is taken into this page instead. */
+function mergePapers(text) {
+  const r = Papa.parse(text, { header: true, skipEmptyLines: true });   // line endings detected
+  const fields = r.meta.fields.slice();
+  flushStateToCSV();
+  const mine = new Map(allPapers.map(p => [p.id, p]));
+  let adopted = false;
+  const rows = r.data.filter(row => {
+    const p = row.id && mine.get(row.id);
+    if (!p) return !(row.id && _loadedPaperFields.has(row.id));   // deleted here: drop; new on GitHub: keep
+    const now = paperFields(p), was = _loadedPaperFields.get(row.id) || {};
+    EDITABLE_FIELDS.forEach(f => {
+      const theirs = row[f] || '';
+      if (now[f] !== (was[f] || '')) row[f] = now[f];
+      else if (theirs !== now[f]) { p[f] = theirs; adopted = true; }
+    });
+    return true;
+  });
+  EDITABLE_FIELDS.forEach(f => { if (!fields.includes(f) && rows.some(x => x[f])) fields.push(f); });
+  if (adopted) { bootstrapStateFromCSV(); refresh(); }
+  return { csv: toCSV(rows, { columns: fields }), rows };
+}
+/* Interests and topics: this page's rows, plus rows added on GitHub that this page never saw */
+function mergeRows(mineRows, loadedNames, key, parseOpts, unparseOpts) {
+  return text => {
+    const r = Papa.parse(text, { header: true, skipEmptyLines: true, ...parseOpts });
+    const rows = mergeBackupRows(r.data.filter(x => x[key] && x[key].trim()), { rows: mineRows, loadedNames }, key);
+    return { csv: toCSV(rows, { ...unparseOpts, columns: r.meta.fields }), rows };   // the file's own columns
+  };
+}
+
+async function pushToGitHub(auto) {
+  auto = auto === true;
+  clearTimeout(_autoPushTimer);
+  if (!anyDirty()) return;
+  if (_pushing) { _pushAgain = true; return; }
+  if (_stateDirty && !_loadedPaperFields.size) { scheduleAutoPush(); return; }   // papers still loading
 
   let pat = localStorage.getItem('gh_pat');
   if (!pat) {
+    if (auto) return;
     pat = await showPrompt(
       'GitHub Personal Access Token',
-      'Fine-grained PAT with Contents read+write access. Stored in your browser — only sent to api.github.com.',
+      'Fine-grained PAT with Contents read+write access. Stored in your browser — only sent to api.github.com. From then on, changes save by themselves.',
       'Paste PAT here'
     );
     if (!pat) return;
     localStorage.setItem('gh_pat', pat);
   }
+  if (auto && !navigator.onLine) { setSaveBar('Offline', 'Kept in this browser; saves when you reconnect', 'Save now'); return; }
 
   const btn = document.getElementById('btnPushGH');
-  const origText = btn.textContent;
-  btn.textContent = 'Pushing…'; btn.disabled = true;
+  _pushing = true; _pushAgain = false;
+  const gen = _editGen;
+  btn.disabled = true;
+  setSaveBar('Saving to GitHub…', 'Kept in this browser until it lands', 'Saving…');
 
   const headers = { 'Authorization': `Bearer ${pat}`, 'Accept': 'application/vnd.github+json' };
   try {
-    if (_stateDirty)
-      await _ghPushFile(headers, 'papers_database.csv', Papa.unparse(allPapers), 'Update papers_database.csv from dashboard');
-    if (_interestsDirty)
-      await _ghPushFile(headers, 'interests_database.csv', Papa.unparse(allInterests), 'Update interests_database.csv from dashboard');
-    if (_groupsDirty)
-      await _ghPushFile(headers, 'groups_database.csv', Papa.unparse(allGroups, {delimiter:'|'}), 'Update groups_database.csv from dashboard');
-
-    _stateDirty = false; _interestsDirty = false; _groupsDirty = false;
-    clearBackup();
-    _loadedPaperFields = new Map(allPapers.map(p => [p.id, paperFields(p)]));
-    _loadedInterestNames = allInterests.map(i => i.interest_name);
-    _loadedGroupNames = allGroups.map(g => g.group_name);
-    hideSaveBar();
-    toast('Saved to GitHub ✓');
+    if (_stateDirty) {
+      const { rows } = await _ghMergePush(headers, 'papers_database.csv', mergePapers, 'Update papers_database.csv from dashboard');
+      // The edits just saved are the new baseline; anything changed since stays unsaved
+      const saved = new Map(rows.filter(x => x.id).map(x => [x.id, paperFields(x)]));
+      _loadedPaperFields = new Map(allPapers.map(p => [p.id, saved.get(p.id) || paperFields(p)]));
+    }
+    if (_interestsDirty) {
+      const { rows } = await _ghMergePush(headers, 'interests_database.csv', mergeRows(allInterests, _loadedInterestNames, 'interest_name'), 'Update interests_database.csv from dashboard');
+      allInterests = rows;
+      _loadedInterestNames = rows.map(i => i.interest_name);
+    }
+    if (_groupsDirty) {
+      const { rows } = await _ghMergePush(headers, 'groups_database.csv', mergeRows(allGroups, _loadedGroupNames, 'group_name', { delimiter: '|' }, { delimiter: '|' }), 'Update groups_database.csv from dashboard');
+      allGroups = rows;
+      _loadedGroupNames = rows.map(g => g.group_name);
+      buildGroupOrder();
+    }
+    updateInterestsBadge();
+    if (_interestsDirty || _groupsDirty) renderInterests();
+    if (_editGen === gen && !_pushAgain) {
+      _stateDirty = false; _interestsDirty = false; _groupsDirty = false;
+      clearBackup();
+      hideSaveBar();
+      if (!auto) toast('Saved to GitHub ✓');
+    } else {
+      scheduleAutoPush();
+    }
   } catch (e) {
-    toast('Push failed: ' + e.message);
     console.error(e);
+    if (e.fatal || !hasPAT()) {
+      setSaveBar('Unsaved changes', 'Kept in this browser until you push', 'Push to GitHub');
+      toastError(e.message);
+    } else {
+      setSaveBar('Not saved yet', 'GitHub didn’t take it; trying again shortly', 'Retry now');
+      toastError(`Couldn’t save to GitHub: ${e.message}. Trying again in 30 s.`);
+      scheduleAutoPush(AUTO_PUSH_RETRY);
+    }
   } finally {
-    btn.textContent = origText; btn.disabled = false;
+    _pushing = false;
+    btn.disabled = false;
+    if (btn.textContent === 'Saving…') btn.textContent = hasPAT() ? 'Save now' : 'Push to GitHub';
+    if (_pushAgain && anyDirty()) scheduleAutoPush();
   }
 }
 
