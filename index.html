@@ -1492,7 +1492,7 @@ async function fetchNormalized(url) {
 }
 /* Papers load in two steps so the page never waits on GitHub: the copy served next to the page
    renders right away, then GitHub's copy (which also carries edits pushed from other devices)
-   replaces it when it is newer. Newer = later date_found, then more rows; on a tie GitHub wins. */
+   replaces it when it is newer. Newer = later date_found; on the same date GitHub wins. */
 let _papersText = null, _papersFresh = null;
 function parsePapers(text) {
   return Papa.parse(text, { header: true, skipEmptyLines: true, newline: '\n' }).data.filter(p => p.title && p.title.trim());
@@ -1502,7 +1502,9 @@ function freshnessOf(rows) {
   rows.forEach(p => { if ((p.date_found || '') > latest) latest = p.date_found; });
   return { latest, n: rows.length };
 }
-function isOlder(a, b) { return a.latest < b.latest || (a.latest === b.latest && a.n < b.n); }
+/* Row counts don't say which copy is newer: merging duplicates or hiding papers shrinks the file.
+   Only a later digest date does; on the same date GitHub's copy (the canonical one) wins. */
+function isOlder(a, b) { return a.latest < b.latest; }
 function applyPapers(rows, text) {
   if (anyDirty()) writeBackup();   // edits made meanwhile are re-applied by restorePapersFromBackup
   allPapers = rows; _hiddenPapers = [];
