@@ -398,6 +398,9 @@ a { color: inherit; text-decoration: none; }
 }
 @media (max-width: 600px) {
   .nav-tabs { margin: 0 -16px; padding: 0 4px; }
+  .nav-tabs.more-right { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 44px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 44px), transparent); }
+  .nav-tabs.more-left { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 44px), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 44px), transparent); }
+  .nav-tabs.more-left.more-right { -webkit-mask-image: linear-gradient(to right, transparent, #000 44px, #000 calc(100% - 44px), transparent); mask-image: linear-gradient(to right, transparent, #000 44px, #000 calc(100% - 44px), transparent); }
 }
 
 /* PAPER PAGE — one scrolling article with a slim sticky bar */
@@ -518,7 +521,9 @@ body.tok-mode .tok { display: block; flex: 1; min-height: 0; overflow-y: auto; s
 .tok-count { font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; flex-shrink: 0; padding-left: 4px; }
 .tok-progress { position: absolute; left: 0; bottom: -1px; height: 2px; background: var(--accent); width: 0; transition: width 0.2s ease; }
 
-.tok-card { touch-action: pan-y; position: relative; z-index: 2; background: var(--bg); height: 100%; scroll-snap-align: start; scroll-snap-stop: always; display: flex; flex-direction: column; padding: 20px 72px 18px 20px; overflow: hidden; }
+.tok-card { touch-action: pan-y; position: relative; z-index: 2; background: var(--bg); height: 100%; scroll-snap-align: start; scroll-snap-stop: always; display: flex; flex-direction: column; padding: 20px 72px 34px 20px; overflow: hidden; }
+/* a dark band at the foot of each card keeps neighbouring papers apart while swiping */
+.tok-card::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 14px; background: #000; border-top: 1px solid rgba(255,255,255,0.07); pointer-events: none; }
 .tok-card::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 45%; background: var(--gc, var(--accent)); opacity: 0.07; pointer-events: none; -webkit-mask-image: linear-gradient(#000, transparent); mask-image: linear-gradient(#000, transparent); }
 .tok-topics { display: flex; flex-wrap: wrap; gap: 6px; position: relative; }
 .tok-topic { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-secondary); background: rgba(255,255,255,0.07); padding: 3px 10px; border-radius: 999px; }
@@ -528,15 +533,15 @@ body.tok-mode .tok { display: block; flex: 1; min-height: 0; overflow-y: auto; s
 .tok-summary { font-family: var(--serif); font-size: 17px; line-height: 1.55; color: #cfd0d5; margin-top: 16px; flex: 1; min-height: 0; overflow: hidden; -webkit-mask-image: linear-gradient(#000 78%, transparent); mask-image: linear-gradient(#000 78%, transparent); }
 .tok-foot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 12px; color: var(--text-muted); margin-top: 14px; flex-shrink: 0; font-variant-numeric: tabular-nums; }
 .tok-open { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; align-self: flex-start; padding: 9px 16px; border-radius: 999px; background: rgba(255,255,255,0.08); color: var(--text); font-size: 13.5px; font-weight: 500; border: none; font-family: inherit; flex-shrink: 0; }
-.tok-rail { position: absolute; right: 8px; bottom: 96px; display: flex; flex-direction: column; gap: 6px; z-index: 2; }
+.tok-rail { position: absolute; right: 8px; bottom: 110px; display: flex; flex-direction: column; gap: 6px; z-index: 2; }
 .tok-act { width: 48px; height: 48px; border-radius: 50%; border: none; background: rgba(255,255,255,0.07); color: var(--text-secondary); font-size: 19px; display: flex; align-items: center; justify-content: center; text-decoration: none; }
 .tok-act span { font-size: 9px; margin-top: -2px; }
 .tok-act.on-star { color: var(--star); background: rgba(201,163,86,0.16); }
 .tok-act.on-read { color: var(--green); background: rgba(129,201,149,0.16); }
 .tok-act.on-list { color: var(--list); background: rgba(91,155,245,0.16); }
 .tok-act svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.tok-card.has-hint { padding-bottom: 46px; }
-.tok-hint { position: absolute; left: 0; right: 0; bottom: 14px; text-align: center; font-size: 12px; color: var(--text-muted); animation: tok-bob 1.8s ease-in-out infinite; pointer-events: none; }
+.tok-card.has-hint { padding-bottom: 62px; }
+.tok-hint { position: absolute; left: 0; right: 0; bottom: 28px; text-align: center; font-size: 12px; color: var(--text-muted); animation: tok-bob 1.8s ease-in-out infinite; pointer-events: none; }
 @keyframes tok-bob { 0%, 100% { transform: translateY(0); opacity: 0.75; } 50% { transform: translateY(-5px); opacity: 1; } }
 .tok-card.snapback { transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1); }
 .tok-card.is-read .tok-head, .tok-card.is-read .tok-summary { opacity: 0.6; }
@@ -975,7 +980,7 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
   .save-bar .btn-dismiss-bar { position: static; order: 3; }
   body:has(.save-bar.visible) .toast { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
   body:has(.save-bar.visible) .toast:not(.show) { transform: translateX(-50%) translateY(200px); }   /* hidden fully off-screen when lifted */
-  body.tok-mode:has(.save-bar.visible) .tok-card { padding-bottom: 84px; }
+  body.tok-mode:has(.save-bar.visible) .tok-card { padding-bottom: 98px; }
   body.tok-mode:has(.save-bar.visible) .tok-rail { bottom: 170px; }
 }
 .save-bar-btns .btn-save-csv { white-space: nowrap; }
@@ -1806,6 +1811,8 @@ function toggleMobileSearch(force) {
   if (open) setTimeout(() => document.getElementById('searchInput').focus(), 0);
 }
 function showGlobalSearch(q, fromHash) {
+  const ms = document.getElementById('mainScroll');
+  if (!_searchActive && !_paperViewActive) { _tabScroll[currentTab] = ms.scrollTop; jumpScroll(ms, 0); }
   _searchActive = true;
   // on phones, keep the search row visible with its results (desktop always shows the box)
   if (window.matchMedia('(max-width: 600px)').matches) document.body.classList.add('search-open');
@@ -1828,6 +1835,7 @@ function hideGlobalSearch() {
   _searchActive = false;
   document.getElementById('sec-search').classList.remove('active');
   switchTab(currentTab);
+  jumpScroll(document.getElementById('mainScroll'), _tabScroll[currentTab] || 0);   // back where you were before searching
 }
 /* Search ranks by where the words match (headline/title, then authors, then venue, then summary/abstract/
    notes), highlights them, and narrows with chips: relevance, unread, topic, year. */
@@ -1904,7 +1912,12 @@ function renderGlobalSearch(q) {
 }
 
 /* [6] TAB SWITCHING — crossfade */
+/* Each tab keeps its own place; a tab you haven't visited opens at the top */
+const _tabScroll = {};
 function switchTab(tab, fromHash) {
+  const ms = document.getElementById('mainScroll');
+  const prevTab = currentTab, fromSearch = _searchActive, moved = prevTab !== tab || fromSearch;
+  if (prevTab !== tab && !fromSearch && !_paperViewActive) _tabScroll[prevTab] = ms.scrollTop;
   // Clear search when switching tabs
   if (_searchActive) {
     _searchActive = false;
@@ -1928,11 +1941,28 @@ function switchTab(tab, fromHash) {
   if (tab === 'library') renderLibrary();
   else if (tab === 'venues') renderVenues();
   else if (tab === 'interests') renderInterests();
+  if (moved) jumpScroll(ms, _tabScroll[tab] || 0);
 }
+function jumpScroll(el, y) { el.style.scrollBehavior = 'auto'; el.scrollTop = y; el.style.scrollBehavior = ''; }
 
-/* On narrow screens the tab row scrolls sideways; keep the current tab in view */
+/* On narrow screens the tab row scrolls sideways; fade whichever edge has more tabs past it */
+function updateTabFade() {
+  const bar = document.querySelector('.nav-tabs');
+  if (!bar) return;
+  const over = bar.scrollWidth > bar.clientWidth + 2;
+  bar.classList.toggle('more-left', over && bar.scrollLeft > 2);
+  bar.classList.toggle('more-right', over && bar.scrollLeft + bar.clientWidth < bar.scrollWidth - 2);
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const bar = document.querySelector('.nav-tabs');
+  if (bar) bar.addEventListener('scroll', updateTabFade, { passive: true });
+  updateTabFade();
+});
+window.addEventListener('resize', updateTabFade, { passive: true });
+/* ...and keep the current tab in view */
 function revealActiveTab() {
   const bar = document.querySelector('.nav-tabs'), a = bar && bar.querySelector('.nav-tab.active');
+  requestAnimationFrame(updateTabFade);
   if (!a || bar.scrollWidth <= bar.clientWidth) return;
   const br = bar.getBoundingClientRect(), ar = a.getBoundingClientRect();
   if (ar.left < br.left) bar.scrollLeft -= br.left - ar.left + 12;
@@ -1963,10 +1993,12 @@ function applyFilters() {
   // Stats (from tab-filtered, before relevance filter)
   let base = allPapers;
   if (currentTab === 'email') base = base.filter(p => (p.source_mode||'').includes('email'));
-  document.getElementById('stat-all').textContent = base.length;
-  document.getElementById('stat-def').textContent = base.filter(p=>dynamicRelevance(p)==='definitely').length;
-  document.getElementById('stat-prob').textContent = base.filter(p=>dynamicRelevance(p)==='probably').length;
-  document.getElementById('stat-mild').textContent = base.filter(p=>dynamicRelevance(p)==='mildly').length;
+  // With "Hide read" on, every count on the page leaves read papers out, like the lists do
+  const counted = hideRead ? base.filter(p => !readSet.has(paperKey(p))) : base;
+  document.getElementById('stat-all').textContent = counted.length;
+  document.getElementById('stat-def').textContent = counted.filter(p=>dynamicRelevance(p)==='definitely').length;
+  document.getElementById('stat-prob').textContent = counted.filter(p=>dynamicRelevance(p)==='probably').length;
+  document.getElementById('stat-mild').textContent = counted.filter(p=>dynamicRelevance(p)==='mildly').length;
   document.getElementById('stat-read').textContent = base.filter(p=>readSet.has(paperKey(p))).length;
 
   const dates = allPapers.map(p=>p.date_found).filter(Boolean).sort();
@@ -1982,11 +2014,17 @@ function applyFilters() {
   renderAlertSources(currentTab === 'email' ? base : null);
   renderWeekPulse(base.filter(p => p.date_found && new Date(p.date_found + 'T00:00:00') >= weekAgo));
 
-  if (phoneFeedOn()) { renderTok(papers); return; }
+  if (phoneFeedOn()) { renderTok(sortForFeed(papers.slice())); return; }
   renderPapers(papers);
 }
 
 /* ===== PHONE FEED (one paper per screen) ===== */
+/* Newest first: latest digest on top, then by relevance, then by publication date */
+function sortForFeed(arr) {
+  return arr.sort((a, b) => (b.date_found || '').localeCompare(a.date_found || '')
+    || (REL_ORDER[dynamicRelevance(a)] ?? 9) - (REL_ORDER[dynamicRelevance(b)] ?? 9)
+    || pubKey(b) - pubKey(a));
+}
 const TOK_BATCH = 12;
 let _tokPapers = [], _tokShown = 0, _tokLock = false, _tokHinted = false, _tokScrollTop = 0;
 function phoneFeedOn() {
@@ -3273,7 +3311,8 @@ function renderGroupsTab(main) {
   main.innerHTML = html;
 }
 function groupCardHTML(g) {
-  const paperCount = allPapers.filter(p => (p.theme_groups||'').split('|').map(norm).includes(norm(g.group_name))).length;
+  const inGroup = allPapers.filter(p => (p.theme_groups||'').split('|').map(norm).includes(norm(g.group_name)));
+  const paperCount = inGroup.length, readCount = inGroup.filter(p => readSet.has(paperKey(p))).length;
   const notes = g.notes ? `<div class="interest-detail interest-notes" title="${escAttr(g.notes)}">${esc(g.notes)}</div>` : '';
   const showStatus = currentIStatus === 'all' || g.status === 'suggested';
   const statusBadge = showStatus && g.status ? `<span class="badge badge-${g.status}">${g.status.charAt(0).toUpperCase()+g.status.slice(1)}</span>` : '';
@@ -3282,7 +3321,7 @@ function groupCardHTML(g) {
   else if (g.status === 'confirmed') actions = `<div class="interest-actions"><button class="btn-quiet-remove" onclick="event.stopPropagation();updateG('${escAttr(g.group_name)}','rejected')" title="Hide this topic (you can restore it from Rejected)">Remove</button></div>`;
   else if (g.status === 'rejected') actions = `<div class="interest-actions"><button class="btn-approve" onclick="event.stopPropagation();updateG('${escAttr(g.group_name)}','confirmed')">Restore</button></div>`;
   const handle = `<div class="group-drag-handle" title="Drag to reorder"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg></div>`;
-  return `<div class="interest-card" draggable="true" data-group="${dataAttr(g.group_name)}" ondragstart="gDragStart(event)" ondragover="gDragOver(event)" ondragenter="gDragEnter(event)" ondragleave="gDragLeave(event)" ondrop="gDrop(event)" ondragend="gDragEnd(event)">${handle}<div class="interest-info"><div class="interest-name">${g.status === 'confirmed' ? gdot(norm(g.group_name)) : ''}${esc(g.group_name)}</div><div class="interest-detail">${esc(g.description||'')}</div>${notes}<div class="interest-meta">${statusBadge}<span class="badge badge-venue">${paperCount} paper${paperCount!==1?'s':''}</span></div></div>${actions}</div>`;
+  return `<div class="interest-card" draggable="true" data-group="${dataAttr(g.group_name)}" ondragstart="gDragStart(event)" ondragover="gDragOver(event)" ondragenter="gDragEnter(event)" ondragleave="gDragLeave(event)" ondrop="gDrop(event)" ondragend="gDragEnd(event)">${handle}<div class="interest-info"><div class="interest-name">${g.status === 'confirmed' ? gdot(norm(g.group_name)) : ''}${esc(g.group_name)}</div><div class="interest-detail">${esc(g.description||'')}</div>${notes}<div class="interest-meta">${statusBadge}<span class="badge badge-venue">${paperCount} paper${paperCount!==1?'s':''}${readCount ? `, ${readCount} read` : ''}</span></div></div>${actions}</div>`;
 }
 /* ===== GROUP DRAG & DROP ===== */
 let _draggedGroup = null;
