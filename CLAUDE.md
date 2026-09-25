@@ -322,7 +322,7 @@ Notes, highlights and comments the user makes in the dashboard live in `annotati
 
 - `annotations/_vault.json`: salt, round count and an encrypted check value (no secrets)
 - `annotations/_index.json`: encrypted list of which papers have notes, and the user's highlight-colour names
-- `annotations/<paper id>.json`: encrypted notes, highlights and comments for that paper
+- `annotations/<paper id>.json`: encrypted notes, highlights, comments and Apple Pencil ink (`ink`: strokes as page fractions) for that paper
 
 **Digest runs and other tasks must never create, edit, move or delete anything in `annotations/`.** The files can't be read without the password, and changing them can destroy the user's notes. If a paper is ever merged into another id, leave its notes file alone and tell the user.
 
@@ -335,6 +335,7 @@ The reader's **Chat** tab talks to Claude through **Claude Code on Sumanth's lap
 - State lives in `~/.scholar-bridge/` (token, chats/, work/papers, work/library.tsv), never in this repo.
 - The page sends the paper's text on a chat's first message, and the user's decrypted highlights/comments/notes and research interests with each message. Claude Code keeps the transcripts in `~/.claude/projects/` (unencrypted, on the laptop only).
 - Claude cites passages as `[[p.N "exact words"]]` (clickable pills in chat and in notes), adds notes/highlights only when asked (```` ```note ```` / ```` ```highlight p.N color "words" ```` blocks), and asks for another paper with ```` ```paper <id>``` ````, which makes the page send that paper's text and notes.
+- From an iPad: `bridge/tailscale_setup.sh` publishes the bridge on the user's private Tailscale network (HTTPS, `tailscale serve`); the page stores that address in localStorage `claude_bridge_url` and pairs as usual (Allow on the Mac). The Mac must be awake.
 - Digest runs never touch `bridge/` or `~/.scholar-bridge/`.
 
 # Uploaded papers (usually papers to review)

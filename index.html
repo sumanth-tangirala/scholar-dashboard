@@ -677,6 +677,16 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .reader-zoom-label { min-width: 52px; font-size: 12.5px; font-variant-numeric: tabular-nums; }
 .reader-pageno { font-size: 12.5px; color: var(--text-muted); font-variant-numeric: tabular-nums; margin-right: 4px; }
 #readerDarkBtn[aria-pressed="true"] { color: var(--accent); }
+#readerPenBtn[aria-pressed="true"] { color: var(--accent); border-color: rgba(251,177,60,0.5); background: rgba(251,177,60,0.1); }
+.inkLayer { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; overflow: visible; }
+.inkLayer path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.reader.dark .inkLayer { filter: invert(0.9) hue-rotate(180deg); }   /* like the page: dark ink turns light */
+.reader-body.inking .textLayer, .reader-body.inking .textLayer span { cursor: crosshair; user-select: none; -webkit-user-select: none; }
+.ink-bar { top: auto !important; bottom: calc(18px + env(safe-area-inset-bottom)); }
+.ink-bar .sel-dot.on { border-color: #fff; }
+.ink-bar .sel-icon.on { background: rgba(255,255,255,0.12); color: var(--text); }
+.ink-bar .ink-done { font: inherit; font-size: 13px; font-weight: 600; color: var(--accent); background: none; border: none; padding: 0 10px; height: 30px; border-radius: 7px; cursor: pointer; transition: background 0.15s; }
+.ink-bar .ink-done:hover { background: rgba(251,177,60,0.12); }
 .reader-body { flex: 1; overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-x pan-y; }   /* two-finger pinch zooms the paper, not the page */
 .reader-body:focus { outline: none; }
 /* no PDF on screen (loading, or the picker): only the PDF's own controls go; Notes stays reachable */
@@ -1050,6 +1060,8 @@ button.chat-hist-item:hover, button.chat-hist-item:focus-visible { background: r
   .top-row[data-upload] .tr-actions { grid-template-rows: 1fr; opacity: 1; margin-top: 10px; }
 }
 @media (pointer: coarse) {
+  #acNote { min-height: 64px; }   /* room to write a comment by hand (Scribble turns it into text) */
+  .ink-bar .ink-done { height: 36px; padding: 0 14px; }
   .sel-bar { gap: 4px; padding: 5px 6px; border-radius: 12px; }
   .sel-bar .sel-dot { width: 26px; height: 26px; margin: 0 4px; }
   .sel-icon { width: 38px; height: 36px; }
@@ -1616,6 +1628,7 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
         <button class="reader-btn reader-zoom-label" id="readerZoomLabel" onclick="readerZoom(0)" title="Fit to width">Fit</button>
         <button class="reader-btn" onclick="readerZoom(1)" title="Zoom in" aria-label="Zoom in">+</button>
       </span>
+      <button class="reader-btn" id="readerPenBtn" onclick="toggleInk()" title="Pen: write and draw with Apple Pencil" aria-label="Pen" aria-pressed="false" hidden><svg viewBox="0 0 24 24" aria-hidden="true" style="fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M4 20l1.2-4.6L15.6 5a2 2 0 0 1 2.8 0l.6.6a2 2 0 0 1 0 2.8L8.6 18.8z"/><path d="M13.8 6.8l3.4 3.4"/></svg></button>
       <button class="reader-btn" id="readerDarkBtn" onclick="toggleReaderDark()" title="Dark pages" aria-pressed="false">&#9680;</button>
       <button class="reader-btn reader-text" id="readerNotesBtn" onclick="toggleReaderPanel()" title="Notes, highlights and comments" aria-pressed="false">Notes <span class="rn-count" id="readerNotesCount"></span></button>
       <button class="reader-btn reader-text reader-change" onclick="openPdfChange()" title="Use a different PDF for this paper">Change PDF</button>
@@ -1631,6 +1644,7 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
     <div class="pdf-modal-box"><button class="pdf-modal-x" onclick="closePdfModal()" aria-label="Close">&times;</button><div id="pdfModalBody"></div></div>
   </div>
   <div class="sel-bar" id="selBar" role="toolbar" aria-label="Selection"></div>
+  <div class="sel-bar ink-bar" id="inkBar" role="toolbar" aria-label="Pen"></div>
   <div class="anno-card" id="annoCard" role="dialog" aria-label="Highlight"></div>
 </div>
 
@@ -3859,7 +3873,7 @@ function libBodyHTML(papers, key) {
 function uploadRowHTML(p) {
   const ka = escAttr(p.id), ix = Vault.index && Vault.index.papers[p.id];
   const added = (_uploads[p.id].added || '').slice(0, 10);
-  const counts = ix ? [ix.g && `${ix.g} note${ix.g === 1 ? '' : 's'}`, ix.h && `${ix.h} highlight${ix.h === 1 ? '' : 's'}`, ix.c && `${ix.c} comment${ix.c === 1 ? '' : 's'}`].filter(Boolean).join(' · ') : '';
+  const counts = ix ? [ix.g && `${ix.g} note${ix.g === 1 ? '' : 's'}`, ix.h && `${ix.h} highlight${ix.h === 1 ? '' : 's'}`, ix.c && `${ix.c} comment${ix.c === 1 ? '' : 's'}`, ix.d && 'handwriting'].filter(Boolean).join(' · ') : '';
   return `<article class="topic-item top-row" tabindex="0" data-upload="${ka}" onclick="openReader('${ka}')">
     <div class="tr-main">
       <div class="tr-headline">${esc(p.title)}</div>
@@ -4837,7 +4851,7 @@ function hideReader() {
   const el = document.getElementById('reader');
   hidePdfModal();
   finishNotesEdit();
-  closeAnnoCard(); hideSelBar(); closeCiteDD();
+  closeAnnoCard(); hideSelBar(); closeCiteDD(); endInk();
   el.classList.remove('open');
   document.body.style.overflow = '';
   if (_reader.obs) _reader.obs.disconnect();
@@ -4851,7 +4865,7 @@ async function showReader(id) {
   if (!p) { location.hash = '#all'; return; }
   noteRecentRead(p.id);
   const el = document.getElementById('reader');
-  if (_reader.paper !== p) { _rnFilter = { colors: new Set(), comments: false, notes: false, q: '' }; endDraft('discard'); }
+  if (_reader.paper !== p) { _rnFilter = { colors: new Set(), comments: false, notes: false, q: '' }; endDraft('discard'); endInk(); }
   _reader.paper = p;
   el.classList.toggle('panel-open', window.innerWidth >= 1024);   // notes beside the paper by default; on a phone or an upright iPad the paper needs the width (Notes opens it)
   document.getElementById('readerNotesBtn').setAttribute('aria-pressed', el.classList.contains('panel-open') ? 'true' : 'false'); _reader.zoom = 'fit';
@@ -5444,7 +5458,7 @@ function mergePaperNotes(a, b) {
     [...(xs || []), ...(ys || [])].forEach(x => { const cur = byId.get(x.id); if (!cur || (x.updated || '') > (cur.updated || '')) byId.set(x.id, x); });
     return [...byId.values()].filter(x => !deleted[x.id] || deleted[x.id] < (x.updated || ''));
   };
-  return { ...a, ...b, entries: union(a.entries, b.entries).sort((x, y) => (x.created || '').localeCompare(y.created || '')), annos: union(a.annos, b.annos), deleted, pdf: b.pdf || a.pdf };
+  return { ...a, ...b, entries: union(a.entries, b.entries).sort((x, y) => (x.created || '').localeCompare(y.created || '')), annos: union(a.annos, b.annos), ink: union(a.ink, b.ink), deleted, pdf: b.pdf || a.pdf };
 }
 function mergeIndex(a, b) {
   const papers = { ...(a.papers || {}) };
@@ -5693,6 +5707,7 @@ function emptyPaperNotes(id) { return { v: 1, id, entries: [], annos: [], delete
 function normalizeNotes(obj) {
   if (!obj) return obj;
   if (!Array.isArray(obj.entries)) obj.entries = [];
+  if (!Array.isArray(obj.ink)) obj.ink = [];   // Pencil strokes
   if (typeof obj.notes === 'string' && obj.notes.trim() && !obj.entries.length) {
     const t = obj.notesUpdated || new Date().toISOString();
     obj.entries.push({ id: 'n' + Date.parse(t).toString(36), text: obj.notes, created: t, updated: t });
@@ -5755,14 +5770,14 @@ async function revalidatePaperNotes(id, seen) {
 /* What the index says about a paper: counts of highlights, comments and notes (chats and citation anchors don't count) */
 function indexCounts(obj) {
   const live = (obj.annos || []);
-  return { h: live.filter(a => a.kind === 'hl').length, c: live.filter(a => a.kind === 'note' || (a.note || '').trim()).length, g: (obj.entries || []).length };
+  return { h: live.filter(a => a.kind === 'hl').length, c: live.filter(a => a.kind === 'note' || (a.note || '').trim()).length, g: (obj.entries || []).length, d: (obj.ink || []).length };
 }
 function indexEntryFor(obj) {
   Vault.index = Vault.index || { v: 1, papers: {}, colors: {} };
   // a paper left with nothing keeps a dated zero entry: simply deleting it would be undone by the next merge with GitHub's copy
   Vault.index.papers[obj.id] = { ...indexCounts(obj), updated: new Date().toISOString() };
 }
-function hasNotesIx(id) { const e = Vault.index && Vault.index.papers[id]; return !!(e && (e.h || e.c || e.g)); }
+function hasNotesIx(id) { const e = Vault.index && Vault.index.papers[id]; return !!(e && (e.h || e.c || e.g || e.d)); }
 /* Counts left stale by earlier versions (an entry that came back after its notes were removed) are corrected
    from each paper's own file on GitHub; a file that can't be fetched is left alone */
 async function reconcileNotesIndex() {
@@ -5773,7 +5788,7 @@ async function reconcileNotesIndex() {
     try { const rec = await nfLoad(id + '.json'); if (!rec) continue; obj = normalizeNotes(await vaultDecrypt(rec.env)); } catch (e) { continue; }
     if (!Vault.key || !Vault.index) return;
     const n = indexCounts(obj), e = Vault.index.papers[id];
-    if (e && (n.h !== e.h || n.c !== e.c || n.g !== e.g)) { Vault.index.papers[id] = { ...n, updated: new Date().toISOString() }; changed = true; }
+    if (e && (n.h !== e.h || n.c !== e.c || n.g !== e.g || (n.d || 0) !== (e.d || 0))) { Vault.index.papers[id] = { ...n, updated: new Date().toISOString() }; changed = true; }
   }
   if (!changed) return;
   await nfSave('_index.json', Vault.index);
@@ -5840,11 +5855,11 @@ function dropUncitedRefs(obj) {
 async function clearPaperNotes(id) {
   if (!Vault.key) return;
   const obj = await paperNotes(id);
-  if (!obj || !((obj.annos || []).length + (obj.entries || []).length)) return;
+  if (!obj || !((obj.annos || []).length + (obj.entries || []).length + (obj.ink || []).length)) return;
   const now = new Date().toISOString();
   obj.deleted = { ...(obj.deleted || {}) };
-  obj.annos.concat(obj.entries).forEach(x => { obj.deleted[x.id] = now; });
-  obj.annos = []; obj.entries = [];
+  obj.annos.concat(obj.entries, obj.ink || []).forEach(x => { obj.deleted[x.id] = now; });
+  obj.annos = []; obj.entries = []; obj.ink = [];
   await savePaperNotes(obj);
 }
 async function savePaperNotes(obj) {
@@ -5963,6 +5978,35 @@ function renderAnnoLayer(pageDiv) {
     const slot = rows.filter(v => Math.abs(v - y) < 0.012).length; rows.push(y);
     return `<button class="anno-mark ${a.kind === 'note' ? 'note' : ''}" data-anno="${a.id}" style="--hc:${annoHc(a)};top:${y * 100}%;right:${6 + slot * 20}px" title="${escAttr((a.note || 'Comment').replace(CITE_RE, (m, id, rest) => '\u201c' + ((rest.match(/"([^"]*)/) || [])[1] || '\u2026') + '\u201d').slice(0, 120))}" aria-label="Open comment" onclick="event.stopPropagation();openAnnoCard('${a.id}', true)" onmouseenter="markHover('${a.id}',true)" onmouseleave="markHover('${a.id}',false)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8l-4 3v-3H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg></button>`;
   }).join('');
+  renderInkLayer(pageDiv);
+}
+/* Ink strokes: points as fractions of the page, drawn as smooth paths in an SVG over the text */
+const SVGNS = 'http://www.w3.org/2000/svg';
+function inkSvg(pageDiv, create) {
+  let svg = pageDiv.querySelector('.inkLayer');
+  if (!svg && create) { svg = document.createElementNS(SVGNS, 'svg'); svg.setAttribute('class', 'inkLayer'); svg.setAttribute('preserveAspectRatio', 'none'); pageDiv.insertBefore(svg, pageDiv.querySelector('.annoMarks')); }
+  if (svg) svg.setAttribute('viewBox', `0 0 1000 ${(1000 * pageDiv.offsetHeight / pageDiv.offsetWidth).toFixed(1)}`);
+  return svg;
+}
+function inkD(pts, ar) {
+  const P = pts.map(p => [p[0] * 1000, p[1] * 1000 * ar]), f = v => v.toFixed(1);
+  if (!P.length) return '';
+  if (P.length < 3) return `M${f(P[0][0])} ${f(P[0][1])}` + (P.length === 1 ? 'l0.01 0' : `L${f(P[1][0])} ${f(P[1][1])}`);
+  let d = `M${f(P[0][0])} ${f(P[0][1])}`;
+  for (let i = 1; i < P.length - 1; i++) d += `Q${f(P[i][0])} ${f(P[i][1])} ${f((P[i][0] + P[i + 1][0]) / 2)} ${f((P[i][1] + P[i + 1][1]) / 2)}`;
+  return d + `L${f(P[P.length - 1][0])} ${f(P[P.length - 1][1])}`;
+}
+function inkPathEl(st, ar) {
+  const el = document.createElementNS(SVGNS, 'path');
+  el.setAttribute('d', inkD(st.pts, ar)); el.setAttribute('stroke', st.color); el.setAttribute('stroke-width', (st.w * 1000).toFixed(2)); el.dataset.ink = st.id;
+  return el;
+}
+function renderInkLayer(pageDiv) {
+  const page = +pageDiv.dataset.page, strokes = ((_rn && _rn.ink) || []).filter(k => k.page === page);
+  const svg = inkSvg(pageDiv, strokes.length > 0);
+  if (!svg) return;
+  const ar = pageDiv.offsetHeight / pageDiv.offsetWidth;
+  svg.replaceChildren(...strokes.map(k => inkPathEl(k, ar)));
 }
 function markHover(id, on) { document.querySelectorAll(`.anno-rect[data-anno="${id}"]`).forEach(r => r.classList.toggle('hover', on)); }
 function redrawAnnoLayers() { _rnDrawnSig = refSig(); document.querySelectorAll('#readerBody .reader-page[data-drawn]').forEach(renderAnnoLayer); }
@@ -6075,6 +6119,7 @@ async function createAnno(kind, color) {
     openAnnoCard(a.id, true);
     return;
   }
+  if (kind === 'hl') rememberHlColor(color);
   _rn.annos = (_rn.annos || []).concat(a);
   await savePaperNotes(_rn);
   updateReaderNotesCount(); redrawAnnoLayers(); renderReaderPanel();
@@ -6193,7 +6238,7 @@ async function setAnnoColor(id, color) {
   if (notesBusy()) return;
   const a = annoById(id);
   if (!a) return;
-  if (color) { a.kind = 'hl'; a.color = color; } else { a.kind = 'note'; a.color = null; }
+  if (color) { a.kind = 'hl'; a.color = color; rememberHlColor(color); } else { a.kind = 'note'; a.color = null; }
   a.updated = new Date().toISOString();
   if (a === _acPending && a.kind === 'hl') { _acPending = null; _rn.annos = (_rn.annos || []).concat(a); }
   if (a !== _acPending) await savePaperNotes(_rn);
@@ -6245,6 +6290,7 @@ function jumpToAnno(id) {
   document.addEventListener('pointerup', () => { down = false; }, true);
   body.addEventListener('pointerup', e => {
     if (e.target.closest && e.target.closest('.anno-mark')) return;   // a margin marker opens its card by its own click
+    if (Ink.on && e.pointerType !== 'touch') return;                    // the pen is writing
     setTimeout(() => {
       const sel = window.getSelection();
       if (sel && !sel.isCollapsed && body.contains(sel.anchorNode)) { showSelBar(); return; }
@@ -6289,6 +6335,151 @@ function jumpToAnno(id) {
     const card = document.getElementById('annoCard');
     if (_acId && !card.contains(e.target) && !e.target.closest('.reader-page') && !e.target.closest('.rp-item')) closeAnnoCard();
   });
+})();
+
+
+/* ===== APPLE PENCIL =====
+   The Pencil marks the paper while a finger scrolls it, as in note-taking apps:
+   - normally a stroke across text highlights it at once, in the colour you used last; a tap opens a highlight
+   - with the pen on (the pen button, shown on touch screens), it writes and draws: ink strokes are kept in your
+     encrypted notes as fractions of the page, so they sit right at any zoom; the eraser removes strokes it touches */
+const PEN_COLORS = { ink: '#1f2a44', red: '#d93025', blue: '#1a73e8' };
+const Ink = { on: false, tool: 'pen', color: 'ink', undo: [], saveTimer: null };
+function lastHlColor() { try { const c = localStorage.getItem('scholar_pen_hl'); return HL_COLORS.includes(c) ? c : 'orange'; } catch (e) { return 'orange'; } }
+function rememberHlColor(c) { try { if (c) localStorage.setItem('scholar_pen_hl', c); } catch (e) {} }
+if (navigator.maxTouchPoints > 1) document.getElementById('readerPenBtn').hidden = false;
+async function toggleInk(on) {
+  on = typeof on === 'boolean' ? on : !Ink.on;
+  if (on === Ink.on) return;
+  if (on) {
+    if (!_reader.doc || notesBusy()) return;
+    if (!await vaultReady()) return;
+    if (!_rn) { setRnState('loading'); await loadReaderNotes(); if (!_rn) return; }
+    hideSelBar(); window.getSelection().removeAllRanges(); closeAnnoCard();
+  } else flushInk();
+  Ink.on = on;
+  document.getElementById('readerBody').classList.toggle('inking', on);
+  document.getElementById('readerPenBtn').setAttribute('aria-pressed', on ? 'true' : 'false');
+  renderInkBar();
+}
+function endInk() {   // leaving the paper: save what was drawn, pen off, nothing left to undo
+  flushInk();
+  Ink.on = false; Ink.undo = [];
+  document.getElementById('readerBody').classList.remove('inking');
+  document.getElementById('readerPenBtn').setAttribute('aria-pressed', 'false');
+  renderInkBar();
+}
+function renderInkBar() {
+  const bar = document.getElementById('inkBar');
+  if (!Ink.on) { bar.classList.remove('open'); return; }
+  bar.innerHTML = Object.entries(PEN_COLORS).map(([k, c]) => `<button class="sel-dot ${Ink.tool === 'pen' && Ink.color === k ? 'on' : ''}" style="--hc:${c}" title="Pen" aria-label="Pen, ${k}" onclick="Ink.tool='pen';Ink.color='${k}';renderInkBar()"></button>`).join('')
+    + `<button class="sel-icon ${Ink.tool === 'eraser' ? 'on' : ''}" onclick="Ink.tool='eraser';renderInkBar()" title="Eraser: touch strokes to remove them" aria-label="Eraser"><svg viewBox="0 0 24 24" aria-hidden="true" style="fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M8 20h12M5.5 14.5l8-8a2 2 0 0 1 2.8 0l2.2 2.2a2 2 0 0 1 0 2.8L11 19H8.5l-3-3a1 1 0 0 1 0-1.5z"/><path d="M9 11l5 5"/></svg></button>`
+    + `<button class="sel-icon" onclick="undoInk()" ${Ink.undo.length ? '' : 'aria-disabled="true"'} title="Undo" aria-label="Undo"><svg viewBox="0 0 24 24" aria-hidden="true" style="fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button>`
+    + `<span class="sel-sep"></span><button class="ink-done" onclick="toggleInk(false)">Done</button>`;
+  bar.classList.add('open');
+  const r = document.getElementById('readerBody').getBoundingClientRect();
+  bar.style.left = Math.max(8, r.left + r.width / 2 - bar.offsetWidth / 2) + 'px';
+}
+function scheduleInkSave() { clearTimeout(Ink.saveTimer); const obj = _rn; Ink.saveTimer = setTimeout(() => { Ink.saveTimer = null; if (obj) savePaperNotes(obj); }, 700); }
+function flushInk() { if (Ink.saveTimer) { clearTimeout(Ink.saveTimer); Ink.saveTimer = null; if (_rn) savePaperNotes(_rn); } }
+function removeInk(strokes) {
+  const now = new Date().toISOString(), ids = new Set(strokes.map(k => k.id));
+  _rn.ink = (_rn.ink || []).filter(k => !ids.has(k.id));
+  _rn.deleted = { ...(_rn.deleted || {}) }; ids.forEach(id => { _rn.deleted[id] = now; });
+}
+function addInk(strokes) {
+  const now = new Date().toISOString();
+  strokes.forEach(k => { if (_rn.deleted) delete _rn.deleted[k.id]; k.updated = now; });
+  _rn.ink = (_rn.ink || []).concat(strokes);
+}
+function undoInk() {
+  const last = Ink.undo.pop();
+  if (!last || !_rn) return;
+  if (last.added) removeInk(last.added); else addInk(last.erased);
+  scheduleInkSave(); redrawAnnoLayers(); renderInkBar();
+}
+function wholeWords(r) {
+  const isW = c => /[\p{L}\p{N}]/u.test(c || '');
+  if (r.startContainer.nodeType === 3) { const t = r.startContainer.data; let a = r.startOffset; while (a > 0 && isW(t[a - 1])) a--; r.setStart(r.startContainer, a); }
+  if (r.endContainer.nodeType === 3) { const t = r.endContainer.data; let b = r.endOffset; while (b < t.length && isW(t[b])) b++; r.setEnd(r.endContainer, b); }
+}
+function caretAt(x, y) {
+  if (document.caretRangeFromPoint) { const r = document.caretRangeFromPoint(x, y); return r && { node: r.startContainer, offset: r.startOffset }; }
+  if (document.caretPositionFromPoint) { const c = document.caretPositionFromPoint(x, y); return c && { node: c.offsetNode, offset: c.offset }; }
+  return null;
+}
+(function () {
+  const body = document.getElementById('readerBody');
+  const onPage = t => t && t.closest && !t.closest('.anno-mark, button, a') && t.closest('.reader-page');
+  // Safari: the Pencil would scroll or start a text selection; stop that (fingers still scroll), buttons stay tappable
+  body.addEventListener('touchstart', e => { if ([...e.changedTouches].some(t => t.touchType === 'stylus') && onPage(e.target)) e.preventDefault(); }, { passive: false });
+  let st = null;
+  body.addEventListener('pointerdown', e => {
+    const pen = e.pointerType === 'pen' || (Ink.on && e.pointerType === 'mouse' && e.button === 0);
+    const pg = pen && onPage(e.target);
+    if (!pg || !_reader.doc) return;
+    e.preventDefault();
+    try { body.setPointerCapture(e.pointerId); } catch (err) {}
+    const r = pg.getBoundingClientRect();
+    st = { id: e.pointerId, pg, r, x0: e.clientX, y0: e.clientY, moved: false, mode: Ink.on ? Ink.tool : 'hl', erased: [] };
+    if (st.mode === 'pen') {
+      st.stroke = { id: 'k' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), page: +pg.dataset.page, color: PEN_COLORS[Ink.color], w: 0.0024, pts: [], pr: [] };
+      st.ar = pg.offsetHeight / pg.offsetWidth;
+      st.path = inkPathEl(st.stroke, st.ar); inkSvg(pg, true).appendChild(st.path);
+      addPoints(e);
+    } else if (st.mode === 'eraser') eraseAt(e);
+  });
+  function addPoints(e) {
+    const evs = (e.getCoalescedEvents && e.getCoalescedEvents().length) ? e.getCoalescedEvents() : [e], k = st.stroke;
+    evs.forEach(ev => {
+      const x = (ev.clientX - st.r.left) / st.r.width, y = (ev.clientY - st.r.top) / st.r.height, last = k.pts[k.pts.length - 1];
+      if (last && Math.hypot((x - last[0]) * st.r.width, (y - last[1]) * st.r.height) < 1.2) return;
+      k.pts.push([+x.toFixed(4), +y.toFixed(4)]); k.pr.push(ev.pressure || 0.5);
+    });
+    const p = k.pr.reduce((a, b) => a + b, 0) / k.pr.length;   // firmer strokes draw a little thicker
+    k.w = +(0.0014 + 0.0022 * Math.min(1, p)).toFixed(5);
+    st.path.setAttribute('d', inkD(k.pts, st.ar)); st.path.setAttribute('stroke-width', (k.w * 1000).toFixed(2));
+  }
+  function eraseAt(e) {
+    const page = +st.pg.dataset.page, px = e.clientX - st.r.left, py = e.clientY - st.r.top, R = 10;
+    const hit = (_rn.ink || []).filter(k => k.page === page && k.pts.some(q => Math.hypot(q[0] * st.r.width - px, q[1] * st.r.height - py) < R + k.w * st.r.width / 2));
+    if (!hit.length) return;
+    removeInk(hit); st.erased.push(...hit);
+    renderInkLayer(st.pg);
+  }
+  function highlightTo(e) {
+    const a = st.a || (st.a = caretAt(st.x0, st.y0)), b = caretAt(e.clientX, e.clientY), tl = st.pg.querySelector('.textLayer');
+    if (!a || !b || !tl || !tl.contains(a.node) || !tl.contains(b.node)) return;
+    const r = document.createRange();
+    r.setStart(a.node, a.offset); r.setEnd(b.node, b.offset);
+    if (r.collapsed && (a.node !== b.node || a.offset !== b.offset)) { r.setStart(b.node, b.offset); r.setEnd(a.node, a.offset); }   // stroked right to left
+    wholeWords(r);   // a stroke is coarser than a cursor: take in the words it touches
+    const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+  }
+  body.addEventListener('pointermove', e => {
+    if (!st || e.pointerId !== st.id) return;
+    if (!st.moved && Math.hypot(e.clientX - st.x0, e.clientY - st.y0) < 6) { if (st.mode === 'pen') addPoints(e); return; }
+    st.moved = true;
+    if (st.mode === 'pen') addPoints(e); else if (st.mode === 'eraser') eraseAt(e); else highlightTo(e);
+  });
+  const finish = e => {
+    if (!st || e.pointerId !== st.id) return;
+    const s = st; st = null;
+    if (s.mode === 'pen') {
+      const k = s.stroke; delete k.pr;
+      k.created = k.updated = new Date().toISOString();
+      if (e.type === 'pointercancel' || !_rn) { s.path.remove(); return; }
+      _rn.ink = (_rn.ink || []).concat(k); Ink.undo.push({ added: [k] });
+      scheduleInkSave(); renderInkBar();
+    } else if (s.mode === 'eraser') {
+      if (s.erased.length) { Ink.undo.push({ erased: s.erased }); scheduleInkSave(); renderInkBar(); }
+    } else if (s.moved && e.type !== 'pointercancel') {   // a stroke across text: highlight it
+      const info = selInfo();
+      window.getSelection().removeAllRanges();
+      if (info && !info.error && info.quote.length > 1) { _selPending = info; createAnno('hl', lastHlColor()); }
+    }
+  };
+  body.addEventListener('pointerup', finish); body.addEventListener('pointercancel', finish);
 })();
 
 /* ===== NOTES PANEL ===== */
@@ -6602,9 +6793,20 @@ async function deleteGeneralNote(id) {
 /* ===== CHAT WITH CLAUDE: one Claude Code session per paper, through bridge/scholar_bridge.py on this laptop =====
    The page talks to the bridge on 127.0.0.1 (Chrome asks once to allow that); the bridge runs Claude Code.
    Only this laptop can do it, so the Chat tab only tries to connect after you set it up here. */
-const BRIDGE = 'http://127.0.0.1:7823';
+/* On the laptop the helper is at 127.0.0.1; an iPad reaches it through a private Tailscale HTTPS address */
+function bridgeRemote() { try { return localStorage.getItem('claude_bridge_url') || ''; } catch (e) { return ''; } }
+function bridgeBase() { return bridgeRemote() || 'http://127.0.0.1:7823'; }
 /* Chat runs through Claude Code on the laptop, so an iPad or phone can't reach it (iPadOS reports itself as a Mac, but with touch points) */
-function chatElsewhere() { return navigator.maxTouchPoints > 1; }
+function chatElsewhere() { return navigator.maxTouchPoints > 1 && !bridgeRemote(); }
+function chatSetRemote() {
+  const i = document.getElementById('chatRemote'), m = document.getElementById('chatRemoteMsg');
+  let u = (i && i.value || '').trim().replace(/\/+$/, '');
+  if (u && !/^https?:\/\//i.test(u)) u = 'https://' + u;
+  if (!/^https:\/\/[\w.-]+(:\d+)?$/i.test(u)) { if (m) m.textContent = 'Enter the https address Tailscale shows, e.g. https://my-mac.tail1234.ts.net'; return; }
+  try { localStorage.setItem('claude_bridge_url', u); } catch (e) {}
+  chatConnect();
+}
+function chatForgetRemote() { try { localStorage.removeItem('claude_bridge_url'); } catch (e) {} Chat.status = chatElsewhere() ? 'elsewhere' : 'setup'; renderChatPanel(true); }
 const Chat = {
   status: (() => { if (chatElsewhere()) return 'elsewhere'; try { return localStorage.getItem('claude_bridge_token') ? 'unknown' : 'setup'; } catch (e) { return 'setup'; } })(),
   token: (() => { try { return localStorage.getItem('claude_bridge_token') || ''; } catch (e) { return ''; } })(),
@@ -6630,7 +6832,7 @@ const ICON_NOTE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l3
 
 function saveBridgeToken(t) { Chat.token = t || ''; try { t ? localStorage.setItem('claude_bridge_token', t) : localStorage.removeItem('claude_bridge_token'); } catch (e) {} }
 function bridgeFetch(path, opts = {}) {
-  return fetch(BRIDGE + path, { ...opts, headers: { 'content-type': 'application/json', ...(Chat.token ? { authorization: 'Bearer ' + Chat.token } : {}), ...(opts.headers || {}) } });
+  return fetch(bridgeBase() + path, { ...opts, headers: { 'content-type': 'application/json', ...(Chat.token ? { authorization: 'Bearer ' + Chat.token } : {}), ...(opts.headers || {}) } });
 }
 async function bridgeCheck() {
   const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 2500);
@@ -6708,8 +6910,8 @@ function renderChatPanel(force) {
     unpaired: `<p>Claude Code is running on this laptop. Allow this page to use it:</p><button class="ui-btn ui-btn-primary" onclick="chatConnect()">Connect</button>`,
     pairing: `<p>Check the dialog on your Mac and click <strong>Allow</strong>.</p><p class="chat-code">${Chat.pairCode}</p><p class="chat-dim">It should show the same code.</p>`,
     declined: `<p>Not connected (the dialog was declined or timed out).</p><button class="ui-btn ui-btn-secondary" onclick="chatConnect()">Try again</button>`,
-    elsewhere: `<p>Chat runs through Claude Code on your laptop, so it's available there, not on this device. Your notes and highlights sync both ways.</p>`,
-    offline: `<p>Can't reach Claude Code on this computer. Chat works on the laptop where the helper runs; to start it there, run <code>bash bridge/install_bridge.sh</code> once from the dashboard's folder.</p><button class="ui-btn ui-btn-secondary" onclick="chatConnect()">Try again</button>`,
+    elsewhere: `<p>Chat runs through Claude Code on your laptop. To use it here, connect to the laptop over Tailscale (set up once on the Mac with <code>bash bridge/tailscale_setup.sh</code>, which prints the address).</p><form class="pp-row" onsubmit="event.preventDefault(); chatSetRemote()"><input class="pp-input" id="chatRemote" placeholder="https://my-mac.tail1234.ts.net" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="ui-btn ui-btn-primary" type="submit">Connect</button></form><p class="chat-dim" id="chatRemoteMsg"></p>`,
+    offline: bridgeRemote() ? `<p>Can't reach your laptop at <code>${esc(bridgeRemote().replace(/^https:\/\//, ''))}</code>. It needs to be awake, with Tailscale on, on both devices.</p><button class="ui-btn ui-btn-secondary" onclick="chatConnect()">Try again</button> <button class="ui-btn ui-btn-secondary" onclick="chatForgetRemote()">Change address</button>` : `<p>Can't reach Claude Code on this computer. Chat works on the laptop where the helper runs; to start it there, run <code>bash bridge/install_bridge.sh</code> once from the dashboard's folder.</p><button class="ui-btn ui-btn-secondary" onclick="chatConnect()">Try again</button>`,
   };
   const body = ready
     ? `<div class="chat-scroll" id="chatScroll"></div>
