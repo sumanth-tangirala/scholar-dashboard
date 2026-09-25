@@ -740,7 +740,7 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .reader-split .reader-body { flex: 1; min-width: 0; }
 .reader-panel { display: none; width: var(--rp-w, 380px); flex-shrink: 0; border-left: 1px solid var(--border); background: #121214; flex-direction: column; min-height: 0; }
 .reader.panel-open .reader-panel { display: flex; }
-/* drag the panel's edge to resize it (10-50% of the window, never narrower than its controls need) */
+/* drag the panel's edge to resize it (10-70% of the window, never narrower than its controls need) */
 .rp-resize { display: none; flex: 0 0 8px; margin: 0 -4px; position: relative; z-index: 3; cursor: col-resize; touch-action: none; }
 .reader.panel-open .rp-resize { display: block; }
 .rp-resize::after { content: ''; position: absolute; top: 0; bottom: 0; left: 3px; width: 2px; background: transparent; transition: background 0.15s; }
@@ -5959,9 +5959,9 @@ function jumpToAnno(id) {
 
 /* ===== NOTES PANEL ===== */
 /* Panel width: a share of the window (so it keeps its proportion when the window changes), kept between 10%
-   and 50%, and never narrower than the panel's own controls need */
+   and 70%, and never narrower than the panel's own controls need */
 const RP_MIN_PX = 280;
-function panelWidthBounds() { const w = window.innerWidth; return [Math.max(RP_MIN_PX, w * 0.10), Math.max(RP_MIN_PX, w * 0.50)]; }
+function panelWidthBounds() { const w = window.innerWidth; return [Math.max(RP_MIN_PX, w * 0.10), Math.max(RP_MIN_PX, w * 0.70)]; }
 function applyPanelWidth(frac) {
   const [lo, hi] = panelWidthBounds();
   const px = Math.round(Math.min(hi, Math.max(lo, (frac || 380 / 1440) * window.innerWidth)));
