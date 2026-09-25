@@ -809,7 +809,10 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .sel-act.primary { color: var(--accent); background: rgba(251,177,60,0.12); }
 .sel-act.primary:hover { background: rgba(251,177,60,0.2); color: var(--accent); }
 .rp-icon-btn svg path[d^="M9.5"] { fill: currentColor; stroke: none; }
-.anno-rect.ref { background: none; opacity: 1; border-bottom: 2px dotted var(--note-line, var(--accent)); border-radius: 0; mix-blend-mode: normal !important; }
+.anno-rect.ref { background: var(--ref-tint, rgba(251,177,60,0.2)); border-bottom: 2px solid var(--note-line, var(--accent)); border-radius: 2px 2px 0 0; mix-blend-mode: normal !important; }
+.reader:not(.dark) .anno-rect.ref { --ref-tint: rgba(196,116,0,0.17); }
+/* lines (comments, citations) are not translucent fills: the highlight opacity rules must not fade them */
+.reader .anno-rect.note, .reader .anno-rect.ref, .reader:not(.dark) .anno-rect.note, .reader:not(.dark) .anno-rect.ref { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { .rp-card.fresh { animation: none; } }
 .rp-gnote { position: relative; padding: 10px 12px; border-radius: 10px; background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.06); margin-bottom: 8px; transition: border-color 0.15s, background 0.15s; }
 .rp-gnote:hover { border-color: rgba(255,255,255,0.12); background: rgba(255,255,255,0.035); }
@@ -4546,7 +4549,7 @@ async function showReader(id) {
   const p = allPapers.find(x => x.id === id) || _hiddenPapers.find(x => x.id === id);
   if (!p) { location.hash = '#all'; return; }
   const el = document.getElementById('reader');
-  if (_reader.paper !== p) { _rnFilter = { colors: new Set(), comments: false, notes: false, q: '' }; _rnEditing = null; _rnDraft = ''; }
+  if (_reader.paper !== p) { _rnFilter = { colors: new Set(), comments: false, notes: false, q: '' }; endDraft('discard'); }
   _reader.paper = p;
   let panelWanted = false; try { panelWanted = localStorage.getItem('scholar_reader_panel') === '1'; } catch (e) {}
   el.classList.toggle('panel-open', panelWanted && !window.matchMedia('(max-width: 700px)').matches);
@@ -5120,7 +5123,8 @@ async function afterUnlock() {
 }
 async function lockNotes() {
   await finishNotesEdit();
-  Vault.key = null; Vault.index = null; Vault.cache.clear(); _rn = null; _rnEditing = null; _rnDraft = '';
+  endDraft('discard');
+  Vault.key = null; Vault.index = null; Vault.cache.clear(); _rn = null;
   await notesDB('keys', 'readwrite', st => st.delete('k')).catch(() => {});
   closeAnnoCard(); hideSelBar(); closeNotesModal();
   if (_reader.paper) { renderReaderPanel(); redrawAnnoLayers(); updateReaderNotesCount(); }
@@ -5160,12 +5164,48 @@ function indexEntryFor(obj) {
   if (!entry.h && !entry.c && !entry.g) delete Vault.index.papers[obj.id];
   else Vault.index.papers[obj.id] = entry;
 }
-function dropUncitedRefs(obj) {
+/* Citation anchors ('ref') exist only to give a citation somewhere to jump. Invariants:
+   - an anchor made while drafting belongs to the draft (_rnPendingRefs), not to the saved notes; saving
+     the draft adopts the ones its final text still cites, cancelling discards them;
+   - the page draws a citation underline only if something actually cites it (saved notes/comments, or
+     the open draft), so an orphan from any source is never shown;
+   - saving drops saved anchors nothing cites (tombstoned, so a merge can't bring them back). */
+let _rnPendingRefs = [];
+function citedIds(obj, draft, editing) {
   const cited = new Set();
   const scan = t => { for (const m of String(t || '').matchAll(/\[\[cite:([\w-]+)/g)) cited.add(m[1]); };
-  (obj.entries || []).forEach(e => scan(e.text));
-  (obj.annos || []).forEach(a => scan(a.note));
-  if (_rn === obj) scan(_rnDraft);
+  // the item open in the editor counts by its draft, not its saved text, so removing a citation shows at once
+  if (obj) {
+    (obj.entries || []).forEach(e => { if (e.id !== editing) scan(e.text); });
+    (obj.annos || []).forEach(a => { if ('a:' + a.id !== editing) scan(a.note); });
+  }
+  scan(draft);
+  return cited;
+}
+/* Anchors to draw: saved ones (citations only if cited) plus the draft's own, while the draft cites them */
+function visibleAnnos() {
+  if (!_rn) return [];
+  const cited = citedIds(_rn, _rnEditing ? _rnDraft : '', _rnEditing);
+  return (_rn.annos || []).filter(a => a.kind !== 'ref' || cited.has(a.id))
+    .concat(_rnEditing ? _rnPendingRefs.filter(a => cited.has(a.id)) : []);
+}
+/* Ends the draft either way: 'save' keeps the draft's anchors its text cites, 'discard' drops them all */
+function endDraft(mode, finalText) {
+  if (mode === 'save' && _rn) {
+    const cited = citedIds(null, finalText);
+    const keep = _rnPendingRefs.filter(a => cited.has(a.id));
+    if (keep.length) _rn.annos = (_rn.annos || []).concat(keep);
+  }
+  _rnPendingRefs = [];
+  _rnEditing = null; _rnDraft = ''; _rnCaret = null;
+  closeCiteDD();
+}
+/* Typing in a draft can add or remove a citation: redraw only when the drawn set actually changes */
+let _rnDrawnSig = null;   // which citation underlines are on the page, recorded by every redraw
+function refSig() { return visibleAnnos().filter(a => a.kind === 'ref').map(a => a.id).sort().join(','); }
+function draftChanged() { if (refSig() !== _rnDrawnSig) redrawAnnoLayers(); }
+function dropUncitedRefs(obj) {
+  const cited = citedIds(obj, '');
   const now = new Date().toISOString();
   obj.annos = (obj.annos || []).filter(a => {
     if (a.kind !== 'ref' || cited.has(a.id)) return true;
@@ -5195,7 +5235,7 @@ function updateNotesSync() {
 let _rn = null;          // notes object of the paper in the reader
 let _rnFilter = { colors: new Set(), comments: false, notes: false, q: '' };
 let _rnEditing = null;   // null, 'new', or the id of the note being edited
-function annoById(id) { return _rn && (_rn.annos || []).find(a => a.id === id); }
+function annoById(id) { return _rn && ((_rn.annos || []).find(a => a.id === id) || _rnPendingRefs.find(a => a.id === id)); }
 function newAnnoId() { return 'a' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 async function loadReaderNotes() {
   _rn = null;
@@ -5221,7 +5261,7 @@ function renderAnnoLayer(pageDiv) {
     pageDiv.insertBefore(layer, pageDiv.querySelector('.textLayer'));
   }
   const page = +pageDiv.dataset.page;
-  const list = _rn ? (_rn.annos || []).filter(a => a.page === page) : [];
+  const list = visibleAnnos().filter(a => a.page === page);
   layer.innerHTML = list.map(a => a.rects.map(r =>
     `<div class="anno-rect ${a.kind === 'note' ? 'note' : a.kind === 'ref' ? 'ref' : ''}" data-anno="${a.id}" style="--hc:var(--hl-${a.color || 'orange'});left:${r[0] * 100}%;top:${r[1] * 100}%;width:${r[2] * 100}%;height:${r[3] * 100}%"></div>`).join('')).join('');
   // a marker in the right margin, level with the first line, for anything that carries a comment
@@ -5235,7 +5275,7 @@ function renderAnnoLayer(pageDiv) {
   }).join('');
 }
 function markHover(id, on) { document.querySelectorAll(`.anno-rect[data-anno="${id}"]`).forEach(r => r.classList.toggle('hover', on)); }
-function redrawAnnoLayers() { document.querySelectorAll('#readerBody .reader-page[data-drawn]').forEach(renderAnnoLayer); }
+function redrawAnnoLayers() { _rnDrawnSig = refSig(); document.querySelectorAll('#readerBody .reader-page[data-drawn]').forEach(renderAnnoLayer); }
 
 /* --- selection toolbar --- */
 function selInfo() {
@@ -5306,21 +5346,20 @@ async function citeSelection() {
   await pinPdfVersion();
   const now = new Date().toISOString();
   const a = { id: newAnnoId(), kind: 'ref', color: null, page: info.page, rects: info.rects, quote: info.quote, prefix: info.prefix, suffix: info.suffix, note: '', created: now, updated: now };
-  _rn.annos = (_rn.annos || []).concat(a);
   window.getSelection().removeAllRanges();
-  redrawAnnoLayers();
   const tok = citeToken(a) + ' ';
-  if (_rnEditing) {
-    const t = document.getElementById('rpNotes');
+  if (!_rnEditing) await startNewNote('');
+  _rnPendingRefs.push(a);   // owned by the draft until it is saved
+  const t = document.getElementById('rpNotes');
+  {
     const pos = _rnCaret != null ? Math.min(_rnCaret, _rnDraft.length) : _rnDraft.length;
     const before = _rnDraft.slice(0, pos), after = _rnDraft.slice(pos), sep = before && !/\s$/.test(before) ? ' ' : '';
     _rnDraft = before + sep + tok + after;
     _rnCaret = before.length + sep.length + tok.length;
     if (t) { t.value = _rnDraft; t.focus(); t.selectionStart = t.selectionEnd = _rnCaret; }
     else renderReaderPanel();
-  } else {
-    await startNewNote(tok);
   }
+  draftChanged();
 }
 async function createAnno(kind, color) {
   const info = _selPending || selInfo();
@@ -5357,7 +5396,7 @@ async function pinPdfVersion() {
 function annoAt(pageDiv, clientX, clientY) {
   if (!_rn) return null;
   const pr = pageDiv.getBoundingClientRect(), x = (clientX - pr.left) / pr.width, y = (clientY - pr.top) / pr.height, page = +pageDiv.dataset.page;
-  const hits = (_rn.annos || []).filter(a => a.page === page && a.rects.some(r => x >= r[0] - 0.003 && x <= r[0] + r[2] + 0.003 && y >= r[1] - 0.003 && y <= r[1] + r[3] + 0.006));
+  const hits = visibleAnnos().filter(a => a.page === page && a.rects.some(r => x >= r[0] - 0.003 && x <= r[0] + r[2] + 0.003 && y >= r[1] - 0.003 && y <= r[1] + r[3] + 0.006));
   return hits.length ? hits[hits.length - 1] : null;
 }
 let _acId = null, _acTimer = null;
@@ -5543,7 +5582,7 @@ function noteDate(e) {
   return (e.updated && e.created && e.updated.slice(0, 16) !== e.created.slice(0, 16)) ? s + ' \u00b7 edited' : s;
 }
 function noteEditorHTML() {
-  return `<div class="rp-editor"><textarea class="rp-notes-edit" id="rpNotes" placeholder="${_rnEditing && String(_rnEditing).startsWith('a:') ? 'Your comment on this passage\u2026' : 'Write a note\u2026 Select text in the paper and press \u201c Cite, or type [[ to cite a highlight.'}" oninput="_rnDraft = this.value; _rnCaret = this.selectionStart; citeInput(this)" onkeyup="_rnCaret = this.selectionStart" onclick="_rnCaret = this.selectionStart" onkeydown="noteEditorKey(event)">${esc(_rnDraft)}</textarea>
+  return `<div class="rp-editor"><textarea class="rp-notes-edit" id="rpNotes" placeholder="${_rnEditing && String(_rnEditing).startsWith('a:') ? 'Your comment on this passage\u2026' : 'Write a note\u2026 Select text in the paper and press \u201c Cite, or type [[ to cite a highlight.'}" oninput="_rnDraft = this.value; _rnCaret = this.selectionStart; citeInput(this); draftChanged()" onkeyup="_rnCaret = this.selectionStart" onclick="_rnCaret = this.selectionStart" onkeydown="noteEditorKey(event)">${esc(_rnDraft)}</textarea>
     <div class="rp-editor-foot"><span class="rp-hint">${MOD_KEY}\u21b5 save \u00b7 Esc cancel</span><span class="grow"></span><button class="ui-btn ui-btn-secondary ui-btn-sm" onmousedown="event.preventDefault()" onclick="cancelNoteEdit()">Cancel</button><button class="ui-btn ui-btn-primary ui-btn-sm" onmousedown="event.preventDefault()" onclick="saveNoteEdit()">Save</button></div></div>`;
 }
 function renderRnList(shown, total, anyFilter) {
@@ -5587,7 +5626,7 @@ let _rnDraft = '', _rnFresh = null, _rnCaret = null;
 async function startNewNote(prefill) {
   if (!await vaultReady()) return;
   if (!_rn) _rn = await paperNotes(_reader.paper.id);
-  if (_rnEditing && (_rnDraft.trim() || String(_rnEditing).startsWith('a:'))) await saveNoteEdit(true);
+  if (_rnEditing) await finishNotesEdit();
   _rnEditing = 'new'; _rnDraft = prefill || ''; _rnCaret = null;
   if (!document.getElementById('reader').classList.contains('panel-open')) toggleReaderPanel(true);
   else renderReaderPanel();
@@ -5595,23 +5634,23 @@ async function startNewNote(prefill) {
 async function editNote(id) {
   const e = _rn && (_rn.entries || []).find(x => x.id === id);
   if (!e) return;
-  if (_rnEditing && _rnEditing !== id && _rnDraft.trim()) await saveNoteEdit(true);
+  if (_rnEditing && _rnEditing !== id) await finishNotesEdit();
   _rnEditing = id; _rnDraft = e.text;
   renderReaderPanel();
 }
-function cancelNoteEdit() { _rnEditing = null; _rnDraft = ''; _rnCaret = null; closeCiteDD(); renderReaderPanel(); }
+function cancelNoteEdit() { endDraft('discard'); redrawAnnoLayers(); renderReaderPanel(); }
 async function editAnnoComment(id) {
   const a = annoById(id);
   if (!a) return;
   closeAnnoCard();
-  if (_rnEditing && _rnDraft.trim() && _rnEditing !== 'a:' + id) await saveNoteEdit(true);
+  if (_rnEditing && _rnEditing !== 'a:' + id) await finishNotesEdit();
   _rnEditing = 'a:' + id; _rnDraft = a.note || ''; _rnCaret = null;
   if (!document.getElementById('reader').classList.contains('panel-open')) toggleReaderPanel(true); else renderReaderPanel();
 }
 async function saveNoteEdit(quiet) {
   if (!_rnEditing || !_rn) return;
   const text = _rnDraft.trim(), now = new Date().toISOString(), editing = _rnEditing;
-  _rnEditing = null; _rnDraft = ''; _rnCaret = null; closeCiteDD();
+  endDraft('save', text);
   _rn.entries = _rn.entries || [];
   if (String(editing).startsWith('a:')) {
     const a = annoById(editing.slice(2));
@@ -5627,7 +5666,7 @@ async function saveNoteEdit(quiet) {
   redrawAnnoLayers(); updateReaderNotesCount();
   if (!quiet) renderReaderPanel();
 }
-async function finishNotesEdit() { if (_rnEditing) { if (_rnDraft.trim() || String(_rnEditing).startsWith('a:')) await saveNoteEdit(true); else { _rnEditing = null; _rnDraft = ''; } } }
+async function finishNotesEdit() { if (_rnEditing) { if (_rnDraft.trim() || String(_rnEditing).startsWith('a:')) await saveNoteEdit(true); else endDraft('discard'); } }
 function noteEditorKey(e) {
   if (_citeCtx && document.getElementById('citeDD').classList.contains('open')) { citeKey(e); if (e.defaultPrevented) return; }
   if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); saveNoteEdit(); }
@@ -5660,12 +5699,13 @@ async function citeAnno(id) {
   closeAnnoCard();
   const tok = citeToken(a) + ' ';
   const t = document.getElementById('rpNotes');
-  if (!_rnEditing || !t) { await startNewNote(tok); return; }
+  if (!_rnEditing || !t) { await startNewNote(tok); draftChanged(); return; }
   const pos = _rnCaret != null ? Math.min(_rnCaret, t.value.length) : t.value.length;
   const before = t.value.slice(0, pos), after = t.value.slice(pos), sep = before && !/\s$/.test(before) ? ' ' : '';
   t.value = before + sep + tok + after;
   _rnDraft = t.value; _rnCaret = before.length + sep.length + tok.length;
   t.focus(); t.selectionStart = t.selectionEnd = _rnCaret;
+  draftChanged();
 }
 let _citeCtx = null;
 function citeInput(t) {
@@ -5699,6 +5739,7 @@ function pickCite(i) {
   c.t.focus();
   closeCiteDD();
   _rnDraft = c.t.value;
+  draftChanged();
 }
 function closeCiteDD() { const dd = document.getElementById('citeDD'); if (dd) dd.classList.remove('open'); _citeCtx = null; }
 
