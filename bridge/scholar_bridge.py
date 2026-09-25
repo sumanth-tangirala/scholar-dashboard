@@ -95,6 +95,27 @@ def chat_list(pid):
     return sorted(out, key=lambda c: -c['updated'])
 
 
+def forget_paper(pid):
+    """Everything kept for a paper: its chats, the PDF and figure copies, and Claude Code's own transcripts of them."""
+    base = safe_id(pid)
+    if not base: return 0
+    sessions, gone = set(), 0
+    for f in os.listdir(CHATS):
+        if f == base + '.json' or (f.startswith(base + '.') and f.endswith('.json') and f[len(base) + 1:-5].isdigit()):
+            s = read_json(os.path.join(CHATS, f), {}).get('session')
+            if s and re.fullmatch(r'[0-9a-f-]{36}', s): sessions.add(s)
+            os.remove(os.path.join(CHATS, f)); gone += 1
+    for path in [os.path.join(WORK, 'papers', base + '.pdf')] + [os.path.join(WORK, 'attachments', f) for f in os.listdir(os.path.join(WORK, 'attachments')) if f.startswith(base + '-')]:
+        if os.path.exists(path): os.remove(path); gone += 1
+    projects = os.path.expanduser('~/.claude/projects')
+    for d in (os.listdir(projects) if os.path.isdir(projects) else []):
+        for s in sessions:
+            for path in (os.path.join(projects, d, s + '.jsonl'), os.path.join(projects, d, s)):
+                if os.path.isfile(path): os.remove(path); gone += 1
+                elif os.path.isdir(path): shutil.rmtree(path, ignore_errors=True); gone += 1
+    return gone
+
+
 def ask_permission(code):
     """A native dialog on this laptop: the only way to get a token."""
     script = ('display dialog "Scholar Dashboard wants to chat with Claude through Claude Code on this Mac.\\n\\n'
@@ -205,6 +226,11 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(200, {'ok': True})
         if path == '/chat/send':
             return self.send_chat(data)
+        if path == '/paper/forget':   # an uploaded paper was removed: keep nothing of it
+            pid = data.get('paper', '')
+            if not re.fullmatch(r'up-[0-9a-f]{12}', pid): return self.reply(400, {'error': 'only uploaded papers'})
+            if pid in _running: _running[pid] and _running[pid].terminate()
+            return self.reply(200, {'ok': True, 'removed': forget_paper(pid)})
         if path == '/library':   # the user's paper list, for finding papers they describe (no notes in it)
             with open(os.path.join(WORK, 'library.tsv'), 'w') as f: f.write(str(data.get('tsv', ''))[:3_000_000])
             return self.reply(200, {'ok': True})
@@ -224,7 +250,7 @@ class Handler(BaseHTTPRequestHandler):
             session = c.get('session') or str(uuid.uuid4())
             pdf_name = safe_id(pid) + '.pdf'
             pdf_path = os.path.join(WORK, 'papers', pdf_name)
-            if fresh and not os.path.exists(pdf_path):
+            if fresh and (d.get('pdfBase64') or not os.path.exists(pdf_path)):   # a file you gave may have changed since
                 self.fetch_pdf(d.get('pdfUrl'), d.get('pdfBase64'), pdf_path)
             names = []
             for i, img in enumerate(d.get('images') or []):   # figure crops: saved where Claude can Read them

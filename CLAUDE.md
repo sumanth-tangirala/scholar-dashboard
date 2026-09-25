@@ -336,3 +336,12 @@ The reader's **Chat** tab talks to Claude through **Claude Code on Sumanth's lap
 - The page sends the paper's text on a chat's first message, and the user's decrypted highlights/comments/notes and research interests with each message. Claude Code keeps the transcripts in `~/.claude/projects/` (unencrypted, on the laptop only).
 - Claude cites passages as `[[p.N "exact words"]]` (clickable pills in chat and in notes), adds notes/highlights only when asked (```` ```note ```` / ```` ```highlight p.N color "words" ```` blocks), and asks for another paper with ```` ```paper <id>``` ````, which makes the page send that paper's text and notes.
 - Digest runs never touch `bridge/` or `~/.scholar-bridge/`.
+
+# Uploaded papers (usually papers to review)
+
+Library → **To review** lets the user upload a PDF and use the same reader, notes and chat. These papers are confidential and **never go into `papers_database.csv`**:
+- ids are random (`up-` + 12 hex characters), so nothing about the paper shows in file names;
+- the record (title, PDF fingerprint) lives in the browser (localStorage `scholar_uploads_v1`) and inside the encrypted `annotations/_index.json`; the PDF stays in the browser's IndexedDB;
+- chat tells Claude the paper is a confidential submission (no web searches for it). Removing one deletes its record, local PDF and notes, and the bridge's chats, PDF copy and Claude Code transcripts (`POST /paper/forget`, accepted only for `up-` ids).
+
+Digest runs never add, dedupe against or otherwise touch uploaded papers.

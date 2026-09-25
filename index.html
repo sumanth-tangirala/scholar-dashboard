@@ -216,6 +216,7 @@ a { color: inherit; text-decoration: none; }
 .lib-icon { display: inline-flex; justify-content: center; width: 18px; margin-right: 8px; }
 .lib-hint { border: 1px dashed var(--border); border-radius: 12px; padding: 16px 20px; margin: 0 0 18px; font-size: 13.5px; line-height: 1.6; color: var(--text-secondary); }
 .lib-hint strong { color: var(--text); }
+#sec-library.drop-over .library-wrap { outline: 2px dashed rgba(251,177,60,0.55); outline-offset: 6px; border-radius: 12px; transition: outline-color 0.15s; }
 .lib-hint-btn { background: none; border: 1px solid var(--border); color: var(--text); font: inherit; font-size: 12.5px; padding: 2px 10px; border-radius: 999px; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
 .lib-hint-btn:hover { border-color: rgba(255,255,255,0.3); background: rgba(255,255,255,0.05); }
 .tr-venue-line { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; justify-content: flex-end; }
@@ -3829,20 +3830,37 @@ let _collapsedLibGroups = new Set(['all', 'read']);
 function toggleLibGroup(headerEl, key) {
   const group = headerEl.closest('.interest-group');
   const body = group.querySelector('.interest-group-body');
-  if (group.classList.contains('collapsed') && !body.innerHTML) body.innerHTML = libBodyHTML(_libPapers[key] || []);
+  if (group.classList.contains('collapsed') && !body.innerHTML) body.innerHTML = libBodyHTML(_libPapers[key] || [], key);
   group.classList.toggle('collapsed');
   if (group.classList.contains('collapsed')) _collapsedLibGroups.add(key);
   else _collapsedLibGroups.delete(key);
 }
 /* Collapsed lists ("All" has ~1,000 papers) render their rows only when opened */
 let _libPapers = {};
-function libBodyHTML(papers) {
+function libBodyHTML(papers, key) {
+  if (key === 'review') return `<div class="paper-list flat"><section class="tl-section">${papers.map(uploadRowHTML).join('')}</section></div>`;
   return papers.length ? paperListHTML(papers) : '<div class="library-list-empty">No papers in this list</div>';
+}
+/* A PDF you uploaded: it opens straight in the reader (there's no paper page for it) */
+function uploadRowHTML(p) {
+  const ka = escAttr(p.id), ix = Vault.index && Vault.index.papers[p.id];
+  const added = (_uploads[p.id].added || '').slice(0, 10);
+  const counts = ix ? [ix.g && `${ix.g} note${ix.g === 1 ? '' : 's'}`, ix.h && `${ix.h} highlight${ix.h === 1 ? '' : 's'}`, ix.c && `${ix.c} comment${ix.c === 1 ? '' : 's'}`].filter(Boolean).join(' · ') : '';
+  return `<article class="topic-item top-row" tabindex="0" data-upload="${ka}" onclick="openReader('${ka}')">
+    <div class="tr-main">
+      <div class="tr-headline">${esc(p.title)}</div>
+      <div class="tr-line"><span class="tr-authors">${counts || 'No notes yet'}</span></div>
+    </div>
+    <div class="tr-side"><span>${added ? 'Added ' + esc(shortDate(added)) : ''}</span></div>
+    <div class="tr-actions"><div>
+      <div class="p-action-row"><button class="btn-abs" onclick="event.stopPropagation();renameUpload('${ka}')">Rename</button><button class="btn-abs" onclick="event.stopPropagation();removeUpload('${ka}')">Remove</button></div>
+    </div></div>
+  </article>`;
 }
 function libGroupHTML(key, icon, label, papers, extra) {
   _libPapers[key] = papers;
   const collapsed = _collapsedLibGroups.has(key) ? ' collapsed' : '';
-  const body = collapsed ? '' : libBodyHTML(papers);
+  const body = collapsed ? '' : libBodyHTML(papers, key);
   return `<div class="interest-group${collapsed}"><div class="interest-group-inner"><div class="interest-group-header" onclick="toggleLibGroup(this,'${escAttr(key)}')"><span class="lib-icon" aria-hidden="true">${icon}</span>${esc(label)} <span class="interest-group-count">${papers.length}</span>${extra||''}<svg class="chevron" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg></div><div class="interest-group-body">${body}</div></div></div>`;
 }
 function renderLibrary() {
@@ -3855,9 +3873,12 @@ function renderLibrary() {
   const noted = Vault.index ? allPapers.filter(p => Vault.index.papers[p.id]) : [];
   sortPapers(noted);
 
-  let html = '';
+  const uploads = uploadedPapers();
+  let html = uploads.length
+    ? libGroupHTML('review', '&#9873;', 'To review', uploads, '<span class="library-actions" onclick="event.stopPropagation()"><button onclick="pickUploadPdf()">Upload PDF</button></span>')
+    : `<div class="lib-hint"><strong>Reviewing a paper?</strong> Upload its PDF to read, annotate and chat about it with the same notes and Claude. It stays private: kept in this browser, never added to your database. <button class="lib-hint-btn" onclick="pickUploadPdf()">Upload PDF</button></div>`;
   if (!allPapers.length) {
-    html = '<div class="library-empty">No papers in the database yet.</div>';
+    html += '<div class="library-empty">No papers in the database yet.</div>';
   } else {
     if (starred.length) html += libGroupHTML('starred', '&#9733;', 'Starred', starred);
     if (noted.length) html += libGroupHTML('noted', '&#9998;', 'Notes & highlights', noted);
@@ -4632,6 +4653,149 @@ const localPdfGet = id => pdfStore('readonly', st => st.get(id)).catch(() => nul
 const localPdfPut = (id, blob) => pdfStore('readwrite', st => st.put(blob, id));
 const localPdfDel = id => pdfStore('readwrite', st => st.delete(id));
 
+/* ===== UPLOADED PAPERS (usually papers to review) =====
+   They never enter the public database. Each record (a random id, title) lives in this browser and, once notes
+   are unlocked, inside the encrypted notes index, so another device lists the paper with your notes on it; the
+   PDF stays in this browser only (on another device you drop it in again). Removed ones stay as tombstones so a
+   sync can't bring them back. */
+const UPLOADS_KEY = 'scholar_uploads_v1';
+let _uploads = (() => { try { return JSON.parse(localStorage.getItem(UPLOADS_KEY) || '{}') || {}; } catch (e) { return {}; } })();
+const _uploadObjs = new Map();   // one object per paper, so the reader can tell it's the same one
+function uploadById(id) {
+  const u = _uploads[id];
+  if (!u || u.deleted) return null;
+  let p = _uploadObjs.get(id);
+  if (!p) { p = { id, uploaded: true }; _uploadObjs.set(id, p); }
+  return Object.assign(p, { title: u.title || 'Untitled PDF', authors: '', date_found: (u.added || '').slice(0, 10), venue: '', url: '' });
+}
+function uploadedPapers() {
+  return Object.keys(_uploads).map(uploadById).filter(Boolean).sort((a, b) => (_uploads[b.id].added || '').localeCompare(_uploads[a.id].added || ''));
+}
+function findPaper(id) { return allPapers.find(x => x.id === id) || _hiddenPapers.find(x => x.id === id) || uploadById(id); }
+function mergeUploads(a, b) {
+  const out = { ...(a || {}) };
+  Object.entries(b || {}).forEach(([id, u]) => { if (!out[id] || (u.updated || '') > (out[id].updated || '')) out[id] = u; });
+  return out;
+}
+function sameUploads(a, b) {
+  const ka = Object.keys(a || {}), kb = Object.keys(b || {});
+  return ka.length === kb.length && ka.every(id => b[id] && (b[id].updated || '') === (a[id].updated || ''));
+}
+function storeUploads() { try { localStorage.setItem(UPLOADS_KEY, JSON.stringify(_uploads)); } catch (e) {} }
+function saveUploads() {
+  storeUploads();
+  if (Vault.key && Vault.index) { Vault.index.uploads = mergeUploads(Vault.index.uploads, _uploads); nfSave('_index.json', Vault.index).catch(() => {}); }
+  if (currentTab === 'library') renderLibrary();
+}
+/* The encrypted index changed (unlocked, or synced from another device): take in its records, give it ours */
+function syncUploadsWithIndex() {
+  if (!Vault.index) return;
+  const merged = mergeUploads(_uploads, Vault.index.uploads);
+  if (!sameUploads(merged, _uploads)) {
+    _uploads = merged; storeUploads();
+    if (currentTab === 'library') renderLibrary();
+    const rp = _reader.paper;
+    if (rp && rp.uploaded && document.getElementById('reader').classList.contains('open')) {
+      if (uploadById(rp.id)) document.getElementById('readerTitle').textContent = rp.title;
+      else closeReader();   // removed on another device
+    }
+  }
+  if (!sameUploads(merged, Vault.index.uploads) && Vault.key) { Vault.index.uploads = merged; nfSave('_index.json', Vault.index).catch(() => {}); }
+}
+/* Dropping a PDF anywhere on the Library uploads it */
+(() => {
+  const sec = document.getElementById('sec-library');
+  const isFile = e => [...(e.dataTransfer && e.dataTransfer.types || [])].includes('Files');
+  let depth = 0;
+  sec.addEventListener('dragenter', e => { if (isFile(e)) { depth++; sec.classList.add('drop-over'); } });
+  sec.addEventListener('dragleave', e => { if (isFile(e) && --depth <= 0) { depth = 0; sec.classList.remove('drop-over'); } });
+  sec.addEventListener('dragover', e => { if (isFile(e)) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } });
+  sec.addEventListener('drop', e => {
+    if (!isFile(e)) return;
+    e.preventDefault(); depth = 0; sec.classList.remove('drop-over');
+    const f = [...e.dataTransfer.files].find(f => /pdf$/i.test(f.type) || /\.pdf$/i.test(f.name));
+    if (f) uploadPdf(f); else toast('Only PDFs can be uploaded');
+  });
+})();
+function pickUploadPdf() {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'application/pdf,.pdf';
+  inp.onchange = () => { if (inp.files[0]) uploadPdf(inp.files[0]); };
+  inp.click();
+}
+async function uploadPdf(file) {
+  let doc = null, title = '', fp = '';
+  try {
+    const lib = await loadPdfJs();
+    doc = await lib.getDocument({ data: await file.arrayBuffer(), isEvalSupported: false, verbosity: 0 }).promise;
+    fp = (doc.fingerprints || [])[0] || '';
+    const same = fp && Object.keys(_uploads).find(id => !_uploads[id].deleted && _uploads[id].fp === fp);
+    if (same) {   // e.g. the same file on another device: its record (and your notes) are already here
+      if (!(await localPdfGet(same))) await localPdfPut(same, file).catch(() => {});
+      toast('Already in To review: opening it'); openReader(same); return;
+    }
+    title = await guessPdfTitle(doc);
+  } catch (e) { toastError(pdfErrorText(e)); return; }
+  finally { if (doc) doc.destroy(); }
+  const id = 'up-' + [...crypto.getRandomValues(new Uint8Array(6))].map(b => b.toString(16).padStart(2, '0')).join('');   // random: nothing about the paper shows in file names
+  try { await localPdfPut(id, file); } catch (e) { toastError("Couldn't keep the PDF in this browser (storage full or blocked)."); return; }
+  const now = new Date().toISOString();
+  _uploads[id] = { title: title || file.name.replace(/\.pdf$/i, '').replace(/[_]+/g, ' ').trim(), fp, added: now, updated: now };
+  saveUploads();
+  openReader(id);
+  toast('Private: kept in this browser, not added to your database.', null, { duration: 5000 });
+}
+/* The title from the PDF's own metadata when it looks like one, else the largest text at the top of page 1 */
+async function guessPdfTitle(doc) {
+  try {
+    const t = (((await doc.getMetadata()) || {}).info || {}).Title || '';
+    if (t.trim().split(/\s+/).length >= 3 && !/^(microsoft word|untitled)|\.(pdf|docx?|tex|dvi)$/i.test(t.trim())) return t.trim();
+  } catch (e) {}
+  try {
+    const page = await doc.getPage(1), h = page.getViewport({ scale: 1 }).height, tc = await page.getTextContent();
+    const size = it => Math.abs(it.transform[3]);
+    const items = tc.items.filter(it => (it.str || '').trim() && Math.abs(it.transform[1]) < 0.01 && Math.abs(it.transform[2]) < 0.01 && it.transform[5] > h * 0.45);   // upright text, top half
+    if (!items.length) return '';
+    // the lines that carry the largest text, whole (small caps mix two sizes on one line)
+    const max = Math.max(...items.map(size)), near = (a, b) => Math.abs(a - b) < max * 0.4;
+    const ys = [...new Set(items.filter(it => size(it) >= max * 0.9).map(it => it.transform[5]))];
+    const line = items.filter(it => ys.some(y => near(it.transform[5], y))).sort((a, b) => near(a.transform[5], b.transform[5]) ? a.transform[4] - b.transform[4] : b.transform[5] - a.transform[5]);
+    let t = '', prev = null;
+    line.forEach(it => {   // a space only where there's a gap; a word hyphenated across lines is joined
+      if (prev && !near(prev.transform[5], it.transform[5])) { if (/\w-$/.test(t.trimEnd())) t = t.trimEnd().slice(0, -1); else t += ' '; }
+      else if (prev && it.transform[4] - (prev.transform[4] + prev.width) > size(it) * 0.15) t += ' ';
+      t += it.str; prev = it;
+    });
+    t = t.replace(/\s+/g, ' ').trim();
+    if (!/[a-z]/.test(t)) {   // small caps come out as capitals: title case reads better (rename fixes the rest)
+      const small = new Set(['a', 'an', 'and', 'as', 'at', 'by', 'for', 'from', 'in', 'of', 'on', 'or', 'the', 'to', 'via', 'with']);
+      t = t.toLowerCase().replace(/[a-z][a-z']*/g, (w, i) => i && small.has(w) && !/[:\-]\s*$/.test(t.slice(0, i)) ? w : w[0].toUpperCase() + w.slice(1));
+    }
+    return t.length >= 8 && t.length <= 250 ? t : '';
+  } catch (e) { return ''; }
+}
+async function renameUpload(id) {
+  const u = _uploads[id];
+  if (!u || u.deleted) return;
+  const name = await showPrompt('Rename', null, 'Title', u.title);
+  if (!name || !name.trim() || name.trim() === u.title) return;
+  _uploads[id] = { ...u, title: name.trim().slice(0, 300), updated: new Date().toISOString() };
+  saveUploads();
+  if (_reader.paper && _reader.paper.id === id) document.getElementById('readerTitle').textContent = uploadById(id).title;
+}
+async function removeUpload(id) {
+  const u = _uploads[id];
+  if (!u || u.deleted) return;
+  const ok = await showConfirm(`Remove “${shortQuote(u.title, 60)}”?`, 'Its PDF, your notes on it and its chats with Claude are deleted.', 'Remove', true);
+  if (!ok) return;
+  _uploads[id] = { deleted: true, updated: new Date().toISOString() };
+  saveUploads();
+  localPdfDel(id).catch(() => {});
+  clearPaperNotes(id).catch(() => {});
+  if (Chat.token) bridgeFetch('/paper/forget', { method: 'POST', body: JSON.stringify({ paper: id }) }).catch(() => {});
+  toast('Removed');
+}
+
 let _reader = { paper: null, doc: null, zoom: 'fit', scale: 1, obs: null, under: null, token: 0, local: false };
 function readerDark() { try { return localStorage.getItem(READER_DARK_KEY) === 'true'; } catch (e) { return false; } }
 /* notes: open with the notes panel ('panel'), start a new note ('new') or edit one (its id).
@@ -4652,7 +4816,7 @@ function runPendingNotes() {
 }
 function closeReader() {
   if (history.length > 1 && _reader.under !== null) history.go(_reader.notesStep && /\/notes$/.test(location.hash) ? -2 : -1);   // over the notes step too
-  else location.hash = '#paper/' + encodeURIComponent(_reader.paper ? paperKey(_reader.paper) : '');
+  else location.hash = _reader.paper && _reader.paper.uploaded ? '#library' : '#paper/' + encodeURIComponent(_reader.paper ? paperKey(_reader.paper) : '');
 }
 function hideReader() {
   const el = document.getElementById('reader');
@@ -4668,7 +4832,7 @@ function hideReader() {
   document.getElementById('readerBody').innerHTML = '';
 }
 async function showReader(id) {
-  const p = allPapers.find(x => x.id === id) || _hiddenPapers.find(x => x.id === id);
+  const p = findPaper(id);
   if (!p) { location.hash = '#all'; return; }
   noteRecentRead(p.id);
   const el = document.getElementById('reader');
@@ -5040,6 +5204,19 @@ async function showPdfPicker(p, why, detail) {
     document.getElementById('reader').classList.add('no-doc');
   }
   const hasLocal = !!(await localPdfGet(p.id));
+  if (p.uploaded) {   // your own file: it can only come from a file (a link would go into the public database)
+    document.getElementById(inModal ? 'pdfModalBody' : 'readerBody').innerHTML = `<div class="pdf-picker">
+    <h3>${why === 'none' ? 'The PDF is on another device' : why === 'failed' ? "This PDF couldn't be opened here" : 'Use a different PDF'}</h3>
+    <p class="pp-why">${why === 'none' ? 'An uploaded PDF stays in the browser it was uploaded in. Drop the same file here to read it on this device too; your notes are already here.' : why === 'failed' ? esc(detail || '') : 'A revised version, for example. Your notes stay with the paper.'}</p>
+    <label class="pp-drop" id="ppDrop" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="event.preventDefault();this.classList.remove('over');usePdfFile(event.dataTransfer.files[0])">
+      <input type="file" accept="application/pdf,.pdf" onchange="usePdfFile(this.files[0])">
+      <strong>Drop a PDF here</strong> or click to choose one.<br>It stays in this browser, on this device only.
+    </label>
+    <div class="pp-msg" id="ppMsg"></div>
+    ${inModal ? '<div class="pp-foot"><button onclick="closePdfModal()">Keep the current PDF</button></div>' : ''}
+  </div>`;
+    return;
+  }
   const head = why === 'none' ? 'No PDF to read here yet'
     : why === 'failed' ? "This PDF couldn't be opened here"
     : 'Use a different PDF';
@@ -5257,7 +5434,7 @@ function mergeIndex(a, b) {
   const papers = { ...(a.papers || {}) };
   Object.entries(b.papers || {}).forEach(([id, e]) => { if (!papers[id] || (e.updated || '') > (papers[id].updated || '')) papers[id] = e; });
   const newerColors = (a.colorsUpdated || '') >= (b.colorsUpdated || '') ? a : b;
-  return { v: 1, papers, colors: newerColors.colors || {}, colorsUpdated: newerColors.colorsUpdated || '' };
+  return { v: 1, papers, colors: newerColors.colors || {}, colorsUpdated: newerColors.colorsUpdated || '', uploads: mergeUploads(a.uploads, b.uploads) };
 }
 
 /* ---- pushing: every dirty file, merged with GitHub's copy when that changed meanwhile ---- */
@@ -5299,7 +5476,7 @@ async function pushNotes() {
           const mine = await vaultDecrypt(rec.env), theirs = await vaultDecrypt(remote.env);
           const merged = name === '_index.json' ? mergeIndex(theirs, mine) : mergePaperNotes(theirs, mine);
           env = await vaultEncrypt(merged);
-          if (name === '_index.json') Vault.index = mergeIndex(merged, Vault.index || {});
+          if (name === '_index.json') { Vault.index = mergeIndex(merged, Vault.index || {}); syncUploadsWithIndex(); }
           else {
             const pid = name.replace(/\.json$/, '');
             if (Vault.cache.has(pid)) Vault.cache.set(pid, merged);
@@ -5471,10 +5648,11 @@ async function resetLocalVault(newMeta) {
 async function afterUnlock() {
   const rec = (await nfGet('_index.json')) || await nfLoad('_index.json').catch(() => null);
   if (rec && !rec.dirty) nfLoad('_index.json').then(async fresh => {   // newer index from another device, in the background
-    if (fresh && !fresh.dirty && fresh.env.updated !== rec.env.updated && Vault.key) { try { Vault.index = await vaultDecrypt(fresh.env); if (currentTab === 'library') renderLibrary(); } catch (e) {} }
+    if (fresh && !fresh.dirty && fresh.env.updated !== rec.env.updated && Vault.key) { try { Vault.index = await vaultDecrypt(fresh.env); syncUploadsWithIndex(); if (currentTab === 'library') renderLibrary(); } catch (e) {} }
   }).catch(() => {});
   try { Vault.index = rec ? await vaultDecrypt(rec.env) : { v: 1, papers: {}, colors: {}, colorsUpdated: '' }; }
   catch (e) { Vault.index = { v: 1, papers: {}, colors: {}, colorsUpdated: '' }; }
+  syncUploadsWithIndex();
   scheduleNotesPush(500);   // anything left unpushed from an earlier session
   if (currentTab === 'library') renderLibrary();
   if (_paperViewActive) { const p = allPapers.find(x => location.hash === '#paper/' + encodeURIComponent(x.id)); if (p) renderPaperDetail(p); }
@@ -5620,6 +5798,17 @@ function dropUncitedRefs(obj) {
     obj.deleted = { ...(obj.deleted || {}), [a.id]: now };
     return false;
   });
+}
+/* Everything on a paper deleted (tombstoned, so a copy on another device can't bring it back). Needs the key. */
+async function clearPaperNotes(id) {
+  if (!Vault.key) return;
+  const obj = await paperNotes(id);
+  if (!obj || !((obj.annos || []).length + (obj.entries || []).length)) return;
+  const now = new Date().toISOString();
+  obj.deleted = { ...(obj.deleted || {}) };
+  obj.annos.concat(obj.entries).forEach(x => { obj.deleted[x.id] = now; });
+  obj.annos = []; obj.entries = [];
+  await savePaperNotes(obj);
 }
 async function savePaperNotes(obj) {
   bumpNotesGen(obj.id);
@@ -6178,7 +6367,7 @@ function renderReaderPanel() {
   const filtering = f.colors.size || f.comments || f.notes || f.q;
   const showFilters = total >= 6 || filtering;
   const kept = keepLiveEditor(() => { panel.innerHTML = head + `<div class="rp-scroll">
-    <div class="rp-toolbar">${_rnEditing === 'new' ? '<span class="rp-count-l">New note</span>' : `<button class="rp-add" onclick="startNewNote()">${ICON_PLUS}Add note</button>`}<span class="grow"></span>
+    <div class="rp-toolbar">${_rnEditing === 'new' ? '<span class="rp-count-l">New note</span>' : `<button class="rp-add" onclick="startNewNote()">${ICON_PLUS}Add note</button>${_reader.paper && _reader.paper.uploaded && !(n.entries || []).some(e => REVIEW_MARK.test(e.text)) ? '<button class="rp-text-btn" onclick="startReview()" title="A note laid out as a review">Start review</button>' : ''}`}<span class="grow"></span>
       ${total >= 3 ? `<div class="rp-seg" role="group" aria-label="Order"><button class="${_rnSort === 'page' ? 'on' : ''}" onclick="setRnSort('page')" title="Notes first, then in page order">Page</button><button class="${_rnSort === 'recent' ? 'on' : ''}" onclick="setRnSort('recent')" title="Newest first">Recent</button></div>` : ''}</div>
     ${showFilters ? `<div class="rp-filters">${HL_COLORS.filter(c => used.has(c) || f.colors.has(c)).map(c => `<button class="sel-dot ${f.colors.has(c) ? 'on' : ''}" style="--hc:var(--hl-${c})" title="${escAttr(hlLabel(c))}" aria-pressed="${f.colors.has(c)}" onclick="toggleRnColor('${c}')"></button>`).join('')}${hasComments || f.comments ? chip(f.comments, 'Comments', "_rnFilter.comments=!_rnFilter.comments;renderReaderPanel()") : ''}${hasNotes || f.notes ? chip(f.notes, 'Notes', "_rnFilter.notes=!_rnFilter.notes;renderReaderPanel()") : ''}<input class="rp-search" id="rpSearch" placeholder="Search" value="${esc(f.q)}" oninput="_rnFilter.q=this.value;keepLiveEditor(() => renderRnList())"></div>` : ''}
     ${_rnEditing === 'new' ? noteEditorHTML() : ''}
@@ -6266,6 +6455,16 @@ async function renameHlColor(c) {
   await nfSave('_index.json', Vault.index);
   renderReaderPanel();
 }
+/* Uploaded papers (usually to review) offer a note laid out as a review */
+const REVIEW_TEMPLATE = '## Review\n\n**Summary**\n\n\n**Strengths**\n- \n\n**Weaknesses**\n- \n\n**Questions for the authors**\n- \n\n**Minor issues**\n- \n\n**Recommendation:** \n**Confidence:** ';
+async function startReview() {   // the caret starts on the empty line under Summary
+  await startNewNote(REVIEW_TEMPLATE);
+  const ed = document.getElementById('rpNotes'), n = ed && [...ed.childNodes].find(x => x.nodeType === 3 && x.textContent.includes('**Summary**'));
+  if (!n || !n.nextSibling) return;
+  const r = document.createRange(); r.setStartAfter(n.nextSibling); r.collapse(true);
+  const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+}
+const REVIEW_MARK = /\*\*Strengths\*\*[\s\S]*\*\*Weaknesses\*\*/;
 /* Notes: '+ Add note' opens an editor card; Save (or Cmd/Ctrl+Enter) keeps it, Cancel (or Esc) drops it */
 let _rnDraft = '', _rnFresh = null;
 async function startNewNote(prefill) {
@@ -6585,7 +6784,7 @@ async function renderChatMarkdown(el, text, msgIdx) {
   try { await loadMdLibs(); } catch (e) { return; }
   const slots = [], slot = html => `@@SLOT${slots.push(html) - 1}@@`;
   let bi = 0;
-  let src = String(text).replace(/```paper\s+([\w.-]+)\s*```/g, (m, id) => { const q = allPapers.find(x => x.id === id); return slot(`<div class="chat-status static">Reading ${q ? '<em>' + esc(shortQuote(q.title, 70)) + '</em>' : 'the paper'} and your notes on it\u2026</div>`); })
+  let src = String(text).replace(/```paper\s+([\w.-]+)\s*```/g, (m, id) => { const q = findPaper(id); return slot(`<div class="chat-status static">Reading ${q ? '<em>' + esc(shortQuote(q.title, 70)) + '</em>' : 'the paper'} and your notes on it\u2026</div>`); })
     .replace(CHAT_BLOCK_RE, (m, kind, first, rest) => {
     const i = bi++, body = blockBody(kind, first, rest);
     if (kind === 'highlight') {
@@ -6728,8 +6927,8 @@ function libraryTSV() {
   const opened = new Map(recentReads().map(r => [r.id, r.t]));
   const noted = (Vault.index && Vault.index.papers) || {};
   const day = t => new Date(t).toISOString().slice(0, 10);
-  return 'id\ttitle\tauthors\tdate\tvenue\ttopics\tsummary\tflags\n' + allPapers.filter(p => !isHidden(p)).map(p => [p.id, p.title, shortQuote(p.authors, 160), p.publishing_date, p.venue, (p.theme_groups || '').replace(/\|/g, ', '), p.headline,
-    [p.is_starred === 'true' && 'starred', p.is_read === 'true' && 'read', p.user_lists && 'lists: ' + p.user_lists.replace(/\|/g, ', '), noted[p.id] && 'has my notes', opened.has(p.id) && 'opened ' + day(opened.get(p.id)), p.date_found && 'added ' + p.date_found].filter(Boolean).join('; ')].map(clean).join('\t')).join('\n');
+  return 'id\ttitle\tauthors\tdate\tvenue\ttopics\tsummary\tflags\n' + uploadedPapers().concat(allPapers.filter(p => !isHidden(p))).map(p => [p.id, p.title, shortQuote(p.authors, 160), p.publishing_date, p.venue, (p.theme_groups || '').replace(/\|/g, ', '), p.headline,
+    [p.uploaded && 'uploaded by me for review (confidential)', p.is_starred === 'true' && 'starred', p.is_read === 'true' && 'read', p.user_lists && 'lists: ' + p.user_lists.replace(/\|/g, ', '), noted[p.id] && 'has my notes', opened.has(p.id) && 'opened ' + day(opened.get(p.id)), p.date_found && 'added ' + p.date_found].filter(Boolean).join('; ')].map(clean).join('\t')).join('\n');
 }
 async function syncLibrary() {
   const tsv = libraryTSV();
@@ -6740,12 +6939,13 @@ async function syncLibrary() {
 /* @ (or + Paper) another paper from your database: its text and your notes on it come along */
 let _mentionCtx = null;
 function mentionMatches(q) {
-  const cur = _reader.paper && _reader.paper.id, pool = allPapers.filter(p => p.id !== cur && !isHidden(p));
+  const cur = _reader.paper && _reader.paper.id, pool = uploadedPapers().concat(allPapers).filter(p => p.id !== cur && !isHidden(p));
   if (!q) {   // nothing typed yet: the papers you most likely mean
     const groups = new Set(((_reader.paper && _reader.paper.theme_groups) || '').split('|').filter(Boolean));
     const seen = new Set(), out = [];
     const add = (p, why) => { if (p && !seen.has(p.id)) { seen.add(p.id); out.push({ p, why }); } };
     recentReads().slice(0, 6).forEach(r => add(pool.find(p => p.id === r.id), 'opened recently'));
+    pool.filter(p => p.uploaded).slice(0, 3).forEach(p => add(p, 'to review'));
     pool.filter(p => p.is_starred === 'true').slice(0, 3).forEach(p => add(p, 'starred'));
     pool.filter(p => (p.theme_groups || '').split('|').some(g => groups.has(g))).slice(0, 4).forEach(p => add(p, 'same topic'));
     return out.slice(0, 8);
@@ -6812,15 +7012,16 @@ function chatProfile() {
     + (by('definitely') ? ' Core interests: ' + by('definitely') + '.' : '') + (by('probably') ? ' Also interested in: ' + by('probably') + '.' : '');
 }
 async function mentionContext(m) {
-  const p = allPapers.find(x => x.id === m.id);
+  const p = findPaper(m.id);
   if (!p) return '';
   let text = '', notes = '';
   try {
-    const src = pdfSourceOf(p);
-    if (src) { const lib = await loadPdfJs(); const doc = await lib.getDocument({ url: src, isEvalSupported: false, verbosity: 0 }).promise; text = await pdfText(doc, 'm:' + p.id, 80000); doc.destroy(); }
+    const local = await localPdfGet(p.id), src = local ? { data: await local.arrayBuffer() } : pdfSourceOf(p) ? { url: pdfSourceOf(p) } : null;
+    if (src) { const lib = await loadPdfJs(); const doc = await lib.getDocument({ ...src, isEvalSupported: false, verbosity: 0 }).promise; text = await pdfText(doc, 'm:' + p.id, 80000); doc.destroy(); }
   } catch (e) {}
   if (!text) text = [p.title, p.authors, p.abstract].filter(Boolean).join('\n');
   if (Vault.key) { try { notes = notesContext(await paperNotes(p.id)); } catch (e) {} }
+  if (p.uploaded) text = '(An unpublished submission I am reviewing: confidential, never search the web for it.)\n' + text;
   return `<other-paper id="${p.id}" title="${(p.title || '').replace(/"/g, "'")}">\n${text}\n${notes ? '\nMy notes on it:\n' + notes + '\n' : ''}</other-paper>`;
 }
 async function blobToBase64(blob) {
@@ -6849,7 +7050,8 @@ async function chatSend(text, auto) {
   user.quotes.forEach(q => { message += q.page ? `About this passage: [[p.${q.page} "${q.text}"]]\n` : `About this part of your answer: “${q.text}”\n`; });
   if (images.length) message += `(I attached ${images.length === 1 ? 'a crop of the page' : images.length + ' crops of the page'}.)\n`;
   message += text || (images.length ? 'What does this show?' : 'Explain this.');
-  let context = [notesContext(_rn) ? 'My highlights, comments and notes on this paper:\n' + notesContext(_rn) : (Vault.key ? 'I have no notes on this paper yet.' : '')].filter(Boolean).join('\n\n');
+  let context = [p.uploaded && 'This paper is an unpublished submission I am reviewing. It is confidential: never search the web for it, its title, its authors or passages from it (searching for related published work is fine). Help me review it rigorously.',
+    notesContext(_rn) ? 'My highlights, comments and notes on this paper:\n' + notesContext(_rn) : (Vault.key ? 'I have no notes on this paper yet.' : '')].filter(Boolean).join('\n\n');
   if (mentions.length) context += (context ? '\n\n' : '') + (await Promise.all(mentions.map(mentionContext))).join('\n\n');
   const body = { paper: pid, message, display: user.text, auto: user.auto, model: Chat.model, effort: Chat.effort || undefined, context, profile: chatProfile(), quotes: user.quotes, mentions: user.mentions, images };
   if (Chat.fresh) {
@@ -6891,7 +7093,7 @@ async function chatSend(text, auto) {
   renderChatMessages(); updateChatSend();
   if (reply && chatBlocks(reply).length && /\b(add|save|put|note|highlight)\b/i.test(text)) chatApplyAll(Chat.messages.length - 1);   // you asked for it
   // Claude identified papers you described: send their text and your notes on them, and let it continue
-  const wanted = [...new Set([...(reply || '').matchAll(/```paper\s+([\w.-]+)\s*```/g)].map(x => x[1]))].map(id => allPapers.find(q => q.id === id)).filter(Boolean);
+  const wanted = [...new Set([...(reply || '').matchAll(/```paper\s+([\w.-]+)\s*```/g)].map(x => x[1]))].map(findPaper).filter(Boolean);
   if (wanted.length && !auto) chatSend('Here is what you asked for (in <other-paper>). Please continue with my question.', { papers: wanted.map(q => ({ id: q.id, title: q.title })) });
 }
 
@@ -7597,6 +7799,7 @@ function applyHash() {
   // Paper detail route
   if (hash.startsWith('paper/')) {
     const id = decodeURIComponent(hash.slice(6));
+    if (id && uploadById(id)) { history.replaceState(null, '', '#read/' + encodeURIComponent(id)); applyHash(); return; }
     if (id) { showPaperDetail(id); return; }
   }
 
