@@ -6017,16 +6017,23 @@ function editorText(ed) {
   return s.replace(/\u00a0/g, ' ');
 }
 let _rnRange = null;   // where the caret last was in the editor, so a citation lands there even after clicking the paper
+/* A caret never rests inside a pill (clicking one selects it): move it to just after the pill */
+function outsidePill(r) {
+  const el = n => (n.nodeType === 1 ? n : n.parentElement);
+  const p = el(r.startContainer) && el(r.startContainer).closest('.cite-pill') || el(r.endContainer) && el(r.endContainer).closest('.cite-pill');
+  if (p) { r = r.cloneRange(); r.setStartAfter(p); r.collapse(true); }
+  return r;
+}
 document.addEventListener('selectionchange', () => {
   const ed = document.getElementById('rpNotes'), sel = getSelection();
   if (!ed || !sel.rangeCount) return;
   const r = sel.getRangeAt(0);
-  if (ed.contains(r.startContainer)) _rnRange = r.cloneRange();
+  if (ed.contains(r.startContainer)) _rnRange = outsidePill(r.cloneRange());
   ed.querySelectorAll('.cite-pill').forEach(p => p.classList.toggle('sel', !r.collapsed && r.intersectsNode(p)));
 });
 function editorSaveRange(ed) {
   const sel = getSelection();
-  if (sel.rangeCount && ed.contains(sel.getRangeAt(0).startContainer)) _rnRange = sel.getRangeAt(0).cloneRange();
+  if (sel.rangeCount && ed.contains(sel.getRangeAt(0).startContainer)) _rnRange = outsidePill(sel.getRangeAt(0).cloneRange());
 }
 function editorSync(ed) {
   _rnDraft = editorText(ed);
@@ -6064,16 +6071,20 @@ function editorInsertCite(tok, range) {
   const ed = document.getElementById('rpNotes');
   if (!ed) return false;
   ed.focus();
-  let r = range || (_rnRange && ed.contains(_rnRange.startContainer) ? _rnRange.cloneRange() : null);
+  let r = range || (_rnRange && ed.contains(_rnRange.startContainer) ? outsidePill(_rnRange.cloneRange()) : null);
   if (!r) { editorCaretEnd(ed); r = _rnRange.cloneRange(); }
-  r.deleteContents();
+  if (range) r.deleteContents();   // replacing a typed [[query
+  else r.collapse(false);          // a saved caret/selection: insert after it, never over what's written
   const tmp = document.createElement('span'); tmp.innerHTML = draftToEditorHTML(tok);
   const pill = tmp.firstChild;
-  const prev = r.startContainer.nodeType === 3 ? r.startContainer.nodeValue.slice(0, r.startOffset) : (r.startContainer.childNodes[r.startOffset - 1] || {}).textContent || '';
-  const after = document.createTextNode(' ');
-  r.insertNode(after); r.insertNode(pill);
+  // spaces only where needed: look at the characters on either side of the caret
+  const side = (a, b) => { const x = document.createRange(); x.setStart(...a); x.setEnd(...b); return x.toString(); };
+  const prev = side([ed, 0], [r.startContainer, r.startOffset]), next = side([r.endContainer, r.endOffset], [ed, ed.childNodes.length]);
+  const after = /^\s/.test(next) ? null : document.createTextNode(' ');
+  if (after) r.insertNode(after);
+  r.insertNode(pill);
   if (prev && !/\s$/.test(prev)) pill.before(document.createTextNode(' '));
-  const c = document.createRange(); c.setStartAfter(after); c.collapse(true);
+  const c = document.createRange(); c.setStartAfter(after || pill); c.collapse(true);
   const sel = getSelection(); sel.removeAllRanges(); sel.addRange(c);
   _rnRange = c.cloneRange();
   editorSync(ed);
