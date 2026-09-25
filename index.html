@@ -5111,6 +5111,7 @@ async function pushNotes() {
   Vault.pushing = true; Vault.pushAgain = false; updateNotesSync();
   let sent = false;   // only a sync that reached GitHub counts as saved (and as back online)
   try {
+    if (Vault.meta && !(await checkVaultStillThere(Vault.meta))) return;   // notes reset elsewhere: nothing here belongs to GitHub's vault
     for (let attempt = 0; ; attempt++) {
       const dirty = (await nfAll()).filter(([, rec]) => rec && rec.dirty);
       if (!dirty.length) break;
@@ -5174,8 +5175,8 @@ window.addEventListener('online', () => scheduleNotesPush(1000));
 /* ---- unlocking ---- */
 async function vaultMeta() {
   if (Vault.meta !== undefined) return Vault.meta;
-  const local = await nfGet('_vault.json');   // set once and never changes, so a stored copy is final
-  if (local) { Vault.meta = local.env; return Vault.meta; }
+  const local = await nfGet('_vault.json');   // set once per vault, so a stored copy is used straight away...
+  if (local) { Vault.meta = local.env; checkVaultStillThere(local.env); return Vault.meta; }   // ...and checked against GitHub in the background
   const rec = await nfLoad('_vault.json').catch(() => null);
   Vault.meta = rec ? rec.env : null;
   return Vault.meta;
@@ -5190,7 +5191,7 @@ async function vaultReady(quiet) {
   const meta = await vaultMeta();
   if (meta) {
     const saved = await notesDB('keys', 'readonly', st => st.get('k')).catch(() => null);
-    if (saved && saved.salt === meta.salt && await vaultCheckKey(saved.key, meta)) { Vault.key = saved.key; await afterUnlock(); return true; }
+    if (saved && saved.salt === meta.salt && await vaultCheckKey(saved.key, meta) && Vault.meta === meta) { Vault.key = saved.key; await afterUnlock(); return true; }   // unless the vault was reset meanwhile
   }
   if (quiet) return false;
   return openVaultModal(meta ? 'unlock' : 'create');
@@ -5266,6 +5267,30 @@ async function submitVault() {
   } finally {
     go.disabled = false; go.textContent = _vaultMode === 'create' ? 'Encrypt my notes' : 'Unlock';
   }
+}
+/* The notes can be reset from another device (deleted, or started again with a new password). This browser's
+   copy then belongs to a vault that no longer exists: drop it, so the user can set up or unlock the new one,
+   and never push notes encrypted for the old vault back over the new one. */
+async function checkVaultStillThere(localMeta) {
+  let remote;
+  try { remote = await ghNoteRead('_vault.json'); } catch (e) { return true; }   // offline: can't tell, keep what we have
+  if (remote && remote.env.salt === localMeta.salt) return true;
+  await resetLocalVault(remote ? remote.env : null);
+  return false;
+}
+async function resetLocalVault(newMeta) {
+  if (Vault.pushTimer) { clearTimeout(Vault.pushTimer); Vault.pushTimer = null; }
+  if (_acId) { _acId = null; document.getElementById('annoCard').classList.remove('open'); }
+  _acPending = null; endDraft('discard');
+  Vault.key = null; Vault.index = null; Vault.cache.clear(); Vault.meta = newMeta || null; _rn = null;
+  await notesDB('files', 'readwrite', st => st.clear()).catch(() => {});
+  await notesDB('keys', 'readwrite', st => st.clear()).catch(() => {});
+  if (newMeta) await nfPut('_vault.json', { env: newMeta, sha: null, base: newMeta.updated, dirty: false }).catch(() => {});
+  hideSelBar();
+  if (_reader.paper) { redrawAnnoLayers(); updateReaderNotesCount(); setRnState('ready'); }
+  if (currentTab === 'library') renderLibrary();
+  if (_paperViewActive) { const p = allPapers.find(x => location.hash === '#paper/' + encodeURIComponent(x.id)); if (p) renderPaperDetail(p); }
+  toast(newMeta ? 'Your notes were given a new password on another device. Unlock them with it.' : 'Your notes were reset. Set a password to start again.', null, { duration: 6000 });
 }
 async function afterUnlock() {
   const rec = (await nfGet('_index.json')) || await nfLoad('_index.json').catch(() => null);
