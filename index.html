@@ -808,7 +808,7 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .rp-foot { padding: 8px 14px; border-top: 1px solid var(--border); font-size: 11.5px; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
 .rp-locked { padding: 28px 18px; text-align: center; color: var(--text-secondary); font-size: 13.5px; line-height: 1.6; }
 .rp-locked strong { display: block; color: var(--text); font-size: 15px; margin-bottom: 6px; }
-.rp-locked .pp-btn { margin-top: 14px; padding: 9px 16px; }
+.rp-locked .ui-btn { margin-top: 16px; }
 .cite-dd { position: fixed; z-index: 350; display: none; width: 320px; max-height: 260px; overflow: auto; background: #1d1d20; border: 1px solid rgba(255,255,255,0.14); border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.55); padding: 4px; }
 .cite-dd.open { display: block; }
 .cite-dd button { display: block; width: 100%; text-align: left; background: none; border: none; color: var(--text-secondary); font: inherit; font-size: 12.5px; line-height: 1.4; padding: 6px 8px 6px 11px; border-radius: 6px; cursor: pointer; border-left: 3px solid var(--hc, var(--accent)); margin: 2px 0; }
@@ -819,8 +819,47 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .vault-box h3 { font-family: var(--serif); font-size: 22px; font-weight: 500; }
 .vault-sub { font-size: 13px; line-height: 1.6; color: var(--text-secondary); margin-bottom: 4px; }
 .vault-remember { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); cursor: pointer; }
-.vault-btns { display: flex; justify-content: flex-end; gap: 8px; }
-.vault-btns .pp-btn { padding: 9px 16px; }
+.vault-btns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+/* one button shape for the notes UI: same height, corners and type; filled primary, outlined secondary */
+.ui-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 40px; padding: 0 18px; border-radius: 10px; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; border: 1px solid transparent; transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.15s; }
+.ui-btn:active { transform: translateY(1px); }
+.ui-btn:disabled { opacity: 0.6; cursor: default; transform: none; }
+.ui-btn-primary { background: var(--accent); color: #1a1406; }
+.ui-btn-primary:hover:not(:disabled) { background: #ffc261; }
+.ui-btn-secondary { background: transparent; color: var(--text-secondary); border-color: var(--border); }
+.ui-btn-secondary:hover:not(:disabled) { color: var(--text); border-color: rgba(255,255,255,0.3); background: rgba(255,255,255,0.04); }
+.vault-box .pp-input { height: 44px; box-sizing: border-box; }
+.vault-box .pp-msg:empty { display: none; }
+.vault-box .pp-msg { margin-top: 0; min-height: 0; }
+.vault-gh { display: none; flex-direction: column; gap: 10px; }
+.vault-gh.show { display: flex; }
+.vault-step { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; font-size: 13.5px; font-weight: 600; color: var(--text); margin-top: 4px; }
+.vault-num { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: var(--accent-dim); color: var(--accent); font-size: 12px; flex-shrink: 0; align-self: center; }
+.vault-why { font-weight: 400; color: var(--text-muted); font-size: 12.5px; }
+.vault-hint { font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-top: -4px; }
+/* motion: short and quiet, and off when the system asks for less */
+@keyframes ui-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ui-rise { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
+@keyframes ui-pop { from { opacity: 0; transform: translateY(4px) scale(0.96); } to { opacity: 1; transform: none; } }
+@keyframes ui-slide { from { opacity: 0.4; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+@keyframes hl-sweep { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes hl-glow { 0% { opacity: 0.8; } 100% { opacity: 0.38; } }
+@keyframes item-in { from { opacity: 0; transform: translateY(-4px); background: rgba(251,177,60,0.12); } to { opacity: 1; transform: none; } }
+.vault-overlay.open { animation: ui-fade 0.18s ease-out; }
+.vault-overlay.open .vault-box { animation: ui-rise 0.22s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.sel-bar.open { animation: ui-pop 0.14s ease-out; transform-origin: 50% 0; }
+.anno-card.open { animation: ui-pop 0.16s ease-out; transform-origin: 20% 0; }
+.cite-dd.open { animation: ui-pop 0.12s ease-out; }
+.reader.panel-open .reader-panel { animation: ui-slide 0.22s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.anno-rect.fresh { animation: hl-sweep 0.32s cubic-bezier(0.3, 0.7, 0.2, 1) both, hl-glow 0.9s ease-out; }
+.anno-rect.note.fresh { animation: hl-sweep 0.32s cubic-bezier(0.3, 0.7, 0.2, 1) both; }
+.anno-pin.fresh { animation: ui-pop 0.2s 0.25s ease-out both; }
+.rp-item.fresh { animation: item-in 0.5s ease-out; }
+.anno-rect { transition: opacity 0.2s, box-shadow 0.2s; }
+@media (prefers-reduced-motion: reduce) {
+  .vault-overlay.open, .vault-overlay.open .vault-box, .sel-bar.open, .anno-card.open, .cite-dd.open, .reader.panel-open .reader-panel,
+  .anno-rect.fresh, .anno-pin.fresh, .rp-item.fresh { animation: none; }
+}
 .pd-notes-meta { font-size: 12.5px; color: var(--text-muted); margin-top: 8px; }
 .pd-notes-meta button { background: none; border: none; color: var(--accent); font: inherit; cursor: pointer; padding: 0; }
 @media (max-width: 700px) {
@@ -1399,12 +1438,18 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
   <form class="vault-box" onsubmit="event.preventDefault(); submitVault()">
     <h3 id="vaultTitle"></h3>
     <p class="vault-sub" id="vaultSub"></p>
+    <div class="vault-gh" id="vaultGh">
+      <div class="vault-step"><span class="vault-num">1</span>Connect GitHub <span class="vault-why">so every device shares this one notes password</span></div>
+      <input class="pp-input" id="vaultPat" type="password" autocomplete="off" spellcheck="false" placeholder="GitHub token (fine-grained, Contents: read and write)">
+      <div class="vault-hint">Stored in this browser and only sent to api.github.com. <a class="ig-link" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Create a token</a> for the scholar-dashboard repo.</div>
+      <div class="vault-step"><span class="vault-num">2</span>Choose a notes password</div>
+    </div>
     <input type="text" name="username" autocomplete="username" value="Scholar notes" hidden>
     <input class="pp-input" id="vaultPw" type="password" autocomplete="current-password" placeholder="Password">
     <input class="pp-input" id="vaultPw2" type="password" autocomplete="new-password" placeholder="Type it again">
     <label class="vault-remember"><input type="checkbox" id="vaultRemember"> Remember on this device</label>
     <div class="pp-msg err" id="vaultErr"></div>
-    <div class="vault-btns"><button type="button" class="reader-btn reader-text" onclick="closeVaultModal(false)">Cancel</button><button class="pp-btn" id="vaultGo" type="submit"></button></div>
+    <div class="vault-btns"><button type="button" class="ui-btn ui-btn-secondary" onclick="closeVaultModal(false)">Cancel</button><button class="ui-btn ui-btn-primary" id="vaultGo" type="submit"></button></div>
   </form>
 </div>
 
@@ -4874,12 +4919,14 @@ function openVaultModal(mode) {
     ? 'Notes, highlights and comments are encrypted in this browser before they are saved, so the public repo only holds scrambled text. <strong>If you forget this password, your notes cannot be recovered.</strong>'
     : 'Your notes are encrypted. Enter the password you set for them.';
   document.getElementById('vaultPw2').style.display = create ? '' : 'none';
+  document.getElementById('vaultGh').classList.toggle('show', create && !hasPAT());
+  document.getElementById('vaultPat').value = '';
   document.getElementById('vaultPw').setAttribute('autocomplete', create ? 'new-password' : 'current-password');
   document.getElementById('vaultGo').textContent = create ? 'Encrypt my notes' : 'Unlock';
   document.getElementById('vaultErr').textContent = '';
   document.getElementById('vaultPw').value = ''; document.getElementById('vaultPw2').value = '';
   document.getElementById('vaultOverlay').classList.add('open');
-  setTimeout(() => document.getElementById('vaultPw').focus(), 0);
+  setTimeout(() => document.getElementById(create && !hasPAT() ? 'vaultPat' : 'vaultPw').focus(), 0);
   return new Promise(res => { _vaultResolve = res; });
 }
 function closeVaultModal(ok) {
@@ -4893,10 +4940,22 @@ async function submitVault() {
   if (_vaultMode === 'create') {
     if (pw.length < 8) { err.textContent = 'Use at least 8 characters.'; return; }
     if (pw !== document.getElementById('vaultPw2').value) { err.textContent = "The two passwords don't match."; return; }
-    if (!hasPAT()) { err.textContent = 'Connect GitHub first (Library → Connect GitHub), so every device shares this one notes password.'; return; }
   }
-  go.disabled = true; go.textContent = _vaultMode === 'create' ? 'Encrypting…' : 'Unlocking…';
+  const needGh = _vaultMode === 'create' && !hasPAT();
+  const pat = document.getElementById('vaultPat').value.trim();
+  if (needGh && !pat) { err.textContent = 'Paste a GitHub token first (step 1).'; document.getElementById('vaultPat').focus(); return; }
+  go.disabled = true; go.textContent = needGh ? 'Checking the token\u2026' : _vaultMode === 'create' ? 'Encrypting\u2026' : 'Unlocking\u2026';
   try {
+    if (needGh) {
+      const res = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}`, { headers: { 'Authorization': `Bearer ${pat}`, 'Accept': 'application/vnd.github+json' }, cache: 'no-store' });
+      const repo = res.ok ? await res.json() : null;
+      if (!repo) { err.textContent = res.status === 401 ? 'GitHub rejected that token.' : `That token can't see the ${GH_REPO} repo (${res.status}).`; return; }
+      if (repo.permissions && !repo.permissions.push) { err.textContent = 'That token can read the repo but not write to it. Give it Contents: read and write.'; return; }
+      localStorage.setItem('gh_pat', pat);
+      document.getElementById('vaultGh').classList.remove('show');
+      updateSyncStatus(); updateNotesSync();
+      go.textContent = 'Encrypting\u2026';
+    }
     if (_vaultMode === 'create') {
       const remote = await ghNoteRead('_vault.json').catch(() => null);
       if (remote) { Vault.meta = remote.env; err.textContent = 'A notes password already exists (set on another device). Enter that one instead.'; openVaultModal('unlock'); return; }
@@ -5085,6 +5144,8 @@ async function createAnno(kind, color) {
   window.getSelection().removeAllRanges();
   await savePaperNotes(_rn);
   updateReaderNotesCount(); redrawAnnoLayers(); renderReaderPanel();
+  document.querySelectorAll(`.anno-rect[data-anno="${a.id}"], .anno-pin`).forEach((el, i) => { if (el.matches('.anno-rect') || el.previousElementSibling?.dataset.anno === a.id) { el.style.animationDelay = el.matches('.anno-rect') ? (i * 0.04) + 's' : ''; el.classList.add('fresh'); } });
+  const item = document.querySelector(`.rp-item[data-id="${a.id}"]`); if (item) item.classList.add('fresh');
   if (kind === 'note') openAnnoCard(a.id, true);
 }
 /* The first highlight on a paper fixes the exact PDF: arXiv's latest version can change later */
@@ -5233,7 +5294,7 @@ function renderReaderPanel() {
     return;
   }
   if (!Vault.key) {
-    panel.innerHTML = head + `<div class="rp-locked"><strong>Your notes are encrypted</strong>Highlights, comments and notes are saved only in encrypted form. Unlock them with your notes password to read and add more.<br><button class="pp-btn" onclick="unlockFromPanel()">${Vault.meta === null ? 'Set a notes password' : 'Unlock notes'}</button></div>`;
+    panel.innerHTML = head + `<div class="rp-locked"><strong>Your notes are encrypted</strong>Highlights, comments and notes are saved only in encrypted form. Unlock them with your notes password to read and add more.<br><button class="ui-btn ui-btn-primary" onclick="unlockFromPanel()">${Vault.meta === null ? 'Set a notes password' : 'Unlock notes'}</button></div>`;
     return;
   }
   const n = _rn || emptyPaperNotes(_reader.paper ? _reader.paper.id : '');
@@ -5264,7 +5325,7 @@ function renderRnList(shown, total) {
   if (!shown) { renderReaderPanel(); return; }
   if (!total) { list.innerHTML = '<div class="rp-empty">Select text in the paper to highlight it or add a comment. Everything here is encrypted.</div>'; return; }
   if (!shown.length) { list.innerHTML = '<div class="rp-empty">Nothing matches this filter.</div>'; return; }
-  list.innerHTML = shown.map(a => `<div class="rp-item ${a.kind === 'note' ? 'note' : ''}" style="--hc:var(--hl-${a.color || 'yellow'})" tabindex="0" onclick="if (!event.target.closest('button')) { jumpToAnno('${a.id}'); }" ondblclick="openAnnoCard('${a.id}', true)">
+  list.innerHTML = shown.map(a => `<div class="rp-item ${a.kind === 'note' ? 'note' : ''}" data-id="${a.id}" style="--hc:var(--hl-${a.color || 'yellow'})" tabindex="0" onclick="if (!event.target.closest('button')) { jumpToAnno('${a.id}'); }" ondblclick="openAnnoCard('${a.id}', true)">
       <div class="rp-item-top">p. ${a.page} · ${a.kind === 'hl' ? esc(hlLabel(a.color)) : 'Comment'}<span class="grow"></span><span class="rp-item-acts"><button onclick="openAnnoCard('${a.id}', true)">Edit</button><button onclick="citeAnno('${a.id}')">Cite</button><button onclick="deleteAnno('${a.id}')">Delete</button></span></div>
       <div class="rp-quote">${esc(a.quote)}</div>
       ${(a.note || '').trim() ? `<div class="rp-note md" data-md="${escAttr(a.id)}"></div>` : ''}
