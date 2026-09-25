@@ -1063,12 +1063,19 @@ button.chat-hist-item:hover, button.chat-hist-item:focus-visible { background: r
   .p-actions .btn-icon:not(.btn-labelled) { min-width: 36px; }
   .tok-pill { min-height: 32px; }
   .group-add-dd .group-opt, .copy-dd-item { padding: 11px 14px; font-size: 14px; }
-  #acNote { min-height: 64px; }   /* room to write a comment by hand (Scribble turns it into text) */
+  .anno-card textarea#acNote { min-height: 64px; }   /* room to write a comment by hand (Scribble turns it into text) */
+  .ac-row { height: auto; gap: 4px; }
+  .ac-row .sel-dot { width: 26px; height: 26px; margin: 0 4px; }
+  /* iPhone Safari zooms the page into any text field under 16px; at 16px it stays put */
+  input:not([type=checkbox]):not([type=radio]):not([type=range]), textarea, [contenteditable="true"] { font-size: 16px !important; }
   .ink-bar .ink-done { height: 36px; padding: 0 14px; }
   .sel-bar { gap: 4px; padding: 5px 6px; border-radius: 12px; }
   .sel-bar .sel-dot { width: 26px; height: 26px; margin: 0 4px; }
   .sel-icon { width: 38px; height: 36px; }
-  .rp-item-acts button { padding: 6px 9px; font-size: 12.5px; }
+  .rp-item-acts button { min-width: 36px; min-height: 36px; padding: 0 9px; font-size: 12.5px; display: inline-flex; align-items: center; justify-content: center; }
+  .rp-item-acts button svg { width: 16px !important; height: 16px !important; }
+  .rp-icon-btn.sm { width: 36px; height: 36px; }
+  .rp-hint { display: none; }   /* keyboard shortcuts mean nothing without a keyboard */
   .rp-resize { flex-basis: 24px; margin: 0 -12px; }
   .rp-resize::after { left: 11px; }
 }
