@@ -6388,7 +6388,7 @@ function renderChatPanel(force) {
     : `<div class="chat-setup">${setup[Chat.status] || setup.setup}</div>`;
   panel.innerHTML = head + `<div class="chat-root" id="chatRoot" data-paper="${escAttr(pid)}" data-status="${Chat.status}">${body}</div>`;
   if (ready) {
-    renderChatMessages(); renderChatAttach(); updateChatSend();
+    renderChatMessages('bottom'); renderChatAttach(); updateChatSend();
     const i = document.getElementById('chatInput'); i.value = Chat.draftText; chatGrow(i);
   }
 }
@@ -6445,9 +6445,14 @@ const CHAT_STARTERS = [
   ['My research', 'How does this paper relate to my research? Be specific about what I could use or build on.'],
   ['Summarise my highlights', 'Summarise my highlights and comments on this paper into one structured note (key idea, method, results, open questions), and add it to my notes.'],
 ];
-function renderChatMessages() {
+/* Scrolling while Claude writes: if the bottom is in view, stay at the bottom as text arrives; if you've
+   scrolled up to read, the view stays exactly where it is. Sending a message or opening a chat goes to the end. */
+const chatAtBottom = box => box.scrollHeight - box.scrollTop - box.clientHeight <= 8;
+async function renderChatMessages(mode) {
   const box = document.getElementById('chatScroll');
   if (!box) return;
+  const stick = mode === 'bottom' || !box.childElementCount || chatAtBottom(box), top = box.scrollTop;
+  const place = () => { box.scrollTop = stick ? box.scrollHeight : top; };
   if (!Chat.messages.length && !Chat.running) {
     box.innerHTML = `<div class="chat-empty"><p>Ask anything about this paper. Claude sees the full text, your highlights and notes, and your research interests, and cites the passages it uses.</p><div class="chat-chips">${CHAT_STARTERS.map(([l, q]) => `<button class="rp-chip" onclick="chatSend(${escAttr(JSON.stringify(q))})">${esc(l)}</button>`).join('')}</div></div>`;
     return;
@@ -6455,9 +6460,11 @@ function renderChatMessages() {
   box.innerHTML = Chat.messages.map((m, i) => chatMsgHTML(m, i)).join('')
     + (Chat.running ? `<div class="chat-msg claude" id="chatLive"><div class="md chat-md" id="chatLiveMd"></div><div class="chat-status" id="chatTool">${esc(chatToolLabel(Chat.tool) || 'Thinking…')}</div></div>` : '')
     + (Chat.error ? `<div class="chat-error">${esc(Chat.error)}</div>` : '');
-  box.querySelectorAll('[data-md-chat]').forEach(el => renderChatMarkdown(el, Chat.messages[+el.dataset.mdChat].text, +el.dataset.mdChat));
-  if (Chat.running) renderChatLive();
-  box.scrollTop = box.scrollHeight;
+  const jobs = [...box.querySelectorAll('[data-md-chat]')].map(el => renderChatMarkdown(el, Chat.messages[+el.dataset.mdChat].text, +el.dataset.mdChat));
+  const live = Chat.running && document.getElementById('chatLiveMd');
+  if (live) jobs.push(renderChatMarkdown(live, Chat.streaming, null));
+  place();                          // right away (plain text)...
+  await Promise.all(jobs); place(); // ...and once formatted, since the heights change
 }
 function chatMsgHTML(m, i) {
   if (m.role === 'user') {
@@ -6514,11 +6521,14 @@ document.addEventListener('click', e => {   // citation pills anywhere (chat, no
   jumpToQuote(+b.dataset.page, b.dataset.quote);
 }, true);
 let _liveTimer = 0;
-function renderChatLive() {
-  const el = document.getElementById('chatLiveMd');
-  if (el) { renderChatMarkdown(el, Chat.streaming, null); const t = document.getElementById('chatTool'); if (t) t.textContent = Chat.tool ? chatToolLabel(Chat.tool) : (Chat.streaming ? '' : 'Thinking…'); }
-  const box = document.getElementById('chatScroll');
-  if (box && box.scrollHeight - box.scrollTop - box.clientHeight < 120) box.scrollTop = box.scrollHeight;   // follow, unless you scrolled up to read
+async function renderChatLive() {
+  const el = document.getElementById('chatLiveMd'), box = document.getElementById('chatScroll');
+  if (!el || !box) return;
+  const stick = chatAtBottom(box), top = box.scrollTop;   // decided before the new text changes the height
+  const place = () => { box.scrollTop = stick ? box.scrollHeight : top; };
+  const job = renderChatMarkdown(el, Chat.streaming, null);
+  const t = document.getElementById('chatTool'); if (t) t.textContent = Chat.tool ? chatToolLabel(Chat.tool) : (Chat.streaming ? '' : 'Thinking…');
+  place(); await job; place();
 }
 function scheduleLive() { if (!_liveTimer) _liveTimer = setTimeout(() => { _liveTimer = 0; renderChatLive(); }, 70); }
 
@@ -6744,7 +6754,7 @@ async function chatSend(text, auto) {
   if (!auto && input && text === input.value.trim()) { input.value = ''; chatGrow(input); }
   Object.assign(Chat, { running: true, streaming: '', tool: '', error: '' });
   Chat.messages.push(user);
-  renderChatAttach(); renderChatMessages(); updateChatSend();
+  renderChatAttach(); renderChatMessages('bottom'); updateChatSend();
 
   let message = '';
   user.quotes.forEach(q => { message += q.page ? `About this passage: [[p.${q.page} "${q.text}"]]\n` : `About this part of your answer: “${q.text}”\n`; });
