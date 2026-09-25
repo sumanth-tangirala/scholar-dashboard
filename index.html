@@ -858,7 +858,9 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .rp-sec-head .grow { flex: 1; }
 .rp-sec-head button { text-transform: none; letter-spacing: 0; font-weight: 500; }
 .rp-general { margin-bottom: 22px; }
-.rp-notes-edit { min-height: 140px; }
+.rp-notes-edit { min-height: 140px; max-height: 55vh; overflow: auto; resize: none; position: relative; white-space: pre-wrap; overflow-wrap: anywhere; cursor: text; }
+.rp-notes-edit.is-empty::before { content: attr(data-ph); position: absolute; left: 10px; right: 10px; top: 8px; color: var(--text-muted); pointer-events: none; }
+.rp-notes-edit.is-empty .cite-pill { display: none; }
 .rp-notes-view { font-size: 14px; line-height: 1.6; color: var(--text-secondary); cursor: text; min-height: 44px; border-radius: 8px; padding: 2px 0; }
 .rp-notes-view:empty::before { content: 'Click to write notes about this paper. Markdown and $math$ work; type [[ to cite a highlight.'; color: var(--text-muted); font-style: italic; font-size: 13px; }
 .rp-hint { font-size: 11.5px; color: var(--text-muted); margin-top: 6px; }
@@ -870,8 +872,14 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .md blockquote { border-left: 3px solid var(--border); margin: 0 0 0.7em; padding-left: 10px; color: var(--text-muted); }
 .md a { color: var(--accent); }
 .md .katex-display { margin: 0.5em 0; overflow-x: auto; overflow-y: hidden; }
-.cite-chip { display: inline; text-align: left; font: inherit; font-size: 12.5px; color: var(--text); background: rgba(251,177,60,0.12); border: 1px solid rgba(251,177,60,0.35); border-left: 3px solid var(--hc, var(--accent)); border-radius: 6px; padding: 1px 7px; cursor: pointer; transition: background 0.15s; }
-.cite-chip:hover { background: rgba(251,177,60,0.22); }
+/* a citation, in the editor and in saved notes: a pill with the page and a short quote. Passages cited
+   straight from the paper are navy like their underline; cited highlights take the highlight's colour */
+.cite-chip { --hc: #8aa4f0; display: inline-flex; align-items: baseline; gap: 5px; max-width: 100%; vertical-align: baseline; text-align: left; font: inherit; font-size: 12px; line-height: 1.5; color: var(--text); background: color-mix(in srgb, var(--hc) 14%, transparent); border: 1px solid color-mix(in srgb, var(--hc) 40%, transparent); border-radius: 999px; padding: 0 9px 0 7px; margin: 0 1px; cursor: pointer; white-space: nowrap; transition: background 0.15s, border-color 0.15s; }
+.cite-chip:hover { background: color-mix(in srgb, var(--hc) 26%, transparent); border-color: color-mix(in srgb, var(--hc) 65%, transparent); }
+.cite-chip .cp-page { flex: none; font-size: 10.5px; font-weight: 600; letter-spacing: 0.02em; color: var(--hc); }
+.cite-chip .cp-q { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.cite-pill { user-select: all; -webkit-user-select: all; }
+.cite-pill.sel { background: color-mix(in srgb, var(--hc) 34%, transparent); border-color: var(--hc); }
 .cite-chip.gone { opacity: 0.6; cursor: default; }
 .rp-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 10px; }
 .rp-filters .sel-dot { width: 18px; height: 18px; opacity: 0.45; }
@@ -5297,7 +5305,7 @@ function endDraft(mode, finalText) {
     if (keep.length) _rn.annos = (_rn.annos || []).concat(keep);
   }
   _rnPendingRefs = [];
-  _rnEditing = null; _rnDraft = ''; _rnCaret = null;
+  _rnEditing = null; _rnDraft = ''; _rnRange = null;
   closeCiteDD();
 }
 /* Typing in a draft can add or remove a citation: redraw only when the drawn set actually changes */
@@ -5508,18 +5516,10 @@ async function citeSelection() {
   const now = new Date().toISOString();
   const a = { id: newAnnoId(), kind: 'ref', color: null, page: info.page, rects: info.rects, quote: info.quote, prefix: info.prefix, suffix: info.suffix, note: '', created: now, updated: now };
   window.getSelection().removeAllRanges();
-  const tok = citeToken(a) + ' ';
+  const tok = citeToken(a);
   if (!_rnEditing) await startNewNote('');
   _rnPendingRefs.push(a);   // owned by the draft until it is saved
-  const t = document.getElementById('rpNotes');
-  {
-    const pos = _rnCaret != null ? Math.min(_rnCaret, _rnDraft.length) : _rnDraft.length;
-    const before = _rnDraft.slice(0, pos), after = _rnDraft.slice(pos), sep = before && !/\s$/.test(before) ? ' ' : '';
-    _rnDraft = before + sep + tok + after;
-    _rnCaret = before.length + sep.length + tok.length;
-    if (t) { t.value = _rnDraft; t.focus(); t.selectionStart = t.selectionEnd = _rnCaret; }
-    else renderReaderPanel();
-  }
+  if (!editorInsertCite(tok)) { _rnDraft += (_rnDraft && !/\s$/.test(_rnDraft) ? ' ' : '') + tok + ' '; renderReaderPanel(); }
   draftChanged();
 }
 async function createAnno(kind, color) {
@@ -5785,11 +5785,7 @@ function renderReaderPanel() {
   _rnFresh = null;
   if (_rnEditing) {
     const t = document.getElementById('rpNotes');
-    if (t) {
-      const had = document.activeElement === t;
-      t.focus();
-      if (!had) { const c = _rnCaret != null ? Math.min(_rnCaret, t.value.length) : t.value.length; t.selectionStart = t.selectionEnd = c; }
-    }
+    if (t && document.activeElement !== t) { t.focus(); editorCaretEnd(t); }
   }
 }
 /* One list: free notes (just text) and anything anchored to the paper (keyed by the quoted text) */
@@ -5824,7 +5820,8 @@ function noteDate(e) {
   return (e.updated && e.created && e.updated.slice(0, 16) !== e.created.slice(0, 16)) ? s + ' \u00b7 edited' : s;
 }
 function noteEditorHTML() {
-  return `<div class="rp-editor"><textarea class="rp-notes-edit" id="rpNotes" placeholder="${_rnEditing && String(_rnEditing).startsWith('a:') ? 'Your comment on this passage\u2026' : 'Write a note\u2026 Select text in the paper and press \u201c Cite, or type [[ to cite a highlight.'}" oninput="_rnDraft = this.value; _rnCaret = this.selectionStart; citeInput(this); draftChanged()" onkeyup="_rnCaret = this.selectionStart" onclick="_rnCaret = this.selectionStart" onkeydown="noteEditorKey(event)">${esc(_rnDraft)}</textarea>
+  const ph = _rnEditing && String(_rnEditing).startsWith('a:') ? 'Your comment on this passage\u2026' : 'Write a note\u2026 Select text in the paper and press \u201c to cite it, or type [[ to cite a highlight.';
+  return `<div class="rp-editor"><div class="rp-notes-edit ${_rnDraft.trim() ? '' : 'is-empty'}" id="rpNotes" contenteditable="true" role="textbox" aria-multiline="true" spellcheck="true" data-ph="${escAttr(ph)}" oninput="editorInput(this)" onkeyup="editorSaveRange(this)" onmouseup="editorSaveRange(this)" onblur="editorSaveRange(this)" onkeydown="editorKey(event)" onpaste="editorPaste(event)" onclick="editorClick(event)" ondrop="event.preventDefault()">${draftToEditorHTML(_rnDraft)}</div>
     <div class="rp-editor-foot"><span class="rp-hint">${MOD_KEY}\u21b5 save \u00b7 Esc cancel</span><span class="grow"></span><button class="ui-btn ui-btn-secondary ui-btn-sm" onmousedown="event.preventDefault()" onclick="cancelNoteEdit()">Cancel</button><button class="ui-btn ui-btn-primary ui-btn-sm" onmousedown="event.preventDefault()" onclick="saveNoteEdit()">Save</button></div></div>`;
 }
 function renderRnList(shown, total, anyFilter) {
@@ -5864,13 +5861,13 @@ async function renameHlColor(c) {
   renderReaderPanel();
 }
 /* Notes: '+ Add note' opens an editor card; Save (or Cmd/Ctrl+Enter) keeps it, Cancel (or Esc) drops it */
-let _rnDraft = '', _rnFresh = null, _rnCaret = null;
+let _rnDraft = '', _rnFresh = null;
 async function startNewNote(prefill) {
   if (notesBusy()) return;
   if (!await vaultReady()) return;
   if (!_rn) { setRnState('loading'); await loadReaderNotes(); if (!_rn) return; }
   if (_rnEditing) await finishNotesEdit();
-  _rnEditing = 'new'; _rnDraft = prefill || ''; _rnCaret = null;
+  _rnEditing = 'new'; _rnDraft = prefill || ''; _rnRange = null;
   if (!document.getElementById('reader').classList.contains('panel-open')) toggleReaderPanel(true);
   else renderReaderPanel();
 }
@@ -5889,7 +5886,7 @@ async function editAnnoComment(id) {
   if (!a) return;
   closeAnnoCard();
   if (_rnEditing && _rnEditing !== 'a:' + id) await finishNotesEdit();
-  _rnEditing = 'a:' + id; _rnDraft = a.note || ''; _rnCaret = null;
+  _rnEditing = 'a:' + id; _rnDraft = a.note || ''; _rnRange = null;
   if (!document.getElementById('reader').classList.contains('panel-open')) toggleReaderPanel(true); else renderReaderPanel();
 }
 async function saveNoteEdit(quiet) {
@@ -5938,35 +5935,133 @@ async function deleteGeneralNote(id) {
   });
 }
 
-/* --- citing highlights in notes: [[cite:ID p.N "quote"]] --- */
+/* --- citing highlights in notes: [[cite:ID p.N "quote"]] ---
+   Stored as plain text so notes stay portable; shown everywhere as a pill (citePillHTML). */
+const CITE_RE = /\[\[cite:([\w-]+)([^\]\n]*)\]\]/g;
+function shortQuote(q, n) { q = String(q || '').replace(/\s+/g, ' ').trim(); return q.length > n ? q.slice(0, n - 3).trim() + '\u2026' : q; }
+function citePillHTML(tok, id, rest, notesObj, editable) {
+  const a = (notesObj && notesObj === _rn) || !notesObj ? annoById(id) : (notesObj.annos || []).find(x => x.id === id);
+  const m = String(rest || '').match(/p\.(\d+)\s*"([^"]*)"?/);
+  const page = a ? a.page : m && m[1], quote = a ? a.quote : m ? m[2] : '';
+  const color = a && a.kind !== 'ref' ? `style="--hc:var(--hl-${a.color === 'yellow' ? 'orange' : a.color || 'orange'})"` : '';
+  const inner = `${page ? `<span class="cp-page">p.\u00a0${esc(String(page))}</span>` : ''}<span class="cp-q">${esc(shortQuote(quote, 48)) || 'deleted passage'}</span>`;
+  const title = escAttr((a ? '' : 'This passage was deleted. ') + '\u201c' + shortQuote(quote, 300) + '\u201d' + (a ? ' \u00b7 click to go to it' : ''));
+  if (editable) return `<span class="cite-chip cite-pill ${a ? '' : 'gone'}" contenteditable="false" draggable="false" data-tok="${escAttr(tok)}" data-anno="${escAttr(id)}" ${color} title="${title}">${inner}</span>`;
+  return `<button class="cite-chip ${a ? '' : 'gone'}" ${a ? `data-anno="${escAttr(id)}"` : ''} ${color} title="${title}">${inner}</button>`;
+}
+
+/* --- the note editor: text with citation pills; _rnDraft always holds the plain-text form --- */
+function draftToEditorHTML(text) {
+  let out = '', last = 0;
+  const seg = t => esc(t).replace(/\n/g, '<br>');
+  for (const m of String(text).matchAll(CITE_RE)) { out += seg(text.slice(last, m.index)) + citePillHTML(m[0], m[1], m[2], null, true); last = m.index + m[0].length; }
+  out += seg(text.slice(last));
+  return /\n$/.test(text) ? out + '<br>' : out;   // a trailing line break needs a second <br> to show
+}
+function editorText(ed) {
+  let s = '';
+  const walk = n => {
+    const kids = [...n.childNodes];
+    kids.forEach((c, i) => {
+      if (c.nodeType === 3) s += c.nodeValue;
+      else if (c.nodeType !== 1) return;
+      else if (c.dataset.tok) s += c.dataset.tok;
+      else if (c.tagName === 'BR') { if (!(n === ed && i === kids.length - 1)) s += '\n'; }   // the last <br> only holds the empty line open
+      else { if (/^(DIV|P)$/.test(c.tagName) && s && !s.endsWith('\n')) s += '\n'; walk(c); }
+    });
+  };
+  walk(ed);
+  return s.replace(/\u00a0/g, ' ');
+}
+let _rnRange = null;   // where the caret last was in the editor, so a citation lands there even after clicking the paper
+document.addEventListener('selectionchange', () => {
+  const ed = document.getElementById('rpNotes'), sel = getSelection();
+  if (!ed || !sel.rangeCount) return;
+  const r = sel.getRangeAt(0);
+  if (ed.contains(r.startContainer)) _rnRange = r.cloneRange();
+  ed.querySelectorAll('.cite-pill').forEach(p => p.classList.toggle('sel', !r.collapsed && r.intersectsNode(p)));
+});
+function editorSaveRange(ed) {
+  const sel = getSelection();
+  if (sel.rangeCount && ed.contains(sel.getRangeAt(0).startContainer)) _rnRange = sel.getRangeAt(0).cloneRange();
+}
+function editorSync(ed) {
+  _rnDraft = editorText(ed);
+  ed.classList.toggle('is-empty', !_rnDraft.trim() && !ed.querySelector('.cite-pill'));
+  draftChanged();
+}
+function editorInput(ed) { editorSaveRange(ed); editorSync(ed); citeInput(ed); }
+function editorKey(e) {
+  const ed = e.currentTarget;
+  if (_citeCtx && document.getElementById('citeDD').classList.contains('open')) { citeKey(e); if (e.defaultPrevented) return; }
+  if (e.key === 'Enter' && !(e.metaKey || e.ctrlKey)) { e.preventDefault(); document.execCommand('insertLineBreak'); return; }   // a plain line break, not a <div>
+  noteEditorKey(e);
+}
+function editorPaste(e) {
+  e.preventDefault();
+  const t = (e.clipboardData || window.clipboardData).getData('text/plain');
+  if (!t) return;
+  const ed = e.currentTarget;
+  document.execCommand('insertText', false, t);
+  if (CITE_RE.test(t)) { CITE_RE.lastIndex = 0; editorSync(ed); ed.innerHTML = draftToEditorHTML(_rnDraft); editorCaretEnd(ed); editorSync(ed); }   // pasted citations become pills
+}
+function editorClick(e) {
+  const p = e.target.closest('.cite-pill');
+  if (p && p.dataset.anno && annoById(p.dataset.anno)) { e.preventDefault(); jumpToAnno(p.dataset.anno); }
+}
+function editorCaretEnd(ed) {
+  const r = document.createRange(); r.selectNodeContents(ed);
+  if (ed.lastChild && ed.lastChild.nodeName === 'BR' && ed.lastChild.previousSibling && ed.lastChild.previousSibling.nodeName === 'BR') r.setEndBefore(ed.lastChild);
+  r.collapse(false);
+  const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+  _rnRange = r.cloneRange();
+}
+/* Put a citation pill at the caret (or at the end), with spaces around it as needed */
+function editorInsertCite(tok, range) {
+  const ed = document.getElementById('rpNotes');
+  if (!ed) return false;
+  ed.focus();
+  let r = range || (_rnRange && ed.contains(_rnRange.startContainer) ? _rnRange.cloneRange() : null);
+  if (!r) { editorCaretEnd(ed); r = _rnRange.cloneRange(); }
+  r.deleteContents();
+  const tmp = document.createElement('span'); tmp.innerHTML = draftToEditorHTML(tok);
+  const pill = tmp.firstChild;
+  const prev = r.startContainer.nodeType === 3 ? r.startContainer.nodeValue.slice(0, r.startOffset) : (r.startContainer.childNodes[r.startOffset - 1] || {}).textContent || '';
+  const after = document.createTextNode(' ');
+  r.insertNode(after); r.insertNode(pill);
+  if (prev && !/\s$/.test(prev)) pill.before(document.createTextNode(' '));
+  const c = document.createRange(); c.setStartAfter(after); c.collapse(true);
+  const sel = getSelection(); sel.removeAllRanges(); sel.addRange(c);
+  _rnRange = c.cloneRange();
+  editorSync(ed);
+  return true;
+}
 function citeToken(a) { const q = a.quote.length > 60 ? a.quote.slice(0, 57).trim() + '…' : a.quote; return `[[cite:${a.id} p.${a.page} "${q.replace(/"/g, "'").replace(/\]/g, ')')}"]]`; }
 async function citeAnno(id) {
   if (notesBusy()) return;
   const a = annoById(id);
   if (!a) return;
   closeAnnoCard();
-  const tok = citeToken(a) + ' ';
-  const t = document.getElementById('rpNotes');
-  if (!_rnEditing || !t) { await startNewNote(tok); draftChanged(); return; }
-  const pos = _rnCaret != null ? Math.min(_rnCaret, t.value.length) : t.value.length;
-  const before = t.value.slice(0, pos), after = t.value.slice(pos), sep = before && !/\s$/.test(before) ? ' ' : '';
-  t.value = before + sep + tok + after;
-  _rnDraft = t.value; _rnCaret = before.length + sep.length + tok.length;
-  t.focus(); t.selectionStart = t.selectionEnd = _rnCaret;
-  draftChanged();
+  const tok = citeToken(a);
+  if (!_rnEditing || !document.getElementById('rpNotes')) { await startNewNote(tok + ' '); draftChanged(); return; }
+  editorInsertCite(tok);
 }
 let _citeCtx = null;
-function citeInput(t) {
-  const upto = t.value.slice(0, t.selectionStart), m = upto.match(/\[\[([^\]\n]{0,40})$/);
+function citeInput(ed) {
+  const sel = getSelection(), r = sel.rangeCount && sel.getRangeAt(0);
+  const node = r && r.collapsed && r.startContainer.nodeType === 3 ? r.startContainer : null;
+  const upto = node ? node.nodeValue.slice(0, r.startOffset) : '', m = upto.match(/\[\[([^\]\n]{0,40})$/);
   if (!m || !_rn || !(_rn.annos || []).length) { closeCiteDD(); return; }
   const q = m[1].toLowerCase();
-  const opts = _rn.annos.slice().sort((a, b) => a.page - b.page).filter(a => !q || (a.quote + ' ' + (a.note || '')).toLowerCase().includes(q)).slice(0, 12);
+  const opts = _rn.annos.filter(a => a.kind !== 'ref').sort((a, b) => a.page - b.page).filter(a => !q || (a.quote + ' ' + (a.note || '')).toLowerCase().includes(q)).slice(0, 12);
   if (!opts.length) { closeCiteDD(); return; }
-  _citeCtx = { t, start: upto.length - m[0].length, end: t.selectionStart, opts, i: 0 };
+  const t = ed;
+  _citeCtx = { node, start: upto.length - m[0].length, end: r.startOffset, opts, i: 0 };
   let dd = document.getElementById('citeDD');
   dd.innerHTML = opts.map((a, i) => `<button class="${i === 0 ? 'on' : ''}" style="--hc:var(--hl-${a.color || 'orange'})" onmousedown="event.preventDefault()" onclick="pickCite(${i})">p. ${a.page} · ${esc(a.quote.slice(0, 90))}</button>`).join('');
-  const r = t.getBoundingClientRect();
-  dd.style.left = Math.max(12, r.left) + 'px'; dd.style.top = Math.min(window.innerHeight - 270, r.bottom + 6) + 'px';
+  const at = r.getBoundingClientRect(), box = t.getBoundingClientRect();   // under the caret, kept inside the window
+  const left = at.height ? at.left : box.left, top = at.height ? at.bottom : box.bottom;
+  dd.style.left = Math.max(12, Math.min(window.innerWidth - 332, left)) + 'px'; dd.style.top = Math.min(window.innerHeight - 270, top + 6) + 'px';
   dd.classList.add('open');
 }
 function citeKey(e) {
@@ -5981,13 +6076,10 @@ function citeKey(e) {
 function pickCite(i) {
   const c = _citeCtx;
   if (!c) return;
-  const tok = citeToken(c.opts[i]) + ' ';
-  c.t.value = c.t.value.slice(0, c.start) + tok + c.t.value.slice(c.end);
-  c.t.selectionStart = c.t.selectionEnd = c.start + tok.length;
-  c.t.focus();
   closeCiteDD();
-  _rnDraft = c.t.value;
-  draftChanged();
+  const r = document.createRange();
+  r.setStart(c.node, c.start); r.setEnd(c.node, Math.min(c.end, c.node.nodeValue.length));   // the typed [[query becomes the pill
+  editorInsertCite(citeToken(c.opts[i]), r);
 }
 function closeCiteDD() { const dd = document.getElementById('citeDD'); if (dd) dd.classList.remove('open'); _citeCtx = null; }
 
@@ -6007,22 +6099,21 @@ function loadMdLibs() {
 async function renderNotesMarkdown(el, text, notesObj) {
   if (!el) return;
   if (!(text || '').trim()) { el.innerHTML = ''; return; }
-  el.textContent = text;   // readable right away, formatted once the libraries arrive
+  const wire = () => el.querySelectorAll('.cite-chip[data-anno]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); citeClick(b.dataset.anno, notesObj); }));
+  // readable right away (citations as pills), formatted once the Markdown libraries arrive; stays like this offline
+  { let out = '', last = 0; for (const m of String(text).matchAll(CITE_RE)) { out += esc(text.slice(last, m.index)).replace(/\n/g, '<br>') + citePillHTML(m[0], m[1], m[2], notesObj); last = m.index + m[0].length; }
+    el.innerHTML = out + esc(text.slice(last)).replace(/\n/g, '<br>'); wire(); }
   try { await loadMdLibs(); } catch (e) { return; }
   const slots = [];
   const slot = html => `@@SLOT${slots.push(html) - 1}@@`;
   let src = text
-    .replace(/\[\[cite:([\w-]+)([^\]]*)\]\]/g, (m, id, rest) => {
-      const a = notesObj && (notesObj.annos || []).find(x => x.id === id);
-      const label = a ? `p. ${a.page} “${a.quote.length > 70 ? a.quote.slice(0, 67).trim() + '…' : a.quote}”` : (rest.trim().replace(/^p\.(\d+)/, 'p. $1') || 'a deleted highlight');
-      return slot(`<button class="cite-chip ${a ? '' : 'gone'}" ${a ? `style="--hc:var(--hl-${a.color || 'orange'})" data-anno="${a.id}"` : 'title="This highlight was deleted"'}>${esc(label)}</button>`);
-    })
+    .replace(CITE_RE, (m, id, rest) => slot(citePillHTML(m, id, rest, notesObj)))
     .replace(/\$\$([\s\S]+?)\$\$/g, (m, tex) => slot(katex.renderToString(tex, { displayMode: true, throwOnError: false })))
     .replace(/(^|[^\\$])\$([^\s$](?:[^$\n]*?[^\s$])?)\$/g, (m, pre, tex) => pre + slot(katex.renderToString(tex, { throwOnError: false })));
   let html = DOMPurify.sanitize(marked.parse(src, { breaks: true, gfm: true }));
   html = html.replace(/@@SLOT(\d+)@@/g, (m, i) => slots[+i]);
   el.innerHTML = html;
-  el.querySelectorAll('.cite-chip[data-anno]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); citeClick(b.dataset.anno, notesObj); }));
+  wire();
   el.querySelectorAll('a[href]').forEach(a => { a.target = '_blank'; a.rel = 'noopener'; });
 }
 /* a citation in the reader jumps to the highlight; elsewhere it opens the reader there */
