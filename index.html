@@ -6576,23 +6576,29 @@ function closeRelevancePopup() {
 function sanitizeNote(s) { return s.replace(/\|/g, '/').replace(/,/g, ';').replace(/\r\n|\r|\n/g, ' // ').replace(/"/g, "'"); }
 function desanitizeNote(s) { return s.replace(/ \/\/ /g, '\n'); }
 
-/* The quick notes box adds one note (or edits one) in the same encrypted list as the reader's panel */
-let _notesNoteId = null;
-async function saveNote(key, value) {
+/* The quick notes box adds one note (or edits one) in the same encrypted list as the reader's panel.
+   Each opening is a session {key, id}: its saves run one after another and all refer to that session,
+   so a save that finishes after the box closed still updates the same note (it used to add a second). */
+let _notesSession = null;
+function saveNote(sess, value) {
+  sess.chain = (sess.chain || Promise.resolve()).then(() => saveNoteNow(sess, value)).catch(e => console.error(e));
+  return sess.chain;
+}
+async function saveNoteNow(sess, value) {
   if (!Vault.key) return;
-  const n = await paperNotes(key);
+  const key = sess.key, n = await paperNotes(key);
   if (!n) return;
   n.entries = n.entries || [];
   const now = new Date().toISOString();
-  let e = _notesNoteId && n.entries.find(x => x.id === _notesNoteId);
+  let e = sess.id && n.entries.find(x => x.id === sess.id);
   if (!e) {
     if (!value.trim()) return;
     e = { id: newNoteId(), text: value.trim(), created: now, updated: now };
-    n.entries.push(e); _notesNoteId = e.id;
+    n.entries.push(e); sess.id = e.id;
   } else if (!value.trim()) {
     n.entries = n.entries.filter(x => x.id !== e.id);
     n.deleted = { ...(n.deleted || {}), [e.id]: now };
-    _notesNoteId = null;
+    sess.id = null;
   } else {
     if (e.text === value.trim()) return;
     e.text = value.trim(); e.updated = now;
@@ -6602,16 +6608,18 @@ async function saveNote(key, value) {
 }
 
 async function deleteNote() {
-  if (!_notesKey || !Vault.key) return;
-  const key = _notesKey, p = allPapers.find(pp => paperKey(pp) === key);
+  const sess = _notesSession;
+  if (!sess || !Vault.key) return;
+  const key = sess.key, p = allPapers.find(pp => paperKey(pp) === key);
   clearTimeout(_notesSaveTimer); _notesSaveTimer = null;
+  await sess.chain;   // let a save in flight finish first, so its note is the one deleted
   const n = await paperNotes(key);
-  const e = _notesNoteId && (n.entries || []).find(x => x.id === _notesNoteId);
+  const e = sess.id && (n.entries || []).find(x => x.id === sess.id);
   const area = document.getElementById('notesModalArea');
   if (!e) { area.value = ''; closeNotesModal(); return; }   // nothing saved yet: just discard
   const prev = { ...e };
   area.value = '';
-  await saveNote(key, '');
+  await saveNote(sess, '');
   if (p) renderPaperDetail(p);
   closeNotesModal();
   toast('Note deleted', async () => {
@@ -6635,28 +6643,27 @@ function debouncedSaveNote() {
   clearTimeout(_notesSaveTimer);
   _notesSaveTimer = setTimeout(async () => {
     _notesSaveTimer = null;
-    if (!_notesKey) return;
-    const key = _notesKey;
-    await saveNote(key, document.getElementById('notesModalArea').value);
+    const sess = _notesSession;
+    if (!sess) return;
+    const key = sess.key;
+    await saveNote(sess, document.getElementById('notesModalArea').value);
     const p = allPapers.find(pp => paperKey(pp) === key);
     if (p && _paperViewActive) renderPaperDetail(p);
     updateNotesFooter(true);
   }, 500);
 }
 
-let _notesKey = null;
 async function toggleNotesModal(key, noteId) {
   const modal = document.getElementById('notesModal');
-  if (_notesKey === key && modal.classList.contains('open') && !noteId) { closeNotesModal(); return; }
+  if (_notesSession && _notesSession.key === key && modal.classList.contains('open') && !noteId) { closeNotesModal(); return; }
   if (modal.classList.contains('open')) closeNotesModal();
   if (!vaultSupported()) { toastError('Notes are encrypted, which needs a secure address: open scholar.localhost or the GitHub Pages site.'); return; }
   if (!await vaultReady()) return;
   const n = await paperNotes(key);
-  _notesKey = key;
   const p = allPapers.find(pp => paperKey(pp) === key);
   const area = document.getElementById('notesModalArea');
   const e = noteId && (n.entries || []).find(x => x.id === noteId);
-  _notesNoteId = e ? e.id : null;
+  _notesSession = { key, id: e ? e.id : null };
   area._notesObj = n;   // so its citation pills can be shown and followed
   area.value = e ? e.text : '';
   document.getElementById('notesModalTitle').textContent = e ? 'Edit note' : 'New note';
@@ -6672,13 +6679,14 @@ function closeNotesModal() {
   const modal = document.getElementById('notesModal');
   if (!modal.classList.contains('open')) return;
   const area = document.getElementById('notesModalArea');
-  if (_notesKey) {
+  const sess = _notesSession;
+  if (sess) {
     clearTimeout(_notesSaveTimer); _notesSaveTimer = null;
-    const key = _notesKey, p = allPapers.find(pp => paperKey(pp) === key);
-    saveNote(key, area.value).then(() => { if (p && _paperViewActive) renderPaperDetail(p); });
+    const p = allPapers.find(pp => paperKey(pp) === sess.key);
+    saveNote(sess, area.value).then(() => { if (p && _paperViewActive) renderPaperDetail(p); });
   }
   modal.classList.remove('open');
-  _notesKey = null; _notesNoteId = null;
+  _notesSession = null;
 }
 
 /* Draggable + resizable notes modal */
