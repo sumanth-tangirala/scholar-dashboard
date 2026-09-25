@@ -731,7 +731,7 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 }
 @media (prefers-reduced-motion: reduce) { .reader-spin { animation-duration: 2.4s; } }
 /* ---- notes, highlights and comments ---- */
-:root { --hl-yellow: #f5c542; --hl-green: #4cc38a; --hl-blue: #5b9bf5; --hl-red: #f06b6b; --hl-purple: #b48cf2; }
+:root { --hl-orange: #ff8a3d; --hl-yellow: var(--hl-orange); --hl-green: #4cc38a; --hl-blue: #5b9bf5; --hl-red: #e5484d; --hl-purple: #b48cf2; }
 .reader-split { flex: 1; min-height: 0; display: flex; }
 .reader-split .reader-body { flex: 1; min-width: 0; }
 .reader-panel { display: none; width: 380px; flex-shrink: 0; border-left: 1px solid var(--border); background: #121214; flex-direction: column; min-height: 0; }
@@ -751,7 +751,7 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .anno-mark:hover { transform: scale(1.15); box-shadow: 0 2px 8px rgba(0,0,0,0.45); }
 .anno-mark svg { width: 12px; height: 12px; fill: currentColor; }
 /* light pages: deeper colours so highlights and comment lines stay visible on white */
-.reader:not(.dark) .annoLayer, .reader:not(.dark) .annoMarks { --hl-yellow: #ffd21f; --hl-green: #34c26b; --hl-blue: #4b8ef7; --hl-red: #f25555; --hl-purple: #a66ff2; --note-line: #c47400; }
+.reader:not(.dark) .annoLayer, .reader:not(.dark) .annoMarks { --hl-orange: #ff7a1f; --hl-yellow: var(--hl-orange); --hl-green: #34c26b; --hl-blue: #4b8ef7; --hl-red: #e03a40; --hl-purple: #a66ff2; --note-line: #c47400; }
 .sel-bar { position: fixed; z-index: 340; display: none; align-items: center; gap: 4px; padding: 5px 6px; background: #1d1d20; border: 1px solid rgba(255,255,255,0.14); border-radius: 10px; box-shadow: 0 8px 26px rgba(0,0,0,0.55); }
 .sel-bar.open { display: flex; }
 .sel-dot { width: 22px; height: 22px; border-radius: 50%; border: 2px solid transparent; background: var(--hc); cursor: pointer; transition: transform 0.12s, border-color 0.12s; }
@@ -782,6 +782,35 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .rp-add:hover { background: rgba(251,177,60,0.18); border-color: rgba(251,177,60,0.55); }
 .rp-add svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
 .rp-count { color: var(--text-muted); font-weight: 500; letter-spacing: 0; }
+.rp-toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.rp-toolbar .grow { flex: 1; }
+.rp-count-l { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); }
+.rp-seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.rp-seg button { background: none; border: none; color: var(--text-muted); font: inherit; font-size: 12px; padding: 4px 10px; cursor: pointer; transition: background 0.15s, color 0.15s; }
+.rp-seg button:hover { color: var(--text); }
+.rp-seg button.on { background: rgba(255,255,255,0.08); color: var(--text); }
+.rp-chip { font: inherit; font-size: 12px; color: var(--text-muted); background: none; border: 1px solid var(--border); border-radius: 999px; padding: 2px 10px; cursor: pointer; transition: color 0.15s, border-color 0.15s, background 0.15s; }
+.rp-chip:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
+.rp-chip.on { color: var(--accent); border-color: rgba(251,177,60,0.55); background: rgba(251,177,60,0.1); }
+.rp-card { position: relative; padding: 10px 12px 11px; border-radius: 10px; background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.06); margin-bottom: 8px; transition: border-color 0.15s, background 0.15s; }
+.rp-card:hover { border-color: rgba(255,255,255,0.13); background: rgba(255,255,255,0.035); }
+.rp-card-anchor { cursor: pointer; padding-left: 15px; }
+.rp-card-anchor::before { content: ''; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 0 2px 2px 0; background: var(--hc, var(--accent)); }
+.rp-card-anchor.is-comment::before { background: repeating-linear-gradient(var(--accent) 0 4px, transparent 4px 7px); }
+.rp-card:hover .rp-item-acts, .rp-card:focus-within .rp-item-acts { opacity: 1; }
+.rp-card-top { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-muted); min-height: 26px; margin-bottom: 2px; }
+.rp-card-top .grow { flex: 1; }
+.rp-card .rp-quote { cursor: pointer; }
+.rp-card-body { font-size: 13.5px; line-height: 1.6; color: var(--text-secondary); margin-top: 6px; cursor: auto; }
+.rp-card-note .rp-card-body { margin-top: 0; font-size: 14px; }
+.rp-card .rp-editor { margin: 8px 0 0; }
+.rp-card.fresh { animation: item-in 0.5s ease-out; }
+.sel-act svg, .sel-cite svg { width: 13px; height: 13px; fill: currentColor; vertical-align: -2px; margin-right: 4px; }
+.sel-act.primary { color: var(--accent); background: rgba(251,177,60,0.12); }
+.sel-act.primary:hover { background: rgba(251,177,60,0.2); color: var(--accent); }
+.rp-icon-btn svg path[d^="M9.5"] { fill: currentColor; stroke: none; }
+.anno-rect.ref { background: none; opacity: 1; border-bottom: 2px dotted var(--note-line, var(--accent)); border-radius: 0; mix-blend-mode: normal !important; }
+@media (prefers-reduced-motion: reduce) { .rp-card.fresh { animation: none; } }
 .rp-gnote { position: relative; padding: 10px 12px; border-radius: 10px; background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.06); margin-bottom: 8px; transition: border-color 0.15s, background 0.15s; }
 .rp-gnote:hover { border-color: rgba(255,255,255,0.12); background: rgba(255,255,255,0.035); }
 .rp-gnote:hover .rp-item-acts, .rp-gnote:focus-within .rp-item-acts { opacity: 1; }
@@ -4517,7 +4546,7 @@ async function showReader(id) {
   const p = allPapers.find(x => x.id === id) || _hiddenPapers.find(x => x.id === id);
   if (!p) { location.hash = '#all'; return; }
   const el = document.getElementById('reader');
-  if (_reader.paper !== p) { _rnFilter = { colors: new Set(), notes: false, q: '' }; _rnEditing = null; _rnDraft = ''; }
+  if (_reader.paper !== p) { _rnFilter = { colors: new Set(), comments: false, notes: false, q: '' }; _rnEditing = null; _rnDraft = ''; }
   _reader.paper = p;
   let panelWanted = false; try { panelWanted = localStorage.getItem('scholar_reader_panel') === '1'; } catch (e) {}
   el.classList.toggle('panel-open', panelWanted && !window.matchMedia('(max-width: 700px)').matches);
@@ -4803,8 +4832,8 @@ function closePdfModal() {
    Edits land in IndexedDB first and are pushed to GitHub a few seconds later (like other edits);
    a copy changed elsewhere in the meantime is merged, not overwritten. */
 const VAULT_DIR = 'annotations/', VAULT_ITER = 600000, VAULT_CHECK = 'scholar-notes-v1';
-const HL_COLORS = ['yellow', 'green', 'blue', 'red', 'purple'];
-const HL_DEFAULT_LABELS = { yellow: 'Key idea', green: 'Method', blue: 'Result', red: 'Question', purple: 'My work' };
+const HL_COLORS = ['orange', 'green', 'blue', 'red', 'purple'];   // orange, not yellow: the site's accent is amber
+const HL_DEFAULT_LABELS = { orange: 'Key idea', green: 'Method', blue: 'Result', red: 'Question', purple: 'My work' };
 const Vault = { key: null, meta: undefined, index: null, cache: new Map(), pushing: false, pushTimer: null, pushAgain: false };
 function vaultSupported() { return !!(window.isSecureContext && window.crypto && crypto.subtle); }
 function b64e(buf) { const a = new Uint8Array(buf); let s = ''; for (let i = 0; i < a.length; i += 0x8000) s += String.fromCharCode.apply(null, a.subarray(i, i + 0x8000)); return btoa(s); }
@@ -4914,7 +4943,20 @@ function scheduleNotesPush(delay) {
   updateNotesSync();
   if (!hasPAT()) return;
   clearTimeout(Vault.pushTimer);
-  Vault.pushTimer = setTimeout(pushNotes, delay || 2500);
+  Vault.pushTimer = setTimeout(pushNotes, delay || 6000);   // a quiet spell, so a burst of edits becomes one commit
+}
+/* Every changed notes file goes to GitHub in ONE commit (git data API: tree -> commit -> move the
+   branch). Files changed on GitHub since we last synced are merged first; if the branch moved while we
+   worked, the whole round is redone. */
+async function ghCommitFiles(files, message) {
+  const api = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/git`, H = ghHeaders(), HJ = { ...H, 'Content-Type': 'application/json' };
+  const ok = async (res, what) => { if (!res.ok) { const e = _ghFail(res, what); if (res.status === 422 || res.status === 409) e.conflict = true; throw e; } return res.json(); };
+  const ref = await ok(await fetch(`${api}/ref/heads/${GH_BRANCH}`, { headers: H, cache: 'no-store' }), 'read of the branch');
+  const head = await ok(await fetch(`${api}/commits/${ref.object.sha}`, { headers: H, cache: 'no-store' }), 'read of the last commit');
+  const tree = await ok(await fetch(`${api}/trees`, { method: 'POST', headers: HJ, body: JSON.stringify({ base_tree: head.tree.sha, tree: files.map(f => ({ path: f.path, mode: '100644', type: 'blob', content: f.content })) }) }), 'save of the notes');
+  const commit = await ok(await fetch(`${api}/commits`, { method: 'POST', headers: HJ, body: JSON.stringify({ message, tree: tree.sha, parents: [ref.object.sha] }) }), 'commit of the notes');
+  await ok(await fetch(`${api}/refs/heads/${GH_BRANCH}`, { method: 'PATCH', headers: HJ, body: JSON.stringify({ sha: commit.sha, force: false }) }), 'update of the branch');
+  return commit.sha;
 }
 async function pushNotes() {
   Vault.pushTimer = null;
@@ -4922,27 +4964,43 @@ async function pushNotes() {
   if (Vault.pushing) { Vault.pushAgain = true; return; }
   Vault.pushing = true; Vault.pushAgain = false; updateNotesSync();
   try {
-    for (const [name, rec] of await nfAll()) {
-      if (!rec || !rec.dirty) continue;
-      const remote = await ghNoteRead(name);
-      let env = rec.env;
-      if (remote && remote.env.updated !== rec.base && name !== '_vault.json') {
-        const mine = await vaultDecrypt(rec.env), theirs = await vaultDecrypt(remote.env);
-        const merged = name === '_index.json' ? mergeIndex(theirs, mine) : mergePaperNotes(theirs, mine);
-        env = await vaultEncrypt(merged);
-        if (name === '_index.json') Vault.index = mergeIndex(merged, Vault.index || {});
-        else {
-          const pid = name.replace(/\.json$/, '');
-          if (Vault.cache.has(pid)) Vault.cache.set(pid, merged);
-          if (_rn && _rn.id === pid) { _rn = merged; redrawAnnoLayers(); updateReaderNotesCount(); }
-          indexEntryFor(merged);
-          await nfSave('_index.json', Vault.index);   // counts now include the other device's highlights
+    for (let attempt = 0; ; attempt++) {
+      const dirty = (await nfAll()).filter(([, rec]) => rec && rec.dirty);
+      if (!dirty.length) break;
+      const out = [];
+      for (const [name, rec] of dirty) {
+        const remote = await ghNoteRead(name);
+        let env = rec.env;
+        if (remote && remote.env.updated !== rec.base && name !== '_vault.json') {
+          const mine = await vaultDecrypt(rec.env), theirs = await vaultDecrypt(remote.env);
+          const merged = name === '_index.json' ? mergeIndex(theirs, mine) : mergePaperNotes(theirs, mine);
+          env = await vaultEncrypt(merged);
+          if (name === '_index.json') Vault.index = mergeIndex(merged, Vault.index || {});
+          else {
+            const pid = name.replace(/\.json$/, '');
+            if (Vault.cache.has(pid)) Vault.cache.set(pid, merged);
+            if (_rn && _rn.id === pid) { _rn = merged; redrawAnnoLayers(); updateReaderNotesCount(); }
+            indexEntryFor(merged);
+            await nfSave('_index.json', Vault.index);   // counts include the other device's items (sent next round)
+          }
         }
+        out.push({ name, rec, env });
       }
-      const latest = await nfGet(name);
-      if (latest && latest.env.ct !== rec.env.ct) { Vault.pushAgain = true; continue; }   // edited while we worked: next round
-      const sha = await ghNoteWrite(name, env, remote ? remote.sha : null);
-      await nfPut(name, { env, sha, base: env.updated, dirty: false });
+      const papers = out.filter(o => !o.name.startsWith('_')).length;
+      try {
+        await ghCommitFiles(out.map(o => ({ path: VAULT_DIR + o.name, content: JSON.stringify(o.env) })), `Update encrypted notes (${papers} paper${papers === 1 ? '' : 's'})`);
+      } catch (e) {
+        if (e.conflict && attempt < 3) continue;   // someone else committed meanwhile: read, merge, try again
+        throw e;
+      }
+      for (const o of out) {
+        const latest = await nfGet(o.name);
+        const changedMeanwhile = latest && latest.env.ct !== o.rec.env.ct;
+        // edited while we pushed: keep it dirty, and with no base so the next round merges with what we just sent
+        await nfPut(o.name, changedMeanwhile ? { ...latest, base: null, dirty: true } : { env: o.env, sha: null, base: o.env.updated, dirty: false });
+        if (changedMeanwhile) Vault.pushAgain = true;
+      }
+      break;
     }
     Vault.lastSaved = Date.now();
   } catch (e) {
@@ -4951,9 +5009,9 @@ async function pushNotes() {
     scheduleNotesPush(30000);
   } finally {
     Vault.pushing = false;
-    if (Vault.pushAgain) scheduleNotesPush(800);
+    if (Vault.pushAgain) scheduleNotesPush(1500);
     updateNotesSync();
-    if (_reader.paper) renderReaderPanel();
+    if (_reader.paper && !_rnEditing) renderReaderPanel();
   }
 }
 window.addEventListener('online', () => scheduleNotesPush(1000));
@@ -5069,7 +5127,7 @@ async function lockNotes() {
   if (currentTab === 'library') renderLibrary();
   toast('Notes locked');
 }
-function hlLabel(c) { return (Vault.index && Vault.index.colors && Vault.index.colors[c]) || HL_DEFAULT_LABELS[c]; }
+function hlLabel(c) { if (c === 'yellow') c = 'orange'; const cs = (Vault.index && Vault.index.colors) || {}; return cs[c] || (c === 'orange' && cs.yellow) || HL_DEFAULT_LABELS[c]; }
 
 /* ---- one paper's notes ---- */
 function emptyPaperNotes(id) { return { v: 1, id, entries: [], annos: [], deleted: {}, pdf: null }; }
@@ -5102,7 +5160,21 @@ function indexEntryFor(obj) {
   if (!entry.h && !entry.c && !entry.g) delete Vault.index.papers[obj.id];
   else Vault.index.papers[obj.id] = entry;
 }
+function dropUncitedRefs(obj) {
+  const cited = new Set();
+  const scan = t => { for (const m of String(t || '').matchAll(/\[\[cite:([\w-]+)/g)) cited.add(m[1]); };
+  (obj.entries || []).forEach(e => scan(e.text));
+  (obj.annos || []).forEach(a => scan(a.note));
+  if (_rn === obj) scan(_rnDraft);
+  const now = new Date().toISOString();
+  obj.annos = (obj.annos || []).filter(a => {
+    if (a.kind !== 'ref' || cited.has(a.id)) return true;
+    obj.deleted = { ...(obj.deleted || {}), [a.id]: now };
+    return false;
+  });
+}
 async function savePaperNotes(obj) {
+  dropUncitedRefs(obj);
   Vault.cache.set(obj.id, obj);
   indexEntryFor(obj);
   await nfSave(obj.id + '.json', obj);
@@ -5121,7 +5193,7 @@ function updateNotesSync() {
 
 /* ===== ANNOTATIONS IN THE READER ===== */
 let _rn = null;          // notes object of the paper in the reader
-let _rnFilter = { colors: new Set(), notes: false, q: '' };
+let _rnFilter = { colors: new Set(), comments: false, notes: false, q: '' };
 let _rnEditing = null;   // null, 'new', or the id of the note being edited
 function annoById(id) { return _rn && (_rn.annos || []).find(a => a.id === id); }
 function newAnnoId() { return 'a' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
@@ -5136,7 +5208,7 @@ async function loadReaderNotes() {
   redrawAnnoLayers();
 }
 function updateReaderNotesCount() {
-  const n = _rn ? (_rn.annos || []).length : 0;
+  const n = _rn ? rnItems(_rn).length : 0;   // everything in the Notes list (citation anchors belong to their notes)
   document.getElementById('readerNotesCount').textContent = n ? n : '';
 }
 /* highlights are stored as fractions of the page, so they sit right at any zoom */
@@ -5151,7 +5223,7 @@ function renderAnnoLayer(pageDiv) {
   const page = +pageDiv.dataset.page;
   const list = _rn ? (_rn.annos || []).filter(a => a.page === page) : [];
   layer.innerHTML = list.map(a => a.rects.map(r =>
-    `<div class="anno-rect ${a.kind === 'note' ? 'note' : ''}" data-anno="${a.id}" style="--hc:var(--hl-${a.color || 'yellow'});left:${r[0] * 100}%;top:${r[1] * 100}%;width:${r[2] * 100}%;height:${r[3] * 100}%"></div>`).join('')).join('');
+    `<div class="anno-rect ${a.kind === 'note' ? 'note' : a.kind === 'ref' ? 'ref' : ''}" data-anno="${a.id}" style="--hc:var(--hl-${a.color || 'orange'});left:${r[0] * 100}%;top:${r[1] * 100}%;width:${r[2] * 100}%;height:${r[3] * 100}%"></div>`).join('')).join('');
   // a marker in the right margin, level with the first line, for anything that carries a comment
   let marks = pageDiv.querySelector('.annoMarks');
   if (!marks) { marks = document.createElement('div'); marks.className = 'annoMarks'; pageDiv.appendChild(marks); }
@@ -5159,7 +5231,7 @@ function renderAnnoLayer(pageDiv) {
   marks.innerHTML = list.filter(a => a.kind === 'note' || (a.note || '').trim()).sort((x, y) => x.rects[0][1] - y.rects[0][1]).map(a => {
     const y = a.rects[0][1] + a.rects[0][3] / 2;
     const slot = rows.filter(v => Math.abs(v - y) < 0.012).length; rows.push(y);
-    return `<button class="anno-mark ${a.kind === 'note' ? 'note' : ''}" data-anno="${a.id}" style="--hc:var(--hl-${a.color || 'yellow'});top:${y * 100}%;right:${6 + slot * 20}px" title="${escAttr((a.note || 'Comment').slice(0, 120))}" aria-label="Open comment" onclick="event.stopPropagation();openAnnoCard('${a.id}')" onmouseenter="markHover('${a.id}',true)" onmouseleave="markHover('${a.id}',false)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8l-4 3v-3H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg></button>`;
+    return `<button class="anno-mark ${a.kind === 'note' ? 'note' : ''}" data-anno="${a.id}" style="--hc:var(--hl-${a.color || 'orange'});top:${y * 100}%;right:${6 + slot * 20}px" title="${escAttr((a.note || 'Comment').slice(0, 120))}" aria-label="Open comment" onclick="event.stopPropagation();openAnnoCard('${a.id}')" onmouseenter="markHover('${a.id}',true)" onmouseleave="markHover('${a.id}',false)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8l-4 3v-3H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg></button>`;
   }).join('');
 }
 function markHover(id, on) { document.querySelectorAll(`.anno-rect[data-anno="${id}"]`).forEach(r => r.classList.toggle('hover', on)); }
@@ -5209,7 +5281,7 @@ function showSelBar() {
   else {
     _selPending = info;
     bar.innerHTML = HL_COLORS.map(c => `<button class="sel-dot" style="--hc:var(--hl-${c})" title="Highlight: ${escAttr(hlLabel(c))}" onmousedown="event.preventDefault()" onclick="createAnno('hl','${c}')"></button>`).join('')
-      + `<span class="sel-sep"></span><button class="sel-act" onmousedown="event.preventDefault()" onclick="createAnno('note')">Comment</button><button class="sel-act" onmousedown="event.preventDefault()" onclick="copySelQuote()">Copy quote</button>`;
+      + `<span class="sel-sep"></span><button class="sel-act sel-cite ${_rnEditing ? 'primary' : ''}" onmousedown="event.preventDefault()" onclick="citeSelection()" title="${_rnEditing ? 'Cite this in the note you are writing' : 'Start a note that cites this'}">${ICON_QUOTE}Cite</button><button class="sel-act" onmousedown="event.preventDefault()" onclick="createAnno('note')">Comment</button><button class="sel-act" onmousedown="event.preventDefault()" onclick="copySelQuote()">Copy</button>`;
   }
   const r = info.end || { right: 200, bottom: 200 };
   bar.classList.add('open');
@@ -5223,6 +5295,32 @@ function copySelQuote() {
   if (!info || info.error) return;
   navigator.clipboard.writeText(`“${info.quote}” (p. ${info.page})`).then(() => toast('Quote copied'));
   hideSelBar();
+}
+/* Cite a selection: it gets a light anchor (dotted underline) so the citation has somewhere to jump */
+async function citeSelection() {
+  const info = _selPending || selInfo();
+  if (!info || info.error) return;
+  hideSelBar();
+  if (!await vaultReady()) return;
+  if (!_rn) _rn = await paperNotes(_reader.paper.id);
+  await pinPdfVersion();
+  const now = new Date().toISOString();
+  const a = { id: newAnnoId(), kind: 'ref', color: null, page: info.page, rects: info.rects, quote: info.quote, prefix: info.prefix, suffix: info.suffix, note: '', created: now, updated: now };
+  _rn.annos = (_rn.annos || []).concat(a);
+  window.getSelection().removeAllRanges();
+  redrawAnnoLayers();
+  const tok = citeToken(a) + ' ';
+  if (_rnEditing) {
+    const t = document.getElementById('rpNotes');
+    const pos = _rnCaret != null ? Math.min(_rnCaret, _rnDraft.length) : _rnDraft.length;
+    const before = _rnDraft.slice(0, pos), after = _rnDraft.slice(pos), sep = before && !/\s$/.test(before) ? ' ' : '';
+    _rnDraft = before + sep + tok + after;
+    _rnCaret = before.length + sep.length + tok.length;
+    if (t) { t.value = _rnDraft; t.focus(); t.selectionStart = t.selectionEnd = _rnCaret; }
+    else renderReaderPanel();
+  } else {
+    await startNewNote(tok);
+  }
 }
 async function createAnno(kind, color) {
   const info = _selPending || selInfo();
@@ -5268,12 +5366,12 @@ function openAnnoCard(id, focusNote) {
   if (!a) return;
   _acId = id;
   const card = document.getElementById('annoCard');
-  card.style.setProperty('--hc', `var(--hl-${a.color || 'yellow'})`);
+  card.style.setProperty('--hc', `var(--hl-${a.color || 'orange'})`);
   card.innerHTML = `
     <div class="ac-quote">${esc(a.quote)}</div>
-    <div class="ac-meta">p. ${a.page}<span class="grow"></span>${HL_COLORS.map(c => `<button class="sel-dot ${a.kind === 'hl' && a.color === c ? 'on' : ''}" style="--hc:var(--hl-${c})" title="${escAttr(hlLabel(c))}" onclick="setAnnoColor('${id}','${c}')"></button>`).join('')}<button class="sel-act ${a.kind === 'note' ? 'on' : ''}" title="Comment only (underline)" onclick="setAnnoColor('${id}',null)">__</button></div>
+    <div class="ac-meta">p. ${a.page}<span class="grow"></span>${HL_COLORS.map(c => `<button class="sel-dot ${a.kind === 'hl' && (a.color === 'yellow' ? 'orange' : a.color) === c ? 'on' : ''}" style="--hc:var(--hl-${c})" title="${escAttr(hlLabel(c))}" onclick="setAnnoColor('${id}','${c}')"></button>`).join('')}<button class="sel-act ${a.kind === 'note' ? 'on' : ''}" title="Comment only (underline)" onclick="setAnnoColor('${id}',null)">__</button></div>
     <textarea id="acNote" placeholder="Add a comment… (Markdown and $math$ work)" oninput="acNoteInput()">${esc(a.note || '')}</textarea>
-    <div class="ac-foot"><span class="grow" id="acState">${a.kind === 'hl' ? esc(hlLabel(a.color)) : 'Comment'}</span>
+    <div class="ac-foot"><span class="grow" id="acState">${a.kind === 'hl' ? esc(hlLabel(a.color)) : a.kind === 'ref' ? 'Cited in your notes' : 'Comment'}</span>
       <button class="sel-act" onclick="citeAnno('${id}')" title="Insert a reference to this in your notes">Cite in notes</button>
       <button class="sel-act" onclick="navigator.clipboard.writeText('\\u201c' + annoById('${id}').quote + '\\u201d (p. ${a.page})').then(() => toast('Quote copied'))">Copy</button>
       <button class="sel-act danger" onclick="deleteAnno('${id}')">Delete</button></div>`;
@@ -5391,38 +5489,52 @@ function renderReaderPanel() {
     return;
   }
   const n = _rn || emptyPaperNotes(_reader.paper ? _reader.paper.id : '');
-  const annos = (n.annos || []).slice().sort((a, b) => a.page - b.page || (a.rects[0][1] - b.rects[0][1]) || (a.rects[0][0] - b.rects[0][0]));
-  const f = _rnFilter, q = f.q.toLowerCase();
-  const shown = annos.filter(a => (!f.colors.size && !f.notes) || (a.kind === 'hl' ? f.colors.has(a.color) : f.notes))
-    .filter(a => !q || (a.quote + ' ' + (a.note || '')).toLowerCase().includes(q));
-  const entries = n.entries || [];
-  const cards = entries.map(e => _rnEditing === e.id ? noteEditorHTML() : `<div class="rp-gnote ${_rnFresh === e.id ? 'fresh' : ''}" data-note="${e.id}">
-      <div class="rp-gnote-top"><span>${esc(noteDate(e))}</span><span class="grow"></span><span class="rp-item-acts"><button class="rp-icon-btn sm" onclick="editNote('${e.id}')" title="Edit note" aria-label="Edit note">${ICON_EDIT}</button><button class="rp-icon-btn sm" onclick="deleteGeneralNote('${e.id}')" title="Delete note" aria-label="Delete note">${ICON_TRASH}</button></span></div>
-      <div class="md rp-gnote-body" data-mdnote="${e.id}"></div></div>`).join('');
-  const general = (_rnEditing === 'new' ? noteEditorHTML() : '') + cards
-    + (!entries.length && _rnEditing !== 'new' ? '<div class="rp-empty">Nothing yet. Use <strong>Add note</strong> for takeaways, questions or ideas; Markdown, $math$ and citations of your highlights work.</div>' : '');
+  const items = rnItems(n);
+  const total = items.length, f = _rnFilter;
+  const anyFilter = f.colors.size || f.comments || f.notes || f.q;
+  const shown = rnFilterItems(items);
+  const chip = (on, label, click, extra) => `<button class="rp-chip ${on ? 'on' : ''}" onclick="${click}" ${extra || ''}>${label}</button>`;
   panel.innerHTML = head + `<div class="rp-scroll">
-    <section class="rp-general"><div class="rp-sec-head">Notes<span class="rp-count">${entries.length || ''}</span><span class="grow"></span>${_rnEditing === 'new' ? '' : `<button class="rp-add" onclick="startNewNote()">${ICON_PLUS}Add note</button>`}</div>${general}</section>
-    <section class="rp-annos">
-      <div class="rp-sec-head">Highlights &amp; comments<span class="grow"></span>${annos.length}</div>
-      ${annos.length ? `<div class="rp-filters">${HL_COLORS.map(c => `<button class="sel-dot ${f.colors.has(c) ? 'on' : ''}" style="--hc:var(--hl-${c})" title="${escAttr(hlLabel(c))}" onclick="toggleRnColor('${c}')"></button>`).join('')}<button class="rp-fnote ${f.notes ? 'on' : ''}" onclick="_rnFilter.notes=!_rnFilter.notes;renderReaderPanel()">comments</button><input class="rp-search" id="rpSearch" placeholder="Search quotes and comments" value="${esc(f.q)}" oninput="_rnFilter.q=this.value;renderRnList()"></div>` : ''}
-      <div class="rp-list" id="rpList"></div>
-      <div class="rp-colors">${HL_COLORS.map(c => `<button onclick="renameHlColor('${c}')" title="Rename"><i style="--hc:var(--hl-${c})"></i>${esc(hlLabel(c))}</button>`).join('')}</div>
-    </section>
+    <div class="rp-toolbar">${_rnEditing === 'new' ? '<span class="rp-count-l">New note</span>' : `<button class="rp-add" onclick="startNewNote()">${ICON_PLUS}Add note</button>`}<span class="grow"></span>
+      ${total > 1 ? `<div class="rp-seg" role="group" aria-label="Order"><button class="${_rnSort === 'page' ? 'on' : ''}" onclick="setRnSort('page')" title="Notes first, then in page order">Page</button><button class="${_rnSort === 'recent' ? 'on' : ''}" onclick="setRnSort('recent')" title="Newest first">Recent</button></div>` : ''}</div>
+    ${total ? `<div class="rp-filters">${HL_COLORS.map(c => `<button class="sel-dot ${f.colors.has(c) ? 'on' : ''}" style="--hc:var(--hl-${c})" title="${escAttr(hlLabel(c))}" aria-pressed="${f.colors.has(c)}" onclick="toggleRnColor('${c}')"></button>`).join('')}${chip(f.comments, 'Comments', "_rnFilter.comments=!_rnFilter.comments;renderReaderPanel()")}${chip(f.notes, 'Notes', "_rnFilter.notes=!_rnFilter.notes;renderReaderPanel()")}<input class="rp-search" id="rpSearch" placeholder="Search" value="${esc(f.q)}" oninput="_rnFilter.q=this.value;renderRnList()"></div>` : ''}
+    ${_rnEditing === 'new' ? noteEditorHTML() : ''}
+    <div class="rp-list" id="rpList"></div>
+    ${total ? `<div class="rp-colors">${HL_COLORS.map(c => `<button onclick="renameHlColor('${c}')" title="Rename this colour"><i style="--hc:var(--hl-${c})"></i>${esc(hlLabel(c))}</button>`).join('')}</div>` : ''}
   </div><div class="rp-foot"><span id="rpSync">${esc(_notesSyncText)}</span></div>`;
   updateNotesSync();
-  renderRnList(shown, annos.length);
-  panel.querySelectorAll('[data-mdnote]').forEach(el => { const e = entries.find(x => x.id === el.dataset.mdnote); if (e) renderNotesMarkdown(el, e.text, n); });
+  renderRnList(shown, total, anyFilter);
   _rnFresh = null;
   if (_rnEditing) {
     const t = document.getElementById('rpNotes');
-    if (t) { const had = document.activeElement === t; t.focus(); if (!had) t.selectionStart = t.selectionEnd = t.value.length; }
+    if (t) {
+      const had = document.activeElement === t;
+      t.focus();
+      if (!had) { const c = _rnCaret != null ? Math.min(_rnCaret, t.value.length) : t.value.length; t.selectionStart = t.selectionEnd = c; }
+    }
   }
+}
+/* One list: free notes (just text) and anything anchored to the paper (keyed by the quoted text) */
+let _rnSort = (() => { try { return localStorage.getItem('scholar_rn_sort') || 'page'; } catch (e) { return 'page'; } })();
+function setRnSort(v) { _rnSort = v; try { localStorage.setItem('scholar_rn_sort', v); } catch (e) {} renderReaderPanel(); }
+function rnItems(n) {
+  const notes = (n.entries || []).map(e => ({ type: 'note', id: e.id, e, created: e.created || '', page: 0, y: 0, x: 0 }));
+  const anchored = (n.annos || []).filter(a => a.kind !== 'ref').map(a => ({ type: a.kind === 'hl' ? 'hl' : 'comment', id: a.id, a, created: a.created || '', page: a.page, y: a.rects[0][1], x: a.rects[0][0] }));
+  const all = notes.concat(anchored);
+  if (_rnSort === 'recent') return all.sort((p, q) => (q.created).localeCompare(p.created));
+  return all.sort((p, q) => p.page - q.page || p.y - q.y || p.x - q.x || p.created.localeCompare(q.created));
+}
+function rnFilterItems(items) {
+  const f = _rnFilter, q = f.q.toLowerCase();
+  const typed = f.colors.size || f.comments || f.notes;
+  return items.filter(it => !typed || (it.type === 'hl' ? f.colors.has(it.a.color === 'yellow' ? 'orange' : it.a.color) : it.type === 'comment' ? f.comments : f.notes))
+    .filter(it => !q || (it.type === 'note' ? it.e.text : it.a.quote + ' ' + (it.a.note || '')).toLowerCase().includes(q));
 }
 const ICON_LOCK = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
 const ICON_CLOSE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 const ICON_EDIT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M14 6l4 4"/></svg>';
 const ICON_TRASH = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>';
+const ICON_QUOTE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 6C6.5 7 4.5 9.6 4.5 13v5h5.5v-5.5H7.2C7.3 10.6 8.3 9 10 8.2z"/><path d="M19 6c-3 1-5 3.6-5 7v5h5.5v-5.5h-2.8c.1-1.9 1.1-3.5 2.8-4.3z"/></svg>';
 const ICON_PLUS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
 const MOD_KEY = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent) ? '\u2318' : 'Ctrl';
 function noteDate(e) {
@@ -5431,21 +5543,34 @@ function noteDate(e) {
   return (e.updated && e.created && e.updated.slice(0, 16) !== e.created.slice(0, 16)) ? s + ' \u00b7 edited' : s;
 }
 function noteEditorHTML() {
-  return `<div class="rp-editor"><textarea class="rp-notes-edit" id="rpNotes" placeholder="Write a note\u2026 Markdown and $math$ work; type [[ to cite a highlight." oninput="_rnDraft = this.value; citeInput(this)" onkeydown="noteEditorKey(event)">${esc(_rnDraft)}</textarea>
+  return `<div class="rp-editor"><textarea class="rp-notes-edit" id="rpNotes" placeholder="${_rnEditing && String(_rnEditing).startsWith('a:') ? 'Your comment on this passage\u2026' : 'Write a note\u2026 Select text in the paper and press \u201c Cite, or type [[ to cite a highlight.'}" oninput="_rnDraft = this.value; _rnCaret = this.selectionStart; citeInput(this)" onkeyup="_rnCaret = this.selectionStart" onclick="_rnCaret = this.selectionStart" onkeydown="noteEditorKey(event)">${esc(_rnDraft)}</textarea>
     <div class="rp-editor-foot"><span class="rp-hint">${MOD_KEY}\u21b5 save \u00b7 Esc cancel</span><span class="grow"></span><button class="ui-btn ui-btn-secondary ui-btn-sm" onmousedown="event.preventDefault()" onclick="cancelNoteEdit()">Cancel</button><button class="ui-btn ui-btn-primary ui-btn-sm" onmousedown="event.preventDefault()" onclick="saveNoteEdit()">Save</button></div></div>`;
 }
-function renderRnList(shown, total) {
+function renderRnList(shown, total, anyFilter) {
   const list = document.getElementById('rpList');
   if (!list) return;
-  if (!shown) { renderReaderPanel(); return; }
-  if (!total) { list.innerHTML = '<div class="rp-empty">Select text in the paper to highlight it or add a comment. Everything here is encrypted.</div>'; return; }
+  if (!shown) { const n = _rn || emptyPaperNotes(''); const items = rnItems(n); shown = rnFilterItems(items); total = items.length; }
+  if (!total) { list.innerHTML = _rnEditing === 'new' ? '' : '<div class="rp-empty">Nothing yet. Select text in the paper to highlight, comment on or cite it, or use <strong>Add note</strong> for your own thoughts. Markdown and $math$ work, and everything here is encrypted.</div>'; return; }
   if (!shown.length) { list.innerHTML = '<div class="rp-empty">Nothing matches this filter.</div>'; return; }
-  list.innerHTML = shown.map(a => `<div class="rp-item ${a.kind === 'note' ? 'note' : ''}" data-id="${a.id}" style="--hc:var(--hl-${a.color || 'yellow'})" tabindex="0" onclick="if (!event.target.closest('button')) { jumpToAnno('${a.id}'); }" ondblclick="openAnnoCard('${a.id}', true)">
-      <div class="rp-item-top">p. ${a.page} · ${a.kind === 'hl' ? esc(hlLabel(a.color)) : 'Comment'}<span class="grow"></span><span class="rp-item-acts"><button onclick="openAnnoCard('${a.id}', true)">Edit</button><button onclick="citeAnno('${a.id}')">Cite</button><button onclick="deleteAnno('${a.id}')">Delete</button></span></div>
-      <div class="rp-quote">${esc(a.quote)}</div>
-      ${(a.note || '').trim() ? `<div class="rp-note md" data-md="${escAttr(a.id)}"></div>` : ''}
-    </div>`).join('');
-  list.querySelectorAll('.rp-note[data-md]').forEach(el => { const a = annoById(el.dataset.md); if (a) renderNotesMarkdown(el, a.note, _rn); });
+  const acts = (it) => {
+    const edit = `<button class="rp-icon-btn sm" onclick="${it.type === 'note' ? `editNote('${it.id}')` : `editAnnoComment('${it.id}')`}" title="${it.type === 'note' ? 'Edit note' : (it.a.note || '').trim() ? 'Edit comment' : 'Add a comment'}" aria-label="Edit">${ICON_EDIT}</button>`;
+    const cite = it.type === 'note' ? '' : `<button class="rp-icon-btn sm" onclick="citeAnno('${it.id}')" title="Cite in a note" aria-label="Cite in a note">${ICON_QUOTE}</button>`;
+    const del = `<button class="rp-icon-btn sm" onclick="${it.type === 'note' ? `deleteGeneralNote('${it.id}')` : `deleteAnno('${it.id}')`}" title="Delete" aria-label="Delete">${ICON_TRASH}</button>`;
+    return `<span class="rp-item-acts">${edit}${cite}${del}</span>`;
+  };
+  list.innerHTML = shown.map(it => {
+    const editing = _rnEditing === it.id || _rnEditing === 'a:' + it.id;
+    if (it.type === 'note') return `<div class="rp-card rp-card-note ${_rnFresh === it.id ? 'fresh' : ''}" data-id="${it.id}">
+        <div class="rp-card-top"><span>Note · ${esc(noteDate(it.e))}</span><span class="grow"></span>${editing ? '' : acts(it)}</div>
+        ${editing ? noteEditorHTML() : `<div class="md rp-card-body" data-md-note="${it.id}"></div>`}</div>`;
+    const a = it.a, label = a.kind === 'hl' ? esc(hlLabel(a.color)) : 'Comment';
+    return `<div class="rp-card rp-card-anchor ${a.kind === 'note' ? 'is-comment' : ''} ${_rnFresh === it.id ? 'fresh' : ''}" data-id="${it.id}" style="--hc:var(--hl-${a.color || 'orange'})" tabindex="0" onclick="if (!event.target.closest('button, textarea, a, .cite-chip')) jumpToAnno('${it.id}')">
+        <div class="rp-card-top"><span>p. ${a.page} · ${label}</span><span class="grow"></span>${editing ? '' : acts(it)}</div>
+        <div class="rp-quote">${esc(a.quote)}</div>
+        ${editing ? noteEditorHTML() : (a.note || '').trim() ? `<div class="md rp-card-body" data-md-anno="${it.id}"></div>` : ''}</div>`;
+  }).join('');
+  list.querySelectorAll('[data-md-note]').forEach(el => { const e = (_rn.entries || []).find(x => x.id === el.dataset.mdNote); if (e) renderNotesMarkdown(el, e.text, _rn); });
+  list.querySelectorAll('[data-md-anno]').forEach(el => { const a = annoById(el.dataset.mdAnno); if (a) renderNotesMarkdown(el, a.note, _rn); });
 }
 function toggleRnColor(c) { _rnFilter.colors.has(c) ? _rnFilter.colors.delete(c) : _rnFilter.colors.add(c); renderReaderPanel(); }
 async function unlockFromPanel() { if (await vaultReady()) { await loadReaderNotes(); } }
@@ -5458,12 +5583,12 @@ async function renameHlColor(c) {
   renderReaderPanel();
 }
 /* Notes: '+ Add note' opens an editor card; Save (or Cmd/Ctrl+Enter) keeps it, Cancel (or Esc) drops it */
-let _rnDraft = '', _rnFresh = null;
+let _rnDraft = '', _rnFresh = null, _rnCaret = null;
 async function startNewNote(prefill) {
   if (!await vaultReady()) return;
   if (!_rn) _rn = await paperNotes(_reader.paper.id);
-  if (_rnEditing && _rnDraft.trim()) await saveNoteEdit(true);
-  _rnEditing = 'new'; _rnDraft = prefill || '';
+  if (_rnEditing && (_rnDraft.trim() || String(_rnEditing).startsWith('a:'))) await saveNoteEdit(true);
+  _rnEditing = 'new'; _rnDraft = prefill || ''; _rnCaret = null;
   if (!document.getElementById('reader').classList.contains('panel-open')) toggleReaderPanel(true);
   else renderReaderPanel();
 }
@@ -5474,13 +5599,24 @@ async function editNote(id) {
   _rnEditing = id; _rnDraft = e.text;
   renderReaderPanel();
 }
-function cancelNoteEdit() { _rnEditing = null; _rnDraft = ''; closeCiteDD(); renderReaderPanel(); }
+function cancelNoteEdit() { _rnEditing = null; _rnDraft = ''; _rnCaret = null; closeCiteDD(); renderReaderPanel(); }
+async function editAnnoComment(id) {
+  const a = annoById(id);
+  if (!a) return;
+  closeAnnoCard();
+  if (_rnEditing && _rnDraft.trim() && _rnEditing !== 'a:' + id) await saveNoteEdit(true);
+  _rnEditing = 'a:' + id; _rnDraft = a.note || ''; _rnCaret = null;
+  if (!document.getElementById('reader').classList.contains('panel-open')) toggleReaderPanel(true); else renderReaderPanel();
+}
 async function saveNoteEdit(quiet) {
   if (!_rnEditing || !_rn) return;
   const text = _rnDraft.trim(), now = new Date().toISOString(), editing = _rnEditing;
-  _rnEditing = null; _rnDraft = ''; closeCiteDD();
+  _rnEditing = null; _rnDraft = ''; _rnCaret = null; closeCiteDD();
   _rn.entries = _rn.entries || [];
-  if (editing === 'new') {
+  if (String(editing).startsWith('a:')) {
+    const a = annoById(editing.slice(2));
+    if (a && (a.note || '') !== text) { a.note = text; a.updated = now; _rnFresh = a.id; }
+  } else if (editing === 'new') {
     if (text) { const e = { id: newNoteId(), text, created: now, updated: now }; _rn.entries.push(e); _rnFresh = e.id; }
   } else {
     const e = _rn.entries.find(x => x.id === editing);
@@ -5488,9 +5624,10 @@ async function saveNoteEdit(quiet) {
     if (e && e.text !== text) { e.text = text; e.updated = now; _rnFresh = e.id; }
   }
   await savePaperNotes(_rn);
+  redrawAnnoLayers(); updateReaderNotesCount();
   if (!quiet) renderReaderPanel();
 }
-async function finishNotesEdit() { if (_rnEditing) { if (_rnDraft.trim()) await saveNoteEdit(true); else { _rnEditing = null; _rnDraft = ''; } } }
+async function finishNotesEdit() { if (_rnEditing) { if (_rnDraft.trim() || String(_rnEditing).startsWith('a:')) await saveNoteEdit(true); else { _rnEditing = null; _rnDraft = ''; } } }
 function noteEditorKey(e) {
   if (_citeCtx && document.getElementById('citeDD').classList.contains('open')) { citeKey(e); if (e.defaultPrevented) return; }
   if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); saveNoteEdit(); }
@@ -5499,12 +5636,16 @@ function noteEditorKey(e) {
 async function deleteGeneralNote(id) {
   const e = _rn && (_rn.entries || []).find(x => x.id === id);
   if (!e) return;
+  const refs = (_rn.annos || []).filter(a => a.kind === 'ref' && e.text.includes('cite:' + a.id));   // Undo brings these back too
   _rn.entries = _rn.entries.filter(x => x.id !== id);
   _rn.deleted = { ...(_rn.deleted || {}), [id]: new Date().toISOString() };
   await savePaperNotes(_rn);
-  renderReaderPanel();
+  redrawAnnoLayers(); updateReaderNotesCount(); renderReaderPanel();
   toast('Note deleted', async () => {
-    delete _rn.deleted[id]; e.updated = new Date().toISOString();
+    const now = new Date().toISOString();
+    refs.forEach(a => { delete _rn.deleted[a.id]; a.updated = now; if (!_rn.annos.some(x => x.id === a.id)) _rn.annos.push(a); });
+    redrawAnnoLayers();
+    delete _rn.deleted[id]; e.updated = now;
     _rn.entries = _rn.entries.concat(e).sort((x, y) => (x.created || '').localeCompare(y.created || ''));
     _rnFresh = id;
     await savePaperNotes(_rn); renderReaderPanel();
@@ -5520,11 +5661,11 @@ async function citeAnno(id) {
   const tok = citeToken(a) + ' ';
   const t = document.getElementById('rpNotes');
   if (!_rnEditing || !t) { await startNewNote(tok); return; }
-  const pos = t.selectionStart ?? t.value.length;
+  const pos = _rnCaret != null ? Math.min(_rnCaret, t.value.length) : t.value.length;
   const before = t.value.slice(0, pos), after = t.value.slice(pos), sep = before && !/\s$/.test(before) ? ' ' : '';
   t.value = before + sep + tok + after;
-  _rnDraft = t.value;
-  t.focus(); t.selectionStart = t.selectionEnd = before.length + sep.length + tok.length;
+  _rnDraft = t.value; _rnCaret = before.length + sep.length + tok.length;
+  t.focus(); t.selectionStart = t.selectionEnd = _rnCaret;
 }
 let _citeCtx = null;
 function citeInput(t) {
@@ -5535,7 +5676,7 @@ function citeInput(t) {
   if (!opts.length) { closeCiteDD(); return; }
   _citeCtx = { t, start: upto.length - m[0].length, end: t.selectionStart, opts, i: 0 };
   let dd = document.getElementById('citeDD');
-  dd.innerHTML = opts.map((a, i) => `<button class="${i === 0 ? 'on' : ''}" style="--hc:var(--hl-${a.color || 'yellow'})" onmousedown="event.preventDefault()" onclick="pickCite(${i})">p. ${a.page} · ${esc(a.quote.slice(0, 90))}</button>`).join('');
+  dd.innerHTML = opts.map((a, i) => `<button class="${i === 0 ? 'on' : ''}" style="--hc:var(--hl-${a.color || 'orange'})" onmousedown="event.preventDefault()" onclick="pickCite(${i})">p. ${a.page} · ${esc(a.quote.slice(0, 90))}</button>`).join('');
   const r = t.getBoundingClientRect();
   dd.style.left = Math.max(12, r.left) + 'px'; dd.style.top = Math.min(window.innerHeight - 270, r.bottom + 6) + 'px';
   dd.classList.add('open');
@@ -5585,7 +5726,7 @@ async function renderNotesMarkdown(el, text, notesObj) {
     .replace(/\[\[cite:([\w-]+)([^\]]*)\]\]/g, (m, id, rest) => {
       const a = notesObj && (notesObj.annos || []).find(x => x.id === id);
       const label = a ? `p. ${a.page} “${a.quote.length > 70 ? a.quote.slice(0, 67).trim() + '…' : a.quote}”` : (rest.trim().replace(/^p\.(\d+)/, 'p. $1') || 'a deleted highlight');
-      return slot(`<button class="cite-chip ${a ? '' : 'gone'}" ${a ? `style="--hc:var(--hl-${a.color || 'yellow'})" data-anno="${a.id}"` : 'title="This highlight was deleted"'}>${esc(label)}</button>`);
+      return slot(`<button class="cite-chip ${a ? '' : 'gone'}" ${a ? `style="--hc:var(--hl-${a.color || 'orange'})" data-anno="${a.id}"` : 'title="This highlight was deleted"'}>${esc(label)}</button>`);
     })
     .replace(/\$\$([\s\S]+?)\$\$/g, (m, tex) => slot(katex.renderToString(tex, { displayMode: true, throwOnError: false })))
     .replace(/(^|[^\\$])\$([^\s$](?:[^$\n]*?[^\s$])?)\$/g, (m, pre, tex) => pre + slot(katex.renderToString(tex, { throwOnError: false })));
