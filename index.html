@@ -3870,7 +3870,7 @@ function renderLibrary() {
   const read = allPapers.filter(p => readSet.has(paperKey(p)));
   sortPapers(read);
   const listNames = Object.keys(libraryLists);
-  const noted = Vault.index ? allPapers.filter(p => Vault.index.papers[p.id]) : [];
+  const noted = Vault.index ? allPapers.filter(p => hasNotesIx(p.id)) : [];
   sortPapers(noted);
 
   const uploads = uploadedPapers();
@@ -5656,6 +5656,7 @@ async function afterUnlock() {
   scheduleNotesPush(500);   // anything left unpushed from an earlier session
   if (currentTab === 'library') renderLibrary();
   if (_paperViewActive) { const p = allPapers.find(x => location.hash === '#paper/' + encodeURIComponent(x.id)); if (p) renderPaperDetail(p); }
+  setTimeout(() => reconcileNotesIndex().catch(() => {}), 3000);   // after the page has what it needs
 }
 async function lockNotes() {
   await closeAnnoCard();   // the open comment is settled (kept, restored or discarded) while the key is still here
@@ -5735,12 +5736,32 @@ async function revalidatePaperNotes(id, seen) {
   if (_rn && _rn === cur) { _rn = obj; updateReaderNotesCount(); redrawAnnoLayers(); renderReaderPanel(); }
   if (_paperViewActive && location.hash === '#paper/' + encodeURIComponent(id)) { const p = allPapers.find(x => x.id === id); if (p) renderPaperDetail(p); }
 }
-function indexEntryFor(obj) {
+/* What the index says about a paper: counts of highlights, comments and notes (chats and citation anchors don't count) */
+function indexCounts(obj) {
   const live = (obj.annos || []);
-  const entry = { h: live.filter(a => a.kind === 'hl').length, c: live.filter(a => a.kind === 'note' || (a.note || '').trim()).length, g: (obj.entries || []).length, updated: new Date().toISOString() };
+  return { h: live.filter(a => a.kind === 'hl').length, c: live.filter(a => a.kind === 'note' || (a.note || '').trim()).length, g: (obj.entries || []).length };
+}
+function indexEntryFor(obj) {
   Vault.index = Vault.index || { v: 1, papers: {}, colors: {} };
-  if (!entry.h && !entry.c && !entry.g) delete Vault.index.papers[obj.id];
-  else Vault.index.papers[obj.id] = entry;
+  // a paper left with nothing keeps a dated zero entry: simply deleting it would be undone by the next merge with GitHub's copy
+  Vault.index.papers[obj.id] = { ...indexCounts(obj), updated: new Date().toISOString() };
+}
+function hasNotesIx(id) { const e = Vault.index && Vault.index.papers[id]; return !!(e && (e.h || e.c || e.g)); }
+/* Counts left stale by earlier versions (an entry that came back after its notes were removed) are corrected
+   from each paper's own file on GitHub; a file that can't be fetched is left alone */
+async function reconcileNotesIndex() {
+  if (!Vault.key || !Vault.index) return;
+  let changed = false;
+  for (const id of Object.keys(Vault.index.papers).filter(hasNotesIx)) {
+    let obj;
+    try { const rec = await nfLoad(id + '.json'); if (!rec) continue; obj = normalizeNotes(await vaultDecrypt(rec.env)); } catch (e) { continue; }
+    if (!Vault.key || !Vault.index) return;
+    const n = indexCounts(obj), e = Vault.index.papers[id];
+    if (e && (n.h !== e.h || n.c !== e.c || n.g !== e.g)) { Vault.index.papers[id] = { ...n, updated: new Date().toISOString() }; changed = true; }
+  }
+  if (!changed) return;
+  await nfSave('_index.json', Vault.index);
+  if (currentTab === 'library') renderLibrary();
 }
 /* Citation anchors ('ref') exist only to give a citation somewhere to jump. Invariants:
    - an anchor made while drafting belongs to the draft (_rnPendingRefs), not to the saved notes; saving
@@ -6925,10 +6946,9 @@ let _libSent = '';
 function libraryTSV() {
   const clean = v => String(v || '').replace(/[\t\r\n]+/g, ' ').trim();
   const opened = new Map(recentReads().map(r => [r.id, r.t]));
-  const noted = (Vault.index && Vault.index.papers) || {};
   const day = t => new Date(t).toISOString().slice(0, 10);
   return 'id\ttitle\tauthors\tdate\tvenue\ttopics\tsummary\tflags\n' + uploadedPapers().concat(allPapers.filter(p => !isHidden(p))).map(p => [p.id, p.title, shortQuote(p.authors, 160), p.publishing_date, p.venue, (p.theme_groups || '').replace(/\|/g, ', '), p.headline,
-    [p.uploaded && 'uploaded by me for review (confidential)', p.is_starred === 'true' && 'starred', p.is_read === 'true' && 'read', p.user_lists && 'lists: ' + p.user_lists.replace(/\|/g, ', '), noted[p.id] && 'has my notes', opened.has(p.id) && 'opened ' + day(opened.get(p.id)), p.date_found && 'added ' + p.date_found].filter(Boolean).join('; ')].map(clean).join('\t')).join('\n');
+    [p.uploaded && 'uploaded by me for review (confidential)', p.is_starred === 'true' && 'starred', p.is_read === 'true' && 'read', p.user_lists && 'lists: ' + p.user_lists.replace(/\|/g, ', '), hasNotesIx(p.id) && 'has my notes', opened.has(p.id) && 'opened ' + day(opened.get(p.id)), p.date_found && 'added ' + p.date_found].filter(Boolean).join('; ')].map(clean).join('\t')).join('\n');
 }
 async function syncLibrary() {
   const tsv = libraryTSV();
