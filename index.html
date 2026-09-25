@@ -1489,6 +1489,11 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
    action rail and the toast lifted above it while it shows. */
 .save-bar { top: auto; right: auto; bottom: 24px; left: 24px; transform: translateY(20px); max-width: 280px; }
 .save-bar.visible { transform: translateY(0); }
+/* up to laptop widths a centred toast would sit on the save bar (bottom-left): toasts rise above it */
+@media (min-width: 701px) and (max-width: 1280px) {
+  body:has(.save-bar.visible) .toast { bottom: calc(160px + env(safe-area-inset-bottom, 0px)); }
+  body:has(.save-bar.visible) .toast:not(.show) { transform: translateX(-50%) translateY(260px); }
+}
 @media (max-width: 700px) {
   .save-bar { left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); max-width: none; flex-wrap: nowrap; padding: 10px 12px; }
   .save-bar .save-bar-msg { margin-bottom: 0; padding-right: 0; }
