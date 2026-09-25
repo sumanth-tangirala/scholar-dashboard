@@ -751,7 +751,12 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .anno-rect:not(.note) { box-sizing: content-box; padding: 0 3px; margin-left: -3px; border-radius: 3px; }   /* a little room either side of the words */
 .reader:not(.dark) .anno-rect { mix-blend-mode: multiply; }   /* opacity from .anno-rect, so .hover/.flash still apply */
 .anno-rect.note { background: none; opacity: 1; border-bottom: 2px dashed var(--note-line, var(--accent)); border-radius: 0; mix-blend-mode: normal !important; }
-.anno-rect.flash { opacity: 0.75; box-shadow: 0 0 0 2px var(--hc, var(--accent)); }
+.anno-rect.flash { animation: hl-pulse 0.8s cubic-bezier(0.2, 0.7, 0.3, 1); }   /* jumped to: one soft pulse (quick rise, slow ease back), ending exactly as it was */
+.anno-rect.note.flash { animation-name: note-pulse; }
+.anno-rect.ref.flash { animation-name: ref-pulse; }
+@keyframes hl-pulse { 0% { opacity: 0.38; } 18% { opacity: 0.85; } 100% { opacity: 0.38; } }
+@keyframes note-pulse { 0% { background-color: transparent; } 18% { background-color: color-mix(in srgb, var(--note-line, #8aa4f0) 28%, transparent); } 100% { background-color: transparent; } }
+@keyframes ref-pulse { 0% { background-color: var(--ref-tint); } 18% { background-color: color-mix(in srgb, var(--note-line, #8aa4f0) 36%, transparent); } 100% { background-color: var(--ref-tint); } }
 .anno-rect.hover { opacity: 0.6; }
 .anno-rect.note.hover { opacity: 1; border-bottom-style: solid; }
 .anno-rect.ref.hover { opacity: 1; box-shadow: inset 0 -1px 0 var(--note-line, var(--accent)); }
@@ -839,7 +844,7 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .sel-act.primary { color: var(--accent); background: rgba(251,177,60,0.12); }
 .sel-act.primary:hover { background: rgba(251,177,60,0.2); color: var(--accent); }
 .rp-icon-btn svg path[d^="M9.5"] { fill: currentColor; stroke: none; }
-.anno-rect.ref { background: var(--ref-tint, rgba(251,177,60,0.2)); border-bottom: 2px solid var(--note-line, var(--accent)); border-radius: 2px 2px 0 0; mix-blend-mode: normal !important; }
+.anno-rect.ref { background: var(--ref-tint, rgba(251,177,60,0.2)); border-bottom: 1.5px solid var(--note-line, var(--accent)); border-radius: 2px 2px 0 0; mix-blend-mode: normal !important; }
 /* lines (comments, citations) are not translucent fills: the highlight opacity rules must not fade them */
 .reader .anno-rect.note, .reader .anno-rect.ref, .reader:not(.dark) .anno-rect.note, .reader:not(.dark) .anno-rect.ref { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { .rp-card.fresh { animation: none; } }
@@ -961,7 +966,7 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .anno-rect { transition: opacity 0.2s, box-shadow 0.2s; }
 @media (prefers-reduced-motion: reduce) {
   .vault-overlay.open, .vault-overlay.open .vault-box, .sel-bar.open, .anno-card.open, .cite-dd.open, .reader.panel-open .reader-panel,
-  .anno-rect.fresh, .anno-mark.fresh, .rp-item.fresh { animation: none; }
+  .anno-rect.fresh, .anno-mark.fresh, .rp-item.fresh, .anno-rect.flash { animation: none; }
 }
 .pd-note { padding: 10px 0 12px; border-top: 1px solid var(--border-subtle, rgba(255,255,255,0.06)); }
 .pd-note:first-of-type { border-top: none; padding-top: 0; }
@@ -5788,10 +5793,17 @@ function jumpToAnno(id) {
   const body = document.getElementById('readerBody');
   const pg = body.querySelector(`.reader-page[data-page="${a.page}"]`);
   if (!pg) return;
-  body.scrollTo({ top: pg.offsetTop + a.rects[0][1] * pg.offsetHeight - body.clientHeight * 0.3, behavior: 'smooth' });
-  setTimeout(() => {
-    document.querySelectorAll(`.anno-rect[data-anno="${id}"]`).forEach(r => { r.classList.remove('flash'); void r.offsetWidth; r.classList.add('flash'); setTimeout(() => r.classList.remove('flash'), 1400); });
-  }, 450);
+  const top = Math.max(0, pg.offsetTop + a.rects[0][1] * pg.offsetHeight - body.clientHeight * 0.3);
+  const blink = () => document.querySelectorAll(`.anno-rect[data-anno="${id}"]`).forEach(r => {
+    r.classList.remove('flash'); void r.offsetWidth; r.classList.add('flash');
+    r.addEventListener('animationend', () => r.classList.remove('flash'), { once: true });
+  });
+  if (Math.abs(body.scrollTop - top) < 4) { blink(); return; }   // already there
+  // blink once the scroll has arrived (scrollend where supported, else a fallback)
+  let done = false; const go = () => { if (!done) { done = true; blink(); } };
+  body.addEventListener('scrollend', go, { once: true });
+  setTimeout(go, 900);
+  body.scrollTo({ top, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
 }
 
 /* --- reader events: selection toolbar, clicks on highlights --- */
