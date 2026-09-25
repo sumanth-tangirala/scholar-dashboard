@@ -679,6 +679,8 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 #readerDarkBtn[aria-pressed="true"] { color: var(--accent); }
 .reader-body { flex: 1; overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 .reader-body:focus { outline: none; }
+/* no PDF on screen (loading, or the picker): only the PDF's own controls go; Notes stays reachable */
+.reader.no-doc .reader-pageno, .reader.no-doc .reader-zoom, .reader.no-doc #readerDarkBtn, .reader.no-doc .reader-change, .reader.no-doc #readerExternal { visibility: hidden; }
 .reader-pages { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; padding: 18px 12px 60px; width: max-content; min-width: 100%; box-sizing: border-box; }
 .reader-page { position: relative; background: #fff; box-shadow: 0 2px 18px rgba(0,0,0,0.5); flex-shrink: 0; }
 .reader-page canvas { display: block; }
@@ -1527,7 +1529,7 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
       </span>
       <button class="reader-btn" id="readerDarkBtn" onclick="toggleReaderDark()" title="Dark pages" aria-pressed="false">&#9680;</button>
       <button class="reader-btn reader-text" id="readerNotesBtn" onclick="toggleReaderPanel()" title="Notes, highlights and comments" aria-pressed="false">Notes <span class="rn-count" id="readerNotesCount"></span></button>
-      <button class="reader-btn reader-text" onclick="openPdfChange()" title="Use a different PDF for this paper">Change PDF</button>
+      <button class="reader-btn reader-text reader-change" onclick="openPdfChange()" title="Use a different PDF for this paper">Change PDF</button>
       <a class="reader-btn reader-text" id="readerExternal" target="_blank" rel="noopener" title="Open the PDF in a new tab">Open &#8599;</a>
     </div>
   </div>
@@ -4613,7 +4615,7 @@ async function showReader(id) {
 function readerStatus(html) { document.getElementById('readerBody').innerHTML = `<div class="reader-status">${html}</div>`; }
 async function loadIntoReader(p, source, isLocal) {
   const token = ++_reader.token;
-  document.getElementById('readerTools').style.visibility = 'hidden';
+  document.getElementById('reader').classList.add('no-doc');
   readerStatus('<div class="reader-spin"></div>Loading the PDF…');
   try {
     const lib = await loadPdfJs();
@@ -4623,7 +4625,7 @@ async function loadIntoReader(p, source, isLocal) {
     _reader.doc = doc; _reader.local = isLocal;
     const ext = document.getElementById('readerExternal');
     if (source.url) { ext.href = source.url; ext.style.display = ''; } else ext.style.display = 'none';
-    document.getElementById('readerTools').style.visibility = '';
+    document.getElementById('reader').classList.remove('no-doc');
     await layoutReader(true);            // the paper first...
     await ensureReaderNotes();           // ...then the notes
     checkPdfFingerprint();
@@ -4819,7 +4821,7 @@ async function showPdfPicker(p, why, detail) {
     if (_reader.obs) _reader.obs.disconnect();
     if (_reader.far) _reader.far.disconnect();
     if (_reader.doc) { _reader.doc.destroy(); _reader.doc = null; }
-    document.getElementById('readerTools').style.visibility = 'hidden';
+    document.getElementById('reader').classList.add('no-doc');
   }
   const hasLocal = !!(await localPdfGet(p.id));
   const head = why === 'none' ? 'No PDF to read here yet'
@@ -5887,7 +5889,7 @@ function renderRnList(shown, total, anyFilter) {
   const list = document.getElementById('rpList');
   if (!list) return;
   if (!shown) { const n = _rn || emptyPaperNotes(''); const items = rnItems(n); shown = rnFilterItems(items); total = items.length; }
-  if (!total) { list.innerHTML = _rnEditing === 'new' ? '' : '<div class="rp-empty">Nothing yet. Select text in the paper to highlight, comment on or cite it, or use <strong>Add note</strong> for your own thoughts. Markdown and $math$ work, and everything here is encrypted.</div>'; return; }
+  if (!total) { list.innerHTML = _rnEditing === 'new' ? '' : (_reader.doc ? '<div class="rp-empty">Nothing yet. Select text in the paper to highlight, comment on or cite it, or use <strong>Add note</strong> for your own thoughts. Markdown and $math$ work, and everything here is encrypted.</div>' : '<div class="rp-empty">Nothing yet. Once a PDF is open here you can highlight, comment on and cite it; until then, use <strong>Add note</strong> for your own thoughts. Everything here is encrypted.</div>'); return; }
   if (!shown.length) { list.innerHTML = '<div class="rp-empty">Nothing matches this filter.</div>'; return; }
   const acts = (it) => {
     const edit = `<button class="rp-icon-btn sm" onclick="${it.type === 'note' ? `editNote('${it.id}')` : `editAnnoComment('${it.id}')`}" title="${it.type === 'note' ? 'Edit note' : (it.a.note || '').trim() ? 'Edit comment' : 'Add a comment'}" aria-label="Edit">${ICON_EDIT}</button>`;
