@@ -4578,7 +4578,7 @@ function openReader(key) {
   location.hash = '#read/' + encodeURIComponent(key);
 }
 function closeReader() {
-  if (history.length > 1 && _reader.under !== null) history.back();
+  if (history.length > 1 && _reader.under !== null) history.go(_reader.notesStep && /\/notes$/.test(location.hash) ? -2 : -1);   // over the notes step too
   else location.hash = '#paper/' + encodeURIComponent(_reader.paper ? paperKey(_reader.paper) : '');
 }
 function hideReader() {
@@ -5812,9 +5812,21 @@ function jumpToAnno(id) {
 })();
 
 /* ===== NOTES PANEL ===== */
+/* On a phone the notes panel covers the paper, so it is a step of its own: opening it adds a history
+   entry (#read/<id>/notes) and Back closes it, like the Change PDF dialog. On wider screens it's a side panel. */
+function readerPhone() { return window.matchMedia('(max-width: 700px)').matches; }
 function toggleReaderPanel(force) {
   const r = document.getElementById('reader');
   const open = typeof force === 'boolean' ? force : !r.classList.contains('panel-open');
+  if (readerPhone() && _reader.paper && r.classList.contains('open')) {
+    const onNotes = /\/notes$/.test(location.hash);
+    if (open && !onNotes) { _reader.notesStep = true; location.hash = '#read/' + encodeURIComponent(_reader.paper.id) + '/notes'; return; }
+    if (!open && onNotes) { if (_reader.notesStep) history.back(); else location.hash = '#read/' + encodeURIComponent(_reader.paper.id); return; }
+  }
+  setReaderPanel(open);
+}
+function setReaderPanel(open) {
+  const r = document.getElementById('reader');
   r.classList.toggle('panel-open', open);
   document.getElementById('readerNotesBtn').setAttribute('aria-pressed', open ? 'true' : 'false');
   try { localStorage.setItem('scholar_reader_panel', open ? '1' : '0'); } catch (e) {}
@@ -6774,13 +6786,19 @@ function applyHash() {
   // PDF reader sits over whatever was on screen
   if (hash.startsWith('read/')) {
     let id = decodeURIComponent(hash.slice(5));
-    const wantPdf = /\/pdf$/.test(id);
+    const wantPdf = /\/pdf$/.test(id), wantNotes = /\/notes$/.test(id);
     if (wantPdf) id = id.slice(0, -4);
+    if (wantNotes) id = id.slice(0, -6);
+    if (!wantNotes) _reader.notesStep = false;
     if (id) {
       const same = document.getElementById('reader').classList.contains('open') && _reader.paper && _reader.paper.id === id;
-      if (same) { if (wantPdf) showPdfModal(); else hidePdfModal(); return; }
+      if (same) {
+        if (wantPdf) showPdfModal(); else hidePdfModal();
+        if (wantNotes || readerPhone()) setReaderPanel(wantNotes);   // phone: the notes step decides; desktop: a /notes link opens it
+        return;
+      }
       hidePdfModal();
-      showReader(id).then(() => { if (wantPdf && _reader.doc) showPdfModal(); });
+      showReader(id).then(() => { if (wantPdf && _reader.doc) showPdfModal(); if (wantNotes) setReaderPanel(true); });
       return;
     }
   }
