@@ -5393,6 +5393,8 @@ function updateNotesSync() {
 let _rn = null;          // notes object of the paper in the reader
 let _rnFilter = { colors: new Set(), comments: false, notes: false, q: '' };
 let _rnEditing = null;   // null, 'new', or the id of the note being edited
+/* An annotation's colour: highlights use their colour; comments and cited passages are navy (their line colour) */
+function annoHc(a) { return a && a.kind === 'hl' ? `var(--hl-${a.color === 'yellow' ? 'orange' : a.color || 'orange'})` : 'var(--note-line, #8aa4f0)'; }
 function annoById(id) { return _rn && ((_rn.annos || []).find(a => a.id === id) || _rnPendingRefs.find(a => a.id === id) || (_acPending && _acPending.id === id ? _acPending : null)); }
 function newAnnoId() { return 'a' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 /* The open paper's notes are in one of three states, changed only by setRnState():
@@ -5452,7 +5454,7 @@ function renderAnnoLayer(pageDiv) {
   const page = +pageDiv.dataset.page;
   const list = visibleAnnos().filter(a => a.page === page);
   layer.innerHTML = list.map(a => a.rects.map(r =>
-    `<div class="anno-rect ${a.kind === 'note' ? 'note' : a.kind === 'ref' ? 'ref' : ''}" data-anno="${a.id}" style="--hc:var(--hl-${a.color || 'orange'});left:${r[0] * 100}%;top:${r[1] * 100}%;width:${r[2] * 100}%;height:${r[3] * 100}%"></div>`).join('')).join('');
+    `<div class="anno-rect ${a.kind === 'note' ? 'note' : a.kind === 'ref' ? 'ref' : ''}" data-anno="${a.id}" style="--hc:${annoHc(a)};left:${r[0] * 100}%;top:${r[1] * 100}%;width:${r[2] * 100}%;height:${r[3] * 100}%"></div>`).join('')).join('');
   // a marker in the right margin, level with the first line, for anything that carries a comment
   let marks = pageDiv.querySelector('.annoMarks');
   if (!marks) { marks = document.createElement('div'); marks.className = 'annoMarks'; pageDiv.appendChild(marks); }
@@ -5460,7 +5462,7 @@ function renderAnnoLayer(pageDiv) {
   marks.innerHTML = list.filter(a => a.kind === 'note' || (a.note || '').trim()).sort((x, y) => x.rects[0][1] - y.rects[0][1]).map(a => {
     const y = a.rects[0][1] + a.rects[0][3] / 2;
     const slot = rows.filter(v => Math.abs(v - y) < 0.012).length; rows.push(y);
-    return `<button class="anno-mark ${a.kind === 'note' ? 'note' : ''}" data-anno="${a.id}" style="--hc:var(--hl-${a.color || 'orange'});top:${y * 100}%;right:${6 + slot * 20}px" title="${escAttr((a.note || 'Comment').slice(0, 120))}" aria-label="Open comment" onclick="event.stopPropagation();openAnnoCard('${a.id}', true)" onmouseenter="markHover('${a.id}',true)" onmouseleave="markHover('${a.id}',false)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8l-4 3v-3H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg></button>`;
+    return `<button class="anno-mark ${a.kind === 'note' ? 'note' : ''}" data-anno="${a.id}" style="--hc:${annoHc(a)};top:${y * 100}%;right:${6 + slot * 20}px" title="${escAttr((a.note || 'Comment').slice(0, 120))}" aria-label="Open comment" onclick="event.stopPropagation();openAnnoCard('${a.id}', true)" onmouseenter="markHover('${a.id}',true)" onmouseleave="markHover('${a.id}',false)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8l-4 3v-3H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg></button>`;
   }).join('');
 }
 function markHover(id, on) { document.querySelectorAll(`.anno-rect[data-anno="${id}"]`).forEach(r => r.classList.toggle('hover', on)); }
@@ -5603,7 +5605,7 @@ function openAnnoCard(id, focusNote) {
   if (_acId !== id) _acOrigin = { id, kind: a.kind, color: a.color, note: a.note || '' };
   _acId = id;
   const card = document.getElementById('annoCard');
-  card.style.setProperty('--hc', `var(--hl-${a.color || 'orange'})`);
+  card.style.setProperty('--hc', annoHc(a));
   // minimal: the passage is already visible on the page, so the card is just controls and a growing one-line box
   const cur = a.kind === 'hl' ? (a.color === 'yellow' ? 'orange' : a.color) : null;
   card.innerHTML = `
@@ -5870,7 +5872,7 @@ function renderRnList(shown, total, anyFilter) {
         <div class="rp-card-top"><span>Note · ${esc(noteDate(it.e))}</span><span class="grow"></span>${editing ? '' : acts(it)}</div>
         ${editing ? noteEditorHTML() : `<div class="md rp-card-body" data-md-note="${it.id}"></div>`}</div>`;
     const a = it.a, label = a.kind === 'hl' ? esc(hlLabel(a.color)) : 'Comment';
-    return `<div class="rp-card rp-card-anchor ${a.kind === 'note' ? 'is-comment' : ''} ${_rnFresh === it.id ? 'fresh' : ''}" data-id="${it.id}" style="--hc:var(--hl-${a.color || 'orange'})" tabindex="0" onclick="if (!event.target.closest('button, textarea, a, .cite-chip')) jumpToAnno('${it.id}')">
+    return `<div class="rp-card rp-card-anchor ${a.kind === 'note' ? 'is-comment' : ''} ${_rnFresh === it.id ? 'fresh' : ''}" data-id="${it.id}" style="--hc:${annoHc(a)}" tabindex="0" onclick="if (!event.target.closest('button, textarea, a, .cite-chip')) jumpToAnno('${it.id}')">
         <div class="rp-card-top"><span>p. ${a.page} · ${label}</span><span class="grow"></span>${editing ? '' : acts(it)}</div>
         <div class="rp-quote">${esc(a.quote)}</div>
         ${editing ? noteEditorHTML() : (a.note || '').trim() ? `<div class="md rp-card-body" data-md-anno="${it.id}"></div>` : ''}</div>`;
@@ -5984,7 +5986,7 @@ function citePillHTML(tok, id, rest, notesObj, editable) {
   const a = (notesObj && notesObj === _rn) || !notesObj ? annoById(id) : (notesObj.annos || []).find(x => x.id === id);
   const m = String(rest || '').match(/p\.(\d+)\s*"([^"]*)"?/);
   const page = a ? a.page : m && m[1], quote = a ? a.quote : m ? m[2] : '';
-  const color = a && a.kind !== 'ref' ? `style="--hc:var(--hl-${a.color === 'yellow' ? 'orange' : a.color || 'orange'})"` : '';
+  const color = a && a.kind === 'hl' ? `style="--hc:${annoHc(a)}"` : '';   // comments and cited passages: the pill's navy default
   const inner = `${page ? `<span class="cp-page">p.\u00a0${esc(String(page))}</span>` : ''}<span class="cp-q">${esc(shortQuote(quote, 48)) || 'deleted passage'}</span>`;
   const title = escAttr((a ? '' : 'This passage was deleted. ') + '\u201c' + shortQuote(quote, 300) + '\u201d' + (a ? ' \u00b7 click to go to it' : ''));
   if (editable) return `<span class="cite-chip cite-pill ${a ? '' : 'gone'}" contenteditable="false" draggable="false" data-tok="${escAttr(tok)}" data-anno="${escAttr(id)}" ${color} title="${title}">${inner}</span>`;
@@ -6099,7 +6101,7 @@ function citeInput(ed) {
   const t = ed;
   _citeCtx = { node, start: upto.length - m[0].length, end: r.startOffset, opts, i: 0 };
   let dd = document.getElementById('citeDD');
-  dd.innerHTML = opts.map((a, i) => `<button class="${i === 0 ? 'on' : ''}" style="--hc:var(--hl-${a.color || 'orange'})" onmousedown="event.preventDefault()" onclick="pickCite(${i})">p. ${a.page} · ${esc(a.quote.slice(0, 90))}</button>`).join('');
+  dd.innerHTML = opts.map((a, i) => `<button class="${i === 0 ? 'on' : ''}" style="--hc:${annoHc(a)}" onmousedown="event.preventDefault()" onclick="pickCite(${i})">p. ${a.page} · ${esc(a.quote.slice(0, 90))}</button>`).join('');
   const at = r.getBoundingClientRect(), box = t.getBoundingClientRect();   // under the caret, kept inside the window
   const left = at.height ? at.left : box.left, top = at.height ? at.bottom : box.bottom;
   dd.style.left = Math.max(12, Math.min(window.innerWidth - 332, left)) + 'px'; dd.style.top = Math.min(window.innerHeight - 270, top + 6) + 'px';
