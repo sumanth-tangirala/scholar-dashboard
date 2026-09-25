@@ -688,7 +688,7 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .reader-body:focus { outline: none; }
 /* no PDF on screen (loading, or the picker): only the PDF's own controls go; Notes stays reachable */
 .reader.no-doc .reader-pageno, .reader.no-doc .reader-zoom, .reader.no-doc #readerDarkBtn, .reader.no-doc .reader-change, .reader.no-doc #readerExternal { visibility: hidden; }
-.reader-pages { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; padding: 18px 12px 60px; width: max-content; min-width: 100%; box-sizing: border-box; }
+.reader-pages { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; padding: 18px 12px calc(60px + env(safe-area-inset-bottom, 0px)); width: max-content; min-width: 100%; box-sizing: border-box; }
 .reader-page { position: relative; background: #fff; box-shadow: 0 2px 18px rgba(0,0,0,0.5); flex-shrink: 0; }
 .reader-page canvas { display: block; }
 .reader-page canvas.stale { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; }   /* old pixels, shown until the sharp redraw */
@@ -740,7 +740,7 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
   .reader-title { font-size: 14px; }
   .reader-btn.reader-text { font-size: 12px; padding: 0 8px; white-space: nowrap; }
   .reader-tools { flex: none; gap: 4px; }
-  .reader-pages { padding-top: 10px; padding-bottom: 40px; gap: 10px; }
+  .reader-pages { padding-top: 10px; padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px)); gap: 10px; }
   .pd-read { padding: 7px 12px; margin-left: 4px; }
 }
 @media (prefers-reduced-motion: reduce) { .reader-spin { animation-duration: 2.4s; } }
@@ -1062,6 +1062,7 @@ button.chat-hist-item:hover, button.chat-hist-item:focus-visible { background: r
   .pill, .ig-toggle-btn, .tl-chip, .tl-sort button, .lib-hint-btn, .library-actions button, .btn-abs, .btn-link, .p-actions .btn-icon, .btn-quiet-remove, .ui-btn, .rp-chip, .rp-seg button { min-height: 36px; display: inline-flex; align-items: center; justify-content: center; }
   .p-actions .btn-icon:not(.btn-labelled) { min-width: 36px; }
   .tok-pill { min-height: 32px; }
+  .group-add-dd .group-opt, .copy-dd-item { padding: 11px 14px; font-size: 14px; }
   #acNote { min-height: 64px; }   /* room to write a comment by hand (Scribble turns it into text) */
   .ink-bar .ink-done { height: 36px; padding: 0 14px; }
   .sel-bar { gap: 4px; padding: 5px 6px; border-radius: 12px; }
@@ -1376,6 +1377,14 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
 /* [7] TOAST — frosted glass + accent border */
 .toast { position: fixed; bottom: 24px; left: 50%; width: max-content; max-width: calc(100vw - 32px); box-sizing: border-box; transform: translateX(-50%) translateY(80px); background: rgba(0,0,0,0.88); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); color: var(--text); padding: 10px 20px; border-radius: 8px; font-size: 13px; border: 1px solid rgba(255,255,255,0.2); border-left: 3px solid var(--accent); box-shadow: 0 8px 32px rgba(0,0,0,0.55); transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1); z-index: 450; pointer-events: none; display: flex; align-items: center; gap: 12px; }
 .toast.show { transform: translateX(-50%) translateY(0); pointer-events: auto; }
+/* iPhone / iPad edges (the page uses viewport-fit=cover): the notch or Dynamic Island in landscape, and the
+   home indicator, never cover content or controls. Every env() is 0 on the Mac. */
+.navbar { padding-top: env(safe-area-inset-top, 0px); padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
+.main-scroll { padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+.reader { padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) 0 env(safe-area-inset-left, 0px); }
+.rp-foot, .chat-compose { padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
+.toast { bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
+#overlay { padding-bottom: env(safe-area-inset-bottom, 0px); }
 .toast.error { border-left-color: #e57373; }
 .toast-msg { flex: 1; }
 .toast-undo { background: none; border: none; color: var(--accent); font-size: 13px; font-weight: 600; cursor: pointer; padding: 2px 6px; border-radius: 4px; white-space: nowrap; }
@@ -1431,6 +1440,7 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
 .group-add-btn:hover { opacity: 1; border-style: solid; }
 .badge-group, .group-add-btn { height: 24px; }
 .group-add-dd { position: absolute; top: 100%; left: 0; margin-top: 4px; background: var(--bg-surface); border: 1px solid rgba(255,255,255,0.18); border-radius: 8px; padding: 4px 0; z-index: 100; min-width: 200px; max-height: 240px; overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,.5); opacity: 0; transform: translateY(-4px); pointer-events: none; transition: opacity 0.15s ease, transform 0.15s ease; }
+.group-add-dd:not(.open) { min-width: 0; width: 0; padding: 0; border-width: 0; overflow: hidden; }   /* closed: takes no room, so it never widens the page */
 .group-add-dd.open { opacity: 1; transform: translateY(0); pointer-events: auto; }
 .group-add-dd .group-opt { padding: 6px 12px; font-size: 12px; cursor: pointer; white-space: nowrap; color: var(--text-secondary); transition: background 0.12s ease, color 0.12s ease; }
 .group-add-dd .group-opt:hover { background: var(--hover-bg); color: var(--text-primary); }
