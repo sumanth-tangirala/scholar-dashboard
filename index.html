@@ -1313,9 +1313,9 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
 .notes-delete { background: none; border: none; font: inherit; font-size: 12.5px; color: var(--text-muted); cursor: pointer; padding: 4px 6px; border-radius: 6px; transition: color 0.15s, background 0.15s; }
 .notes-delete:hover { color: #ff6b6b; background: rgba(255,107,107,0.1); }
 .notes-delete[hidden] { display: none; }
-.notes-modal textarea { flex: 1; width: 100%; background: transparent; border: none; color: var(--text-secondary); font-size: 14px; line-height: 1.6; padding: 12px 14px; resize: none; font-family: inherit; min-height: 160px; }
-.notes-modal textarea:focus { outline: none; }
-.notes-modal textarea::placeholder { color: var(--text-muted); font-style: italic; }
+.notes-modal .nm-edit { flex: 1; width: 100%; box-sizing: border-box; overflow: auto; position: relative; white-space: pre-wrap; overflow-wrap: anywhere; background: transparent; border: none; color: var(--text-secondary); font-size: 14px; line-height: 1.6; padding: 12px 14px; font-family: inherit; min-height: 160px; cursor: text; }
+.notes-modal .nm-edit:focus { outline: none; }
+.notes-modal .nm-edit.is-empty::before { content: attr(data-ph); position: absolute; left: 14px; top: 12px; color: var(--text-muted); font-style: italic; pointer-events: none; }
 .btn-icon.has-notes { color: var(--accent); }
 .btn-triage-info { color: var(--text-muted); }
 .triage-anchor { display: inline-flex; }
@@ -1610,7 +1610,7 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
     <span class="notes-head"><strong id="notesModalTitle">New note</strong><span class="notes-paper" id="notesPaper"></span></span>
     <button class="notes-modal-close" onclick="closeNotesModal()" title="Close" aria-label="Close notes">&times;</button>
   </div>
-  <textarea id="notesModalArea" placeholder="Add your notes..." oninput="debouncedSaveNote();updateNotesFooter()"></textarea>
+  <div id="notesModalArea" class="nm-edit is-empty" contenteditable="true" role="textbox" aria-multiline="true" spellcheck="true" data-ph="Add your notes..." oninput="nmInput(this)" onkeydown="nmKey(event)" onpaste="nmPaste(event)" onclick="nmClick(event)" ondrop="event.preventDefault()"></div>
   <div class="notes-modal-foot">
     <span class="notes-status" id="notesStatus"></span>
     <button class="notes-delete" id="notesDelete" onclick="deleteNote()">Delete note</button>
@@ -5462,7 +5462,7 @@ function renderAnnoLayer(pageDiv) {
   marks.innerHTML = list.filter(a => a.kind === 'note' || (a.note || '').trim()).sort((x, y) => x.rects[0][1] - y.rects[0][1]).map(a => {
     const y = a.rects[0][1] + a.rects[0][3] / 2;
     const slot = rows.filter(v => Math.abs(v - y) < 0.012).length; rows.push(y);
-    return `<button class="anno-mark ${a.kind === 'note' ? 'note' : ''}" data-anno="${a.id}" style="--hc:${annoHc(a)};top:${y * 100}%;right:${6 + slot * 20}px" title="${escAttr((a.note || 'Comment').slice(0, 120))}" aria-label="Open comment" onclick="event.stopPropagation();openAnnoCard('${a.id}', true)" onmouseenter="markHover('${a.id}',true)" onmouseleave="markHover('${a.id}',false)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8l-4 3v-3H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg></button>`;
+    return `<button class="anno-mark ${a.kind === 'note' ? 'note' : ''}" data-anno="${a.id}" style="--hc:${annoHc(a)};top:${y * 100}%;right:${6 + slot * 20}px" title="${escAttr((a.note || 'Comment').replace(CITE_RE, (m, id, rest) => '\u201c' + ((rest.match(/"([^"]*)/) || [])[1] || '\u2026') + '\u201d').slice(0, 120))}" aria-label="Open comment" onclick="event.stopPropagation();openAnnoCard('${a.id}', true)" onmouseenter="markHover('${a.id}',true)" onmouseleave="markHover('${a.id}',false)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8l-4 3v-3H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg></button>`;
   }).join('');
 }
 function markHover(id, on) { document.querySelectorAll(`.anno-rect[data-anno="${id}"]`).forEach(r => r.classList.toggle('hover', on)); }
@@ -5994,10 +5994,10 @@ function citePillHTML(tok, id, rest, notesObj, editable) {
 }
 
 /* --- the note editor: text with citation pills; _rnDraft always holds the plain-text form --- */
-function draftToEditorHTML(text) {
+function draftToEditorHTML(text, notesObj) {
   let out = '', last = 0;
   const seg = t => esc(t).replace(/\n/g, '<br>');
-  for (const m of String(text).matchAll(CITE_RE)) { out += seg(text.slice(last, m.index)) + citePillHTML(m[0], m[1], m[2], null, true); last = m.index + m[0].length; }
+  for (const m of String(text).matchAll(CITE_RE)) { out += seg(text.slice(last, m.index)) + citePillHTML(m[0], m[1], m[2], notesObj || null, true); last = m.index + m[0].length; }
   out += seg(text.slice(last));
   return /\n$/.test(text) ? out + '<br>' : out;   // a trailing line break needs a second <br> to show
 }
@@ -6015,6 +6015,22 @@ function editorText(ed) {
   };
   walk(ed);
   return s.replace(/\u00a0/g, ' ');
+}
+/* The floating notes box (outside the reader) is the same pill editor; its .value stays the plain text */
+(function () {
+  const el = document.getElementById('notesModalArea');
+  if (!el) return;
+  Object.defineProperty(el, 'value', {
+    get() { return editorText(el); },
+    set(v) { el.innerHTML = draftToEditorHTML(String(v || ''), el._notesObj); el.classList.toggle('is-empty', !String(v || '').trim()); },
+  });
+})();
+function nmInput(el) { el.classList.toggle('is-empty', !editorText(el).trim() && !el.querySelector('.cite-pill')); debouncedSaveNote(); updateNotesFooter(); }
+function nmKey(e) { if (e.key === 'Enter' && !(e.metaKey || e.ctrlKey)) { e.preventDefault(); document.execCommand('insertLineBreak'); } }
+function nmPaste(e) { e.preventDefault(); const t = (e.clipboardData || window.clipboardData).getData('text/plain'); if (t) document.execCommand('insertText', false, t); }
+function nmClick(e) {
+  const p = e.target.closest('.cite-pill'), el = e.currentTarget, n = el._notesObj;
+  if (p && p.dataset.anno && n && (n.annos || []).some(a => a.id === p.dataset.anno)) { e.preventDefault(); closeNotesModal(); citeClick(p.dataset.anno, n); }
 }
 let _rnRange = null;   // where the caret last was in the editor, so a citation lands there even after clicking the paper
 /* A caret never rests inside a pill (clicking one selects it): move it to just after the pill */
@@ -6564,6 +6580,7 @@ async function toggleNotesModal(key, noteId) {
   const area = document.getElementById('notesModalArea');
   const e = noteId && (n.entries || []).find(x => x.id === noteId);
   _notesNoteId = e ? e.id : null;
+  area._notesObj = n;   // so its citation pills can be shown and followed
   area.value = e ? e.text : '';
   document.getElementById('notesModalTitle').textContent = e ? 'Edit note' : 'New note';
   document.getElementById('notesPaper').textContent = p ? (p.headline || p.title) : '';
@@ -6571,6 +6588,8 @@ async function toggleNotesModal(key, noteId) {
   updateNotesFooter();
   document.getElementById('notesStatus').textContent = '';
   area.focus();
+  const end = document.createRange(); end.selectNodeContents(area); end.collapse(false);
+  getSelection().removeAllRanges(); getSelection().addRange(end);
 }
 function closeNotesModal() {
   const modal = document.getElementById('notesModal');
