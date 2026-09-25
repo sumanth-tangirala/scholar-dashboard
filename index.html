@@ -4674,9 +4674,10 @@ async function layoutReader(restore) {
   if (anchor) {
     const target = body.querySelector(`.reader-page[data-page="${anchor.page}"]`);
     if (target) body.scrollTop = target.offsetTop + anchor.frac * target.offsetHeight;
-  } else if (keepPage > 1) {
-    const target = body.querySelector(`.reader-page[data-page="${keepPage}"]`);
-    if (target) body.scrollTop = target.offsetTop - 12;
+  } else if (keepPage > 1 || keepPage % 1) {
+    const n = Math.floor(keepPage), frac = keepPage - n;   // saved as page + fraction into it (older saves: whole pages)
+    const target = body.querySelector(`.reader-page[data-page="${n}"]`);
+    if (target) body.scrollTop = frac ? target.offsetTop + frac * target.offsetHeight : target.offsetTop - 12;
   } else body.scrollTop = 0;
   _reader.layoutToken = _reader.token;
   updateReaderPageNo();
@@ -4743,7 +4744,11 @@ function updateReaderPageNo() {
   document.getElementById('readerPageNo').textContent = `${n} / ${_reader.doc.numPages}`;
   clearTimeout(_readerSaveTimer);
   _readerSaveTimer = setTimeout(() => {
-    try { const all = JSON.parse(localStorage.getItem(READER_POS_KEY) || '{}'); all[_reader.paper.id] = n; localStorage.setItem(READER_POS_KEY, JSON.stringify(all)); } catch (e) {}
+    // the exact place: page number plus how far down it (3.25 = a quarter into page 3)
+    const body = document.getElementById('readerBody'), pages = [...body.querySelectorAll('.reader-page')];
+    const cur = pages.filter(d => d.offsetTop <= body.scrollTop + 1).pop();
+    const pos = cur ? +(+cur.dataset.page + Math.min(0.999, Math.max(0, (body.scrollTop - cur.offsetTop) / cur.offsetHeight))).toFixed(4) : n;
+    try { const all = JSON.parse(localStorage.getItem(READER_POS_KEY) || '{}'); all[_reader.paper.id] = pos; localStorage.setItem(READER_POS_KEY, JSON.stringify(all)); } catch (e) {}
   }, 400);
 }
 document.getElementById('readerBody').addEventListener('scroll', updateReaderPageNo, { passive: true });
