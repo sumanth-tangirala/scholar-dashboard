@@ -740,6 +740,8 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .rn-count { font-variant-numeric: tabular-nums; color: var(--text-muted); font-size: 12px; }
 .rn-count:empty { display: none; }
 .annoLayer { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+/* comments and citations are lines in navy, apart from the highlight colours and the site's amber */
+.annoLayer, .annoMarks { --note-line: #8aa4f0; --note-ink: #0f1b3d; --ref-tint: rgba(138,164,240,0.16); }
 .anno-rect { position: absolute; border-radius: 2px; background: var(--hc); opacity: 0.38; transition: opacity 0.15s, box-shadow 0.15s; }
 .reader:not(.dark) .anno-rect { mix-blend-mode: multiply; opacity: 0.38; }
 .anno-rect.note { background: none; opacity: 1; border-bottom: 2px dashed var(--note-line, var(--accent)); border-radius: 0; mix-blend-mode: normal !important; }
@@ -747,11 +749,11 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .anno-rect.hover { opacity: 0.6; }
 .annoMarks { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
 .anno-mark { position: absolute; width: 18px; height: 18px; margin-top: -9px; padding: 0; border: none; border-radius: 5px; background: var(--hc, var(--accent)); color: #1a1406; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; pointer-events: auto; box-shadow: 0 1px 3px rgba(0,0,0,0.35); transition: transform 0.15s, box-shadow 0.15s; }
-.anno-mark.note { background: var(--note-line, var(--accent)); }
+.anno-mark.note { background: var(--note-line, var(--accent)); color: var(--note-ink, #1a1406); }
 .anno-mark:hover { transform: scale(1.15); box-shadow: 0 2px 8px rgba(0,0,0,0.45); }
 .anno-mark svg { width: 12px; height: 12px; fill: currentColor; }
 /* light pages: deeper colours so highlights and comment lines stay visible on white */
-.reader:not(.dark) .annoLayer, .reader:not(.dark) .annoMarks { --hl-orange: #ff7a1f; --hl-yellow: var(--hl-orange); --hl-green: #34c26b; --hl-blue: #4b8ef7; --hl-red: #e03a40; --hl-purple: #a66ff2; --note-line: #c47400; }
+.reader:not(.dark) .annoLayer, .reader:not(.dark) .annoMarks { --hl-orange: #ff7a1f; --hl-yellow: var(--hl-orange); --hl-green: #34c26b; --hl-blue: #4b8ef7; --hl-red: #e03a40; --hl-purple: #a66ff2; --note-line: #1f3a8a; --note-ink: #fff; --ref-tint: rgba(31,58,138,0.10); }
 .sel-bar { position: fixed; z-index: 340; display: none; align-items: center; gap: 2px; padding: 3px 4px; background: #1d1d20; border: 1px solid rgba(255,255,255,0.14); border-radius: 10px; box-shadow: 0 8px 26px rgba(0,0,0,0.55); }
 .sel-bar.open { display: flex; }
 .sel-dot { width: 22px; height: 22px; border-radius: 50%; border: 2px solid transparent; background: var(--hc); cursor: pointer; transition: transform 0.12s, border-color 0.12s; }
@@ -829,7 +831,6 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .sel-act.primary:hover { background: rgba(251,177,60,0.2); color: var(--accent); }
 .rp-icon-btn svg path[d^="M9.5"] { fill: currentColor; stroke: none; }
 .anno-rect.ref { background: var(--ref-tint, rgba(251,177,60,0.2)); border-bottom: 2px solid var(--note-line, var(--accent)); border-radius: 2px 2px 0 0; mix-blend-mode: normal !important; }
-.reader:not(.dark) .anno-rect.ref { --ref-tint: rgba(196,116,0,0.17); }
 /* lines (comments, citations) are not translucent fills: the highlight opacity rules must not fade them */
 .reader .anno-rect.note, .reader .anno-rect.ref, .reader:not(.dark) .anno-rect.note, .reader:not(.dark) .anno-rect.ref { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { .rp-card.fresh { animation: none; } }
