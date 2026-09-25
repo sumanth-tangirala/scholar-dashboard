@@ -68,9 +68,9 @@ The token file (`.github_token`) is gitignored and must be present locally for b
 
 ### Serving
 
-A `launchd` daemon (`com.scholar-dashboard.plist`) runs `python3 -m http.server 80` bound to localhost from this folder. It starts on boot and auto-restarts if it crashes. `/etc/hosts` maps `scholar.local` to `127.0.0.1`.
+A `launchd` daemon (`com.scholar-dashboard.plist`) runs `python3 -m http.server 80` bound to localhost from this folder. It starts on boot and auto-restarts if it crashes. `/etc/hosts` maps `scholar.localhost` (and the older `scholar.local`) to `127.0.0.1`.
 
-- **URL**: `http://scholar.local`
+- **URL**: `http://scholar.localhost`. Use this rather than `scholar.local`: browsers only allow the Web Crypto API that the encrypted notes use on https or `*.localhost` addresses.
 - **Install**: `./install_server.sh` (one-time, requires sudo for hosts + port forward)
 - **Uninstall**: `./uninstall_server.sh`
 - **Logs**: `/tmp/scholar-dashboard.log`, `/tmp/scholar-dashboard.err`
@@ -313,3 +313,15 @@ Groups are purely a display layer — they are not used for filtering or ranking
 2. For each paper, split `theme_groups` on `|` and fan into matching confirmed group cards
 3. Papers whose groups are all rejected/suggested simply don't appear in any group card (acceptable)
 4. The `Other` group catches papers that don't fit any specific group
+
+---
+
+# Encrypted Notes (`annotations/`)
+
+Notes, highlights and comments the user makes in the dashboard live in `annotations/`, **encrypted in the browser** with a password only the user knows (AES-256-GCM; key from PBKDF2-SHA256, 600,000 rounds). The repo only ever holds ciphertext.
+
+- `annotations/_vault.json`: salt, round count and an encrypted check value (no secrets)
+- `annotations/_index.json`: encrypted list of which papers have notes, and the user's highlight-colour names
+- `annotations/<paper id>.json`: encrypted notes, highlights and comments for that paper
+
+**Digest runs and other tasks must never create, edit, move or delete anything in `annotations/`.** The files can't be read without the password, and changing them can destroy the user's notes. If a paper is ever merged into another id, leave its notes file alone and tell the user.

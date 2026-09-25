@@ -722,6 +722,112 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
   .pd-read { padding: 7px 12px; margin-left: 4px; }
 }
 @media (prefers-reduced-motion: reduce) { .reader-spin { animation-duration: 2.4s; } }
+/* ---- notes, highlights and comments ---- */
+:root { --hl-yellow: #f5c542; --hl-green: #4cc38a; --hl-blue: #5b9bf5; --hl-red: #f06b6b; --hl-purple: #b48cf2; }
+.reader-split { flex: 1; min-height: 0; display: flex; }
+.reader-split .reader-body { flex: 1; min-width: 0; }
+.reader-panel { display: none; width: 380px; flex-shrink: 0; border-left: 1px solid var(--border); background: #121214; flex-direction: column; min-height: 0; }
+.reader.panel-open .reader-panel { display: flex; }
+#readerNotesBtn[aria-pressed="true"] { color: var(--accent); border-color: rgba(251,177,60,0.5); }
+.rn-count { font-variant-numeric: tabular-nums; color: var(--text-muted); font-size: 12px; }
+.rn-count:empty { display: none; }
+.annoLayer { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.anno-rect { position: absolute; border-radius: 2px; background: var(--hc); opacity: 0.38; transition: opacity 0.15s, box-shadow 0.15s; }
+.reader:not(.dark) .anno-rect { mix-blend-mode: multiply; opacity: 0.45; }
+.anno-rect.note { background: none; opacity: 1; border-bottom: 2px dashed var(--accent); border-radius: 0; }
+.anno-rect.flash { opacity: 0.75; box-shadow: 0 0 0 2px var(--hc, var(--accent)); }
+.anno-rect.hover { opacity: 0.6; }
+.anno-pin { position: absolute; width: 16px; height: 16px; margin: -8px 0 0 -2px; border-radius: 50% 50% 50% 0; background: var(--hc, var(--accent)); box-shadow: 0 1px 4px rgba(0,0,0,0.5); }
+.sel-bar { position: fixed; z-index: 340; display: none; align-items: center; gap: 4px; padding: 5px 6px; background: #1d1d20; border: 1px solid rgba(255,255,255,0.14); border-radius: 10px; box-shadow: 0 8px 26px rgba(0,0,0,0.55); }
+.sel-bar.open { display: flex; }
+.sel-dot { width: 22px; height: 22px; border-radius: 50%; border: 2px solid transparent; background: var(--hc); cursor: pointer; transition: transform 0.12s, border-color 0.12s; }
+.sel-dot:hover { transform: scale(1.12); border-color: #fff; }
+.sel-dot.on { border-color: #fff; }
+.sel-sep { width: 1px; height: 20px; background: rgba(255,255,255,0.14); margin: 0 3px; }
+.sel-act { background: none; border: none; color: var(--text-secondary); font: inherit; font-size: 12.5px; padding: 4px 8px; border-radius: 6px; cursor: pointer; transition: background 0.15s, color 0.15s; }
+.sel-act:hover { background: rgba(255,255,255,0.08); color: var(--text); }
+.anno-card { position: fixed; z-index: 345; display: none; width: 340px; max-width: calc(100vw - 24px); background: #1b1b1e; border: 1px solid rgba(255,255,255,0.14); border-radius: 12px; box-shadow: 0 14px 40px rgba(0,0,0,0.6); padding: 12px 14px; }
+.anno-card.open { display: block; }
+.ac-quote { font-family: var(--serif); font-size: 14px; line-height: 1.5; color: var(--text); border-left: 3px solid var(--hc, var(--accent)); padding-left: 10px; max-height: 6.2em; overflow: auto; }
+.ac-meta { display: flex; align-items: center; gap: 6px; margin: 10px 0 8px; font-size: 12px; color: var(--text-muted); }
+.ac-meta .sel-dot { width: 18px; height: 18px; }
+.ac-meta .grow { flex: 1; }
+.anno-card textarea, .rp-notes-edit { width: 100%; box-sizing: border-box; background: #121214; border: 1px solid var(--border); border-radius: 8px; color: var(--text); font: inherit; font-size: 13.5px; line-height: 1.55; padding: 8px 10px; resize: vertical; }
+.anno-card textarea { min-height: 76px; }
+.anno-card textarea:focus, .rp-notes-edit:focus, .rp-search:focus { outline: none; border-color: var(--accent); }
+.ac-foot { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+.ac-foot .grow { flex: 1; font-size: 11.5px; color: var(--text-muted); }
+.ac-foot .danger:hover { color: #f28b82; }
+.rp-head { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+.rp-head strong { font-size: 14px; font-weight: 600; color: var(--text); }
+.rp-lock { font-size: 11.5px; color: var(--text-muted); display: inline-flex; align-items: center; gap: 4px; }
+.rp-head .grow { flex: 1; }
+.rp-scroll { flex: 1; overflow: auto; padding: 14px 14px 30px; }
+.rp-sec-head { display: flex; align-items: center; gap: 8px; margin: 4px 0 8px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); }
+.rp-sec-head .grow { flex: 1; }
+.rp-sec-head button { text-transform: none; letter-spacing: 0; font-weight: 500; }
+.rp-general { margin-bottom: 22px; }
+.rp-notes-edit { min-height: 140px; }
+.rp-notes-view { font-size: 14px; line-height: 1.6; color: var(--text-secondary); cursor: text; min-height: 44px; border-radius: 8px; padding: 2px 0; }
+.rp-notes-view:empty::before { content: 'Click to write notes about this paper. Markdown and $math$ work; type [[ to cite a highlight.'; color: var(--text-muted); font-style: italic; font-size: 13px; }
+.rp-hint { font-size: 11.5px; color: var(--text-muted); margin-top: 6px; }
+.md p { margin: 0 0 0.7em; } .md p:last-child { margin-bottom: 0; }
+.md ul, .md ol { margin: 0 0 0.7em 1.2em; } .md li { margin: 0.15em 0; }
+.md h1, .md h2, .md h3 { font-size: 15px; font-weight: 600; color: var(--text); margin: 0.9em 0 0.4em; }
+.md code { font-size: 12.5px; background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 4px; }
+.md pre { background: rgba(255,255,255,0.05); padding: 8px 10px; border-radius: 6px; overflow: auto; }
+.md blockquote { border-left: 3px solid var(--border); margin: 0 0 0.7em; padding-left: 10px; color: var(--text-muted); }
+.md a { color: var(--accent); }
+.md .katex-display { margin: 0.5em 0; overflow-x: auto; overflow-y: hidden; }
+.cite-chip { display: inline; text-align: left; font: inherit; font-size: 12.5px; color: var(--text); background: rgba(251,177,60,0.12); border: 1px solid rgba(251,177,60,0.35); border-left: 3px solid var(--hc, var(--accent)); border-radius: 6px; padding: 1px 7px; cursor: pointer; transition: background 0.15s; }
+.cite-chip:hover { background: rgba(251,177,60,0.22); }
+.cite-chip.gone { opacity: 0.6; cursor: default; }
+.rp-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 10px; }
+.rp-filters .sel-dot { width: 18px; height: 18px; opacity: 0.45; }
+.rp-filters .sel-dot.on { opacity: 1; }
+.rp-filters .rp-fnote { font: inherit; font-size: 11.5px; color: var(--text-muted); background: none; border: 1px dashed var(--border); border-radius: 999px; padding: 1px 8px; cursor: pointer; opacity: 0.6; }
+.rp-filters .rp-fnote.on { opacity: 1; color: var(--text); }
+.rp-search { flex: 1; min-width: 120px; background: #0e0e10; border: 1px solid var(--border); border-radius: 8px; color: var(--text); font: inherit; font-size: 12.5px; padding: 5px 9px; }
+.rp-item { position: relative; padding: 9px 10px 9px 13px; border-radius: 8px; cursor: pointer; transition: background 0.15s; }
+.rp-item::before { content: ''; position: absolute; left: 0; top: 9px; bottom: 9px; width: 3px; border-radius: 2px; background: var(--hc, var(--accent)); }
+.rp-item.note::before { background: repeating-linear-gradient(var(--accent) 0 4px, transparent 4px 7px); }
+.rp-item:hover { background: rgba(255,255,255,0.045); }
+.rp-item-top { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--text-muted); margin-bottom: 3px; }
+.rp-item-top .grow { flex: 1; }
+.rp-item-acts { opacity: 0; transition: opacity 0.15s; display: inline-flex; gap: 2px; }
+.rp-item:hover .rp-item-acts, .rp-item:focus-within .rp-item-acts { opacity: 1; }
+.rp-item-acts button { background: none; border: none; color: var(--text-muted); font: inherit; font-size: 11.5px; padding: 1px 6px; border-radius: 5px; cursor: pointer; transition: color 0.15s, background 0.15s; }
+.rp-item-acts button:hover { color: var(--text); background: rgba(255,255,255,0.08); }
+.rp-quote { font-family: var(--serif); font-size: 13.5px; line-height: 1.45; color: var(--text); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.rp-note { font-size: 13px; line-height: 1.5; color: var(--text-secondary); margin-top: 4px; }
+.rp-empty { font-size: 13px; color: var(--text-muted); line-height: 1.6; padding: 6px 2px; }
+.rp-colors { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 18px; font-size: 12px; color: var(--text-muted); }
+.rp-colors button { display: inline-flex; align-items: center; gap: 6px; background: none; border: none; color: var(--text-secondary); font: inherit; font-size: 12px; cursor: pointer; padding: 2px 0; }
+.rp-colors button:hover { color: var(--text); }
+.rp-colors i { width: 10px; height: 10px; border-radius: 50%; background: var(--hc); }
+.rp-foot { padding: 8px 14px; border-top: 1px solid var(--border); font-size: 11.5px; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
+.rp-locked { padding: 28px 18px; text-align: center; color: var(--text-secondary); font-size: 13.5px; line-height: 1.6; }
+.rp-locked strong { display: block; color: var(--text); font-size: 15px; margin-bottom: 6px; }
+.rp-locked .pp-btn { margin-top: 14px; padding: 9px 16px; }
+.cite-dd { position: fixed; z-index: 350; display: none; width: 320px; max-height: 260px; overflow: auto; background: #1d1d20; border: 1px solid rgba(255,255,255,0.14); border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.55); padding: 4px; }
+.cite-dd.open { display: block; }
+.cite-dd button { display: block; width: 100%; text-align: left; background: none; border: none; color: var(--text-secondary); font: inherit; font-size: 12.5px; line-height: 1.4; padding: 6px 8px 6px 11px; border-radius: 6px; cursor: pointer; border-left: 3px solid var(--hc, var(--accent)); margin: 2px 0; }
+.cite-dd button:hover, .cite-dd button.on { background: rgba(255,255,255,0.07); color: var(--text); }
+.vault-overlay { position: fixed; inset: 0; z-index: 420; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; padding: 16px; }
+.vault-overlay.open { display: flex; }
+.vault-box { width: min(420px, 100%); background: var(--bg-surface); border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; padding: 22px 22px 18px; box-shadow: 0 16px 48px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 10px; }
+.vault-box h3 { font-family: var(--serif); font-size: 22px; font-weight: 500; }
+.vault-sub { font-size: 13px; line-height: 1.6; color: var(--text-secondary); margin-bottom: 4px; }
+.vault-remember { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); cursor: pointer; }
+.vault-btns { display: flex; justify-content: flex-end; gap: 8px; }
+.vault-btns .pp-btn { padding: 9px 16px; }
+.pd-notes-meta { font-size: 12.5px; color: var(--text-muted); margin-top: 8px; }
+.pd-notes-meta button { background: none; border: none; color: var(--accent); font: inherit; cursor: pointer; padding: 0; }
+@media (max-width: 700px) {
+  .reader-panel { position: fixed; left: 0; right: 0; bottom: 0; top: 56px; width: auto; z-index: 330; border-left: none; }
+  .anno-card { left: 12px !important; right: 12px; width: auto; }
+  .cite-dd { left: 12px !important; right: 12px; width: auto; }
+}
 .keys-help { position: fixed; inset: 0; z-index: 400; background: rgba(0,0,0,0.55); display: none; align-items: center; justify-content: center; padding: 16px; }
 .keys-help.open { display: flex; }
 .keys-help-box { background: var(--bg-surface); border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; padding: 20px 24px 22px; width: min(440px, 100%); box-shadow: 0 16px 48px rgba(0,0,0,0.6); }
@@ -1273,11 +1379,33 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
         <button class="reader-btn" onclick="readerZoom(1)" title="Zoom in" aria-label="Zoom in">+</button>
       </span>
       <button class="reader-btn" id="readerDarkBtn" onclick="toggleReaderDark()" title="Dark pages" aria-pressed="true">&#9680;</button>
+      <button class="reader-btn reader-text" id="readerNotesBtn" onclick="toggleReaderPanel()" title="Notes, highlights and comments" aria-pressed="false">Notes <span class="rn-count" id="readerNotesCount"></span></button>
       <button class="reader-btn reader-text" onclick="showPdfPicker(_reader.paper, 'change')" title="Use a different PDF for this paper">Change PDF</button>
       <a class="reader-btn reader-text" id="readerExternal" target="_blank" rel="noopener" title="Open the PDF in a new tab">Open &#8599;</a>
     </div>
   </div>
-  <div class="reader-body" id="readerBody"></div>
+  <div class="reader-split">
+    <div class="reader-body" id="readerBody"></div>
+    <aside class="reader-panel" id="readerPanel" aria-label="Notes"></aside>
+  </div>
+  <div class="sel-bar" id="selBar" role="toolbar" aria-label="Selection"></div>
+  <div class="anno-card" id="annoCard" role="dialog" aria-label="Highlight"></div>
+</div>
+
+<div class="cite-dd" id="citeDD" role="listbox"></div>
+
+<!-- NOTES PASSWORD -->
+<div class="vault-overlay" id="vaultOverlay" role="dialog" aria-modal="true" aria-labelledby="vaultTitle" onclick="if (event.target === this) closeVaultModal(false)">
+  <form class="vault-box" onsubmit="event.preventDefault(); submitVault()">
+    <h3 id="vaultTitle"></h3>
+    <p class="vault-sub" id="vaultSub"></p>
+    <input type="text" name="username" autocomplete="username" value="Scholar notes" hidden>
+    <input class="pp-input" id="vaultPw" type="password" autocomplete="current-password" placeholder="Password">
+    <input class="pp-input" id="vaultPw2" type="password" autocomplete="new-password" placeholder="Type it again">
+    <label class="vault-remember"><input type="checkbox" id="vaultRemember"> Remember on this device</label>
+    <div class="pp-msg err" id="vaultErr"></div>
+    <div class="vault-btns"><button type="button" class="reader-btn reader-text" onclick="closeVaultModal(false)">Cancel</button><button class="pp-btn" id="vaultGo" type="submit"></button></div>
+  </form>
 </div>
 
 <div class="keys-help" id="keysHelp" role="dialog" aria-modal="true" aria-labelledby="keysHelpTitle" onclick="if (event.target === this) toggleKeysHelp(false)">
@@ -1610,7 +1738,11 @@ function receivePapers(text, fromGitHub) {
   if (text === _papersText) return;
   const rows = parsePapers(text);
   if (!rows.length) return;
-  if (!_papersText) { applyPapers(rows, text); applyHash(); revealContent(); return; }
+  if (!_papersText) {
+    applyPapers(rows, text); applyHash(); revealContent();
+    if (vaultSupported()) vaultReady(true).catch(() => {});   // a key remembered on this device unlocks notes quietly
+    return;
+  }
   const fresh = freshnessOf(rows);
   if (!(isOlder(_papersFresh, fresh) || (fromGitHub && !isOlder(fresh, _papersFresh)))) return;
   const swap = () => { applyPapers(rows, text); applyHash(); };
@@ -3487,7 +3619,7 @@ function renderLibrary() {
   const read = allPapers.filter(p => readSet.has(paperKey(p)));
   sortPapers(read);
   const listNames = Object.keys(libraryLists);
-  const noted = allPapers.filter(p => p.user_notes && p.user_notes.trim());
+  const noted = Vault.index ? allPapers.filter(p => Vault.index.papers[p.id]) : [];
   sortPapers(noted);
 
   let html = '';
@@ -3495,7 +3627,8 @@ function renderLibrary() {
     html = '<div class="library-empty">No papers in the database yet.</div>';
   } else {
     if (starred.length) html += libGroupHTML('starred', '&#9733;', 'Starred', starred);
-    if (noted.length) html += libGroupHTML('noted', '&#9998;', 'Notes', noted);
+    if (noted.length) html += libGroupHTML('noted', '&#9998;', 'Notes & highlights', noted);
+    else if (!Vault.key && vaultSupported() && Vault.meta) html += `<div class="lib-hint"><strong>Notes &amp; highlights</strong> are encrypted. <button class="lib-hint-btn" onclick="vaultReady().then(ok => ok && renderLibrary())">Unlock notes</button> to list the papers you annotated.</div>`;
     listNames.forEach(name => {
       const papers = allPapers.filter(p => libraryLists[name].includes(paperKey(p)));
       const actions = `<span class="library-actions" onclick="event.stopPropagation()"><button onclick="renameList('${escAttr(name)}')">Rename</button><button onclick="showCopyDD(this,'${escAttr(name)}')">Copy to...</button><button class="danger" onclick="deleteList('${escAttr(name)}')">Delete</button></span>`;
@@ -4279,6 +4412,8 @@ function closeReader() {
 }
 function hideReader() {
   const el = document.getElementById('reader');
+  if (_rnEditing) finishNotesEdit();
+  closeAnnoCard(); hideSelBar(); closeCiteDD();
   el.classList.remove('open');
   document.body.style.overflow = '';
   if (_reader.obs) _reader.obs.disconnect();
@@ -4291,7 +4426,11 @@ async function showReader(id) {
   const p = allPapers.find(x => x.id === id) || _hiddenPapers.find(x => x.id === id);
   if (!p) { location.hash = '#all'; return; }
   const el = document.getElementById('reader');
-  _reader.paper = p; _reader.zoom = 'fit';
+  if (_reader.paper !== p) { _rnFilter = { colors: new Set(), notes: false, q: '' }; _rnEditing = false; }
+  _reader.paper = p;
+  let panelWanted = false; try { panelWanted = localStorage.getItem('scholar_reader_panel') === '1'; } catch (e) {}
+  el.classList.toggle('panel-open', panelWanted && !window.matchMedia('(max-width: 700px)').matches);
+  document.getElementById('readerNotesBtn').setAttribute('aria-pressed', el.classList.contains('panel-open') ? 'true' : 'false'); _reader.zoom = 'fit';
   el.classList.add('open'); el.classList.toggle('dark', readerDark());
   document.getElementById('readerDarkBtn').setAttribute('aria-pressed', readerDark() ? 'true' : 'false');
   document.getElementById('readerTitle').textContent = p.title || '';
@@ -4315,6 +4454,8 @@ async function loadIntoReader(p, source, isLocal) {
     if (source.url) { ext.href = source.url; ext.style.display = ''; } else ext.style.display = 'none';
     document.getElementById('readerTools').style.visibility = '';
     await layoutReader(true);
+    if (await vaultReady(true)) await loadReaderNotes(); else { _rn = null; updateReaderNotesCount(); renderReaderPanel(); }
+    if (_pendingJump) { const id = _pendingJump; _pendingJump = null; setTimeout(() => jumpToAnno(id), 400); }
   } catch (e) {
     if (token !== _reader.token) return;
     console.warn('PDF load failed', e);
@@ -4384,6 +4525,7 @@ async function drawReaderPage(div) {
   tl.className = 'textLayer';
   div.style.setProperty('--scale-factor', _reader.scale);
   div.appendChild(tl);
+  renderAnnoLayer(div);
   try { await new lib.TextLayer({ textContentSource: page.streamTextContent(), container: tl, viewport: vp }).render(); } catch (e) {}
 }
 function releaseReaderPage(div) {
@@ -4444,8 +4586,14 @@ function toggleReaderDark() {
 document.addEventListener('keydown', e => {
   if (!document.getElementById('reader').classList.contains('open')) return;
   const t = e.target;
-  if (t && /^(INPUT|TEXTAREA)$/.test(t.tagName)) { if (e.key === 'Escape') t.blur(); return; }
-  if (e.key === 'Escape') { e.preventDefault(); closeReader(); }
+  if (document.getElementById('vaultOverlay').classList.contains('open')) { if (e.key === 'Escape') closeVaultModal(false); return; }
+  if (t && /^(INPUT|TEXTAREA)$/.test(t.tagName)) { if (e.key === 'Escape' && !_citeCtx) { t.blur(); if (_acId) closeAnnoCard(); } return; }
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    if (_acId) closeAnnoCard();
+    else if (document.getElementById('selBar').classList.contains('open')) { hideSelBar(); window.getSelection().removeAllRanges(); }
+    else closeReader();
+  }
   else if ((e.key === '+' || e.key === '=') && !e.metaKey && !e.ctrlKey) { e.preventDefault(); readerZoom(1); }
   else if (e.key === '-' && !e.metaKey && !e.ctrlKey) { e.preventDefault(); readerZoom(-1); }
 });
@@ -4528,6 +4676,726 @@ async function removeLocalPdf() {
   toast('Removed the copy stored on this device');
   showReader(_reader.paper.id);
 }
+
+/* ===== ENCRYPTED NOTES =====
+   Notes, highlights and comments are encrypted in this browser (AES-256-GCM; the key comes from
+   your password via PBKDF2-SHA256, 600,000 rounds) before they are stored or sent anywhere, so the
+   public repo only ever holds ciphertext:
+     annotations/_vault.json    salt, rounds and an encrypted check value (no secrets)
+     annotations/_index.json    encrypted: which papers have notes, and your colour names
+     annotations/<paper>.json   encrypted: that paper's notes, highlights and comments
+   Edits land in IndexedDB first and are pushed to GitHub a few seconds later (like other edits);
+   a copy changed elsewhere in the meantime is merged, not overwritten. */
+const VAULT_DIR = 'annotations/', VAULT_ITER = 600000, VAULT_CHECK = 'scholar-notes-v1';
+const HL_COLORS = ['yellow', 'green', 'blue', 'red', 'purple'];
+const HL_DEFAULT_LABELS = { yellow: 'Key idea', green: 'Method', blue: 'Result', red: 'Question', purple: 'My work' };
+const Vault = { key: null, meta: undefined, index: null, cache: new Map(), pushing: false, pushTimer: null, pushAgain: false };
+function vaultSupported() { return !!(window.isSecureContext && window.crypto && crypto.subtle); }
+function b64e(buf) { const a = new Uint8Array(buf); let s = ''; for (let i = 0; i < a.length; i += 0x8000) s += String.fromCharCode.apply(null, a.subarray(i, i + 0x8000)); return btoa(s); }
+function b64d(str) { const b = atob(str); const a = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) a[i] = b.charCodeAt(i); return a; }
+async function vaultDerive(pw, salt, iter) {
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: iter, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+}
+async function vaultEncrypt(obj, key) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key || Vault.key, new TextEncoder().encode(JSON.stringify(obj)));
+  return { v: 1, iv: b64e(iv), ct: b64e(ct), updated: new Date().toISOString() };
+}
+async function vaultDecrypt(env, key) {
+  const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64d(env.iv) }, key || Vault.key, b64d(env.ct));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+/* small IndexedDB helper: 'files' holds encrypted notes files, 'keys' a remembered (non-extractable) key */
+function notesDB(store, mode, fn) {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('scholar_notes', 1);
+    req.onupgradeneeded = () => { req.result.createObjectStore('files'); req.result.createObjectStore('keys'); };
+    req.onerror = () => reject(req.error);
+    req.onsuccess = () => {
+      const tx = req.result.transaction(store, mode), r = fn(tx.objectStore(store));
+      tx.oncomplete = () => resolve(r && r.result);
+      tx.onerror = () => reject(tx.error);
+    };
+  });
+}
+const nfGet = name => notesDB('files', 'readonly', st => st.get(name)).catch(() => null);
+const nfPut = (name, rec) => notesDB('files', 'readwrite', st => st.put(rec, name));
+const nfAll = () => new Promise(resolve => {
+  const out = [];
+  const req = indexedDB.open('scholar_notes', 1);
+  req.onupgradeneeded = () => { req.result.createObjectStore('files'); req.result.createObjectStore('keys'); };
+  req.onerror = () => resolve(out);
+  req.onsuccess = () => {
+    const cur = req.result.transaction('files').objectStore('files').openCursor();
+    cur.onsuccess = e => { const c = e.target.result; if (c) { out.push([c.key, c.value]); c.continue(); } else resolve(out); };
+    cur.onerror = () => resolve(out);
+  };
+});
+
+/* ---- GitHub I/O for the small notes files ---- */
+function ghHeaders() { return { 'Authorization': `Bearer ${localStorage.getItem('gh_pat')}`, 'Accept': 'application/vnd.github+json' }; }
+async function ghNoteRead(name) {
+  if (hasPAT()) {
+    const res = await fetch(`${_ghFileUrl(VAULT_DIR + name)}?ref=${GH_BRANCH}&_=${Date.now()}`, { headers: ghHeaders(), cache: 'no-store' });
+    if (res.status === 404) return null;
+    if (!res.ok) throw _ghFail(res, 'read of ' + name);
+    const j = await res.json();
+    return { sha: j.sha, env: JSON.parse(new TextDecoder().decode(b64d(j.content.replace(/\n/g, '')))) };
+  }
+  const res = await fetch(`https://raw.githubusercontent.com/${GH_OWNER}/${GH_REPO}/${GH_BRANCH}/${VAULT_DIR}${name}?t=${Date.now()}`, { cache: 'no-store' });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error('read of ' + name + ' failed (' + res.status + ')');
+  return { sha: null, env: await res.json() };
+}
+async function ghNoteWrite(name, env, sha) {
+  const body = { message: `Update ${VAULT_DIR}${name} (encrypted notes)`, content: btoa(unescape(encodeURIComponent(JSON.stringify(env)))), branch: GH_BRANCH };
+  if (sha) body.sha = sha;
+  const res = await fetch(_ghFileUrl(VAULT_DIR + name), { method: 'PUT', headers: { ...ghHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (!res.ok) throw _ghFail(res, 'save of ' + name);
+  return (await res.json()).content.sha;
+}
+/* Newest copy of a notes file: our unpushed edit, else whichever of cache / GitHub is newer */
+async function nfLoad(name) {
+  const local = await nfGet(name);
+  if (local && local.dirty) return local;
+  let remote = null;
+  try { remote = await ghNoteRead(name); } catch (e) { if (local) return local; throw e; }
+  if (remote && (!local || (remote.env.updated || '') >= (local.env.updated || ''))) {
+    const rec = { env: remote.env, sha: remote.sha, base: remote.env.updated, dirty: false };
+    await nfPut(name, rec).catch(() => {});
+    return rec;
+  }
+  return local || null;
+}
+async function nfSave(name, obj) {
+  const prev = await nfGet(name);
+  const env = await vaultEncrypt(obj);
+  await nfPut(name, { env, sha: prev ? prev.sha : null, base: prev ? prev.base : null, dirty: true });
+  scheduleNotesPush();
+}
+
+/* ---- merging two copies of the same file (edited on two devices) ---- */
+function mergePaperNotes(a, b) {
+  const deleted = { ...(a.deleted || {}), ...(b.deleted || {}) };
+  const byId = new Map();
+  [...(a.annos || []), ...(b.annos || [])].forEach(x => {
+    const cur = byId.get(x.id);
+    if (!cur || (x.updated || '') > (cur.updated || '')) byId.set(x.id, x);
+  });
+  const annos = [...byId.values()].filter(x => !deleted[x.id] || deleted[x.id] < (x.updated || ''));
+  const newer = (a.notesUpdated || '') >= (b.notesUpdated || '') ? a : b;
+  return { ...a, ...b, notes: newer.notes || '', notesUpdated: newer.notesUpdated || '', annos, deleted, pdf: b.pdf || a.pdf };
+}
+function mergeIndex(a, b) {
+  const papers = { ...(a.papers || {}) };
+  Object.entries(b.papers || {}).forEach(([id, e]) => { if (!papers[id] || (e.updated || '') > (papers[id].updated || '')) papers[id] = e; });
+  const newerColors = (a.colorsUpdated || '') >= (b.colorsUpdated || '') ? a : b;
+  return { v: 1, papers, colors: newerColors.colors || {}, colorsUpdated: newerColors.colorsUpdated || '' };
+}
+
+/* ---- pushing: every dirty file, merged with GitHub's copy when that changed meanwhile ---- */
+function scheduleNotesPush(delay) {
+  updateNotesSync();
+  if (!hasPAT()) return;
+  clearTimeout(Vault.pushTimer);
+  Vault.pushTimer = setTimeout(pushNotes, delay || 2500);
+}
+async function pushNotes() {
+  Vault.pushTimer = null;
+  if (!hasPAT() || !Vault.key) { updateNotesSync(); return; }
+  if (Vault.pushing) { Vault.pushAgain = true; return; }
+  Vault.pushing = true; Vault.pushAgain = false; updateNotesSync();
+  try {
+    for (const [name, rec] of await nfAll()) {
+      if (!rec || !rec.dirty) continue;
+      const remote = await ghNoteRead(name);
+      let env = rec.env;
+      if (remote && remote.env.updated !== rec.base && name !== '_vault.json') {
+        const mine = await vaultDecrypt(rec.env), theirs = await vaultDecrypt(remote.env);
+        const merged = name === '_index.json' ? mergeIndex(theirs, mine) : mergePaperNotes(theirs, mine);
+        env = await vaultEncrypt(merged);
+        if (name === '_index.json') Vault.index = mergeIndex(merged, Vault.index || {});
+        else {
+          const pid = name.replace(/\.json$/, '');
+          if (Vault.cache.has(pid)) Vault.cache.set(pid, merged);
+          if (_rn && _rn.id === pid) { _rn = merged; redrawAnnoLayers(); updateReaderNotesCount(); }
+          indexEntryFor(merged);
+          await nfSave('_index.json', Vault.index);   // counts now include the other device's highlights
+        }
+      }
+      const latest = await nfGet(name);
+      if (latest && latest.env.ct !== rec.env.ct) { Vault.pushAgain = true; continue; }   // edited while we worked: next round
+      const sha = await ghNoteWrite(name, env, remote ? remote.sha : null);
+      await nfPut(name, { env, sha, base: env.updated, dirty: false });
+    }
+    Vault.lastSaved = Date.now();
+  } catch (e) {
+    console.error(e);
+    toastError('Notes not synced yet: ' + e.message + '. They are safe in this browser; trying again shortly.');
+    scheduleNotesPush(30000);
+  } finally {
+    Vault.pushing = false;
+    if (Vault.pushAgain) scheduleNotesPush(800);
+    updateNotesSync();
+    if (_reader.paper) renderReaderPanel();
+  }
+}
+window.addEventListener('online', () => scheduleNotesPush(1000));
+
+/* ---- unlocking ---- */
+async function vaultMeta() {
+  if (Vault.meta !== undefined) return Vault.meta;
+  const rec = await nfLoad('_vault.json').catch(() => null);
+  Vault.meta = rec ? rec.env : null;
+  return Vault.meta;
+}
+async function vaultCheckKey(key, meta) {
+  try { return (await vaultDecrypt(meta.check, key)) === VAULT_CHECK; } catch (e) { return false; }
+}
+/* Unlocked already, or with a key remembered on this device; otherwise ask (unless quiet) */
+async function vaultReady(quiet) {
+  if (Vault.key) return true;
+  if (!vaultSupported()) return false;
+  const meta = await vaultMeta();
+  if (meta) {
+    const saved = await notesDB('keys', 'readonly', st => st.get('k')).catch(() => null);
+    if (saved && saved.salt === meta.salt && await vaultCheckKey(saved.key, meta)) { Vault.key = saved.key; await afterUnlock(); return true; }
+  }
+  if (quiet) return false;
+  return openVaultModal(meta ? 'unlock' : 'create');
+}
+let _vaultResolve = null, _vaultMode = null;
+function openVaultModal(mode) {
+  _vaultMode = mode;
+  const create = mode === 'create';
+  document.getElementById('vaultTitle').textContent = create ? 'Set a password for your notes' : 'Unlock your notes';
+  document.getElementById('vaultSub').innerHTML = create
+    ? 'Notes, highlights and comments are encrypted in this browser before they are saved, so the public repo only holds scrambled text. <strong>If you forget this password, your notes cannot be recovered.</strong>'
+    : 'Your notes are encrypted. Enter the password you set for them.';
+  document.getElementById('vaultPw2').style.display = create ? '' : 'none';
+  document.getElementById('vaultPw').setAttribute('autocomplete', create ? 'new-password' : 'current-password');
+  document.getElementById('vaultGo').textContent = create ? 'Encrypt my notes' : 'Unlock';
+  document.getElementById('vaultErr').textContent = '';
+  document.getElementById('vaultPw').value = ''; document.getElementById('vaultPw2').value = '';
+  document.getElementById('vaultOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('vaultPw').focus(), 0);
+  return new Promise(res => { _vaultResolve = res; });
+}
+function closeVaultModal(ok) {
+  document.getElementById('vaultOverlay').classList.remove('open');
+  if (_vaultResolve) { _vaultResolve(ok); _vaultResolve = null; }
+}
+async function submitVault() {
+  const pw = document.getElementById('vaultPw').value, err = document.getElementById('vaultErr'), go = document.getElementById('vaultGo');
+  const remember = document.getElementById('vaultRemember').checked;
+  err.textContent = '';
+  if (_vaultMode === 'create') {
+    if (pw.length < 8) { err.textContent = 'Use at least 8 characters.'; return; }
+    if (pw !== document.getElementById('vaultPw2').value) { err.textContent = "The two passwords don't match."; return; }
+    if (!hasPAT()) { err.textContent = 'Connect GitHub first (Library → Connect GitHub), so every device shares this one notes password.'; return; }
+  }
+  go.disabled = true; go.textContent = _vaultMode === 'create' ? 'Encrypting…' : 'Unlocking…';
+  try {
+    if (_vaultMode === 'create') {
+      const remote = await ghNoteRead('_vault.json').catch(() => null);
+      if (remote) { Vault.meta = remote.env; err.textContent = 'A notes password already exists (set on another device). Enter that one instead.'; openVaultModal('unlock'); return; }
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      const key = await vaultDerive(pw, salt, VAULT_ITER);
+      const meta = { v: 1, kdf: 'PBKDF2-SHA256', iter: VAULT_ITER, salt: b64e(salt), check: await vaultEncrypt(VAULT_CHECK, key), updated: new Date().toISOString() };
+      const sha = await ghNoteWrite('_vault.json', meta, null);
+      await nfPut('_vault.json', { env: meta, sha, base: meta.updated, dirty: false });
+      Vault.meta = meta; Vault.key = key;
+    } else {
+      const meta = await vaultMeta();
+      const key = await vaultDerive(pw, b64d(meta.salt), meta.iter);
+      if (!await vaultCheckKey(key, meta)) { err.textContent = "That password doesn't unlock these notes."; return; }
+      Vault.key = key;
+    }
+    if (remember) await notesDB('keys', 'readwrite', st => st.put({ key: Vault.key, salt: Vault.meta.salt }, 'k')).catch(() => {});
+    await afterUnlock();
+    closeVaultModal(true);
+    toast(_vaultMode === 'create' ? 'Notes are now encrypted with your password' : 'Notes unlocked');
+  } catch (e) {
+    console.error(e);
+    err.textContent = 'Something went wrong: ' + e.message;
+  } finally {
+    go.disabled = false; go.textContent = _vaultMode === 'create' ? 'Encrypt my notes' : 'Unlock';
+  }
+}
+async function afterUnlock() {
+  const rec = await nfLoad('_index.json').catch(() => null);
+  try { Vault.index = rec ? await vaultDecrypt(rec.env) : { v: 1, papers: {}, colors: {}, colorsUpdated: '' }; }
+  catch (e) { Vault.index = { v: 1, papers: {}, colors: {}, colorsUpdated: '' }; }
+  scheduleNotesPush(500);   // anything left unpushed from an earlier session
+  if (currentTab === 'library') renderLibrary();
+  if (_paperViewActive) { const p = allPapers.find(x => location.hash === '#paper/' + encodeURIComponent(x.id)); if (p) renderPaperDetail(p); }
+}
+async function lockNotes() {
+  Vault.key = null; Vault.index = null; Vault.cache.clear(); _rn = null; _rnEditing = false;
+  await notesDB('keys', 'readwrite', st => st.delete('k')).catch(() => {});
+  closeAnnoCard(); hideSelBar(); closeNotesModal();
+  if (_reader.paper) { renderReaderPanel(); redrawAnnoLayers(); updateReaderNotesCount(); }
+  if (currentTab === 'library') renderLibrary();
+  toast('Notes locked');
+}
+function hlLabel(c) { return (Vault.index && Vault.index.colors && Vault.index.colors[c]) || HL_DEFAULT_LABELS[c]; }
+
+/* ---- one paper's notes ---- */
+function emptyPaperNotes(id) { return { v: 1, id, notes: '', notesUpdated: '', annos: [], deleted: {}, pdf: null }; }
+async function paperNotes(id) {
+  if (!Vault.key) return null;
+  if (Vault.cache.has(id)) return Vault.cache.get(id);
+  const rec = await nfLoad(id + '.json').catch(() => null);
+  let obj = emptyPaperNotes(id);
+  if (rec) { try { obj = await vaultDecrypt(rec.env); } catch (e) { console.error('could not decrypt notes for', id, e); } }
+  Vault.cache.set(id, obj);
+  return obj;
+}
+function indexEntryFor(obj) {
+  const live = (obj.annos || []);
+  const entry = { h: live.filter(a => a.kind === 'hl').length, c: live.filter(a => a.kind === 'note' || (a.note || '').trim()).length, g: !!(obj.notes || '').trim(), updated: new Date().toISOString() };
+  Vault.index = Vault.index || { v: 1, papers: {}, colors: {} };
+  if (!entry.h && !entry.c && !entry.g) delete Vault.index.papers[obj.id];
+  else Vault.index.papers[obj.id] = entry;
+}
+async function savePaperNotes(obj) {
+  Vault.cache.set(obj.id, obj);
+  indexEntryFor(obj);
+  await nfSave(obj.id + '.json', obj);
+  await nfSave('_index.json', Vault.index);
+}
+let _notesSyncText = '';
+function updateNotesSync() {
+  const el = document.getElementById('rpSync');
+  let t;
+  if (!hasPAT()) t = 'Encrypted · only in this browser until you connect GitHub';
+  else if (Vault.pushing || Vault.pushTimer) t = 'Encrypted · saving…';
+  else t = 'Encrypted · saved' + (Vault.lastSaved ? ' ' + agoText(Vault.lastSaved) : '');
+  _notesSyncText = t;
+  if (el) el.textContent = t;
+}
+
+/* ===== ANNOTATIONS IN THE READER ===== */
+let _rn = null;          // notes object of the paper in the reader
+let _rnFilter = { colors: new Set(), notes: false, q: '' };
+let _rnEditing = false;
+function annoById(id) { return _rn && (_rn.annos || []).find(a => a.id === id); }
+function newAnnoId() { return 'a' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+async function loadReaderNotes() {
+  _rn = null;
+  if (_reader.paper && Vault.key) _rn = await paperNotes(_reader.paper.id);
+  // warn when the PDF isn't the one these highlights were made on
+  if (_rn && _rn.pdf && _rn.pdf.fp && _reader.doc && _reader.doc.fingerprints && _rn.pdf.fp !== _reader.doc.fingerprints[0] && (_rn.annos || []).length)
+    toast('This PDF differs from the one you annotated, so some highlights may sit slightly off.', null, { duration: 7000 });
+  updateReaderNotesCount();
+  renderReaderPanel();
+  redrawAnnoLayers();
+}
+function updateReaderNotesCount() {
+  const n = _rn ? (_rn.annos || []).length : 0;
+  document.getElementById('readerNotesCount').textContent = n ? n : '';
+}
+/* highlights are stored as fractions of the page, so they sit right at any zoom */
+function renderAnnoLayer(pageDiv) {
+  let layer = pageDiv.querySelector('.annoLayer');
+  if (!layer) {
+    if (!pageDiv.querySelector('canvas')) return;
+    layer = document.createElement('div');
+    layer.className = 'annoLayer';
+    pageDiv.insertBefore(layer, pageDiv.querySelector('.textLayer'));
+  }
+  const page = +pageDiv.dataset.page;
+  const list = _rn ? (_rn.annos || []).filter(a => a.page === page) : [];
+  layer.innerHTML = list.map(a => a.rects.map(r =>
+    `<div class="anno-rect ${a.kind === 'note' ? 'note' : ''}" data-anno="${a.id}" style="--hc:var(--hl-${a.color || 'yellow'});left:${r[0] * 100}%;top:${r[1] * 100}%;width:${r[2] * 100}%;height:${r[3] * 100}%"></div>`).join('')
+    + (a.kind === 'note' && a.rects[0] ? `<div class="anno-pin" style="left:${(a.rects[a.rects.length - 1][0] + a.rects[a.rects.length - 1][2]) * 100}%;top:${a.rects[a.rects.length - 1][1] * 100}%"></div>` : '')).join('');
+}
+function redrawAnnoLayers() { document.querySelectorAll('#readerBody .reader-page[data-drawn]').forEach(renderAnnoLayer); }
+
+/* --- selection toolbar --- */
+function selInfo() {
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount || sel.isCollapsed) return null;
+  const range = sel.getRangeAt(0);
+  const el = n => (n.nodeType === 1 ? n : n.parentElement);
+  const a = el(range.startContainer) && el(range.startContainer).closest('.reader-page');
+  const b = el(range.endContainer) && el(range.endContainer).closest('.reader-page');
+  if (!a || !b) return null;
+  if (a !== b) return { error: 'Select within one page to highlight.' };
+  const pr = a.getBoundingClientRect();
+  const raw = [...range.getClientRects()].filter(r => r.width > 1 && r.height > 1).map(r => [(r.left - pr.left) / pr.width, (r.top - pr.top) / pr.height, r.width / pr.width, r.height / pr.height]);
+  const rects = mergeLineRects(raw);
+  const quote = sel.toString().replace(/\s+/g, ' ').trim();
+  if (!quote || !rects.length) return null;
+  const text = (a.querySelector('.textLayer') || {}).textContent || '';
+  const flat = text.replace(/\s+/g, ' '), i = flat.indexOf(quote);
+  return { page: +a.dataset.page, rects, quote, prefix: i > 0 ? flat.slice(Math.max(0, i - 40), i) : '', suffix: i >= 0 ? flat.slice(i + quote.length, i + quote.length + 40) : '', end: range.getClientRects()[range.getClientRects().length - 1] };
+}
+/* one box per line: text layers give a rect per span, often overlapping */
+function mergeLineRects(rs) {
+  rs = rs.filter(r => r[2] > 0.001 && r[3] > 0.001).sort((p, q) => p[1] - q[1] || p[0] - q[0]);
+  const out = [];
+  rs.forEach(r => {
+    const last = out[out.length - 1];
+    const sameLine = last && Math.abs((last[1] + last[3] / 2) - (r[1] + r[3] / 2)) < Math.min(last[3], r[3]) * 0.6;
+    if (sameLine && r[0] <= last[0] + last[2] + 0.012) {
+      const x1 = Math.min(last[0], r[0]), y1 = Math.min(last[1], r[1]);
+      const x2 = Math.max(last[0] + last[2], r[0] + r[2]), y2 = Math.max(last[1] + last[3], r[1] + r[3]);
+      out[out.length - 1] = [x1, y1, x2 - x1, y2 - y1];
+    } else out.push(r.slice());
+  });
+  return out.map(r => r.map(v => Math.round(v * 10000) / 10000));
+}
+let _selPending = null;
+function hideSelBar() { document.getElementById('selBar').classList.remove('open'); _selPending = null; }
+function showSelBar() {
+  const info = selInfo();
+  const bar = document.getElementById('selBar');
+  if (!info) { hideSelBar(); return; }
+  if (info.error) { bar.innerHTML = `<span class="sel-act" style="cursor:default">${esc(info.error)}</span>`; }
+  else {
+    _selPending = info;
+    bar.innerHTML = HL_COLORS.map(c => `<button class="sel-dot" style="--hc:var(--hl-${c})" title="Highlight: ${escAttr(hlLabel(c))}" onmousedown="event.preventDefault()" onclick="createAnno('hl','${c}')"></button>`).join('')
+      + `<span class="sel-sep"></span><button class="sel-act" onmousedown="event.preventDefault()" onclick="createAnno('note')">Comment</button><button class="sel-act" onmousedown="event.preventDefault()" onclick="copySelQuote()">Copy quote</button>`;
+  }
+  const r = info.end || { right: 200, bottom: 200 };
+  bar.classList.add('open');
+  const bw = bar.offsetWidth, bh = bar.offsetHeight;
+  let x = Math.min(window.innerWidth - bw - 8, Math.max(8, r.right - bw / 2)), y = r.bottom + 8;
+  if (y + bh > window.innerHeight - 8) y = (r.top || r.bottom) - bh - 8;
+  bar.style.left = x + 'px'; bar.style.top = y + 'px';
+}
+function copySelQuote() {
+  const info = _selPending || selInfo();
+  if (!info || info.error) return;
+  navigator.clipboard.writeText(`“${info.quote}” (p. ${info.page})`).then(() => toast('Quote copied'));
+  hideSelBar();
+}
+async function createAnno(kind, color) {
+  const info = _selPending || selInfo();
+  if (!info || info.error) return;
+  hideSelBar();
+  if (!await vaultReady()) return;
+  if (!_rn) _rn = await paperNotes(_reader.paper.id);
+  await pinPdfVersion();
+  const now = new Date().toISOString();
+  const a = { id: newAnnoId(), kind, color: kind === 'hl' ? color : null, page: info.page, rects: info.rects, quote: info.quote, prefix: info.prefix, suffix: info.suffix, note: '', created: now, updated: now };
+  _rn.annos = (_rn.annos || []).concat(a);
+  window.getSelection().removeAllRanges();
+  await savePaperNotes(_rn);
+  updateReaderNotesCount(); redrawAnnoLayers(); renderReaderPanel();
+  if (kind === 'note') openAnnoCard(a.id, true);
+}
+/* The first highlight on a paper fixes the exact PDF: arXiv's latest version can change later */
+async function pinPdfVersion() {
+  const p = _reader.paper, doc = _reader.doc;
+  if (!p || !doc) return;
+  if (!_rn.pdf) _rn.pdf = { fp: doc.fingerprints && doc.fingerprints[0], url: _reader.local ? null : pdfSourceOf(p) };
+  const src = pdfSourceOf(p), m = src.match(/arxiv\.org\/pdf\/(\d{4}\.\d{4,5})$/);
+  if (!m || _reader.local) return;
+  try {
+    const tc = await (await doc.getPage(1)).getTextContent();
+    const v = tc.items.map(i => i.str).join(' ').match(new RegExp('arXiv:' + m[1].replace('.', '\\.') + '(v\\d+)'));
+    if (v) { p.pdf_url = `https://arxiv.org/pdf/${m[1]}${v[1]}`; _rn.pdf.url = p.pdf_url; _stateDirty = true; showSaveBar(); }
+  } catch (e) {}
+}
+
+/* --- clicking a highlight --- */
+function annoAt(pageDiv, clientX, clientY) {
+  if (!_rn) return null;
+  const pr = pageDiv.getBoundingClientRect(), x = (clientX - pr.left) / pr.width, y = (clientY - pr.top) / pr.height, page = +pageDiv.dataset.page;
+  const hits = (_rn.annos || []).filter(a => a.page === page && a.rects.some(r => x >= r[0] - 0.003 && x <= r[0] + r[2] + 0.003 && y >= r[1] - 0.003 && y <= r[1] + r[3] + 0.006));
+  return hits.length ? hits[hits.length - 1] : null;
+}
+let _acId = null, _acTimer = null;
+function openAnnoCard(id, focusNote) {
+  const a = annoById(id);
+  if (!a) return;
+  _acId = id;
+  const card = document.getElementById('annoCard');
+  card.style.setProperty('--hc', `var(--hl-${a.color || 'yellow'})`);
+  card.innerHTML = `
+    <div class="ac-quote">${esc(a.quote)}</div>
+    <div class="ac-meta">p. ${a.page}<span class="grow"></span>${HL_COLORS.map(c => `<button class="sel-dot ${a.kind === 'hl' && a.color === c ? 'on' : ''}" style="--hc:var(--hl-${c})" title="${escAttr(hlLabel(c))}" onclick="setAnnoColor('${id}','${c}')"></button>`).join('')}<button class="sel-act ${a.kind === 'note' ? 'on' : ''}" title="Comment only (underline)" onclick="setAnnoColor('${id}',null)">__</button></div>
+    <textarea id="acNote" placeholder="Add a comment… (Markdown and $math$ work)" oninput="acNoteInput()">${esc(a.note || '')}</textarea>
+    <div class="ac-foot"><span class="grow" id="acState">${a.kind === 'hl' ? esc(hlLabel(a.color)) : 'Comment'}</span>
+      <button class="sel-act" onclick="citeAnno('${id}')" title="Insert a reference to this in your notes">Cite in notes</button>
+      <button class="sel-act" onclick="navigator.clipboard.writeText('\\u201c' + annoById('${id}').quote + '\\u201d (p. ${a.page})').then(() => toast('Quote copied'))">Copy</button>
+      <button class="sel-act danger" onclick="deleteAnno('${id}')">Delete</button></div>`;
+  card.classList.add('open');
+  positionAnnoCard(a);
+  document.querySelectorAll(`.anno-rect[data-anno="${id}"]`).forEach(r => r.classList.add('hover'));
+  if (focusNote) setTimeout(() => document.getElementById('acNote').focus(), 0);
+}
+function positionAnnoCard(a) {
+  const card = document.getElementById('annoCard');
+  const rect = document.querySelector(`.anno-rect[data-anno="${a.id}"]`);
+  const r = rect ? rect.getBoundingClientRect() : { left: window.innerWidth / 2, bottom: 120, top: 120 };
+  const cw = card.offsetWidth, ch = card.offsetHeight;
+  let x = Math.min(window.innerWidth - cw - 12, Math.max(12, r.left)), y = r.bottom + 10;
+  if (y + ch > window.innerHeight - 12) y = Math.max(64, r.top - ch - 10);
+  card.style.left = x + 'px'; card.style.top = y + 'px';
+}
+function closeAnnoCard() {
+  if (_acTimer) { clearTimeout(_acTimer); _acTimer = null; acSaveNote(); }
+  document.getElementById('annoCard').classList.remove('open');
+  document.querySelectorAll('.anno-rect.hover').forEach(r => r.classList.remove('hover'));
+  _acId = null;
+}
+function acNoteInput() { clearTimeout(_acTimer); document.getElementById('acState').textContent = 'Saving…'; _acTimer = setTimeout(() => { _acTimer = null; acSaveNote(); }, 600); }
+async function acSaveNote() {
+  const a = annoById(_acId), t = document.getElementById('acNote');
+  if (!a || !t || a.note === t.value) return;
+  a.note = t.value; a.updated = new Date().toISOString();
+  await savePaperNotes(_rn);
+  const st = document.getElementById('acState'); if (st) st.textContent = 'Saved · encrypted';
+  renderReaderPanel();
+}
+async function setAnnoColor(id, color) {
+  const a = annoById(id);
+  if (!a) return;
+  if (color) { a.kind = 'hl'; a.color = color; } else { a.kind = 'note'; a.color = null; }
+  a.updated = new Date().toISOString();
+  await savePaperNotes(_rn);
+  redrawAnnoLayers(); renderReaderPanel(); openAnnoCard(id);
+}
+async function deleteAnno(id) {
+  const a = annoById(id);
+  if (!a) return;
+  _rn.annos = _rn.annos.filter(x => x.id !== id);
+  _rn.deleted = { ...(_rn.deleted || {}), [id]: new Date().toISOString() };
+  closeAnnoCard();
+  await savePaperNotes(_rn);
+  updateReaderNotesCount(); redrawAnnoLayers(); renderReaderPanel();
+  toast('Deleted', async () => {
+    delete _rn.deleted[id];
+    a.updated = new Date().toISOString();
+    _rn.annos = _rn.annos.concat(a);
+    await savePaperNotes(_rn);
+    updateReaderNotesCount(); redrawAnnoLayers(); renderReaderPanel();
+  });
+}
+function jumpToAnno(id) {
+  const a = annoById(id);
+  if (!a) return;
+  const body = document.getElementById('readerBody');
+  const pg = body.querySelector(`.reader-page[data-page="${a.page}"]`);
+  if (!pg) return;
+  body.scrollTo({ top: pg.offsetTop + a.rects[0][1] * pg.offsetHeight - body.clientHeight * 0.3, behavior: 'smooth' });
+  setTimeout(() => {
+    document.querySelectorAll(`.anno-rect[data-anno="${id}"]`).forEach(r => { r.classList.remove('flash'); void r.offsetWidth; r.classList.add('flash'); setTimeout(() => r.classList.remove('flash'), 1400); });
+  }, 450);
+}
+
+/* --- reader events: selection toolbar, clicks on highlights --- */
+(function () {
+  const body = document.getElementById('readerBody');
+  let downAt = null;
+  body.addEventListener('pointerdown', e => { downAt = [e.clientX, e.clientY]; });
+  body.addEventListener('pointerup', e => {
+    setTimeout(() => {
+      const sel = window.getSelection();
+      if (sel && !sel.isCollapsed && body.contains(sel.anchorNode)) { showSelBar(); return; }
+      hideSelBar();
+      const moved = downAt && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 4;
+      const pg = e.target.closest && e.target.closest('.reader-page');
+      if (!pg || moved) return;
+      const a = annoAt(pg, e.clientX, e.clientY);
+      if (a) openAnnoCard(a.id); else closeAnnoCard();
+    }, 10);
+  });
+  body.addEventListener('scroll', () => { hideSelBar(); if (_acId) closeAnnoCard(); }, { passive: true });
+  document.addEventListener('selectionchange', () => { const sel = window.getSelection(); if (sel && sel.isCollapsed) document.getElementById('selBar').classList.remove('open'); });
+  document.addEventListener('mousedown', e => {
+    const card = document.getElementById('annoCard');
+    if (_acId && !card.contains(e.target) && !e.target.closest('.reader-page') && !e.target.closest('.rp-item')) closeAnnoCard();
+  });
+})();
+
+/* ===== NOTES PANEL ===== */
+function toggleReaderPanel(force) {
+  const r = document.getElementById('reader');
+  const open = typeof force === 'boolean' ? force : !r.classList.contains('panel-open');
+  r.classList.toggle('panel-open', open);
+  document.getElementById('readerNotesBtn').setAttribute('aria-pressed', open ? 'true' : 'false');
+  try { localStorage.setItem('scholar_reader_panel', open ? '1' : '0'); } catch (e) {}
+  if (open) renderReaderPanel();
+  if (_reader.doc && _reader.zoom === 'fit' && !window.matchMedia('(max-width: 700px)').matches) { _reader.token++; layoutReader(false); }
+}
+function renderReaderPanel() {
+  const panel = document.getElementById('readerPanel');
+  if (!panel || !document.getElementById('reader').classList.contains('panel-open')) return;
+  const head = `<div class="rp-head"><strong>Notes</strong><span class="rp-lock">${Vault.key ? '&#128274; encrypted' : ''}</span><span class="grow"></span>${Vault.key ? '<button class="sel-act" onclick="lockNotes()" title="Forget the key on this device">Lock</button>' : ''}<button class="sel-act" onclick="toggleReaderPanel(false)" aria-label="Close notes">&times;</button></div>`;
+  if (!vaultSupported()) {
+    const alt = 'http://scholar.localhost' + location.pathname + location.hash;
+    panel.innerHTML = head + `<div class="rp-locked"><strong>Notes need a secure address</strong>They are encrypted with your browser's built-in cryptography, which only runs on https:// or localhost pages. Open <a class="ig-link" href="${esc(alt)}">scholar.localhost</a> (the same site), or the GitHub Pages site. You'll connect GitHub there once.</div>`;
+    return;
+  }
+  if (!Vault.key) {
+    panel.innerHTML = head + `<div class="rp-locked"><strong>Your notes are encrypted</strong>Highlights, comments and notes are saved only in encrypted form. Unlock them with your notes password to read and add more.<br><button class="pp-btn" onclick="unlockFromPanel()">${Vault.meta === null ? 'Set a notes password' : 'Unlock notes'}</button></div>`;
+    return;
+  }
+  const n = _rn || emptyPaperNotes(_reader.paper ? _reader.paper.id : '');
+  const annos = (n.annos || []).slice().sort((a, b) => a.page - b.page || (a.rects[0][1] - b.rects[0][1]) || (a.rects[0][0] - b.rects[0][0]));
+  const f = _rnFilter, q = f.q.toLowerCase();
+  const shown = annos.filter(a => (!f.colors.size && !f.notes) || (a.kind === 'hl' ? f.colors.has(a.color) : f.notes))
+    .filter(a => !q || (a.quote + ' ' + (a.note || '')).toLowerCase().includes(q));
+  const general = _rnEditing
+    ? `<textarea class="rp-notes-edit" id="rpNotes" placeholder="Your notes on this paper…" oninput="rpNotesInput(this)" onkeydown="citeKey(event)" onblur="setTimeout(() => { if (!document.getElementById('citeDD').matches(':hover')) finishNotesEdit(); }, 150)">${esc(n.notes || '')}</textarea><div class="rp-hint">Markdown and $math$ work. Type <code>[[</code> to cite a highlight.</div>`
+    : `<div class="rp-notes-view md" id="rpNotesView" onclick="if (!event.target.closest('.cite-chip, a')) startNotesEdit()"></div>`;
+  panel.innerHTML = head + `<div class="rp-scroll">
+    <section class="rp-general"><div class="rp-sec-head">Your notes<span class="grow"></span>${_rnEditing ? '<button class="sel-act" onmousedown="event.preventDefault()" onclick="finishNotesEdit()">Done</button>' : '<button class="sel-act" onclick="startNotesEdit()">Edit</button>'}</div>${general}</section>
+    <section class="rp-annos">
+      <div class="rp-sec-head">Highlights &amp; comments<span class="grow"></span>${annos.length}</div>
+      ${annos.length ? `<div class="rp-filters">${HL_COLORS.map(c => `<button class="sel-dot ${f.colors.has(c) ? 'on' : ''}" style="--hc:var(--hl-${c})" title="${escAttr(hlLabel(c))}" onclick="toggleRnColor('${c}')"></button>`).join('')}<button class="rp-fnote ${f.notes ? 'on' : ''}" onclick="_rnFilter.notes=!_rnFilter.notes;renderReaderPanel()">comments</button><input class="rp-search" id="rpSearch" placeholder="Search quotes and comments" value="${esc(f.q)}" oninput="_rnFilter.q=this.value;renderRnList()"></div>` : ''}
+      <div class="rp-list" id="rpList"></div>
+      <div class="rp-colors">${HL_COLORS.map(c => `<button onclick="renameHlColor('${c}')" title="Rename"><i style="--hc:var(--hl-${c})"></i>${esc(hlLabel(c))}</button>`).join('')}</div>
+    </section>
+  </div><div class="rp-foot"><span id="rpSync">${esc(_notesSyncText)}</span></div>`;
+  updateNotesSync();
+  renderRnList(shown, annos.length);
+  if (!_rnEditing) renderNotesMarkdown(document.getElementById('rpNotesView'), n.notes || '', n);
+  else { const t = document.getElementById('rpNotes'); t.focus(); t.selectionStart = t.selectionEnd = t.value.length; }
+}
+function renderRnList(shown, total) {
+  const list = document.getElementById('rpList');
+  if (!list) return;
+  if (!shown) { renderReaderPanel(); return; }
+  if (!total) { list.innerHTML = '<div class="rp-empty">Select text in the paper to highlight it or add a comment. Everything here is encrypted.</div>'; return; }
+  if (!shown.length) { list.innerHTML = '<div class="rp-empty">Nothing matches this filter.</div>'; return; }
+  list.innerHTML = shown.map(a => `<div class="rp-item ${a.kind === 'note' ? 'note' : ''}" style="--hc:var(--hl-${a.color || 'yellow'})" tabindex="0" onclick="if (!event.target.closest('button')) { jumpToAnno('${a.id}'); }" ondblclick="openAnnoCard('${a.id}', true)">
+      <div class="rp-item-top">p. ${a.page} · ${a.kind === 'hl' ? esc(hlLabel(a.color)) : 'Comment'}<span class="grow"></span><span class="rp-item-acts"><button onclick="openAnnoCard('${a.id}', true)">Edit</button><button onclick="citeAnno('${a.id}')">Cite</button><button onclick="deleteAnno('${a.id}')">Delete</button></span></div>
+      <div class="rp-quote">${esc(a.quote)}</div>
+      ${(a.note || '').trim() ? `<div class="rp-note md" data-md="${escAttr(a.id)}"></div>` : ''}
+    </div>`).join('');
+  list.querySelectorAll('.rp-note[data-md]').forEach(el => { const a = annoById(el.dataset.md); if (a) renderNotesMarkdown(el, a.note, _rn); });
+}
+function toggleRnColor(c) { _rnFilter.colors.has(c) ? _rnFilter.colors.delete(c) : _rnFilter.colors.add(c); renderReaderPanel(); }
+async function unlockFromPanel() { if (await vaultReady()) { await loadReaderNotes(); } }
+async function renameHlColor(c) {
+  const name = await showPrompt('Name this colour', `What does ${hlLabel(c).toLowerCase()} mean in your highlights?`, hlLabel(c));
+  if (!name || !Vault.index) return;
+  Vault.index.colors = { ...(Vault.index.colors || {}), [c]: name.trim().slice(0, 30) };
+  Vault.index.colorsUpdated = new Date().toISOString();
+  await nfSave('_index.json', Vault.index);
+  renderReaderPanel();
+}
+function startNotesEdit() { _rnEditing = true; renderReaderPanel(); }
+async function finishNotesEdit() {
+  if (!_rnEditing) return;
+  const t = document.getElementById('rpNotes');
+  _rnEditing = false;
+  closeCiteDD();
+  if (t && _rn && t.value !== (_rn.notes || '')) await saveGeneralNotes(t.value);
+  renderReaderPanel();
+}
+let _rnNotesTimer = null;
+function rpNotesInput(t) {
+  citeInput(t);
+  clearTimeout(_rnNotesTimer);
+  _rnNotesTimer = setTimeout(() => saveGeneralNotes(t.value), 800);
+}
+async function saveGeneralNotes(text) {
+  if (!_rn) return;
+  if ((_rn.notes || '') === text) return;
+  _rn.notes = text; _rn.notesUpdated = new Date().toISOString();
+  await savePaperNotes(_rn);
+}
+
+/* --- citing highlights in notes: [[cite:ID p.N "quote"]] --- */
+function citeToken(a) { const q = a.quote.length > 60 ? a.quote.slice(0, 57).trim() + '…' : a.quote; return `[[cite:${a.id} p.${a.page} "${q.replace(/"/g, "'").replace(/\]/g, ')')}"]]`; }
+async function citeAnno(id) {
+  const a = annoById(id);
+  if (!a) return;
+  closeAnnoCard();
+  toggleReaderPanel(true);
+  if (!_rnEditing) { _rnEditing = true; renderReaderPanel(); }
+  const t = document.getElementById('rpNotes');
+  const pos = t.selectionStart ?? t.value.length;
+  const before = t.value.slice(0, pos), after = t.value.slice(pos);
+  const tok = citeToken(a) + ' ';
+  t.value = before + (before && !/\s$/.test(before) ? ' ' : '') + tok + after;
+  t.focus(); t.selectionStart = t.selectionEnd = (before.length + tok.length + 1);
+  await saveGeneralNotes(t.value);
+}
+let _citeCtx = null;
+function citeInput(t) {
+  const upto = t.value.slice(0, t.selectionStart), m = upto.match(/\[\[([^\]\n]{0,40})$/);
+  if (!m || !_rn || !(_rn.annos || []).length) { closeCiteDD(); return; }
+  const q = m[1].toLowerCase();
+  const opts = _rn.annos.slice().sort((a, b) => a.page - b.page).filter(a => !q || (a.quote + ' ' + (a.note || '')).toLowerCase().includes(q)).slice(0, 12);
+  if (!opts.length) { closeCiteDD(); return; }
+  _citeCtx = { t, start: upto.length - m[0].length, end: t.selectionStart, opts, i: 0 };
+  let dd = document.getElementById('citeDD');
+  dd.innerHTML = opts.map((a, i) => `<button class="${i === 0 ? 'on' : ''}" style="--hc:var(--hl-${a.color || 'yellow'})" onmousedown="event.preventDefault()" onclick="pickCite(${i})">p. ${a.page} · ${esc(a.quote.slice(0, 90))}</button>`).join('');
+  const r = t.getBoundingClientRect();
+  dd.style.left = Math.max(12, r.left) + 'px'; dd.style.top = Math.min(window.innerHeight - 270, r.bottom + 6) + 'px';
+  dd.classList.add('open');
+}
+function citeKey(e) {
+  if (!_citeCtx || !document.getElementById('citeDD').classList.contains('open')) return;
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    _citeCtx.i = (_citeCtx.i + (e.key === 'ArrowDown' ? 1 : -1) + _citeCtx.opts.length) % _citeCtx.opts.length;
+    document.querySelectorAll('#citeDD button').forEach((b, i) => b.classList.toggle('on', i === _citeCtx.i));
+  } else if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); pickCite(_citeCtx.i); }
+  else if (e.key === 'Escape') { e.preventDefault(); closeCiteDD(); }
+}
+function pickCite(i) {
+  const c = _citeCtx;
+  if (!c) return;
+  const tok = citeToken(c.opts[i]) + ' ';
+  c.t.value = c.t.value.slice(0, c.start) + tok + c.t.value.slice(c.end);
+  c.t.selectionStart = c.t.selectionEnd = c.start + tok.length;
+  c.t.focus();
+  closeCiteDD();
+  saveGeneralNotes(c.t.value);
+}
+function closeCiteDD() { const dd = document.getElementById('citeDD'); if (dd) dd.classList.remove('open'); _citeCtx = null; }
+
+/* --- Markdown + LaTeX, loaded on first use --- */
+let _mdLibs = null;
+function loadScript(src) { return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('could not load ' + src)); document.head.appendChild(s); }); }
+function loadMdLibs() {
+  if (_mdLibs) return _mdLibs;
+  const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css'; document.head.appendChild(css);
+  _mdLibs = Promise.all([
+    loadScript('https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js'),
+    loadScript('https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js'),
+    loadScript('https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js'),
+  ]);
+  return _mdLibs;
+}
+async function renderNotesMarkdown(el, text, notesObj) {
+  if (!el) return;
+  if (!(text || '').trim()) { el.innerHTML = ''; return; }
+  el.textContent = text;   // readable right away, formatted once the libraries arrive
+  try { await loadMdLibs(); } catch (e) { return; }
+  const slots = [];
+  const slot = html => `@@SLOT${slots.push(html) - 1}@@`;
+  let src = text
+    .replace(/\[\[cite:([\w-]+)([^\]]*)\]\]/g, (m, id, rest) => {
+      const a = notesObj && (notesObj.annos || []).find(x => x.id === id);
+      const label = a ? `p. ${a.page} “${a.quote.length > 70 ? a.quote.slice(0, 67).trim() + '…' : a.quote}”` : (rest.trim().replace(/^p\.(\d+)/, 'p. $1') || 'a deleted highlight');
+      return slot(`<button class="cite-chip ${a ? '' : 'gone'}" ${a ? `style="--hc:var(--hl-${a.color || 'yellow'})" data-anno="${a.id}"` : 'title="This highlight was deleted"'}>${esc(label)}</button>`);
+    })
+    .replace(/\$\$([\s\S]+?)\$\$/g, (m, tex) => slot(katex.renderToString(tex, { displayMode: true, throwOnError: false })))
+    .replace(/(^|[^\\$])\$([^\s$](?:[^$\n]*?[^\s$])?)\$/g, (m, pre, tex) => pre + slot(katex.renderToString(tex, { throwOnError: false })));
+  let html = DOMPurify.sanitize(marked.parse(src, { breaks: true, gfm: true }));
+  html = html.replace(/@@SLOT(\d+)@@/g, (m, i) => slots[+i]);
+  el.innerHTML = html;
+  el.querySelectorAll('.cite-chip[data-anno]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); citeClick(b.dataset.anno, notesObj); }));
+  el.querySelectorAll('a[href]').forEach(a => { a.target = '_blank'; a.rel = 'noopener'; });
+}
+/* a citation in the reader jumps to the highlight; elsewhere it opens the reader there */
+function citeClick(id, notesObj) {
+  const r = document.getElementById('reader');
+  if (r.classList.contains('open') && _rn && annoById(id)) { jumpToAnno(id); return; }
+  _pendingJump = id;
+  openReader(notesObj.id);
+}
+let _pendingJump = null;
 
 /* ===== RELATED PAPERS =====
    Score every other paper against this one: shared authors count most, then distinctive title and
@@ -4633,7 +5501,10 @@ function showPaperDetail(id) {
 function renderPaperDetail(p) {
   const k = paperKey(p), ka = escAttr(k);
   const ir = readSet.has(k), isStar = starSet.has(k), inAny = paperInAnyList(k);
-  const hasNotes = hasText(p.user_notes);
+  const vn = Vault.key && Vault.cache.get(p.id);
+  const ix = Vault.index && Vault.index.papers[p.id];
+  const hasNotes = !!(vn && (vn.notes || '').trim());
+  if (Vault.key && !Vault.cache.has(p.id) && ix) paperNotes(p.id).then(() => { if (_paperViewActive && location.hash === '#paper/' + encodeURIComponent(p.id)) renderPaperDetail(p); });
   const rel = dynamicRelevance(p);
   const v = venueOf(p);
   const why = parseWhy(p);
@@ -4689,7 +5560,7 @@ function renderPaperDetail(p) {
   let main = '';
   if (hasText(p.summary)) main += `<section class="pd-section"><h2>Summary</h2><p class="pd-prose">${esc(p.summary)}</p></section>`;
   if (hasText(p.abstract)) main += `<section class="pd-section"><h2>Abstract</h2><p class="pd-prose">${esc(p.abstract)}</p></section>`;
-  if (hasNotes) main += `<section class="pd-section pd-notes"><h2>Your notes <button class="pd-edit" onclick="toggleNotesModal('${ka}')">Edit</button></h2><p class="pd-prose">${esc(p.user_notes)}</p></section>`;
+  if (hasNotes || (ix && ix.h + ix.c)) main += `<section class="pd-section pd-notes"><h2>Your notes <button class="pd-edit" onclick="toggleNotesModal('${ka}')">Edit</button></h2>${hasNotes ? `<div class="pd-prose md" id="pdNotesMd"></div>` : ''}${ix && ix.h + ix.c ? `<div class="pd-notes-meta">${ix.h} highlight${ix.h === 1 ? '' : 's'}${ix.c ? `, ${ix.c} comment${ix.c === 1 ? '' : 's'}` : ''} · <button onclick="openReader('${ka}');setTimeout(()=>toggleReaderPanel(true),300)">Open in the reader</button></div>` : ''}</section>`;
   if (!main) main = `<p class="pd-empty">No summary or abstract yet. Open the paper to read it at the source.</p>`;
 
   // Side panel: facts + editable topics
@@ -4734,6 +5605,7 @@ function renderPaperDetail(p) {
     </article>
   </div>`;
 
+  if (hasNotes) renderNotesMarkdown(document.getElementById('pdNotesMd'), vn.notes, vn);
   if (!renderPaperDetail._scrollHooked) {
     document.getElementById('mainScroll').addEventListener('scroll', updatePaperBar, { passive: true });
     renderPaperDetail._scrollHooked = true;
@@ -4828,62 +5700,62 @@ function closeRelevancePopup() {
 function sanitizeNote(s) { return s.replace(/\|/g, '/').replace(/,/g, ';').replace(/\r\n|\r|\n/g, ' // ').replace(/"/g, "'"); }
 function desanitizeNote(s) { return s.replace(/ \/\/ /g, '\n'); }
 
-function saveNote(key, value) {
-  const p = allPapers.find(pp => paperKey(pp) === key);
-  if (!p) return;
-  const sanitized = sanitizeNote(value.trim());
-  if ((p.user_notes||'') === sanitized) return;
-  p.user_notes = sanitized;
-  _stateDirty = true; showSaveBar();
+/* The quick notes box edits the same encrypted notes as the reader's panel */
+async function saveNote(key, value) {
+  if (!Vault.key) return;
+  const n = await paperNotes(key);
+  if (!n || (n.notes || '') === value) return;
+  n.notes = value; n.notesUpdated = new Date().toISOString();
+  await savePaperNotes(n);
+  if (_reader.paper && _reader.paper.id === key) { _rn = n; renderReaderPanel(); }
 }
 
-function deleteNote() {
-  if (!_notesKey) return;
-  const p = allPapers.find(pp => paperKey(pp) === _notesKey);
-  if (!p) return;
+async function deleteNote() {
+  if (!_notesKey || !Vault.key) return;
+  const key = _notesKey, p = allPapers.find(pp => paperKey(pp) === key);
   clearTimeout(_notesSaveTimer);
-  const prev = p.user_notes || '';
+  const n = await paperNotes(key);
+  const prev = n.notes || '';
   const area = document.getElementById('notesModalArea');
   if (!prev && !area.value.trim()) { closeNotesModal(); return; }   // nothing to delete
-  p.user_notes = '';
   area.value = '';
-  _stateDirty = true; showSaveBar();
-  renderPaperDetail(p);
+  await saveNote(key, '');
+  if (p) renderPaperDetail(p);
   closeNotesModal();
-  toast('Note deleted', () => {
-    p.user_notes = prev;
-    _stateDirty = true; showSaveBar();
-    if (_paperViewActive) renderPaperDetail(p);
-  });
+  toast('Note deleted', async () => { await saveNote(key, prev); if (_paperViewActive && p) renderPaperDetail(p); });
 }
 /* Footer shows "Saved" after typing, and offers delete only when there is something to delete */
 function updateNotesFooter(saved) {
   const area = document.getElementById('notesModalArea');
   document.getElementById('notesDelete').hidden = !area.value.trim();
   const st = document.getElementById('notesStatus');
-  st.textContent = saved ? 'Saved in this browser' : (area.value.trim() ? 'Saving…' : '');
+  st.textContent = saved ? 'Saved \u00b7 encrypted' : (area.value.trim() ? 'Saving…' : '');
 }
 
 let _notesSaveTimer = null;
 function debouncedSaveNote() {
   clearTimeout(_notesSaveTimer);
-  _notesSaveTimer = setTimeout(() => {
+  _notesSaveTimer = setTimeout(async () => {
     if (!_notesKey) return;
-    saveNote(_notesKey, document.getElementById('notesModalArea').value);
-    const p = allPapers.find(pp => paperKey(pp) === _notesKey);
-    if (p) renderPaperDetail(p);
+    const key = _notesKey;
+    await saveNote(key, document.getElementById('notesModalArea').value);
+    const p = allPapers.find(pp => paperKey(pp) === key);
+    if (p && _paperViewActive) renderPaperDetail(p);
     updateNotesFooter(true);
-  }, 300);
+  }, 500);
 }
 
 let _notesKey = null;
-function toggleNotesModal(key) {
+async function toggleNotesModal(key) {
   const modal = document.getElementById('notesModal');
   if (_notesKey === key && modal.classList.contains('open')) { closeNotesModal(); return; }
+  if (!vaultSupported()) { toastError('Notes are encrypted, which needs a secure address: open scholar.localhost or the GitHub Pages site.'); return; }
+  if (!await vaultReady()) return;
+  const n = await paperNotes(key);
   _notesKey = key;
   const p = allPapers.find(pp => paperKey(pp) === key);
   const area = document.getElementById('notesModalArea');
-  area.value = desanitizeNote(p?.user_notes || '');
+  area.value = n.notes || '';
   document.getElementById('notesPaper').textContent = p ? (p.headline || p.title) : '';
   modal.classList.add('open');
   updateNotesFooter();
@@ -4895,9 +5767,9 @@ function closeNotesModal() {
   if (!modal.classList.contains('open')) return;
   const area = document.getElementById('notesModalArea');
   if (_notesKey) {
-    saveNote(_notesKey, area.value);
-    const p = allPapers.find(pp => paperKey(pp) === _notesKey);
-    if (p) renderPaperDetail(p);
+    clearTimeout(_notesSaveTimer);
+    const key = _notesKey, p = allPapers.find(pp => paperKey(pp) === key);
+    saveNote(key, area.value).then(() => { if (p && _paperViewActive) renderPaperDetail(p); });
   }
   modal.classList.remove('open');
   _notesKey = null;
@@ -4993,7 +5865,10 @@ function applyHash() {
   if (document.getElementById('reader').classList.contains('open')) {
     hideReader();
     const under = _reader.under; _reader.under = null;
-    if (under !== null && hash === under) return;   // back to the view underneath, which is still rendered
+    if (under !== null && hash === under) {   // back to the view underneath, which is still rendered
+      if (hash.startsWith('paper/')) { const pp = allPapers.find(x => x.id === decodeURIComponent(hash.slice(6))); if (pp) renderPaperDetail(pp); }   // notes may have changed
+      return;
+    }
   }
 
   // Paper detail route
