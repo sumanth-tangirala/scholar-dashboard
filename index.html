@@ -748,6 +748,7 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 /* comments and citations are lines in navy, apart from the highlight colours and the site's amber */
 .annoLayer, .annoMarks { --note-line: #8aa4f0; --note-ink: #0f1b3d; --ref-tint: rgba(138,164,240,0.16); }
 .anno-rect { position: absolute; border-radius: 2px; background: var(--hc); opacity: 0.38; transition: opacity 0.15s, box-shadow 0.15s; }
+.anno-rect:not(.note) { box-sizing: content-box; padding: 0 3px; margin-left: -3px; border-radius: 3px; }   /* a little room either side of the words */
 .reader:not(.dark) .anno-rect { mix-blend-mode: multiply; }   /* opacity from .anno-rect, so .hover/.flash still apply */
 .anno-rect.note { background: none; opacity: 1; border-bottom: 2px dashed var(--note-line, var(--accent)); border-radius: 0; mix-blend-mode: normal !important; }
 .anno-rect.flash { opacity: 0.75; box-shadow: 0 0 0 2px var(--hc, var(--accent)); }
