@@ -26,7 +26,8 @@ CHATS = os.path.join(HOME, 'chats')
 TOKEN_FILE = os.path.join(HOME, 'token')
 SESSIONS_FILE = os.path.join(HOME, 'sessions.json')
 NO_MCP = os.path.join(HOME, 'no-mcp.json')
-MODELS = {'opus': 'opus', 'sonnet': 'sonnet'}
+MODELS = {'opus': 'opus', 'sonnet': 'sonnet', 'haiku': 'haiku'}
+EFFORTS = {'low', 'medium', 'high', 'xhigh', 'max'}   # anything else: Claude Code's default
 VERSION = 1
 
 for d in (HOME, WORK, CHATS, os.path.join(WORK, 'papers'), os.path.join(WORK, 'attachments')):
@@ -89,7 +90,7 @@ SYSTEM = """You are a research assistant inside the user's paper-reading app. Th
 
 Each message may start with <context>: the user's current highlights, comments and notes on this paper (they change as they read), their research interests, and sometimes other papers they @-mentioned. Use them; don't repeat them back.
 
-Citing the paper: whenever you point to something in the paper, cite it with its exact words in this form: [[p.N "exact words from the paper"]] (N = page). The quote must be contiguous and verbatim (no ellipses, no paraphrase), a phrase to a sentence long, with symbols as they appear in the text. The app shows each citation as a small clickable pill that jumps to the passage, so don't also write the quoted words in your sentence; put the citation where the claim is. Use [[p.N "..."]] only for the paper being read (its pills jump within it); cite other papers, including ones the user @-mentions, in plain text by title or author, with a page if useful.
+Citing the paper: whenever you point to something in the paper, cite it with its exact words in this form: [[p.N "exact words from the paper"]] (N = page). The quote must be contiguous and verbatim (no ellipses, no paraphrase), a phrase to a sentence long, with symbols as they appear in the text. The app shows each citation only as a small clickable pill (page number and a few words), so it is not part of your prose: write complete sentences that read fully on their own (quoting or paraphrasing in the text as you normally would), and put the citation right after the claim it supports, like a footnote marker. Use [[p.N "..."]] only for the paper being read (its pills jump within it); cite other papers, including ones the user @-mentions, in plain text by title or author, with a page if useful.
 
 Other papers: the user's library is in ./library.tsv (tab-separated, one paper per line: id, title, authors, date, venue, topics, one-line summary, and flags such as starred, read, notes). When they refer to another paper by description ("the Ames backup-CBF paper", "the conformal STL one I read last month"), search that file with Grep (try a few keywords) to identify it. If more than one could fit, ask them with a short numbered list of titles. Once you know which paper(s) they mean, reply with only one line per paper, ```paper <id>```, and nothing else: the app then sends you that paper's text and the user's own notes on it, and you continue answering their question. Papers they @-mention arrive the same way, in <other-paper>.
 
@@ -210,6 +211,7 @@ class Handler(BaseHTTPRequestHandler):
             system = SYSTEM.format(pdf=pdf_name if os.path.exists(pdf_path) else '(none)', profile=('\n\nAbout the user: ' + d['profile']) if d.get('profile') else '')
             args = [claude_bin(), '-p', '--output-format', 'stream-json', '--verbose', '--include-partial-messages',
                     '--model', MODELS[model], '--system-prompt', system,
+                    *(['--effort', d['effort']] if d.get('effort') in EFFORTS else []),
                     '--tools', 'Read', 'Grep', 'Glob', 'WebSearch', 'WebFetch',
                     '--allowedTools', 'Read(./**)', 'Grep(./**)', 'Glob(./**)', 'WebSearch', 'WebFetch',   # files: this folder only
                     '--strict-mcp-config', '--mcp-config', NO_MCP, '--setting-sources', '',

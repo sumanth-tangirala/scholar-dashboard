@@ -891,7 +891,7 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .md .katex-display { margin: 0.5em 0; overflow-x: auto; overflow-y: hidden; }
 /* a citation, in the editor and in saved notes: a pill with the page and a short quote. Passages cited
    straight from the paper are navy like their underline; cited highlights take the highlight's colour */
-.cite-chip { --hc: #8aa4f0; display: inline-flex; align-items: baseline; gap: 5px; max-width: 100%; vertical-align: baseline; text-align: left; font: inherit; font-size: 12px; line-height: 1.5; color: var(--text); background: color-mix(in srgb, var(--hc) 14%, transparent); border: 1px solid color-mix(in srgb, var(--hc) 40%, transparent); border-radius: 999px; padding: 0 9px 0 7px; margin: 0 1px; cursor: pointer; white-space: nowrap; transition: background 0.15s, border-color 0.15s; }
+.cite-chip { --hc: #8aa4f0; display: inline-flex; align-items: baseline; gap: 5px; max-width: min(100%, 13em); vertical-align: baseline; text-align: left; font: inherit; font-size: 12px; line-height: 1.5; color: var(--text); background: color-mix(in srgb, var(--hc) 14%, transparent); border: 1px solid color-mix(in srgb, var(--hc) 40%, transparent); border-radius: 999px; padding: 0 9px 0 7px; margin: 0 1px; cursor: pointer; white-space: nowrap; transition: background 0.15s, border-color 0.15s; }
 .cite-chip:hover { background: color-mix(in srgb, var(--hc) 26%, transparent); border-color: color-mix(in srgb, var(--hc) 65%, transparent); }
 .cite-chip .cp-page { flex: none; font-size: 10.5px; font-weight: 600; letter-spacing: 0.02em; color: var(--hc); }
 .cite-chip .cp-q { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
@@ -922,6 +922,9 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .rp-colors button:hover { color: var(--text); }
 .rp-colors i { width: 10px; height: 10px; border-radius: 50%; background: var(--hc); }
 /* ---- chat with Claude (reader panel) ---- */
+.rp-text-btn { display: inline-flex; align-items: center; gap: 4px; font: inherit; font-size: 12.5px; color: var(--text-muted); background: none; border: none; border-radius: 7px; padding: 5px 9px 5px 7px; cursor: pointer; transition: background 0.15s, color 0.15s; }
+.rp-text-btn:hover { background: rgba(255,255,255,0.07); color: var(--text); }
+.rp-text-btn svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
 .rp-tabs { display: inline-flex; gap: 2px; background: rgba(255,255,255,0.04); border-radius: 8px; padding: 2px; }
 .rp-tabs button { background: none; border: none; color: var(--text-muted); font: inherit; font-size: 13px; font-weight: 600; padding: 4px 12px; border-radius: 6px; cursor: pointer; transition: background 0.15s, color 0.15s; }
 .rp-tabs button:hover { color: var(--text); }
@@ -968,6 +971,12 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .chat-box:focus-within { border-color: var(--accent); }
 .chat-box textarea { width: 100%; box-sizing: border-box; background: none; border: none; resize: none; color: var(--text); font: inherit; font-size: 13.5px; line-height: 1.5; outline: none; max-height: 180px; }
 .chat-box-row { display: flex; align-items: center; gap: 4px; }
+.chat-select { appearance: none; -webkit-appearance: none; field-sizing: content; min-width: 0; max-width: 118px; text-overflow: ellipsis; font: inherit; font-size: 12px; color: var(--text-muted); background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 5px center; border: none; border-radius: 6px; padding: 4px 16px 4px 6px; cursor: pointer; transition: background-color 0.15s, color 0.15s; }
+.chat-select:not(.effort) { flex-shrink: 0; }
+.chat-box-row .rp-icon-btn { width: 28px; height: 28px; flex-shrink: 0; }
+.chat-select.effort { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 17a8 8 0 1 1 16 0'/%3E%3Cpath d='M12 17l4-5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 4px center, left 5px center; padding-left: 21px; }
+.chat-select:hover, .chat-select:focus-visible { background-color: rgba(255,255,255,0.07); color: var(--text); outline: none; }
+.chat-select option { background: #1d1d20; color: var(--text); }
 .chat-send { width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 8px; background: var(--accent); color: #1a1406; cursor: pointer; transition: filter 0.15s, background 0.15s; }
 .chat-send:hover { filter: brightness(1.08); }
 .chat-send.stop { background: rgba(255,255,255,0.12); color: var(--text); }
@@ -6269,7 +6278,6 @@ let _panelTab = 'notes';
 const ICON_SEND = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
 const ICON_STOP = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.5"/></svg>';
 const ICON_FIGURE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/></svg>';
-const ICON_NEWCHAT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h8M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
 const ICON_ASK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8l-4 3v-3H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="M10 9.2a2 2 0 1 1 2.6 1.9c-.4.2-.6.5-.6.9M12 13.6h.01"/></svg>';
 const ICON_PAPER = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4 4v6M7 3v18h7M14 3v4h4M17 16v6M14 19h6"/></svg>';
 function chatAddPaper() {   // + Paper: starts an @ search at the caret
@@ -6352,7 +6360,7 @@ function renderChatPanel(force) {
   const input = document.getElementById('chatInput'); if (input) Chat.draftText = input.value;
   const ready = Chat.status === 'ready';
   if (ready && pid && Chat.loadedFor !== pid) { chatOpen(); return; }   // another paper: load its chat first
-  const head = `<div class="rp-head">${panelTabsHTML()}<span class="grow"></span>${ready ? `<div class="rp-seg" role="group" aria-label="Model"><button class="${Chat.model === 'opus' ? 'on' : ''}" onclick="chatModel('opus')" title="Deepest answers">Opus</button><button class="${Chat.model === 'sonnet' ? 'on' : ''}" onclick="chatModel('sonnet')" title="Quicker, lighter on usage">Sonnet</button></div><button class="rp-icon-btn" onclick="chatNew()" title="New chat" aria-label="New chat">${ICON_NEWCHAT}</button>` : ''}<button class="rp-icon-btn" onclick="toggleReaderPanel(false)" title="Close" aria-label="Close panel">${ICON_CLOSE}</button></div>`;
+  const head = `<div class="rp-head">${panelTabsHTML()}<span class="grow"></span>${ready ? `<button class="rp-text-btn" onclick="chatNew()" title="Start a fresh conversation about this paper (this one is kept)">${ICON_PLUS}New chat</button>` : ''}<button class="rp-icon-btn" onclick="toggleReaderPanel(false)" title="Close" aria-label="Close panel">${ICON_CLOSE}</button></div>`;
   const setup = {
     setup: `<p>Chat with Claude about this paper, with your highlights and notes in view. It runs through Claude Code on your laptop.</p><button class="ui-btn ui-btn-primary" onclick="chatConnect()">Connect to Claude Code</button>`,
     unknown: `<p class="chat-dim">Connecting to Claude Code…</p>`,
@@ -6366,7 +6374,7 @@ function renderChatPanel(force) {
     ? `<div class="chat-scroll" id="chatScroll"></div>
        <div class="chat-compose"><div class="chat-attach" id="chatAttach"></div>
          <div class="chat-box"><textarea id="chatInput" rows="1" placeholder="Ask about this paper…   @ adds another paper" oninput="chatInputChanged(this)" onkeydown="chatKey(event)"></textarea>
-           <div class="chat-box-row"><button class="rp-icon-btn sm" onclick="startFigureSelect()" title="Ask about a figure: drag a box on the page" aria-label="Ask about a figure">${ICON_FIGURE}</button><button class="rp-icon-btn sm" onmousedown="event.preventDefault()" onclick="chatAddPaper()" title="Bring in another paper (or just describe it in your message)" aria-label="Bring in another paper">${ICON_PAPER}</button><span class="grow"></span><button class="chat-send" id="chatSend" onclick="chatSendOrStop()" aria-label="Send">${ICON_SEND}</button></div></div></div>`
+           <div class="chat-box-row"><button class="rp-icon-btn sm" onclick="startFigureSelect()" title="Ask about a figure: drag a box on the page" aria-label="Ask about a figure">${ICON_FIGURE}</button><button class="rp-icon-btn sm" onmousedown="event.preventDefault()" onclick="chatAddPaper()" title="Bring in another paper (or just describe it in your message)" aria-label="Bring in another paper">${ICON_PAPER}</button><span class="grow"></span>${chatSelectsHTML()}<button class="chat-send" id="chatSend" onclick="chatSendOrStop()" aria-label="Send">${ICON_SEND}</button></div></div></div>`
     : `<div class="chat-setup">${setup[Chat.status] || setup.setup}</div>`;
   panel.innerHTML = head + `<div class="chat-root" id="chatRoot" data-paper="${escAttr(pid)}" data-status="${Chat.status}">${body}</div>`;
   if (ready) {
@@ -6374,7 +6382,16 @@ function renderChatPanel(force) {
     const i = document.getElementById('chatInput'); i.value = Chat.draftText; chatGrow(i);
   }
 }
-function chatModel(m) { Chat.model = m; renderChatPanel(true); }
+const CHAT_MODELS = [['opus', 'Opus', 'Opus 5.5: deepest answers'], ['sonnet', 'Sonnet', 'Sonnet 5: quicker, lighter on usage'], ['haiku', 'Haiku', 'Haiku 4.5: fastest, lightest']];
+const CHAT_EFFORTS = [['', 'Default'], ['low', 'Low'], ['medium', 'Medium'], ['high', 'High'], ['xhigh', 'X-high'], ['max', 'Max']];
+Chat.effort = (() => { try { return localStorage.getItem('chat_effort') || ''; } catch (e) { return ''; } })();
+function chatSelectsHTML() {
+  const m = CHAT_MODELS.find(x => x[0] === Chat.model) || CHAT_MODELS[0];
+  return `<select class="chat-select" aria-label="Model" title="${m[2]}" onchange="chatModel(this.value); this.title = this.selectedOptions[0].title">${CHAT_MODELS.map(([v, l, t]) => `<option value="${v}" title="${t}"${Chat.model === v ? ' selected' : ''}>${l}</option>`).join('')}</select>`
+    + `<select class="chat-select effort" aria-label="Effort" title="Effort: how hard Claude thinks before answering" onchange="chatEffort(this.value)">${CHAT_EFFORTS.map(([v, l]) => `<option value="${v}"${Chat.effort === v ? ' selected' : ''}>${l}</option>`).join('')}</select>`;
+}
+function chatModel(m) { Chat.model = m; }   // used from the next message; kept with this paper's chat
+function chatEffort(e) { Chat.effort = e; try { e ? localStorage.setItem('chat_effort', e) : localStorage.removeItem('chat_effort'); } catch (x) {} }
 async function chatNew() {
   if (Chat.running) return;
   if (Chat.messages.length) { try { await bridgeFetch('/chat/new', { method: 'POST', body: JSON.stringify({ paper: _reader.paper.id }) }); } catch (e) {} }
@@ -6697,7 +6714,7 @@ async function chatSend(text, auto) {
   message += text || (images.length ? 'What does this show?' : 'Explain this.');
   let context = [notesContext(_rn) ? 'My highlights, comments and notes on this paper:\n' + notesContext(_rn) : (Vault.key ? 'I have no notes on this paper yet.' : '')].filter(Boolean).join('\n\n');
   if (mentions.length) context += (context ? '\n\n' : '') + (await Promise.all(mentions.map(mentionContext))).join('\n\n');
-  const body = { paper: pid, message, display: user.text, auto: user.auto, model: Chat.model, context, profile: chatProfile(), quotes: user.quotes, mentions: user.mentions, images };
+  const body = { paper: pid, message, display: user.text, auto: user.auto, model: Chat.model, effort: Chat.effort || undefined, context, profile: chatProfile(), quotes: user.quotes, mentions: user.mentions, images };
   if (Chat.fresh) {
     try { if (_reader.doc) body.paperText = await pdfText(_reader.doc, 'r:' + pid + ':' + (_reader.doc.fingerprints || [''])[0]); } catch (e) {}
     if (!body.paperText) body.paperText = [p.title, p.authors, p.abstract].filter(Boolean).join('\n');
