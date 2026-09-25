@@ -678,6 +678,7 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .reader-pageno { font-size: 12.5px; color: var(--text-muted); font-variant-numeric: tabular-nums; margin-right: 4px; }
 #readerDarkBtn[aria-pressed="true"] { color: var(--accent); }
 .reader-body { flex: 1; overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.reader-body:focus { outline: none; }
 .reader-pages { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; padding: 18px 12px 60px; width: max-content; min-width: 100%; box-sizing: border-box; }
 .reader-page { position: relative; background: #fff; box-shadow: 0 2px 18px rgba(0,0,0,0.5); flex-shrink: 0; }
 .reader-page canvas { display: block; }
@@ -1529,7 +1530,7 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
     </div>
   </div>
   <div class="reader-split">
-    <div class="reader-body" id="readerBody"></div>
+    <div class="reader-body" id="readerBody" tabindex="-1"></div>
     <aside class="reader-panel" id="readerPanel" aria-label="Notes"></aside>
   </div>
   <div class="pdf-modal" id="pdfModal" role="dialog" aria-modal="true" aria-label="Change PDF" onclick="if (event.target === this) closePdfModal()">
@@ -4586,6 +4587,7 @@ async function showReader(id) {
   el.classList.toggle('panel-open', panelWanted && !window.matchMedia('(max-width: 700px)').matches);
   document.getElementById('readerNotesBtn').setAttribute('aria-pressed', el.classList.contains('panel-open') ? 'true' : 'false'); _reader.zoom = 'fit';
   el.classList.add('open'); el.classList.toggle('dark', readerDark());
+  document.getElementById('readerBody').focus({ preventScroll: true });   // arrow keys, Space and PageDown scroll the paper
   document.getElementById('readerDarkBtn').setAttribute('aria-pressed', readerDark() ? 'true' : 'false');
   document.getElementById('readerTitle').textContent = p.title || '';
   if (!_rn || _rn.id !== p.id) { _rn = null; _rnLoadP = null; updateReaderNotesCount(); setRnState(vaultSupported() ? 'loading' : 'ready'); }   // loader now; loading starts after the PDF
@@ -4777,6 +4779,15 @@ document.addEventListener('keydown', e => {
   if (document.getElementById('vaultOverlay').classList.contains('open')) { if (e.key === 'Escape') closeVaultModal(false); return; }
   if (pdfModalOpen()) { if (e.key === 'Escape') { e.preventDefault(); closePdfModal(); } return; }
   if (t && (/^(INPUT|TEXTAREA)$/.test(t.tagName) || t.isContentEditable)) { if (e.key === 'Escape' && !_citeCtx) { t.blur(); if (_acId) closeAnnoCard(); } return; }   // typing: no reader shortcuts
+  const SCROLL_KEYS = ['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', ' ', 'Home', 'End'];
+  if (SCROLL_KEYS.includes(e.key) && !e.metaKey && !e.ctrlKey && !e.altKey && (t === document.body || !t || !t.closest || !t.closest('#readerBody, button, a, input, select, [contenteditable]'))) {
+    const body = document.getElementById('readerBody'), page = body.clientHeight * 0.9;
+    e.preventDefault();
+    const d = { ArrowDown: 60, ArrowUp: -60, PageDown: page, PageUp: -page, ' ': e.shiftKey ? -page : page }[e.key];
+    if (d != null) body.scrollBy({ top: d, behavior: 'smooth' }); else body.scrollTop = e.key === 'Home' ? 0 : body.scrollHeight;
+    body.focus({ preventScroll: true });   // the next keys scroll natively
+    return;
+  }
   if (e.key === 'Escape') {
     e.preventDefault();
     if (_acId) closeAnnoCard();
