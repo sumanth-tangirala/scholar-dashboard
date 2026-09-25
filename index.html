@@ -5907,7 +5907,20 @@ async function editNote(id) {
   _rnEditing = id; _rnDraft = e.text;
   renderReaderPanel();
 }
-function cancelNoteEdit() { endDraft('discard'); redrawAnnoLayers(); renderReaderPanel(); }
+/* Cancel is one keystroke (Esc), so a changed draft can be brought back */
+function cancelNoteEdit() {
+  const snap = { editing: _rnEditing, draft: _rnDraft, refs: _rnPendingRefs.slice(), pid: _rn && _rn.id };
+  const ed = String(snap.editing || '');
+  const orig = !ed || ed === 'new' ? '' : ed.startsWith('a:') ? ((annoById(ed.slice(2)) || {}).note || '') : (((_rn && _rn.entries) || []).find(e => e.id === ed) || {}).text || '';
+  endDraft('discard'); redrawAnnoLayers(); renderReaderPanel();
+  if (!snap.editing || !snap.draft.trim() || snap.draft === orig) return;
+  toast(ed === 'new' ? 'Note discarded' : 'Changes discarded', () => {
+    if (_rnEditing || !_rn || _rn.id !== snap.pid) return;
+    _rnEditing = snap.editing; _rnDraft = snap.draft; _rnPendingRefs = snap.refs; _rnRange = null;
+    if (!document.getElementById('reader').classList.contains('panel-open')) toggleReaderPanel(true); else renderReaderPanel();
+    redrawAnnoLayers();
+  });
+}
 async function editAnnoComment(id) {
   if (notesBusy()) return;
   const a = annoById(id);
