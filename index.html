@@ -5816,7 +5816,11 @@ function toggleReaderPanel(force) {
   r.classList.toggle('panel-open', open);
   document.getElementById('readerNotesBtn').setAttribute('aria-pressed', open ? 'true' : 'false');
   try { localStorage.setItem('scholar_reader_panel', open ? '1' : '0'); } catch (e) {}
-  if (open) renderReaderPanel();
+  if (open) {
+    renderReaderPanel();
+    const t = document.getElementById('rpNotes');   // opening the panel on a draft: back to writing it
+    if (_rnEditing && t && document.activeElement !== t) { t.focus({ preventScroll: true }); editorCaretEnd(t); }
+  }
   if (_reader.doc && _reader.zoom === 'fit' && !window.matchMedia('(max-width: 700px)').matches) { _reader.token++; layoutReader(false); }
 }
 /* Re-rendering the panel (a sync finished, a comment saved...) must not rebuild a note being written:
