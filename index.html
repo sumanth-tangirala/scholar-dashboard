@@ -767,14 +767,19 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .sel-icon.primary:hover { background: rgba(251,177,60,0.22); color: var(--accent); }
 .sel-act { background: none; border: none; color: var(--text-secondary); font: inherit; font-size: 12.5px; padding: 4px 8px; border-radius: 6px; cursor: pointer; transition: background 0.15s, color 0.15s; }
 .sel-act:hover { background: rgba(255,255,255,0.08); color: var(--text); }
-.anno-card { position: fixed; z-index: 345; display: none; width: 340px; max-width: calc(100vw - 24px); background: #1b1b1e; border: 1px solid rgba(255,255,255,0.14); border-radius: 12px; box-shadow: 0 14px 40px rgba(0,0,0,0.6); padding: 12px 14px; }
+.anno-card { position: fixed; z-index: 345; display: none; width: 280px; max-width: calc(100vw - 24px); background: #1d1d20; border: 1px solid rgba(255,255,255,0.14); border-radius: 10px; box-shadow: 0 8px 26px rgba(0,0,0,0.55); padding: 4px; }
+.ac-row { display: flex; align-items: center; gap: 2px; padding: 0 1px; height: 26px; }
+.ac-row .sel-dot { width: 16px; height: 16px; margin: 0 3px; }
+.sel-icon.on { color: var(--accent); background: rgba(251,177,60,0.14); }
+.sel-icon.danger:hover { color: #f28b82; }
+.anno-card textarea#acNote { display: block; margin-top: 4px; min-height: 0; height: 32px; resize: none; overflow-y: hidden; padding: 6px 9px; line-height: 1.45; font-size: 13.5px; border-radius: 7px; }
 .anno-card.open { display: block; }
 .ac-quote { font-family: var(--serif); font-size: 14px; line-height: 1.5; color: var(--text); border-left: 3px solid var(--hc, var(--accent)); padding-left: 10px; max-height: 6.2em; overflow: auto; }
 .ac-meta { display: flex; align-items: center; gap: 6px; margin: 10px 0 8px; font-size: 12px; color: var(--text-muted); }
 .ac-meta .sel-dot { width: 18px; height: 18px; }
 .ac-meta .grow { flex: 1; }
 .anno-card textarea, .rp-notes-edit { width: 100%; box-sizing: border-box; background: #121214; border: 1px solid var(--border); border-radius: 8px; color: var(--text); font: inherit; font-size: 13.5px; line-height: 1.55; padding: 8px 10px; resize: vertical; }
-.anno-card textarea { min-height: 76px; }
+
 .anno-card textarea:focus, .rp-notes-edit:focus, .rp-search:focus { outline: none; border-color: var(--accent); }
 .ac-foot { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
 .ac-foot .grow { flex: 1; font-size: 11.5px; color: var(--text-muted); }
@@ -5433,15 +5438,18 @@ function openAnnoCard(id, focusNote) {
   _acId = id;
   const card = document.getElementById('annoCard');
   card.style.setProperty('--hc', `var(--hl-${a.color || 'orange'})`);
+  // minimal: the passage is already visible on the page, so the card is just controls and a growing one-line box
+  const cur = a.kind === 'hl' ? (a.color === 'yellow' ? 'orange' : a.color) : null;
   card.innerHTML = `
-    <div class="ac-quote">${esc(a.quote)}</div>
-    <div class="ac-meta">p. ${a.page}<span class="grow"></span>${HL_COLORS.map(c => `<button class="sel-dot ${a.kind === 'hl' && (a.color === 'yellow' ? 'orange' : a.color) === c ? 'on' : ''}" style="--hc:var(--hl-${c})" title="${escAttr(hlLabel(c))}" onclick="setAnnoColor('${id}','${c}')"></button>`).join('')}<button class="sel-act ${a.kind === 'note' ? 'on' : ''}" title="Comment only (underline)" onclick="setAnnoColor('${id}',null)">__</button></div>
-    <textarea id="acNote" placeholder="Add a comment… (Markdown and $math$ work)" oninput="acNoteInput()">${esc(a.note || '')}</textarea>
-    <div class="ac-foot"><span class="grow" id="acState">${a.kind === 'hl' ? esc(hlLabel(a.color)) : a.kind === 'ref' ? 'Cited in your notes' : 'Comment'}</span>
-      <button class="sel-act" onclick="citeAnno('${id}')" title="Insert a reference to this in your notes">Cite in notes</button>
-      <button class="sel-act" onclick="navigator.clipboard.writeText('\\u201c' + annoById('${id}').quote + '\\u201d (p. ${a.page})').then(() => toast('Quote copied'))">Copy</button>
-      <button class="sel-act danger" onclick="deleteAnno('${id}')">Delete</button></div>`;
+    <div class="ac-row">${HL_COLORS.map(c => `<button class="sel-dot ${cur === c ? 'on' : ''}" style="--hc:var(--hl-${c})" title="${escAttr(hlLabel(c))}" aria-label="${escAttr(hlLabel(c))}" onclick="setAnnoColor('${id}','${c}')"></button>`).join('')}
+      <button class="sel-icon ${a.kind === 'note' ? 'on' : ''}" title="Comment only (underline, no colour)" aria-label="Comment only" onclick="setAnnoColor('${id}',null)">${ICON_UNDERLINE}</button>
+      <span class="sel-sep"></span>
+      <button class="sel-icon sel-cite" onclick="citeAnno('${id}')" title="Cite in a note" aria-label="Cite in a note">${ICON_QUOTE}</button>
+      <button class="sel-icon" onclick="copyAnnoQuote('${id}')" title="Copy quote" aria-label="Copy quote">${ICON_COPY}</button>
+      <button class="sel-icon danger" onclick="deleteAnno('${id}')" title="Delete" aria-label="Delete">${ICON_TRASH}</button></div>
+    <textarea id="acNote" rows="1" placeholder="Add a comment\u2026" title="Markdown and $math$ work" oninput="acGrow(this); acNoteInput()">${esc(a.note || '')}</textarea>`;
   card.classList.add('open');
+  acGrow(document.getElementById('acNote'));
   positionAnnoCard(a);
   document.querySelectorAll(`.anno-rect[data-anno="${id}"]`).forEach(r => r.classList.add('hover'));
   if (focusNote) setTimeout(() => document.getElementById('acNote').focus(), 0);
@@ -5489,7 +5497,10 @@ async function endCommentSession(id, text) {
   }
   updateReaderNotesCount(); redrawAnnoLayers(); renderReaderPanel();
 }
-function acNoteInput() { clearTimeout(_acTimer); document.getElementById('acState').textContent = 'Saving…'; _acTimer = setTimeout(() => { _acTimer = null; acSaveNote(); }, 600); }
+/* the comment box starts as one line and grows with the text, up to ~8 lines, then scrolls */
+function acGrow(t) { if (!t) return; t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight + 2, 190) + 'px'; t.style.overflowY = t.scrollHeight + 2 > 190 ? 'auto' : 'hidden'; }
+function copyAnnoQuote(id) { const a = annoById(id); if (a) navigator.clipboard.writeText('\u201c' + a.quote + '\u201d (p. ' + a.page + ')').then(() => toast('Quote copied')); }
+function acNoteInput() { clearTimeout(_acTimer); _acTimer = setTimeout(() => { _acTimer = null; acSaveNote(); }, 600); }
 async function acSaveNote() {
   const a = annoById(_acId), t = document.getElementById('acNote');
   if (!a || !t || a.note === t.value) return;
@@ -5639,6 +5650,7 @@ const ICON_TRASH = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16
 const ICON_QUOTE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 6C6.5 7 4.5 9.6 4.5 13v5h5.5v-5.5H7.2C7.3 10.6 8.3 9 10 8.2z"/><path d="M19 6c-3 1-5 3.6-5 7v5h5.5v-5.5h-2.8c.1-1.9 1.1-3.5 2.8-4.3z"/></svg>';
 const ICON_COMMENT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8l-4 3v-3H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg>';
 const ICON_COPY = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/></svg>';
+const ICON_UNDERLINE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v7a5 5 0 0 0 10 0V4M5 20h14"/></svg>';
 const ICON_PLUS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
 const MOD_KEY = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent) ? '\u2318' : 'Ctrl';
 function noteDate(e) {
