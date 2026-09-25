@@ -5860,13 +5860,18 @@ function renderReaderPanel() {
   const anyFilter = f.colors.size || f.comments || f.notes || f.q;
   const shown = rnFilterItems(items);
   const chip = (on, label, click, extra) => `<button class="rp-chip ${on ? 'on' : ''}" onclick="${click}" ${extra || ''}>${label}</button>`;
+  // controls appear only once they earn their place: filters/search for a longer list (or while in use), and only the kinds that exist
+  const used = new Set(items.filter(it => it.type === 'hl').map(it => it.a.color === 'yellow' ? 'orange' : it.a.color));
+  const hasComments = items.some(it => it.type === 'comment'), hasNotes = items.some(it => it.type === 'note');
+  const filtering = f.colors.size || f.comments || f.notes || f.q;
+  const showFilters = total >= 6 || filtering;
   const kept = keepLiveEditor(() => { panel.innerHTML = head + `<div class="rp-scroll">
     <div class="rp-toolbar">${_rnEditing === 'new' ? '<span class="rp-count-l">New note</span>' : `<button class="rp-add" onclick="startNewNote()">${ICON_PLUS}Add note</button>`}<span class="grow"></span>
-      ${total > 1 ? `<div class="rp-seg" role="group" aria-label="Order"><button class="${_rnSort === 'page' ? 'on' : ''}" onclick="setRnSort('page')" title="Notes first, then in page order">Page</button><button class="${_rnSort === 'recent' ? 'on' : ''}" onclick="setRnSort('recent')" title="Newest first">Recent</button></div>` : ''}</div>
-    ${total ? `<div class="rp-filters">${HL_COLORS.map(c => `<button class="sel-dot ${f.colors.has(c) ? 'on' : ''}" style="--hc:var(--hl-${c})" title="${escAttr(hlLabel(c))}" aria-pressed="${f.colors.has(c)}" onclick="toggleRnColor('${c}')"></button>`).join('')}${chip(f.comments, 'Comments', "_rnFilter.comments=!_rnFilter.comments;renderReaderPanel()")}${chip(f.notes, 'Notes', "_rnFilter.notes=!_rnFilter.notes;renderReaderPanel()")}<input class="rp-search" id="rpSearch" placeholder="Search" value="${esc(f.q)}" oninput="_rnFilter.q=this.value;keepLiveEditor(() => renderRnList())"></div>` : ''}
+      ${total >= 3 ? `<div class="rp-seg" role="group" aria-label="Order"><button class="${_rnSort === 'page' ? 'on' : ''}" onclick="setRnSort('page')" title="Notes first, then in page order">Page</button><button class="${_rnSort === 'recent' ? 'on' : ''}" onclick="setRnSort('recent')" title="Newest first">Recent</button></div>` : ''}</div>
+    ${showFilters ? `<div class="rp-filters">${HL_COLORS.filter(c => used.has(c) || f.colors.has(c)).map(c => `<button class="sel-dot ${f.colors.has(c) ? 'on' : ''}" style="--hc:var(--hl-${c})" title="${escAttr(hlLabel(c))}" aria-pressed="${f.colors.has(c)}" onclick="toggleRnColor('${c}')"></button>`).join('')}${hasComments || f.comments ? chip(f.comments, 'Comments', "_rnFilter.comments=!_rnFilter.comments;renderReaderPanel()") : ''}${hasNotes || f.notes ? chip(f.notes, 'Notes', "_rnFilter.notes=!_rnFilter.notes;renderReaderPanel()") : ''}<input class="rp-search" id="rpSearch" placeholder="Search" value="${esc(f.q)}" oninput="_rnFilter.q=this.value;keepLiveEditor(() => renderRnList())"></div>` : ''}
     ${_rnEditing === 'new' ? noteEditorHTML() : ''}
     <div class="rp-list" id="rpList"></div>
-    ${total ? `<div class="rp-colors">${HL_COLORS.map(c => `<button onclick="renameHlColor('${c}')" title="Rename this colour"><i style="--hc:var(--hl-${c})"></i>${esc(hlLabel(c))}</button>`).join('')}</div>` : ''}
+    ${used.size ? `<div class="rp-colors">${HL_COLORS.map(c => `<button onclick="renameHlColor('${c}')" title="Rename this colour"><i style="--hc:var(--hl-${c})"></i>${esc(hlLabel(c))}</button>`).join('')}</div>` : ''}
   </div><div class="rp-foot"><span id="rpSync">${esc(_notesSyncText)}</span></div>`;
   updateNotesSync();
   renderRnList(shown, total, anyFilter); });
@@ -5909,7 +5914,7 @@ function noteDate(e) {
   return (e.updated && e.created && e.updated.slice(0, 16) !== e.created.slice(0, 16)) ? s + ' \u00b7 edited' : s;
 }
 function noteEditorHTML() {
-  const ph = _rnEditing && String(_rnEditing).startsWith('a:') ? 'Your comment on this passage\u2026' : 'Write a note\u2026 Select text in the paper and press \u201c to cite it, or type [[ to cite a highlight.';
+  const ph = _rnEditing && String(_rnEditing).startsWith('a:') ? 'Your comment on this passage\u2026' : 'Write a note\u2026  [[ cites a highlight';
   return `<div class="rp-editor"><div class="rp-notes-edit ${_rnDraft.trim() ? '' : 'is-empty'}" id="rpNotes" data-editing="${escAttr(String(_rnEditing))}" contenteditable="true" role="textbox" aria-multiline="true" spellcheck="true" data-ph="${escAttr(ph)}" oninput="editorInput(this)" onkeyup="editorSaveRange(this)" onmouseup="editorSaveRange(this)" onblur="editorSaveRange(this)" onkeydown="editorKey(event)" onpaste="editorPaste(event)" onclick="editorClick(event)" ondrop="event.preventDefault()">${draftToEditorHTML(_rnDraft)}</div>
     <div class="rp-editor-foot"><span class="rp-hint">${MOD_KEY}\u21b5 save \u00b7 Esc cancel</span><span class="grow"></span><button class="ui-btn ui-btn-secondary ui-btn-sm" onmousedown="event.preventDefault()" onclick="cancelNoteEdit()">Cancel</button><button class="ui-btn ui-btn-primary ui-btn-sm" onmousedown="event.preventDefault()" onclick="saveNoteEdit()">Save</button></div></div>`;
 }
@@ -5917,7 +5922,7 @@ function renderRnList(shown, total, anyFilter) {
   const list = document.getElementById('rpList');
   if (!list) return;
   if (!shown) { const n = _rn || emptyPaperNotes(''); const items = rnItems(n); shown = rnFilterItems(items); total = items.length; }
-  if (!total) { list.innerHTML = _rnEditing === 'new' ? '' : (_reader.doc ? '<div class="rp-empty">Nothing yet. Select text in the paper to highlight, comment on or cite it, or use <strong>Add note</strong> for your own thoughts. Markdown and $math$ work, and everything here is encrypted.</div>' : '<div class="rp-empty">Nothing yet. Once a PDF is open here you can highlight, comment on and cite it; until then, use <strong>Add note</strong> for your own thoughts. Everything here is encrypted.</div>'); return; }
+  if (!total) { list.innerHTML = _rnEditing === 'new' ? '' : (_reader.doc ? '<div class="rp-empty">Select text in the paper to highlight, comment on or cite it. Notes take Markdown and $math$.</div>' : '<div class="rp-empty">Add a PDF to highlight and cite passages, or write a note with <strong>Add note</strong>.</div>'); return; }
   if (!shown.length) { list.innerHTML = '<div class="rp-empty">Nothing matches this filter.</div>'; return; }
   const acts = (it) => {
     const edit = `<button class="rp-icon-btn sm" onclick="${it.type === 'note' ? `editNote('${it.id}')` : `editAnnoComment('${it.id}')`}" title="${it.type === 'note' ? 'Edit note' : (it.a.note || '').trim() ? 'Edit comment' : 'Add a comment'}" aria-label="Edit">${ICON_EDIT}</button>`;
