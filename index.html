@@ -661,6 +661,67 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .chip-select { -webkit-appearance: none; appearance: none; background: rgba(255,255,255,0.055) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24'%3E%3Cpath fill='%239aa0a6' d='M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z'/%3E%3C/svg%3E") no-repeat right 9px center; border: 1px solid transparent; color: var(--text-secondary); font: inherit; font-size: 12px; padding: 3px 26px 3px 10px; border-radius: 999px; cursor: pointer; transition: border-color 0.15s, color 0.15s; max-width: 240px; }
 .chip-select:hover { border-color: rgba(255,255,255,0.2); color: var(--text); }
 .chip-select.active { background-color: var(--accent-dim); border-color: rgba(251,177,60,0.7); color: var(--accent); }
+/* PDF reader: full-screen, pages drawn by PDF.js */
+.reader { position: fixed; inset: 0; z-index: 320; background: #0b0b0c; display: none; flex-direction: column; }
+.reader.open { display: flex; }
+.reader-bar { display: flex; align-items: center; gap: 12px; height: 56px; padding: 0 16px; border-bottom: 1px solid var(--border); background: rgba(17,17,17,0.96); flex-shrink: 0; }
+.reader-title { flex: 1; min-width: 0; font-family: var(--serif); font-size: 16px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.reader-tools { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.reader-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 32px; height: 32px; padding: 0 8px; background: none; border: 1px solid transparent; border-radius: 8px; color: var(--text-secondary); font: inherit; font-size: 15px; cursor: pointer; text-decoration: none; transition: background 0.15s, color 0.15s, border-color 0.15s; }
+.reader-btn:hover { background: rgba(255,255,255,0.07); color: var(--text); }
+.reader-btn svg { width: 18px; height: 18px; fill: currentColor; }
+.reader-btn.reader-text { font-size: 13px; border-color: var(--border); }
+.reader-back span { font-size: 13.5px; }
+.reader-zoom { display: inline-flex; align-items: center; border: 1px solid var(--border); border-radius: 8px; }
+.reader-zoom .reader-btn { border-radius: 0; }
+.reader-zoom-label { min-width: 52px; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.reader-pageno { font-size: 12.5px; color: var(--text-muted); font-variant-numeric: tabular-nums; margin-right: 4px; }
+#readerDarkBtn[aria-pressed="true"] { color: var(--accent); }
+.reader-body { flex: 1; overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.reader-pages { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 18px 12px 60px; min-width: min-content; }
+.reader-page { position: relative; background: #fff; box-shadow: 0 2px 18px rgba(0,0,0,0.5); flex-shrink: 0; }
+.reader-page canvas { display: block; width: 100%; height: 100%; }
+.reader.dark .reader-page { background: #1d1d1f; }
+.reader.dark .reader-page canvas { filter: invert(0.9) hue-rotate(180deg); }
+.reader-page .textLayer { position: absolute; inset: 0; overflow: clip; line-height: 1; text-size-adjust: none; forced-color-adjust: none; transform-origin: 0 0; z-index: 1; }
+.reader-page .textLayer :is(span, br) { color: transparent; position: absolute; white-space: pre; cursor: text; transform-origin: 0% 0%; }
+.reader-page .textLayer ::selection { background: rgba(251,177,60,0.35); }
+.reader-status { max-width: 560px; margin: 12vh auto 0; padding: 0 20px; text-align: center; color: var(--text-secondary); font-size: 14px; line-height: 1.6; }
+.reader-spin { width: 28px; height: 28px; margin: 0 auto 14px; border: 2px solid rgba(255,255,255,0.15); border-top-color: var(--accent); border-radius: 50%; animation: reader-spin 0.8s linear infinite; }
+@keyframes reader-spin { to { transform: rotate(360deg); } }
+.pdf-picker { max-width: 560px; margin: 8vh auto 40px; padding: 0 20px; color: var(--text-secondary); font-size: 14px; line-height: 1.6; }
+.pdf-picker h3 { font-family: var(--serif); font-size: 24px; font-weight: 500; color: var(--text); margin-bottom: 8px; }
+.pdf-picker .pp-why { color: var(--text-muted); margin-bottom: 22px; }
+.pdf-picker label.pp-label { display: block; font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); margin: 18px 0 8px; }
+.pp-row { display: flex; gap: 8px; }
+.pp-input { flex: 1; min-width: 0; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font: inherit; font-size: 14px; padding: 10px 12px; }
+.pp-input:focus { outline: none; border-color: var(--accent); }
+.pp-btn { background: var(--accent); color: #1a1406; border: none; border-radius: 10px; font: inherit; font-size: 14px; font-weight: 600; padding: 0 16px; cursor: pointer; white-space: nowrap; transition: background 0.15s; }
+.pp-btn:hover { background: #ffc261; }
+.pp-btn:disabled { opacity: 0.6; cursor: default; }
+.pp-msg { min-height: 22px; margin-top: 8px; font-size: 13px; }
+.pp-msg.err { color: #f28b82; }
+.pp-msg.ok { color: var(--green); }
+.pp-drop { display: block; border: 1.5px dashed var(--border); border-radius: 12px; padding: 22px; text-align: center; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+.pp-drop:hover, .pp-drop.over { border-color: var(--accent); background: rgba(251,177,60,0.05); }
+.pp-drop input { display: none; }
+.pp-drop strong { color: var(--text); }
+.pp-foot { margin-top: 18px; font-size: 13px; color: var(--text-muted); }
+.pp-foot button { background: none; border: none; color: var(--accent); font: inherit; cursor: pointer; padding: 0; }
+.pd-read { display: inline-flex; align-items: center; gap: 7px; margin-left: 8px; padding: 8px 15px; border-radius: 999px; background: var(--accent); color: #1a1406; font: inherit; font-size: 13.5px; font-weight: 600; border: none; cursor: pointer; white-space: nowrap; transition: background 0.15s, transform 0.15s; }
+.pd-read:hover { background: #ffc261; transform: translateY(-1px); }
+.pd-read svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.pd-actions .pd-read + .pd-open { background: none; color: var(--text-secondary); border: 1px solid var(--border); font-weight: 500; }
+.pd-actions .pd-read + .pd-open:hover { color: var(--text); border-color: rgba(255,255,255,0.3); background: rgba(255,255,255,0.04); transform: none; }
+@media (max-width: 700px) {
+  .reader-bar { gap: 6px; padding: 0 8px; }
+  .reader-back span, .reader-title, #readerExternal, .reader-pageno { display: none; }
+  .reader-btn.reader-text { font-size: 12px; padding: 0 8px; }
+  .reader-tools { flex: 1; justify-content: flex-end; }
+  .reader-pages { padding: 10px 0 40px; gap: 10px; }
+  .pd-read { padding: 7px 12px; margin-left: 4px; }
+}
+@media (prefers-reduced-motion: reduce) { .reader-spin { animation-duration: 2.4s; } }
 .keys-help { position: fixed; inset: 0; z-index: 400; background: rgba(0,0,0,0.55); display: none; align-items: center; justify-content: center; padding: 16px; }
 .keys-help.open { display: flex; }
 .keys-help-box { background: var(--bg-surface); border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; padding: 20px 24px 22px; width: min(440px, 100%); box-shadow: 0 16px 48px rgba(0,0,0,0.6); }
@@ -1199,6 +1260,26 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
 </div><!-- /.main-scroll -->
 
 <!-- GENERIC PROMPT / CONFIRM MODAL -->
+<!-- PDF READER -->
+<div class="reader" id="reader" role="dialog" aria-modal="true" aria-labelledby="readerTitle">
+  <div class="reader-bar">
+    <button class="reader-btn reader-back" onclick="closeReader()" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg><span>Back</span></button>
+    <div class="reader-title" id="readerTitle"></div>
+    <div class="reader-tools" id="readerTools">
+      <span class="reader-pageno" id="readerPageNo"></span>
+      <span class="reader-zoom">
+        <button class="reader-btn" onclick="readerZoom(-1)" title="Zoom out" aria-label="Zoom out">&minus;</button>
+        <button class="reader-btn reader-zoom-label" id="readerZoomLabel" onclick="readerZoom(0)" title="Fit to width">Fit</button>
+        <button class="reader-btn" onclick="readerZoom(1)" title="Zoom in" aria-label="Zoom in">+</button>
+      </span>
+      <button class="reader-btn" id="readerDarkBtn" onclick="toggleReaderDark()" title="Dark pages" aria-pressed="true">&#9680;</button>
+      <button class="reader-btn reader-text" onclick="showPdfPicker(_reader.paper, 'change')" title="Use a different PDF for this paper">Change PDF</button>
+      <a class="reader-btn reader-text" id="readerExternal" target="_blank" rel="noopener" title="Open the PDF in a new tab">Open &#8599;</a>
+    </div>
+  </div>
+  <div class="reader-body" id="readerBody"></div>
+</div>
+
 <div class="keys-help" id="keysHelp" role="dialog" aria-modal="true" aria-labelledby="keysHelpTitle" onclick="if (event.target === this) toggleKeysHelp(false)">
   <div class="keys-help-box">
     <div class="keys-help-head"><h3 id="keysHelpTitle">Keyboard shortcuts</h3><button class="keys-help-close" onclick="toggleKeysHelp(false)" aria-label="Close">&times;</button></div>
@@ -1391,7 +1472,7 @@ function flushStateToCSV() {
    closed tab doesn't lose them: only the fields people edit are stored for papers, so papers a
    digest run added in the meantime still come through when the backup is re-applied. */
 const LOCAL_BACKUP_KEY = 'scholar_unpushed_v1';
-const EDITABLE_FIELDS = ['is_read', 'is_starred', 'user_lists', 'user_notes', 'theme_groups', 'is_hidden'];
+const EDITABLE_FIELDS = ['is_read', 'is_starred', 'user_lists', 'user_notes', 'theme_groups', 'is_hidden', 'pdf_url'];
 let _loadedPaperFields = new Map();              // id -> editable fields as loaded, to diff against
 let _loadedInterestNames = [], _loadedGroupNames = [];
 let _backupTimer = null, _restoreAnnounced = false;
@@ -2266,7 +2347,7 @@ function tokCardHTML(p, idx) {
       ${hasText(p.venue) ? `<span>${esc(rowVenueLabel(p))}</span>` : ''}
       ${displayDate(p) ? `<span>${esc(displayDate(p))}</span>` : ''}
     </div>
-    <button class="tok-open" onclick="openPaper('${ka}', event)">Read full paper</button>
+    <button class="tok-open" onclick="${pdfSourceOf(p) ? `openReader('${ka}')` : `openPaper('${ka}', event)`}">Read full paper</button>
     <div class="tok-rail">
       <button class="tok-act ${starSet.has(k)?'on-star':''}" onclick="tokAct(event,this,'star','${ka}')" aria-label="Star">&#9733;</button>
       <button class="tok-act ${ir?'on-read':''}" onclick="tokAct(event,this,'read','${ka}')" aria-label="${ir?'Mark unread':'Mark read'}">&#10003;</button>
@@ -3275,7 +3356,7 @@ document.addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   const t = e.target;
   if (t && (/^(INPUT|TEXTAREA|SELECT|BUTTON|A)$/.test(t.tagName) || t.isContentEditable)) return;
-  if (document.querySelector('.auth-overlay.open, .notes-modal.open')) return;
+  if (document.querySelector('.auth-overlay.open, .notes-modal.open, .reader.open')) return;
   if (_paperViewActive) {
     if (e.key === 'j' || e.key === 'k') {
       const b = document.querySelector(e.key === 'j' ? '.pd-nav-next' : '.pd-nav-prev');
@@ -4136,6 +4217,284 @@ async function pushToGitHub(auto) {
   }
 }
 
+/* ===== PDF READER =====
+   PDF.js (loaded on first use from jsDelivr) draws each page on a canvas, with a transparent text
+   layer so text can be selected and found. Where the PDF comes from, in order: a file you dropped
+   in on this device (IndexedDB), the paper's pdf_url, or its arXiv PDF. */
+const PDFJS_VER = '4.10.38';
+const READER_POS_KEY = 'scholar_reader_pos_v1', READER_DARK_KEY = 'scholar_reader_dark';
+let _pdfjs = null;
+async function loadPdfJs() {
+  if (_pdfjs) return _pdfjs;
+  const base = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${PDFJS_VER}/build/`;
+  const lib = await import(base + 'pdf.min.mjs');
+  // a worker can't be started from another origin, so start it from a same-origin blob of the script
+  const src = await (await fetch(base + 'pdf.worker.min.mjs')).text();
+  lib.GlobalWorkerOptions.workerPort = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })), { type: 'module' });
+  _pdfjs = lib;
+  return lib;
+}
+/* Links people paste: arXiv abstract/HTML pages and OpenReview forums point at their PDFs */
+function normalizePdfUrl(u) {
+  u = (u || '').trim();
+  let m = u.match(/arxiv\.org\/(?:abs|html|pdf)\/([a-z\-]+\/\d{7}|\d{4}\.\d{4,5})(v\d+)?/i);
+  if (m) return `https://arxiv.org/pdf/${m[1]}${m[2] || ''}`;
+  m = u.match(/openreview\.net\/forum\?id=([\w-]+)/);
+  if (m) return `https://openreview.net/pdf?id=${m[1]}`;
+  return u;
+}
+function pdfSourceOf(p) {
+  if (hasText(p.pdf_url)) return p.pdf_url.trim();
+  const m = (p.url || '').match(/arxiv\.org\/(?:abs|pdf|html)\/(\d{4}\.\d{4,5})/);
+  return m ? `https://arxiv.org/pdf/${m[1]}` : '';
+}
+/* Files dropped in stay in this browser only */
+function pdfStore(mode, fn) {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('scholar_pdfs', 1);
+    req.onupgradeneeded = () => req.result.createObjectStore('files');
+    req.onerror = () => reject(req.error);
+    req.onsuccess = () => {
+      const tx = req.result.transaction('files', mode), st = tx.objectStore('files');
+      const r = fn(st);
+      tx.oncomplete = () => resolve(r && r.result);
+      tx.onerror = () => reject(tx.error);
+    };
+  });
+}
+const localPdfGet = id => pdfStore('readonly', st => st.get(id)).catch(() => null);
+const localPdfPut = (id, blob) => pdfStore('readwrite', st => st.put(blob, id));
+const localPdfDel = id => pdfStore('readwrite', st => st.delete(id));
+
+let _reader = { paper: null, doc: null, zoom: 'fit', scale: 1, obs: null, under: null, token: 0, local: false };
+function readerDark() { try { return localStorage.getItem(READER_DARK_KEY) !== 'false'; } catch (e) { return true; } }
+function openReader(key) {
+  if (document.body.classList.contains('tok-mode')) _tokScrollTop = document.getElementById('tokFeed').scrollTop;
+  _reader.under = location.hash.slice(1);   // Back returns to this view, which stays rendered underneath
+  location.hash = '#read/' + encodeURIComponent(key);
+}
+function closeReader() {
+  if (history.length > 1 && _reader.under !== null) history.back();
+  else location.hash = '#paper/' + encodeURIComponent(_reader.paper ? paperKey(_reader.paper) : '');
+}
+function hideReader() {
+  const el = document.getElementById('reader');
+  el.classList.remove('open');
+  document.body.style.overflow = '';
+  if (_reader.obs) _reader.obs.disconnect();
+  if (_reader.doc) { _reader.doc.destroy(); _reader.doc = null; }
+  _reader.token++;
+  document.getElementById('readerBody').innerHTML = '';
+}
+async function showReader(id) {
+  const p = allPapers.find(x => x.id === id) || _hiddenPapers.find(x => x.id === id);
+  if (!p) { location.hash = '#all'; return; }
+  const el = document.getElementById('reader');
+  _reader.paper = p; _reader.zoom = 'fit';
+  el.classList.add('open'); el.classList.toggle('dark', readerDark());
+  document.getElementById('readerDarkBtn').setAttribute('aria-pressed', readerDark() ? 'true' : 'false');
+  document.getElementById('readerTitle').textContent = p.title || '';
+  const local = await localPdfGet(p.id);
+  const src = pdfSourceOf(p);
+  if (!local && !src) { showPdfPicker(p, 'none'); return; }
+  await loadIntoReader(p, local ? { data: await local.arrayBuffer() } : { url: src }, !!local);
+}
+function readerStatus(html) { document.getElementById('readerBody').innerHTML = `<div class="reader-status">${html}</div>`; }
+async function loadIntoReader(p, source, isLocal) {
+  const token = ++_reader.token;
+  document.getElementById('readerTools').style.visibility = 'hidden';
+  readerStatus('<div class="reader-spin"></div>Loading the PDF…');
+  try {
+    const lib = await loadPdfJs();
+    const doc = await lib.getDocument({ ...source, isEvalSupported: false, verbosity: 0 }).promise;
+    if (token !== _reader.token) { doc.destroy(); return; }
+    if (_reader.doc) _reader.doc.destroy();
+    _reader.doc = doc; _reader.local = isLocal;
+    const ext = document.getElementById('readerExternal');
+    if (source.url) { ext.href = source.url; ext.style.display = ''; } else ext.style.display = 'none';
+    document.getElementById('readerTools').style.visibility = '';
+    await layoutReader(true);
+  } catch (e) {
+    if (token !== _reader.token) return;
+    console.warn('PDF load failed', e);
+    showPdfPicker(p, 'failed', pdfErrorText(e));
+  }
+}
+function pdfErrorText(e) {
+  const n = e && e.name;
+  if (n === 'InvalidPDFException') return "That file isn't a PDF this reader can open.";
+  if (n === 'MissingPDFException' || (e && e.status === 404)) return 'The link returned "not found".';
+  if (n === 'UnexpectedResponseException') return `The site answered with an error (${e.status || 'unknown'}).`;
+  if (n === 'PasswordException') return 'The PDF is password-protected.';
+  return "The host doesn't let other sites load its PDFs (or the link isn't reachable). Try an arXiv or other open copy, or download it and drop the file in.";
+}
+/* Placeholders for every page at the right size; pages are drawn as they scroll near view */
+async function layoutReader(restore) {
+  const doc = _reader.doc, body = document.getElementById('readerBody');
+  if (!doc) return;
+  const keepPage = restore ? savedReaderPage(_reader.paper.id) : currentReaderPage();
+  const first = await doc.getPage(1);
+  const base = first.getViewport({ scale: 1 });
+  const fit = Math.min(body.clientWidth - (window.matchMedia('(max-width: 700px)').matches ? 0 : 36), 1000) / base.width;
+  _reader.scale = _reader.zoom === 'fit' ? fit : _reader.zoom;
+  document.getElementById('readerZoomLabel').textContent = _reader.zoom === 'fit' ? 'Fit' : Math.round(_reader.scale * 100) + '%';
+  const w = Math.floor(base.width * _reader.scale), h = Math.floor(base.height * _reader.scale);
+  let html = '<div class="reader-pages">';
+  for (let i = 1; i <= doc.numPages; i++) html += `<div class="reader-page" data-page="${i}" style="width:${w}px;height:${h}px"></div>`;
+  body.innerHTML = html + '</div>';
+  if (_reader.obs) _reader.obs.disconnect();
+  _reader.obs = new IntersectionObserver(es => es.forEach(en => { if (en.isIntersecting) drawReaderPage(en.target); }), { root: body, rootMargin: '900px 0px' });
+  body.querySelectorAll('.reader-page').forEach(d => _reader.obs.observe(d));
+  if (keepPage > 1) {
+    const target = body.querySelector(`.reader-page[data-page="${keepPage}"]`);
+    if (target) body.scrollTop = target.offsetTop - 12;
+  } else body.scrollTop = 0;
+  updateReaderPageNo();
+}
+async function drawReaderPage(div) {
+  if (div.dataset.drawn) return;
+  div.dataset.drawn = '1';
+  const token = _reader.token, lib = _pdfjs;
+  const page = await _reader.doc.getPage(+div.dataset.page);
+  if (token !== _reader.token) return;
+  const vp = page.getViewport({ scale: _reader.scale });
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.floor(vp.width * dpr); canvas.height = Math.floor(vp.height * dpr);
+  div.style.width = Math.floor(vp.width) + 'px'; div.style.height = Math.floor(vp.height) + 'px';
+  div.appendChild(canvas);
+  await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp, transform: dpr !== 1 ? [dpr, 0, 0, dpr, 0, 0] : null }).promise;
+  if (token !== _reader.token) return;
+  const tl = document.createElement('div');
+  tl.className = 'textLayer';
+  div.style.setProperty('--scale-factor', _reader.scale);
+  div.appendChild(tl);
+  try { await new lib.TextLayer({ textContentSource: page.streamTextContent(), container: tl, viewport: vp }).render(); } catch (e) {}
+}
+function currentReaderPage() {
+  const body = document.getElementById('readerBody'), mid = body.scrollTop + body.clientHeight * 0.35;
+  let n = 1;
+  body.querySelectorAll('.reader-page').forEach(d => { if (d.offsetTop <= mid) n = +d.dataset.page; });
+  return n;
+}
+function savedReaderPage(id) { try { return (JSON.parse(localStorage.getItem(READER_POS_KEY) || '{}')[id]) || 1; } catch (e) { return 1; } }
+let _readerSaveTimer = null;
+function updateReaderPageNo() {
+  if (!_reader.doc) return;
+  const n = currentReaderPage();
+  document.getElementById('readerPageNo').textContent = `${n} / ${_reader.doc.numPages}`;
+  clearTimeout(_readerSaveTimer);
+  _readerSaveTimer = setTimeout(() => {
+    try { const all = JSON.parse(localStorage.getItem(READER_POS_KEY) || '{}'); all[_reader.paper.id] = n; localStorage.setItem(READER_POS_KEY, JSON.stringify(all)); } catch (e) {}
+  }, 400);
+}
+document.getElementById('readerBody').addEventListener('scroll', updateReaderPageNo, { passive: true });
+window.addEventListener('resize', () => { if (_reader.doc && _reader.zoom === 'fit' && document.getElementById('reader').classList.contains('open')) { clearTimeout(_reader.rt); _reader.rt = setTimeout(() => layoutReader(false), 200); } });
+function readerZoom(dir) {
+  if (!_reader.doc) return;
+  const steps = [0.5, 0.67, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3];
+  if (dir === 0) _reader.zoom = 'fit';
+  else {
+    const cur = _reader.scale;
+    const next = dir > 0 ? steps.find(z => z > cur + 0.01) : [...steps].reverse().find(z => z < cur - 0.01);
+    _reader.zoom = next || cur;
+  }
+  _reader.token++;
+  layoutReader(false);
+}
+function toggleReaderDark() {
+  const on = !readerDark();
+  try { localStorage.setItem(READER_DARK_KEY, on ? 'true' : 'false'); } catch (e) {}
+  document.getElementById('reader').classList.toggle('dark', on);
+  document.getElementById('readerDarkBtn').setAttribute('aria-pressed', on ? 'true' : 'false');
+}
+document.addEventListener('keydown', e => {
+  if (!document.getElementById('reader').classList.contains('open')) return;
+  const t = e.target;
+  if (t && /^(INPUT|TEXTAREA)$/.test(t.tagName)) { if (e.key === 'Escape') t.blur(); return; }
+  if (e.key === 'Escape') { e.preventDefault(); closeReader(); }
+  else if ((e.key === '+' || e.key === '=') && !e.metaKey && !e.ctrlKey) { e.preventDefault(); readerZoom(1); }
+  else if (e.key === '-' && !e.metaKey && !e.ctrlKey) { e.preventDefault(); readerZoom(-1); }
+});
+
+/* No PDF yet, or the one we have fails: paste an open link (checked before it's saved) or drop a file */
+async function showPdfPicker(p, why, detail) {
+  if (!p) return;
+  if (_reader.obs) _reader.obs.disconnect();
+  if (_reader.doc) { _reader.doc.destroy(); _reader.doc = null; }
+  document.getElementById('readerTools').style.visibility = 'hidden';
+  const hasLocal = !!(await localPdfGet(p.id));
+  const head = why === 'none' ? 'No PDF to read here yet'
+    : why === 'failed' ? "This PDF couldn't be opened here"
+    : 'Use a different PDF';
+  const sub = why === 'none' ? 'This paper has no open PDF on record. If you find one (arXiv, OpenReview, the authors’ page…), paste the link; or use a copy you downloaded.'
+    : why === 'failed' ? esc(detail || '')
+    : 'Paste a link to an open PDF, or use a file you downloaded.';
+  document.getElementById('readerBody').innerHTML = `<div class="pdf-picker">
+    <h3>${head}</h3>
+    <p class="pp-why">${sub}</p>
+    <label class="pp-label" for="ppLink">Link to an open PDF</label>
+    <form class="pp-row" onsubmit="event.preventDefault(); submitPdfLink()">
+      <input class="pp-input" id="ppLink" type="url" placeholder="https://arxiv.org/abs/… or a direct .pdf link" value="${esc(why === 'change' ? (p.pdf_url || '') : '')}" autocomplete="off" required>
+      <button class="pp-btn" id="ppCheck" type="submit">Check and save</button>
+    </form>
+    <div class="pp-msg" id="ppMsg">The link is saved for this paper only if the reader can actually open it.</div>
+    <label class="pp-label">Or a PDF you downloaded</label>
+    <label class="pp-drop" id="ppDrop" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="event.preventDefault();this.classList.remove('over');usePdfFile(event.dataTransfer.files[0])">
+      <input type="file" accept="application/pdf,.pdf" onchange="usePdfFile(this.files[0])">
+      <strong>Drop a PDF here</strong> or click to choose one.<br>It stays in this browser, on this device only.
+    </label>
+    <div class="pp-foot">${hasLocal ? `This paper has a copy stored on this device. <button onclick="removeLocalPdf()">Remove it</button>` : ''}${(hasLocal || pdfSourceOf(p)) && why === 'change' ? ` <button onclick="showReader(_reader.paper.id)">Back to the PDF</button>` : ''}</div>
+  </div>`;
+  setTimeout(() => { const i = document.getElementById('ppLink'); if (i && why !== 'failed') i.focus(); }, 0);
+}
+async function submitPdfLink() {
+  const p = _reader.paper, input = document.getElementById('ppLink'), msg = document.getElementById('ppMsg'), btn = document.getElementById('ppCheck');
+  const url = normalizePdfUrl(input.value);
+  if (!/^https?:\/\//i.test(url)) { msg.className = 'pp-msg err'; msg.textContent = 'Enter a full link starting with https://'; return; }
+  btn.disabled = true; msg.className = 'pp-msg'; msg.textContent = 'Checking that the reader can open it…';
+  try {
+    const lib = await loadPdfJs();
+    const doc = await lib.getDocument({ url, isEvalSupported: false, verbosity: 0 }).promise;
+    const n = doc.numPages;
+    await (await doc.getPage(1)).getOperatorList();   // the first page actually parses
+    doc.destroy();
+    if (!n) throw { name: 'InvalidPDFException' };
+    p.pdf_url = url;
+    _stateDirty = true; showSaveBar();
+    await localPdfDel(p.id).catch(() => {});
+    toast(`PDF saved for this paper (${n} page${n === 1 ? '' : 's'})`);
+    await loadIntoReader(p, { url }, false);
+  } catch (e) {
+    btn.disabled = false;
+    msg.className = 'pp-msg err';
+    msg.textContent = 'Not saved. ' + pdfErrorText(e);
+  }
+}
+async function usePdfFile(file) {
+  const p = _reader.paper, msg = document.getElementById('ppMsg');
+  if (!file) return;
+  if (!/pdf$/i.test(file.type) && !/\.pdf$/i.test(file.name)) { msg.className = 'pp-msg err'; msg.textContent = 'That isn’t a PDF file.'; return; }
+  msg.className = 'pp-msg'; msg.textContent = 'Opening…';
+  try {
+    const lib = await loadPdfJs();
+    const data = await file.arrayBuffer();
+    const doc = await lib.getDocument({ data: data.slice(0), isEvalSupported: false, verbosity: 0 }).promise;
+    doc.destroy();
+    await localPdfPut(p.id, new Blob([data], { type: 'application/pdf' }));
+    toast('PDF stored in this browser for this paper');
+    await loadIntoReader(p, { data }, true);
+  } catch (e) {
+    msg.className = 'pp-msg err';
+    msg.textContent = 'Couldn’t open that file. ' + pdfErrorText(e);
+  }
+}
+async function removeLocalPdf() {
+  await localPdfDel(_reader.paper.id).catch(() => {});
+  toast('Removed the copy stored on this device');
+  showReader(_reader.paper.id);
+}
+
 /* ===== RELATED PAPERS =====
    Score every other paper against this one: shared authors count most, then distinctive title and
    headline words, then shared interests; rare words and rare interests weigh more (IDF). */
@@ -4273,6 +4632,7 @@ function renderPaperDetail(p) {
       <button class="pd-act ${ir?'on-read':''}" onclick="toggleRead('${ka}',this);${again}" title="${ir?'Mark unread':'Mark as read'}" aria-label="${ir?'Mark unread':'Mark as read'}">&#10003;<span class="pd-act-label">${ir?'Read':'Mark read'}</span></button>
       <span class="save-anchor"><button class="pd-act ${inAny?'on-list':''}" onclick="event.stopPropagation();openSaveDD(this,'${ka}')" title="Add to list" aria-label="Add to list">&#9776;<span class="pd-act-label">${inAny?'In a list':'Save'}</span></button></span>
       <button class="pd-act ${hasNotes?'on-notes':''}" onclick="toggleNotesModal('${ka}')" title="Notes" aria-label="Notes">&#9998;<span class="pd-act-label">Notes</span></button>
+      <button class="pd-read" onclick="openReader('${ka}')" title="${pdfSourceOf(p) ? 'Read the PDF here' : 'Add a PDF to read it here'}"><svg viewBox="0 0 24 24"><path d="M2 4h7a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H2z"/><path d="M22 4h-7a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h8z"/></svg>Read</button>
       ${p.url ? `<a class="pd-open" href="${esc(p.url)}" target="_blank" rel="noopener"><span class="pd-open-full">Open paper</span><span class="pd-open-short">Open</span><svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>` : ''}
     </div>
   </div></div>`;
@@ -4590,6 +4950,17 @@ function paperBack() {
 const VALID_TABS = ['all', 'email', 'venues', 'library', 'interests'];
 function applyHash() {
   const hash = location.hash.slice(1); // remove '#'
+
+  // PDF reader sits over whatever was on screen
+  if (hash.startsWith('read/')) {
+    const id = decodeURIComponent(hash.slice(5));
+    if (id) { showReader(id); return; }
+  }
+  if (document.getElementById('reader').classList.contains('open')) {
+    hideReader();
+    const under = _reader.under; _reader.under = null;
+    if (under !== null && hash === under) return;   // back to the view underneath, which is still rendered
+  }
 
   // Paper detail route
   if (hash.startsWith('paper/')) {
