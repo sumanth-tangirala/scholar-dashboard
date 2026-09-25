@@ -6215,11 +6215,10 @@ function citeInput(ed) {
   const q = m[1].toLowerCase();
   const opts = _rn.annos.filter(a => a.kind !== 'ref').sort((a, b) => a.page - b.page).filter(a => !q || (a.quote + ' ' + (a.note || '')).toLowerCase().includes(q)).slice(0, 12);
   if (!opts.length) { closeCiteDD(); return; }
-  const t = ed;
   _citeCtx = { node, start: upto.length - m[0].length, end: r.startOffset, opts, i: 0 };
   let dd = document.getElementById('citeDD');
   dd.innerHTML = opts.map((a, i) => `<button class="${i === 0 ? 'on' : ''}" style="--hc:${annoHc(a)}" onmousedown="event.preventDefault()" onclick="pickCite(${i})">p. ${a.page} · ${esc(a.quote.slice(0, 90))}</button>`).join('');
-  const at = r.getBoundingClientRect(), box = t.getBoundingClientRect();   // under the caret, kept inside the window
+  const at = r.getBoundingClientRect(), box = ed.getBoundingClientRect();   // under the caret, kept inside the window
   const left = at.height ? at.left : box.left, top = at.height ? at.bottom : box.bottom;
   dd.style.left = Math.max(12, Math.min(window.innerWidth - 332, left)) + 'px'; dd.style.top = Math.min(window.innerHeight - 270, top + 6) + 'px';
   dd.classList.add('open');
