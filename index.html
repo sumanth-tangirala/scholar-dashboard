@@ -681,6 +681,7 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .reader-pages { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; padding: 18px 12px 60px; width: max-content; min-width: 100%; box-sizing: border-box; }
 .reader-page { position: relative; background: #fff; box-shadow: 0 2px 18px rgba(0,0,0,0.5); flex-shrink: 0; }
 .reader-page canvas { display: block; }
+.reader-page canvas.stale { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; }   /* old pixels, shown until the sharp redraw */
 .reader.dark .reader-page { background: #1d1d1f; }
 .reader.dark .reader-page canvas { filter: invert(0.9) hue-rotate(180deg); }
 .reader-page .textLayer { position: absolute; inset: 0; overflow: clip; line-height: 1; text-size-adjust: none; forced-color-adjust: none; transform-origin: 0 0; z-index: 1; }
@@ -820,7 +821,7 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .rp-card:hover { border-color: rgba(255,255,255,0.13); background: rgba(255,255,255,0.035); }
 .rp-card-anchor { cursor: pointer; padding-left: 15px; }
 .rp-card-anchor::before { content: ''; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 0 2px 2px 0; background: var(--hc, var(--accent)); }
-.rp-card-anchor.is-comment::before { background: repeating-linear-gradient(var(--accent) 0 4px, transparent 4px 7px); }
+.rp-card-anchor.is-comment::before { background: repeating-linear-gradient(#8aa4f0 0 4px, transparent 4px 7px); }   /* navy, like a comment's line on the page */
 .rp-card:hover .rp-item-acts, .rp-card:focus-within .rp-item-acts { opacity: 1; }
 .rp-card-top { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-muted); min-height: 26px; margin-bottom: 2px; }
 .rp-card-top .grow { flex: 1; }
@@ -4640,19 +4641,43 @@ async function layoutReader(restore) {
   // pages sit on whole pixels: a half-pixel offset from centering blurs every glyph
   const phone = window.matchMedia('(max-width: 700px)').matches;
   const left = Math.max(phone ? 0 : 12, Math.floor((body.clientWidth - w) / 2));
+  const oldPages = [...body.querySelectorAll('.reader-page')];
+  // same page size (e.g. the notes panel opened but the page still fits): just re-centre, keep every drawn page
+  if (!restore && oldPages.length === doc.numPages && oldPages[0].offsetWidth === w && oldPages[0].offsetHeight === h) {
+    const wrap = body.querySelector('.reader-pages');
+    wrap.style.paddingLeft = wrap.style.paddingRight = left + 'px';
+    if (_reader.token !== _reader.layoutToken)   // the caller cancelled draws in flight: redo those pages
+      oldPages.forEach(d => { if (d.dataset.drawn && !d.querySelector('.textLayer')) { releaseReaderPage(d); _reader.obs.unobserve(d); _reader.obs.observe(d); } });
+    _reader.layoutToken = _reader.token;
+    updateReaderPageNo();
+    return;
+  }
+  // otherwise keep the exact reading position, and show the old pixels (stretched) until each page is redrawn sharp
+  let anchor = null;
+  if (!restore && oldPages.length) {
+    const top = body.scrollTop, cur = oldPages.filter(d => d.offsetTop <= top + 1).pop() || oldPages[0];
+    anchor = { page: +cur.dataset.page, frac: (top - cur.offsetTop) / cur.offsetHeight };
+  }
+  const keepCanvas = {};
+  if (anchor) oldPages.forEach(d => { const c = d.querySelector('canvas'); if (c && Math.abs(+d.dataset.page - anchor.page) <= 2) keepCanvas[d.dataset.page] = c; });
   let html = `<div class="reader-pages" style="padding-left:${left}px;padding-right:${left}px">`;
   for (let i = 1; i <= doc.numPages; i++) html += `<div class="reader-page" data-page="${i}" style="width:${w}px;height:${h}px"></div>`;
   body.innerHTML = html + '</div>';
+  Object.entries(keepCanvas).forEach(([n, c]) => { c.classList.add('stale'); c.style.width = c.style.height = ''; body.querySelector(`.reader-page[data-page="${n}"]`).appendChild(c); });
   if (_reader.obs) _reader.obs.disconnect();
   if (_reader.far) _reader.far.disconnect();
   _reader.obs = new IntersectionObserver(es => es.forEach(en => { if (en.isIntersecting) drawReaderPage(en.target); }), { root: body, rootMargin: '900px 0px' });
   // pages far out of view give their pixels back (a sharp page is tens of MB)
   _reader.far = new IntersectionObserver(es => es.forEach(en => { if (!en.isIntersecting) releaseReaderPage(en.target); }), { root: body, rootMargin: '4000px 0px' });
   body.querySelectorAll('.reader-page').forEach(d => { _reader.obs.observe(d); _reader.far.observe(d); });
-  if (keepPage > 1) {
+  if (anchor) {
+    const target = body.querySelector(`.reader-page[data-page="${anchor.page}"]`);
+    if (target) body.scrollTop = target.offsetTop + anchor.frac * target.offsetHeight;
+  } else if (keepPage > 1) {
     const target = body.querySelector(`.reader-page[data-page="${keepPage}"]`);
     if (target) body.scrollTop = target.offsetTop - 12;
   } else body.scrollTop = 0;
+  _reader.layoutToken = _reader.token;
   updateReaderPageNo();
 }
 async function drawReaderPage(div) {
@@ -4677,6 +4702,7 @@ async function drawReaderPage(div) {
   const sx = canvas.width / vp.width, sy = canvas.height / vp.height;
   await page.render({ canvasContext: canvas.getContext('2d', { alpha: false }), viewport: vp, transform: [sx, 0, 0, sy, 0, 0] }).promise;
   if (token !== _reader.token) return;
+  div.querySelectorAll('canvas.stale').forEach(c => { c.width = 0; c.height = 0; c.remove(); });   // the sharp page is ready
   const tl = document.createElement('div');
   tl.className = 'textLayer';
   div.style.setProperty('--scale-factor', _reader.scale);
@@ -4685,7 +4711,7 @@ async function drawReaderPage(div) {
   try { await new lib.TextLayer({ textContentSource: page.streamTextContent(), container: tl, viewport: vp }).render(); } catch (e) {}
 }
 function releaseReaderPage(div) {
-  if (!div.dataset.drawn) return;
+  if (!div.dataset.drawn && !div.querySelector('canvas')) return;
   div.querySelectorAll('canvas').forEach(c => { c.width = 0; c.height = 0; });
   div.innerHTML = '';
   delete div.dataset.drawn;
