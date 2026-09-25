@@ -5757,8 +5757,10 @@ function jumpToAnno(id) {
 /* --- reader events: selection toolbar, clicks on highlights --- */
 (function () {
   const body = document.getElementById('readerBody');
-  let downAt = null;
-  body.addEventListener('pointerdown', e => { downAt = [e.clientX, e.clientY]; });
+  let downAt = null, down = false, settle = 0;
+  body.addEventListener('pointerdown', e => { downAt = [e.clientX, e.clientY]; down = true; });
+  body.addEventListener('pointercancel', () => { down = false; });   // touch: a long-press turns into a text selection
+  document.addEventListener('pointerup', () => { down = false; }, true);
   body.addEventListener('pointerup', e => {
     if (e.target.closest && e.target.closest('.anno-mark')) return;   // a margin marker opens its card by its own click
     setTimeout(() => {
@@ -5793,7 +5795,14 @@ function jumpToAnno(id) {
     });
   });
   body.addEventListener('pointerleave', () => { cancelAnimationFrame(hoverFrame); setHover(null, null); });
-  document.addEventListener('selectionchange', () => { const sel = window.getSelection(); if (sel && sel.isCollapsed) document.getElementById('selBar').classList.remove('open'); });
+  // selections made without a pointer release (touch handles, Shift+arrows) get the bar once they settle
+  document.addEventListener('selectionchange', () => {
+    const sel = window.getSelection();
+    clearTimeout(settle);
+    if (!sel || sel.isCollapsed) { document.getElementById('selBar').classList.remove('open'); return; }
+    if (down || !body.contains(sel.anchorNode)) return;
+    settle = setTimeout(() => { const s = window.getSelection(); if (!down && s && !s.isCollapsed && body.contains(s.anchorNode)) showSelBar(); }, 350);
+  });
   document.addEventListener('mousedown', e => {
     const card = document.getElementById('annoCard');
     if (_acId && !card.contains(e.target) && !e.target.closest('.reader-page') && !e.target.closest('.rp-item')) closeAnnoCard();
