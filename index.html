@@ -456,7 +456,6 @@ a { color: inherit; text-decoration: none; }
 .pd-act.on-star { color: var(--star); }
 .pd-act.on-read { color: var(--green); }
 .pd-act.on-list { color: var(--list); }
-.pd-act.on-notes { color: var(--accent); }
 .pd-open { display: inline-flex; align-items: center; gap: 7px; margin-left: 8px; padding: 8px 15px; border-radius: 999px; background: var(--accent); color: #1a1406; font-size: 13.5px; font-weight: 600; text-decoration: none; white-space: nowrap; transition: background 0.15s, transform 0.15s; }
 .pd-open:hover { background: #ffc261; transform: translateY(-1px); }
 .pd-open svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
@@ -4586,8 +4585,7 @@ async function showReader(id) {
   const el = document.getElementById('reader');
   if (_reader.paper !== p) { _rnFilter = { colors: new Set(), comments: false, notes: false, q: '' }; endDraft('discard'); }
   _reader.paper = p;
-  let panelWanted = false; try { panelWanted = localStorage.getItem('scholar_reader_panel') === '1'; } catch (e) {}
-  el.classList.toggle('panel-open', panelWanted && !window.matchMedia('(max-width: 700px)').matches);
+  el.classList.toggle('panel-open', !readerPhone());   // notes beside the paper by default; on a phone the panel would cover it
   document.getElementById('readerNotesBtn').setAttribute('aria-pressed', el.classList.contains('panel-open') ? 'true' : 'false'); _reader.zoom = 'fit';
   el.classList.add('open'); el.classList.toggle('dark', readerDark());
   document.getElementById('readerBody').focus({ preventScroll: true });   // arrow keys, Space and PageDown scroll the paper
@@ -5904,7 +5902,6 @@ function setReaderPanel(open) {
   const r = document.getElementById('reader');
   r.classList.toggle('panel-open', open);
   document.getElementById('readerNotesBtn').setAttribute('aria-pressed', open ? 'true' : 'false');
-  try { localStorage.setItem('scholar_reader_panel', open ? '1' : '0'); } catch (e) {}
   if (open) {
     renderReaderPanel();
     const t = document.getElementById('rpNotes');   // opening the panel on a draft: back to writing it
@@ -5944,7 +5941,9 @@ function renderReaderPanel() {
     return;
   }
   if (!Vault.key) {
-    panel.innerHTML = head + `<div class="rp-locked"><strong>Your notes are encrypted</strong>Highlights, comments and notes are saved only in encrypted form. Unlock them with your notes password to read and add more.<br><button class="ui-btn ui-btn-primary" onclick="unlockFromPanel()">${Vault.meta === null ? 'Set a notes password' : 'Unlock notes'}</button></div>`;
+    panel.innerHTML = head + (Vault.meta === null
+      ? `<div class="rp-locked"><strong>Notes, highlights and comments</strong>They're encrypted with a password only you know. Set one to start.<br><button class="ui-btn ui-btn-primary" onclick="unlockFromPanel()">Set a notes password</button></div>`
+      : `<div class="rp-locked"><strong>Your notes are encrypted</strong>Unlock them with your notes password to read and add more.<br><button class="ui-btn ui-btn-primary" onclick="unlockFromPanel()">Unlock notes</button></div>`);
     return;
   }
   const n = _rn || emptyPaperNotes(_reader.paper ? _reader.paper.id : '');
@@ -6483,7 +6482,6 @@ function renderPaperDetail(p) {
       <button class="pd-act ${isStar?'on-star':''}" onclick="toggleStar('${ka}',this);${again}" title="${isStar?'Unstar':'Star'}" aria-label="${isStar?'Unstar':'Star'}">&#9733;<span class="pd-act-label">${isStar?'Starred':'Star'}</span></button>
       <button class="pd-act ${ir?'on-read':''}" onclick="toggleRead('${ka}',this);${again}" title="${ir?'Mark unread':'Mark as read'}" aria-label="${ir?'Mark unread':'Mark as read'}">&#10003;<span class="pd-act-label">${ir?'Read':'Mark read'}</span></button>
       <span class="save-anchor"><button class="pd-act ${inAny?'on-list':''}" onclick="event.stopPropagation();openSaveDD(this,'${ka}')" title="Add to list" aria-label="Add to list">&#9776;<span class="pd-act-label">${inAny?'In a list':'Save'}</span></button></span>
-      <button class="pd-act ${hasNotes?'on-notes':''}" onclick="openReader('${ka}', 'panel')" title="Notes" aria-label="Notes">&#9998;<span class="pd-act-label">Notes</span></button>
       <button class="pd-read" onclick="openReader('${ka}')" title="${pdfSourceOf(p) ? 'Read the PDF here' : 'Add a PDF to read it here'}"><svg viewBox="0 0 24 24"><path d="M2 4h7a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H2z"/><path d="M22 4h-7a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h8z"/></svg>Read</button>
       ${p.url ? `<a class="pd-open" href="${esc(p.url)}" target="_blank" rel="noopener"><span class="pd-open-full">Open paper</span><span class="pd-open-short">Open</span><svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>` : ''}
     </div>
