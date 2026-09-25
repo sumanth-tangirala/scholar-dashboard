@@ -325,3 +325,14 @@ Notes, highlights and comments the user makes in the dashboard live in `annotati
 - `annotations/<paper id>.json`: encrypted notes, highlights and comments for that paper
 
 **Digest runs and other tasks must never create, edit, move or delete anything in `annotations/`.** The files can't be read without the password, and changing them can destroy the user's notes. If a paper is ever merged into another id, leave its notes file alone and tell the user.
+
+---
+
+# Chat with Claude (bridge/)
+
+The reader's **Chat** tab talks to Claude through **Claude Code on Sumanth's laptop**: `bridge/scholar_bridge.py` is a small local server (127.0.0.1:7823, started at login by `bridge/install_bridge.sh` as a LaunchAgent) that runs `claude -p` with one session per paper and streams replies to the page. It answers only the dashboard's origins, needs a pairing token (granted through a macOS dialog), and runs Claude with no shell, no MCP servers or plugins, file access limited to `~/.scholar-bridge/work`, plus web search/fetch.
+
+- State lives in `~/.scholar-bridge/` (token, chats/, work/papers, work/library.tsv), never in this repo.
+- The page sends the paper's text on a chat's first message, and the user's decrypted highlights/comments/notes and research interests with each message. Claude Code keeps the transcripts in `~/.claude/projects/` (unencrypted, on the laptop only).
+- Claude cites passages as `[[p.N "exact words"]]` (clickable pills in chat and in notes), adds notes/highlights only when asked (```` ```note ```` / ```` ```highlight p.N color "words" ```` blocks), and asks for another paper with ```` ```paper <id>``` ````, which makes the page send that paper's text and notes.
+- Digest runs never touch `bridge/` or `~/.scholar-bridge/`.

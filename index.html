@@ -914,6 +914,68 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .rp-colors button { display: inline-flex; align-items: center; gap: 6px; background: none; border: none; color: var(--text-secondary); font: inherit; font-size: 12px; cursor: pointer; padding: 2px 0; }
 .rp-colors button:hover { color: var(--text); }
 .rp-colors i { width: 10px; height: 10px; border-radius: 50%; background: var(--hc); }
+/* ---- chat with Claude (reader panel) ---- */
+.rp-tabs { display: inline-flex; gap: 2px; background: rgba(255,255,255,0.04); border-radius: 8px; padding: 2px; }
+.rp-tabs button { background: none; border: none; color: var(--text-muted); font: inherit; font-size: 13px; font-weight: 600; padding: 4px 12px; border-radius: 6px; cursor: pointer; transition: background 0.15s, color 0.15s; }
+.rp-tabs button:hover { color: var(--text); }
+.rp-tabs button.on { background: rgba(255,255,255,0.09); color: var(--text); }
+.chat-root { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.chat-setup { padding: 22px 18px; font-size: 13.5px; line-height: 1.55; color: var(--text-secondary); }
+.chat-setup p { margin: 0 0 12px; }
+.chat-setup code { font-size: 12px; background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 4px; }
+.chat-dim { color: var(--text-muted); font-size: 12.5px; }
+.chat-code { font-size: 28px; font-weight: 600; letter-spacing: 0.18em; color: var(--text); margin: 6px 0 4px !important; font-variant-numeric: tabular-nums; }
+.chat-scroll { flex: 1; overflow: auto; padding: 14px 14px 8px; display: flex; flex-direction: column; gap: 14px; }
+.chat-empty { color: var(--text-muted); font-size: 13px; line-height: 1.55; }
+.chat-empty p { margin: 2px 0 12px; }
+.chat-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chat-msg.you { align-self: flex-end; max-width: 88%; background: rgba(255,255,255,0.06); border: 1px solid var(--border); border-radius: 12px 12px 4px 12px; padding: 8px 11px; }
+.chat-you-text { font-size: 13.5px; line-height: 1.5; color: var(--text); white-space: pre-wrap; overflow-wrap: anywhere; }
+.chat-pills { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 5px; }
+.chat-pills:last-child { margin-bottom: 0; }
+.chat-quote, .chat-mention { font-size: 12px; color: var(--text-secondary); background: rgba(255,255,255,0.05); border-radius: 999px; padding: 0 8px; line-height: 1.6; }
+.chat-msg.claude { position: relative; }
+.chat-md { font-size: 13.5px; line-height: 1.6; color: var(--text-secondary); overflow-wrap: anywhere; }
+.chat-md > :first-child { margin-top: 0; }
+.chat-acts { display: flex; gap: 2px; margin-top: 2px; opacity: 0; transition: opacity 0.15s; }
+.chat-msg.claude:hover .chat-acts, .chat-msg.claude:focus-within .chat-acts { opacity: 1; }
+.chat-status { font-size: 12px; color: var(--text-muted); margin-top: 4px; animation: chat-breathe 1.6s ease-in-out infinite; }
+.chat-status:empty { display: none; }
+.chat-status.static, .chat-auto { animation: none; font-size: 12px; color: var(--text-muted); }
+.chat-auto { align-self: center; text-align: center; max-width: 90%; }
+@keyframes chat-breathe { 50% { opacity: 0.45; } }
+.chat-error { font-size: 12.5px; color: #e57373; background: rgba(229,115,115,0.08); border-radius: 8px; padding: 7px 10px; }
+.chat-card { border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 8px; padding: 7px 10px; margin: 8px 0; background: rgba(255,255,255,0.02); }
+.chat-card-head { display: flex; align-items: center; justify-content: space-between; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; }
+.chat-card-btn { font: inherit; font-size: 12px; text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--accent); background: none; border: none; cursor: pointer; padding: 1px 4px; border-radius: 5px; transition: background 0.15s; }
+.chat-card-btn:hover { background: rgba(251,177,60,0.12); }
+.chat-compose { padding: 8px 12px 12px; border-top: 1px solid var(--border); }
+.chat-attach { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 7px; }
+.chat-att { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; font-size: 12px; color: var(--text); background: rgba(138,164,240,0.12); border: 1px solid rgba(138,164,240,0.35); border-radius: 999px; padding: 1px 4px 1px 8px; }
+.chat-att .cp-page { color: #8aa4f0; font-weight: 600; font-size: 10.5px; }
+.chat-att.img { padding: 2px 4px 2px 2px; border-radius: 6px; }
+.chat-att img { height: 34px; border-radius: 4px; display: block; background: #fff; }
+.chat-att button { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 14px; line-height: 1; padding: 0 3px; border-radius: 50%; }
+.chat-att button:hover { color: var(--text); }
+.chat-box { background: #18181b; border: 1px solid var(--border); border-radius: 10px; padding: 7px 8px 5px 10px; transition: border-color 0.15s; }
+.chat-box:focus-within { border-color: var(--accent); }
+.chat-box textarea { width: 100%; box-sizing: border-box; background: none; border: none; resize: none; color: var(--text); font: inherit; font-size: 13.5px; line-height: 1.5; outline: none; max-height: 180px; }
+.chat-box-row { display: flex; align-items: center; gap: 4px; }
+.chat-send { width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 8px; background: var(--accent); color: #1a1406; cursor: pointer; transition: filter 0.15s, background 0.15s; }
+.chat-send:hover { filter: brightness(1.08); }
+.chat-send.stop { background: rgba(255,255,255,0.12); color: var(--text); }
+.chat-send svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.chat-send.stop svg { fill: currentColor; stroke: none; }
+.rp-icon-btn.sm svg, .chat-box-row .rp-icon-btn svg { width: 16px; height: 16px; }
+.dd-sub { display: block; font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+.chat-ask-sel { position: fixed; z-index: 345; display: inline-flex; align-items: center; gap: 5px; font: inherit; font-size: 12px; color: var(--text); background: #1d1d20; border: 1px solid rgba(255,255,255,0.14); border-radius: 8px; padding: 4px 9px; box-shadow: 0 6px 20px rgba(0,0,0,0.5); cursor: pointer; animation: ui-pop 0.16s ease-out; }
+.chat-ask-sel svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.chat-ask-sel:hover { border-color: var(--accent); }
+.reader-body.fig-select .reader-page, .reader-body.fig-select .textLayer, .reader-body.fig-select .textLayer span { cursor: crosshair !important; user-select: none; }
+.fig-box { position: absolute; z-index: 5; border: 1.5px solid var(--accent); background: rgba(251,177,60,0.12); border-radius: 3px; pointer-events: none; }
+.quote-flash { position: absolute; pointer-events: none; border-radius: 3px; margin-left: -3px; padding: 0 3px; box-sizing: content-box; animation: quote-pulse 1.1s cubic-bezier(0.2, 0.7, 0.3, 1) forwards; }
+@keyframes quote-pulse { 0% { background-color: transparent; } 18% { background-color: color-mix(in srgb, var(--note-line, #8aa4f0) 34%, transparent); } 100% { background-color: transparent; } }
+@media (prefers-reduced-motion: reduce) { .quote-flash { animation-duration: 1.6s; animation-timing-function: steps(2, jump-none); } .chat-status { animation: none; } }
 .rp-foot { padding: 8px 14px; border-top: 1px solid var(--border); font-size: 11.5px; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
 .rp-locked { padding: 28px 18px; text-align: center; color: var(--text-secondary); font-size: 13.5px; line-height: 1.6; }
 .rp-locked strong { display: block; color: var(--text); font-size: 15px; margin-bottom: 6px; }
@@ -4582,6 +4644,7 @@ function hideReader() {
 async function showReader(id) {
   const p = allPapers.find(x => x.id === id) || _hiddenPapers.find(x => x.id === id);
   if (!p) { location.hash = '#all'; return; }
+  noteRecentRead(p.id);
   const el = document.getElementById('reader');
   if (_reader.paper !== p) { _rnFilter = { colors: new Set(), comments: false, notes: false, q: '' }; endDraft('discard'); }
   _reader.paper = p;
@@ -5617,6 +5680,7 @@ function showSelBar() {
       + `<span class="sel-sep"></span>`
       + `<button class="sel-icon sel-cite ${_rnEditing && !busy ? 'primary' : ''}"${dis} onmousedown="event.preventDefault()" onclick="citeSelection()" title="${citeTip}" aria-label="${citeTip}">${ICON_QUOTE}</button>`
       + `<button class="sel-icon"${dis} onmousedown="event.preventDefault()" onclick="createAnno('note')" title="${busy ? wait : 'Comment'}" aria-label="Comment">${ICON_COMMENT}</button>`
+      + (readerPhone() ? '' : `<button class="sel-icon" onmousedown="event.preventDefault()" onclick="askAboutSelection()" title="Ask Claude about this" aria-label="Ask Claude about this">${ICON_ASK}</button>`)
       + `<button class="sel-icon" onmousedown="event.preventDefault()" onclick="copySelQuote()" title="Copy quote" aria-label="Copy quote">${ICON_COPY}</button>`;
   }
   const r = info.end || { right: 200, bottom: 200 };
@@ -5930,7 +5994,8 @@ function keepLiveEditor(rebuild) {
 function renderReaderPanel() {
   const panel = document.getElementById('readerPanel');
   if (!panel || !document.getElementById('reader').classList.contains('panel-open')) return;
-  const head = `<div class="rp-head"><strong>Notes</strong><span class="grow"></span>${Vault.key ? `<button class="rp-icon-btn" onclick="lockNotes()" title="Lock notes (forget the key on this device)" aria-label="Lock notes">${ICON_LOCK}</button>` : ''}<button class="rp-icon-btn" onclick="toggleReaderPanel(false)" title="Close" aria-label="Close notes">${ICON_CLOSE}</button></div>`;
+  if (_panelTab === 'chat' && !readerPhone()) { renderChatPanel(); return; }
+  const head = `<div class="rp-head">${panelTabsHTML()}<span class="grow"></span>${Vault.key ? `<button class="rp-icon-btn" onclick="lockNotes()" title="Lock notes (forget the key on this device)" aria-label="Lock notes">${ICON_LOCK}</button>` : ''}<button class="rp-icon-btn" onclick="toggleReaderPanel(false)" title="Close" aria-label="Close notes">${ICON_CLOSE}</button></div>`;
   if (!vaultSupported()) {
     const alt = 'http://scholar.localhost' + location.pathname + location.hash;
     panel.innerHTML = head + `<div class="rp-locked"><strong>Notes need a secure address</strong>They are encrypted with your browser's built-in cryptography, which only runs on https:// or localhost pages. Open <a class="ig-link" href="${esc(alt)}">scholar.localhost</a> (the same site), or the GitHub Pages site. You'll connect GitHub there once.</div>`;
@@ -6141,6 +6206,621 @@ async function deleteGeneralNote(id) {
   });
 }
 
+/* ===== CHAT WITH CLAUDE: one Claude Code session per paper, through bridge/scholar_bridge.py on this laptop =====
+   The page talks to the bridge on 127.0.0.1 (Chrome asks once to allow that); the bridge runs Claude Code.
+   Only this laptop can do it, so the Chat tab only tries to connect after you set it up here. */
+const BRIDGE = 'http://127.0.0.1:7823';
+const Chat = {
+  status: (() => { try { return localStorage.getItem('claude_bridge_token') ? 'unknown' : 'setup'; } catch (e) { return 'setup'; } })(),
+  token: (() => { try { return localStorage.getItem('claude_bridge_token') || ''; } catch (e) { return ''; } })(),
+  pid: null, messages: [], fresh: true, model: 'opus', running: false, streaming: '', tool: '', error: '',
+  draft: { quotes: [], images: [], mentions: [] }, draftText: '', pairCode: '', loadedFor: null,
+};
+let _panelTab = 'notes';
+const ICON_SEND = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
+const ICON_STOP = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.5"/></svg>';
+const ICON_FIGURE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/></svg>';
+const ICON_NEWCHAT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h8M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
+const ICON_ASK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8l-4 3v-3H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="M10 9.2a2 2 0 1 1 2.6 1.9c-.4.2-.6.5-.6.9M12 13.6h.01"/></svg>';
+const ICON_PAPER = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4 4v6M7 3v18h7M14 3v4h4M17 16v6M14 19h6"/></svg>';
+function chatAddPaper() {   // + Paper: starts an @ search at the caret
+  const t = document.getElementById('chatInput'); if (!t) return;
+  t.focus();
+  const at = t.selectionStart, pre = t.value.slice(0, at), ins = pre && !/\s$/.test(pre) ? ' @' : '@';
+  t.value = pre + ins + t.value.slice(at);
+  t.selectionStart = t.selectionEnd = at + ins.length;
+  chatInputChanged(t);
+}
+const ICON_NOTE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l3 3v15H6z"/><path d="M9 11h6M9 15h6"/></svg>';
+
+function saveBridgeToken(t) { Chat.token = t || ''; try { t ? localStorage.setItem('claude_bridge_token', t) : localStorage.removeItem('claude_bridge_token'); } catch (e) {} }
+function bridgeFetch(path, opts = {}) {
+  return fetch(BRIDGE + path, { ...opts, headers: { 'content-type': 'application/json', ...(Chat.token ? { authorization: 'Bearer ' + Chat.token } : {}), ...(opts.headers || {}) } });
+}
+async function bridgeCheck() {
+  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 2500);
+  try { const j = await (await bridgeFetch('/health', { signal: ctl.signal })).json(); Chat.status = j.paired ? 'ready' : 'unpaired'; }
+  catch (e) { Chat.status = 'offline'; }
+  clearTimeout(t);
+  return Chat.status;
+}
+/* Tabs appear on wider screens only: Claude Code runs on the laptop, not a phone */
+function panelTabsHTML() {
+  if (readerPhone()) return '<strong>Notes</strong>';
+  return `<div class="rp-tabs" role="tablist"><button role="tab" aria-selected="${_panelTab === 'notes'}" class="${_panelTab === 'notes' ? 'on' : ''}" onclick="setPanelTab('notes')">Notes</button><button role="tab" aria-selected="${_panelTab === 'chat'}" class="${_panelTab === 'chat' ? 'on' : ''}" onclick="setPanelTab('chat')">Chat</button></div>`;
+}
+function setPanelTab(t, focus) {
+  if (t === 'chat' && readerPhone()) t = 'notes';
+  const changed = _panelTab !== t;
+  _panelTab = t;
+  if (!document.getElementById('reader').classList.contains('panel-open')) toggleReaderPanel(true);
+  else if (changed) renderReaderPanel();
+  if (t === 'chat') chatOpen(focus);
+}
+async function chatOpen(focus) {
+  if (Chat.status === 'unknown' || Chat.status === 'offline') { await bridgeCheck(); }
+  if (Chat.status === 'ready' && _reader.paper && Chat.loadedFor !== _reader.paper.id) await chatLoad();
+  if (Chat.status === 'ready') syncLibrary();
+  renderChatPanel(true);
+  if (focus) setTimeout(() => { const i = document.getElementById('chatInput'); if (i) i.focus(); }, 0);
+}
+async function chatLoad() {
+  const pid = _reader.paper.id;
+  try {
+    const r = await bridgeFetch('/chat?paper=' + encodeURIComponent(pid));
+    if (r.status === 401) { saveBridgeToken(''); Chat.status = 'unpaired'; return; }
+    const j = await r.json();
+    if (!_reader.paper || _reader.paper.id !== pid) return;
+    if (Chat.pid !== pid) { Chat.draft = { quotes: [], images: [], mentions: [] }; Chat.draftText = ''; }   // a draft belongs to its paper
+    Object.assign(Chat, { pid, messages: j.messages || [], fresh: j.fresh !== false, model: j.model || 'opus', running: !!j.running, streaming: '', tool: '', error: '', loadedFor: pid });
+    // an answer still being written from before a reload: check back until it's saved
+    if (j.running) setTimeout(() => { if (Chat.pid === pid && Chat.running && !Chat.streaming) { Chat.loadedFor = null; chatOpen(); } }, 2000);
+  } catch (e) { Chat.status = 'offline'; }
+}
+async function chatConnect() {
+  Chat.status = 'checking'; renderChatPanel(true);
+  const st = await bridgeCheck();
+  if (st === 'ready') return chatOpen(true);
+  if (st !== 'unpaired') return renderChatPanel(true);
+  Chat.pairCode = String(Math.floor(1000 + Math.random() * 9000));
+  Chat.status = 'pairing'; renderChatPanel(true);
+  try {
+    const r = await bridgeFetch('/pair', { method: 'POST', body: JSON.stringify({ code: Chat.pairCode }) });
+    if (!r.ok) { Chat.status = 'declined'; return renderChatPanel(true); }
+    saveBridgeToken((await r.json()).token); Chat.status = 'ready';
+    chatOpen(true);
+  } catch (e) { Chat.status = 'offline'; renderChatPanel(true); }
+}
+
+/* The chat view is built once per paper and then updated in place, so the panel's other re-renders
+   (notes syncing, etc.) never disturb what you're typing */
+function renderChatPanel(force) {
+  const panel = document.getElementById('readerPanel');
+  if (!panel || !document.getElementById('reader').classList.contains('panel-open') || _panelTab !== 'chat') return;
+  const pid = (_reader.paper && _reader.paper.id) || '';
+  const root = document.getElementById('chatRoot');
+  if (!force && root && root.dataset.paper === pid && root.dataset.status === Chat.status) return;
+  const input = document.getElementById('chatInput'); if (input) Chat.draftText = input.value;
+  const ready = Chat.status === 'ready';
+  if (ready && pid && Chat.loadedFor !== pid) { chatOpen(); return; }   // another paper: load its chat first
+  const head = `<div class="rp-head">${panelTabsHTML()}<span class="grow"></span>${ready ? `<div class="rp-seg" role="group" aria-label="Model"><button class="${Chat.model === 'opus' ? 'on' : ''}" onclick="chatModel('opus')" title="Deepest answers">Opus</button><button class="${Chat.model === 'sonnet' ? 'on' : ''}" onclick="chatModel('sonnet')" title="Quicker, lighter on usage">Sonnet</button></div><button class="rp-icon-btn" onclick="chatNew()" title="New chat" aria-label="New chat">${ICON_NEWCHAT}</button>` : ''}<button class="rp-icon-btn" onclick="toggleReaderPanel(false)" title="Close" aria-label="Close panel">${ICON_CLOSE}</button></div>`;
+  const setup = {
+    setup: `<p>Chat with Claude about this paper, with your highlights and notes in view. It runs through Claude Code on your laptop.</p><button class="ui-btn ui-btn-primary" onclick="chatConnect()">Connect to Claude Code</button>`,
+    unknown: `<p class="chat-dim">Connecting to Claude Code…</p>`,
+    checking: `<p class="chat-dim">Connecting to Claude Code…</p>`,
+    unpaired: `<p>Claude Code is running on this laptop. Allow this page to use it:</p><button class="ui-btn ui-btn-primary" onclick="chatConnect()">Connect</button>`,
+    pairing: `<p>Check the dialog on your Mac and click <strong>Allow</strong>.</p><p class="chat-code">${Chat.pairCode}</p><p class="chat-dim">It should show the same code.</p>`,
+    declined: `<p>Not connected (the dialog was declined or timed out).</p><button class="ui-btn ui-btn-secondary" onclick="chatConnect()">Try again</button>`,
+    offline: `<p>Can't reach Claude Code on this computer. Chat works on the laptop where the helper runs; to start it there, run <code>bash bridge/install_bridge.sh</code> once from the dashboard's folder.</p><button class="ui-btn ui-btn-secondary" onclick="chatConnect()">Try again</button>`,
+  };
+  const body = ready
+    ? `<div class="chat-scroll" id="chatScroll"></div>
+       <div class="chat-compose"><div class="chat-attach" id="chatAttach"></div>
+         <div class="chat-box"><textarea id="chatInput" rows="1" placeholder="Ask about this paper…   @ adds another paper" oninput="chatInputChanged(this)" onkeydown="chatKey(event)"></textarea>
+           <div class="chat-box-row"><button class="rp-icon-btn sm" onclick="startFigureSelect()" title="Ask about a figure: drag a box on the page" aria-label="Ask about a figure">${ICON_FIGURE}</button><button class="rp-icon-btn sm" onmousedown="event.preventDefault()" onclick="chatAddPaper()" title="Bring in another paper (or just describe it in your message)" aria-label="Bring in another paper">${ICON_PAPER}</button><span class="grow"></span><button class="chat-send" id="chatSend" onclick="chatSendOrStop()" aria-label="Send">${ICON_SEND}</button></div></div></div>`
+    : `<div class="chat-setup">${setup[Chat.status] || setup.setup}</div>`;
+  panel.innerHTML = head + `<div class="chat-root" id="chatRoot" data-paper="${escAttr(pid)}" data-status="${Chat.status}">${body}</div>`;
+  if (ready) {
+    renderChatMessages(); renderChatAttach(); updateChatSend();
+    const i = document.getElementById('chatInput'); i.value = Chat.draftText; chatGrow(i);
+  }
+}
+function chatModel(m) { Chat.model = m; renderChatPanel(true); }
+async function chatNew() {
+  if (Chat.running) return;
+  if (Chat.messages.length) { try { await bridgeFetch('/chat/new', { method: 'POST', body: JSON.stringify({ paper: _reader.paper.id }) }); } catch (e) {} }
+  Object.assign(Chat, { messages: [], fresh: true, streaming: '', error: '' });
+  renderChatMessages();
+  const i = document.getElementById('chatInput'); if (i) i.focus();
+}
+
+const CHAT_STARTERS = [
+  ['Main contribution', 'What is the main contribution of this paper, and what is new compared to prior work?'],
+  ['Assumptions & limits', 'What are the key assumptions and limitations? Where could they break in practice?'],
+  ['Key result', 'Explain the key theorem or result: what it says, why it holds, and how it is used.'],
+  ['My research', 'How does this paper relate to my research? Be specific about what I could use or build on.'],
+  ['Summarise my highlights', 'Summarise my highlights and comments on this paper into one structured note (key idea, method, results, open questions), and add it to my notes.'],
+];
+function renderChatMessages() {
+  const box = document.getElementById('chatScroll');
+  if (!box) return;
+  if (!Chat.messages.length && !Chat.running) {
+    box.innerHTML = `<div class="chat-empty"><p>Ask anything about this paper. Claude sees the full text, your highlights and notes, and your research interests, and cites the passages it uses.</p><div class="chat-chips">${CHAT_STARTERS.map(([l, q]) => `<button class="rp-chip" onclick="chatSend(${escAttr(JSON.stringify(q))})">${esc(l)}</button>`).join('')}</div></div>`;
+    return;
+  }
+  box.innerHTML = Chat.messages.map((m, i) => chatMsgHTML(m, i)).join('')
+    + (Chat.running ? `<div class="chat-msg claude" id="chatLive"><div class="md chat-md" id="chatLiveMd"></div><div class="chat-status" id="chatTool">${esc(chatToolLabel(Chat.tool) || 'Thinking…')}</div></div>` : '')
+    + (Chat.error ? `<div class="chat-error">${esc(Chat.error)}</div>` : '');
+  box.querySelectorAll('[data-md-chat]').forEach(el => renderChatMarkdown(el, Chat.messages[+el.dataset.mdChat].text, +el.dataset.mdChat));
+  if (Chat.running) renderChatLive();
+  box.scrollTop = box.scrollHeight;
+}
+function chatMsgHTML(m, i) {
+  if (m.role === 'user') {
+    const pills = (m.quotes || []).map(q => q.page ? citeQuotePill(q.page, q.text) : `<span class="chat-quote">“${esc(shortQuote(q.text, 80))}”</span>`).join('')
+      + (m.mentions || []).map(x => `<span class="chat-mention">@${esc(shortQuote(x.title || x.id, 40))}</span>`).join('')
+      + (m.images ? `<span class="chat-mention">${m.images} figure${m.images > 1 ? 's' : ''}</span>` : '');
+    if (m.auto) return '';   // the papers Claude asked for: already shown as "Reading … and your notes on it" 
+    return `<div class="chat-msg you">${pills ? `<div class="chat-pills">${pills}</div>` : ''}${m.text ? `<div class="chat-you-text">${esc(m.text)}</div>` : ''}</div>`;
+  }
+  return `<div class="chat-msg claude"><div class="md chat-md" data-md-chat="${i}"></div><div class="chat-acts"><button class="rp-icon-btn sm" onclick="chatCopy(${i})" title="Copy" aria-label="Copy">${ICON_COPY}</button><button class="rp-icon-btn sm" onclick="chatSaveAsNote(${i})" title="Save as a note" aria-label="Save as a note">${ICON_NOTE}</button></div></div>`;
+}
+function chatToolLabel(t) { return { WebSearch: 'Searching the web…', WebFetch: 'Reading a web page…', Read: 'Looking at the PDF…', Grep: 'Looking through your library…', Glob: 'Looking through your library…' }[t] || (t ? 'Working…' : ''); }
+
+/* Markdown with clickable citations [[p.N "exact words"]], and cards for notes/highlights Claude was asked to add */
+const QUOTE_RE = /\[\[p\.(\d+)\s+"([^"\]\n]*)"\]\]/g;
+function citeQuotePill(page, quote, tok) {
+  if (tok) return `<span class="cite-chip cite-pill quote-chip" contenteditable="false" draggable="false" data-tok="${escAttr(tok)}" data-page="${escAttr(String(page))}" data-quote="${escAttr(quote)}" title="${escAttr('\u201c' + shortQuote(quote, 300) + '\u201d \u00b7 click to go to it')}"><span class="cp-page">p.\u00a0${esc(String(page))}</span><span class="cp-q">${esc(shortQuote(quote, 48))}</span></span>`;
+  return `<button class="cite-chip quote-chip" data-page="${escAttr(String(page))}" data-quote="${escAttr(quote)}" title="${escAttr('“' + shortQuote(quote, 300) + '” · click to go to it')}"><span class="cp-page">p. ${esc(String(page))}</span><span class="cp-q">${esc(shortQuote(quote, 48))}</span></button>`;
+}
+const CHAT_BLOCK_RE = /```(note|highlight)([^\n]*)\n?([\s\S]*?)```/g;
+function blockBody(kind, first, rest) { return (kind === 'highlight' ? first + ' ' + rest : rest).replace(/\s+\n/g, '\n').trim(); }
+function chatBlocks(text) {
+  const out = [];
+  String(text).replace(CHAT_BLOCK_RE, (m, kind, first, rest) => { out.push({ kind, body: blockBody(kind, first, rest), raw: m }); return m; });
+  return out;
+}
+async function renderChatMarkdown(el, text, msgIdx) {
+  el.textContent = text;
+  try { await loadMdLibs(); } catch (e) { return; }
+  const slots = [], slot = html => `@@SLOT${slots.push(html) - 1}@@`;
+  let bi = 0;
+  let src = String(text).replace(/```paper\s+([\w.-]+)\s*```/g, (m, id) => { const q = allPapers.find(x => x.id === id); return slot(`<div class="chat-status static">Reading ${q ? '<em>' + esc(shortQuote(q.title, 70)) + '</em>' : 'the paper'} and your notes on it\u2026</div>`); })
+    .replace(CHAT_BLOCK_RE, (m, kind, first, rest) => {
+    const i = bi++, body = blockBody(kind, first, rest);
+    if (kind === 'highlight') {
+      const h = body.match(/p\.(\d+)\s+(\w+)\s+"([^"]+)"/);
+      return slot(`<div class="chat-card"><div class="chat-card-head">Highlight${h ? ` · ${esc(h[2])}` : ''}${msgIdx != null ? `<button class="chat-card-btn" onclick="chatApplyBlock(${msgIdx},${i})">${chatBlockDone(msgIdx, i) ? 'Added' : 'Add'}</button>` : ''}</div>${h ? citeQuotePill(h[1], h[3]) : esc(body)}</div>`);
+    }
+    return slot(`<div class="chat-card"><div class="chat-card-head">Note${msgIdx != null ? `<button class="chat-card-btn" onclick="chatApplyBlock(${msgIdx},${i})">${chatBlockDone(msgIdx, i) ? 'In your notes' : 'Save to notes'}</button>` : ''}</div><div class="md" data-card-note="${i}"></div></div>`);
+  }).replace(QUOTE_RE, (m, page, q) => slot(citeQuotePill(page, q)))
+    .replace(/\$\$([\s\S]+?)\$\$/g, (m, tex) => slot(katex.renderToString(tex, { displayMode: true, throwOnError: false })))
+    .replace(/(^|[^\\$])\$([^\s$](?:[^$\n]*?[^\s$])?)\$/g, (m, pre, tex) => pre + slot(katex.renderToString(tex, { throwOnError: false })));
+  let html = DOMPurify.sanitize(marked.parse(src, { breaks: true, gfm: true }));
+  html = html.replace(/@@SLOT(\d+)@@/g, (m, i) => slots[+i]);
+  el.innerHTML = html;
+  const blocks = chatBlocks(text);
+  el.querySelectorAll('[data-card-note]').forEach(n => { const b = blocks[+n.dataset.cardNote]; if (b) renderNotesMarkdown(n, b.body, _rn); });
+  el.querySelectorAll('a[href]').forEach(a => { a.target = '_blank'; a.rel = 'noopener'; });
+}
+document.addEventListener('click', e => {   // citation pills anywhere (chat, notes, cards) jump to the passage
+  const b = e.target.closest && e.target.closest('.quote-chip[data-quote]');
+  if (!b || !document.getElementById('reader').classList.contains('open')) return;
+  e.preventDefault(); e.stopPropagation();
+  jumpToQuote(+b.dataset.page, b.dataset.quote);
+}, true);
+let _liveTimer = 0;
+function renderChatLive() {
+  const el = document.getElementById('chatLiveMd');
+  if (el) { renderChatMarkdown(el, Chat.streaming, null); const t = document.getElementById('chatTool'); if (t) t.textContent = Chat.tool ? chatToolLabel(Chat.tool) : (Chat.streaming ? '' : 'Thinking…'); }
+  const box = document.getElementById('chatScroll');
+  if (box && box.scrollHeight - box.scrollTop - box.clientHeight < 120) box.scrollTop = box.scrollHeight;   // follow, unless you scrolled up to read
+}
+function scheduleLive() { if (!_liveTimer) _liveTimer = setTimeout(() => { _liveTimer = 0; renderChatLive(); }, 70); }
+
+/* ---- composing ---- */
+function chatGrow(t) { t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 180) + 'px'; }
+function chatInputChanged(t) { Chat.draftText = t.value; chatGrow(t); chatMentionInput(t); }
+function chatKey(e) {
+  if (_mentionCtx && document.getElementById('citeDD').classList.contains('open')) {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); _mentionCtx.i = (_mentionCtx.i + (e.key === 'ArrowDown' ? 1 : -1) + _mentionCtx.opts.length) % _mentionCtx.opts.length; document.querySelectorAll('#citeDD button').forEach((b, i) => b.classList.toggle('on', i === _mentionCtx.i)); return; }
+    if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); pickMention(_mentionCtx.i); return; }
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeCiteDD(); _mentionCtx = null; return; }
+  }
+  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); chatSendOrStop(); }
+  else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); e.target.blur(); }
+}
+function renderChatAttach() {
+  const box = document.getElementById('chatAttach');
+  if (!box) return;
+  const d = Chat.draft;
+  box.innerHTML = d.quotes.map((q, i) => `<span class="chat-att">${q.page ? `<span class="cp-page">p. ${q.page}</span>` : ''}${esc(shortQuote(q.text, 40))}<button onclick="chatDropAtt('quotes',${i})" aria-label="Remove">×</button></span>`).join('')
+    + d.images.map((im, i) => `<span class="chat-att img"><img src="${im.url}" alt=""><button onclick="chatDropAtt('images',${i})" aria-label="Remove">×</button></span>`).join('')
+    + d.mentions.map((m, i) => `<span class="chat-att">@${esc(shortQuote(m.title, 36))}<button onclick="chatDropAtt('mentions',${i})" aria-label="Remove">×</button></span>`).join('');
+  box.style.display = box.innerHTML ? '' : 'none';
+}
+function chatDropAtt(kind, i) { Chat.draft[kind].splice(i, 1); renderChatAttach(); }
+function updateChatSend() {
+  const b = document.getElementById('chatSend'); if (!b) return;
+  b.innerHTML = Chat.running ? ICON_STOP : ICON_SEND;
+  b.title = Chat.running ? 'Stop' : 'Send (Enter)'; b.setAttribute('aria-label', b.title);
+  b.classList.toggle('stop', Chat.running);
+}
+function chatSendOrStop() { if (Chat.running) chatStop(); else chatSend(); }
+async function chatStop() { try { await bridgeFetch('/chat/stop', { method: 'POST', body: JSON.stringify({ paper: Chat.pid }) }); } catch (e) {} }
+
+/* Ask about a passage: from the paper's selection bar, or a selection inside a reply */
+function askAboutSelection() {
+  const info = _selPending || selInfo();
+  if (!info || info.error) return;
+  Chat.draft.quotes.push({ page: info.page, text: info.quote });
+  hideSelBar(); window.getSelection().removeAllRanges();
+  setPanelTab('chat', true); renderChatAttach();
+}
+document.addEventListener('mouseup', () => {
+  setTimeout(() => {
+    const btn = document.getElementById('chatAskSel');
+    const sel = window.getSelection(), box = document.getElementById('chatScroll');
+    const inReply = sel && !sel.isCollapsed && box && box.contains(sel.anchorNode) && sel.anchorNode.parentElement && sel.anchorNode.parentElement.closest('.chat-msg.claude');
+    if (!inReply) { if (btn) btn.remove(); return; }
+    const r = sel.getRangeAt(0).getBoundingClientRect();
+    const b = btn || Object.assign(document.createElement('button'), { id: 'chatAskSel', className: 'chat-ask-sel', innerHTML: ICON_ASK + '<span>Ask</span>' });
+    b.onmousedown = ev => ev.preventDefault();
+    b.onclick = () => { const t = window.getSelection().toString().replace(/\s+/g, ' ').trim(); if (t) { Chat.draft.quotes.push({ page: 0, text: t }); renderChatAttach(); } b.remove(); window.getSelection().removeAllRanges(); const i = document.getElementById('chatInput'); if (i) i.focus(); };
+    b.style.left = Math.min(window.innerWidth - 80, r.right - 30) + 'px'; b.style.top = (r.bottom + 6) + 'px';
+    if (!btn) document.body.appendChild(b);
+  }, 10);
+});
+
+/* Ask about a figure: drag a box on the page; the crop is sent as an image */
+function startFigureSelect() {
+  const body = document.getElementById('readerBody');
+  body.classList.add('fig-select');
+  toast('Drag a box around the figure or equation (Esc to cancel)');
+  let start = null, box = null, pg = null;
+  const done = () => { body.classList.remove('fig-select'); body.removeEventListener('pointerdown', down, true); window.removeEventListener('pointermove', move, true); window.removeEventListener('pointerup', up, true); document.removeEventListener('keydown', key, true); if (box) box.remove(); };
+  const key = e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); done(); } };
+  const down = e => {
+    pg = e.target.closest('.reader-page'); if (!pg) return;
+    e.preventDefault(); e.stopPropagation();
+    const r = pg.getBoundingClientRect(); start = { x: e.clientX - r.left, y: e.clientY - r.top };
+    box = Object.assign(document.createElement('div'), { className: 'fig-box' }); pg.appendChild(box);
+  };
+  const move = e => {
+    if (!start) return;
+    const r = pg.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+    Object.assign(box.style, { left: Math.min(x, start.x) + 'px', top: Math.min(y, start.y) + 'px', width: Math.abs(x - start.x) + 'px', height: Math.abs(y - start.y) + 'px' });
+  };
+  const up = e => {
+    if (!start) return;
+    const r = pg.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+    const sel = { x: Math.min(x, start.x), y: Math.min(y, start.y), w: Math.abs(x - start.x), h: Math.abs(y - start.y) };
+    const canvas = pg.querySelector('canvas:not(.stale)');
+    done();
+    if (!canvas || sel.w < 12 || sel.h < 12) return;
+    const k = canvas.width / r.width, scale = Math.min(1, 1600 / (sel.w * k));
+    const out = document.createElement('canvas'); out.width = Math.round(sel.w * k * scale); out.height = Math.round(sel.h * k * scale);
+    const ctx = out.getContext('2d');
+    if (document.getElementById('reader').classList.contains('dark')) ctx.filter = 'none';
+    ctx.drawImage(canvas, sel.x * k, sel.y * k, sel.w * k, sel.h * k, 0, 0, out.width, out.height);
+    Chat.draft.images.push({ url: out.toDataURL('image/png'), page: +pg.dataset.page });
+    setPanelTab('chat', true); renderChatAttach();
+  };
+  body.addEventListener('pointerdown', down, true);
+  window.addEventListener('pointermove', move, true);
+  window.addEventListener('pointerup', up, true);
+  document.addEventListener('keydown', key, true);
+}
+
+/* Papers you opened recently, newest first (for @ suggestions and Claude's library index) */
+function recentReads() { try { return JSON.parse(localStorage.getItem('scholar_recent_reads') || '[]'); } catch (e) { return []; } }
+function noteRecentRead(id) {
+  try { const r = recentReads().filter(x => x.id !== id); r.unshift({ id, t: Date.now() }); localStorage.setItem('scholar_recent_reads', JSON.stringify(r.slice(0, 60))); } catch (e) {}
+}
+/* Claude finds papers you describe by searching this index of your library (titles, authors, topics, one-line
+   summaries, your flags; never your notes). Sent when chat connects, and again if it changed. */
+let _libSent = '';
+function libraryTSV() {
+  const clean = v => String(v || '').replace(/[\t\r\n]+/g, ' ').trim();
+  const opened = new Map(recentReads().map(r => [r.id, r.t]));
+  const noted = (Vault.index && Vault.index.papers) || {};
+  const day = t => new Date(t).toISOString().slice(0, 10);
+  return 'id\ttitle\tauthors\tdate\tvenue\ttopics\tsummary\tflags\n' + allPapers.filter(p => !isHidden(p)).map(p => [p.id, p.title, shortQuote(p.authors, 160), p.publishing_date, p.venue, (p.theme_groups || '').replace(/\|/g, ', '), p.headline,
+    [p.is_starred === 'true' && 'starred', p.is_read === 'true' && 'read', p.user_lists && 'lists: ' + p.user_lists.replace(/\|/g, ', '), noted[p.id] && 'has my notes', opened.has(p.id) && 'opened ' + day(opened.get(p.id)), p.date_found && 'added ' + p.date_found].filter(Boolean).join('; ')].map(clean).join('\t')).join('\n');
+}
+async function syncLibrary() {
+  const tsv = libraryTSV();
+  if (tsv === _libSent) return;
+  try { const r = await bridgeFetch('/library', { method: 'POST', body: JSON.stringify({ tsv }) }); if (r.ok) _libSent = tsv; } catch (e) {}
+}
+
+/* @ (or + Paper) another paper from your database: its text and your notes on it come along */
+let _mentionCtx = null;
+function mentionMatches(q) {
+  const cur = _reader.paper && _reader.paper.id, pool = allPapers.filter(p => p.id !== cur && !isHidden(p));
+  if (!q) {   // nothing typed yet: the papers you most likely mean
+    const groups = new Set(((_reader.paper && _reader.paper.theme_groups) || '').split('|').filter(Boolean));
+    const seen = new Set(), out = [];
+    const add = (p, why) => { if (p && !seen.has(p.id)) { seen.add(p.id); out.push({ p, why }); } };
+    recentReads().slice(0, 6).forEach(r => add(pool.find(p => p.id === r.id), 'opened recently'));
+    pool.filter(p => p.is_starred === 'true').slice(0, 3).forEach(p => add(p, 'starred'));
+    pool.filter(p => (p.theme_groups || '').split('|').some(g => groups.has(g))).slice(0, 4).forEach(p => add(p, 'same topic'));
+    return out.slice(0, 8);
+  }
+  const words = q.toLowerCase().split(/\s+/).filter(Boolean);   // any words, any order: title, authors, summary, topics, venue, year
+  return pool.map(p => {
+    const title = (p.title || '').toLowerCase(), hay = [title, p.authors, p.headline, p.theme_groups, p.venue, p.publishing_date, p.id].join(' ').toLowerCase();
+    if (!words.every(w => hay.includes(w))) return null;
+    return { p, score: words.filter(w => title.includes(w)).length * 3 + words.filter(w => (p.authors || '').toLowerCase().includes(w)).length * 2 + (p.is_starred === 'true' ? 1 : 0) };
+  }).filter(Boolean).sort((a, b) => b.score - a.score).slice(0, 8);
+}
+function chatMentionInput(t) {
+  const upto = t.value.slice(0, t.selectionStart), m = upto.match(/(^|\s)@([^@\n]{0,60})$/);
+  if (!m) { if (_mentionCtx) { closeCiteDD(); _mentionCtx = null; } return; }
+  const opts = mentionMatches(m[2].trim());
+  if (!opts.length) { closeCiteDD(); _mentionCtx = null; return; }
+  _mentionCtx = { start: upto.length - m[2].length - 1, end: t.selectionStart, opts: opts.map(o => o.p), i: 0 };
+  const dd = document.getElementById('citeDD');
+  dd.innerHTML = opts.map((o, i) => `<button class="${i === 0 ? 'on' : ''}" onmousedown="event.preventDefault()" onclick="pickMention(${i})">${esc(shortQuote(o.p.title, 90))}<span class="dd-sub">${esc(shortQuote(o.p.authors || '', 40))}${o.p.publishing_date ? ' · ' + esc(o.p.publishing_date) : ''}${o.why ? ' · ' + o.why : ''}</span></button>`).join('');
+  const r = t.getBoundingClientRect();
+  dd.style.left = Math.max(12, Math.min(window.innerWidth - 332, r.left)) + 'px';
+  dd.style.top = Math.max(12, r.top - Math.min(260, 44 * opts.length) - 8) + 'px';
+  dd.classList.add('open');
+}
+function pickMention(i) {
+  const c = _mentionCtx, t = document.getElementById('chatInput');
+  if (!c || !t) return;
+  const p = c.opts[i];
+  t.value = t.value.slice(0, c.start) + t.value.slice(c.end); t.selectionStart = t.selectionEnd = c.start;
+  Chat.draftText = t.value;
+  if (!Chat.draft.mentions.some(m => m.id === p.id)) Chat.draft.mentions.push({ id: p.id, title: p.title });
+  closeCiteDD(); _mentionCtx = null; renderChatAttach(); t.focus();
+}
+function isHidden(p) { return String(p.is_hidden || '').toLowerCase() === 'true'; }
+
+/* ---- what Claude is given ---- */
+const _paperTextCache = new Map();
+async function pdfText(doc, key, cap) {
+  if (_paperTextCache.has(key)) return _paperTextCache.get(key);
+  const pages = [];
+  for (let i = 1; i <= doc.numPages; i++) {
+    const tc = await (await doc.getPage(i)).getTextContent();
+    pages.push(`[p.${i}]\n` + tc.items.map(it => (it.str || '') + (it.hasEOL ? '\n' : ' ')).join('').replace(/[ \t]+\n/g, '\n'));
+  }
+  let text = pages.join('\n\n');
+  if (cap && text.length > cap) text = text.slice(0, cap) + '\n[… truncated]';
+  _paperTextCache.set(key, text);
+  return text;
+}
+function notesContext(n) {
+  if (!n) return '';
+  const quote = t => String(t || '').replace(CITE_RE, (m, id, rest) => { const a = (n.annos || []).find(x => x.id === id); return a ? `“${a.quote}” (p. ${a.page})` : ''; });
+  const hl = (n.annos || []).filter(a => a.kind === 'hl'), com = (n.annos || []).filter(a => a.kind === 'note' && (a.note || '').trim());
+  const out = [];
+  if (hl.length) out.push('Highlights:\n' + hl.sort((a, b) => a.page - b.page).map(a => `- p.${a.page} [${hlLabel(a.color)}] “${a.quote}”${(a.note || '').trim() ? ' — my comment: ' + a.note.trim() : ''}`).join('\n'));
+  if (com.length) out.push('Comments:\n' + com.sort((a, b) => a.page - b.page).map(a => `- p.${a.page} “${a.quote}”: ${a.note.trim()}`).join('\n'));
+  if ((n.entries || []).length) out.push('Notes:\n' + n.entries.map(e => '- ' + quote(e.text).replace(/\n/g, '\n  ')).join('\n'));
+  return out.join('\n\n');
+}
+function chatProfile() {
+  const conf = allInterests.filter(i => i.status === 'confirmed');
+  const by = lvl => conf.filter(i => i.relevance_mapping === lvl).map(i => i.interest_name).join('; ');
+  return 'Robotics researcher; current focus: data-driven verification of black-box robotic systems with black-box controllers.'
+    + (by('definitely') ? ' Core interests: ' + by('definitely') + '.' : '') + (by('probably') ? ' Also interested in: ' + by('probably') + '.' : '');
+}
+async function mentionContext(m) {
+  const p = allPapers.find(x => x.id === m.id);
+  if (!p) return '';
+  let text = '', notes = '';
+  try {
+    const src = pdfSourceOf(p);
+    if (src) { const lib = await loadPdfJs(); const doc = await lib.getDocument({ url: src, isEvalSupported: false, verbosity: 0 }).promise; text = await pdfText(doc, 'm:' + p.id, 80000); doc.destroy(); }
+  } catch (e) {}
+  if (!text) text = [p.title, p.authors, p.abstract].filter(Boolean).join('\n');
+  if (Vault.key) { try { notes = notesContext(await paperNotes(p.id)); } catch (e) {} }
+  return `<other-paper id="${p.id}" title="${(p.title || '').replace(/"/g, "'")}">\n${text}\n${notes ? '\nMy notes on it:\n' + notes + '\n' : ''}</other-paper>`;
+}
+async function blobToBase64(blob) {
+  const buf = new Uint8Array(await blob.arrayBuffer()); let s = '';
+  for (let i = 0; i < buf.length; i += 0x8000) s += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+
+/* ---- one turn ---- */
+async function chatSend(text, auto) {
+  if (Chat.running || Chat.status !== 'ready' || !_reader.paper) return;
+  const input = document.getElementById('chatInput');
+  text = String(text != null ? text : (input ? input.value : '')).trim();
+  const d = auto ? { quotes: [], images: [], mentions: auto.papers } : Chat.draft;
+  if (!text && !d.quotes.length && !d.images.length && !d.mentions.length) return;
+  const p = _reader.paper, pid = p.id;
+  const user = { role: 'user', text: auto ? '' : text, quotes: d.quotes.slice(), images: d.images.length, mentions: d.mentions.map(m => ({ id: m.id, title: m.title })), auto: !!auto, ts: Date.now() / 1000 };
+  const images = d.images.map(im => im.url), mentions = d.mentions.slice();
+  if (!auto) { Chat.draft = { quotes: [], images: [], mentions: [] }; Chat.draftText = ''; }
+  if (!auto && input && text === input.value.trim()) { input.value = ''; chatGrow(input); }
+  Object.assign(Chat, { running: true, streaming: '', tool: '', error: '' });
+  Chat.messages.push(user);
+  renderChatAttach(); renderChatMessages(); updateChatSend();
+
+  let message = '';
+  user.quotes.forEach(q => { message += q.page ? `About this passage: [[p.${q.page} "${q.text}"]]\n` : `About this part of your answer: “${q.text}”\n`; });
+  if (images.length) message += `(I attached ${images.length === 1 ? 'a crop of the page' : images.length + ' crops of the page'}.)\n`;
+  message += text || (images.length ? 'What does this show?' : 'Explain this.');
+  let context = [notesContext(_rn) ? 'My highlights, comments and notes on this paper:\n' + notesContext(_rn) : (Vault.key ? 'I have no notes on this paper yet.' : '')].filter(Boolean).join('\n\n');
+  if (mentions.length) context += (context ? '\n\n' : '') + (await Promise.all(mentions.map(mentionContext))).join('\n\n');
+  const body = { paper: pid, message, display: user.text, auto: user.auto, model: Chat.model, context, profile: chatProfile(), quotes: user.quotes, mentions: user.mentions, images };
+  if (Chat.fresh) {
+    try { if (_reader.doc) body.paperText = await pdfText(_reader.doc, 'r:' + pid + ':' + (_reader.doc.fingerprints || [''])[0]); } catch (e) {}
+    if (!body.paperText) body.paperText = [p.title, p.authors, p.abstract].filter(Boolean).join('\n');
+    if (_reader.local) { try { const blob = await localPdfGet(pid); if (blob) body.pdfBase64 = await blobToBase64(blob); } catch (e) {} }
+    else body.pdfUrl = pdfSourceOf(p);
+  }
+  let reply = '';
+  try {
+    const res = await bridgeFetch('/chat/send', { method: 'POST', body: JSON.stringify(body) });
+    if (res.status === 401) { saveBridgeToken(''); Chat.status = 'unpaired'; throw new Error('This page needs to be connected to Claude Code again.'); }
+    if (res.status === 409) throw new Error('Claude is still answering the previous message.');
+    if (!res.ok) throw new Error('Claude Code returned an error (' + res.status + ').');
+    const reader = res.body.getReader(), dec = new TextDecoder(); let buf = '';
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let nl;
+      while ((nl = buf.indexOf('\n')) >= 0) {
+        const line = buf.slice(0, nl); buf = buf.slice(nl + 1);
+        if (!line.trim()) continue;
+        const e = JSON.parse(line);
+        if (e.t === 'text') { reply += e.v; if (Chat.pid === pid) { Chat.streaming = reply; Chat.tool = ''; scheduleLive(); } }
+        else if (e.t === 'tool') { if (Chat.pid === pid) { Chat.tool = e.v; scheduleLive(); } }
+        else if (e.t === 'done' && e.error && !reply) throw new Error(/stopped|terminated|SIGTERM/i.test(e.error) ? 'Stopped.' : 'Claude Code: ' + e.error.slice(-200));
+      }
+    }
+    Chat.fresh = false;
+  } catch (e) {
+    if (Chat.pid === pid) Chat.error = e.message === 'Failed to fetch' ? "Lost the connection to Claude Code on this laptop." : e.message;
+  }
+  if (Chat.pid !== pid) return;   // you moved to another paper meanwhile: its chat reloads from the bridge
+  Chat.running = false; Chat.tool = '';
+  if (reply) Chat.messages.push({ role: 'assistant', text: reply, ts: Date.now() / 1000 });
+  Chat.streaming = '';
+  if (Chat.status !== 'ready') return renderChatPanel(true);
+  renderChatMessages(); updateChatSend();
+  if (reply && chatBlocks(reply).length && /\b(add|save|put|note|highlight)\b/i.test(text)) chatApplyAll(Chat.messages.length - 1);   // you asked for it
+  // Claude identified papers you described: send their text and your notes on them, and let it continue
+  const wanted = [...new Set([...(reply || '').matchAll(/```paper\s+([\w.-]+)\s*```/g)].map(x => x[1]))].map(id => allPapers.find(q => q.id === id)).filter(Boolean);
+  if (wanted.length && !auto) chatSend('Here is what you asked for (in <other-paper>). Please continue with my question.', { papers: wanted.map(q => ({ id: q.id, title: q.title })) });
+}
+
+/* ---- notes and highlights Claude was asked to add ---- */
+const _chatApplied = new Set();
+function chatBlockDone(mi, bi) {
+  if (_chatApplied.has(mi + ':' + bi)) return true;
+  const b = chatBlocks((Chat.messages[mi] || {}).text || '')[bi];
+  if (!b || !_rn) return false;
+  if (b.kind === 'note') return (_rn.entries || []).some(e => e.text.trim() === b.body.trim());
+  const h = b.body.match(/p\.(\d+)\s+(\w+)\s+"([^"]+)"/);
+  return !!h && (_rn.annos || []).some(a => a.kind === 'hl' && a.page === +h[1] && a.quote === h[3]);
+}
+async function chatApplyBlock(mi, bi, quiet) {
+  const b = chatBlocks((Chat.messages[mi] || {}).text || '')[bi];
+  if (!b || chatBlockDone(mi, bi) || notesBusy()) return null;
+  if (!await vaultReady()) return null;
+  if (!_rn) { setRnState('loading'); await loadReaderNotes(); if (!_rn) return null; }
+  const now = new Date().toISOString();
+  let added = null;
+  if (b.kind === 'note') {
+    added = { type: 'entry', obj: { id: newNoteId(), text: b.body.trim(), created: now, updated: now } };
+    _rn.entries = (_rn.entries || []).concat(added.obj);
+  } else {
+    const h = b.body.match(/p\.(\d+)\s+(\w+)\s+"([^"]+)"/);
+    if (!h) return null;
+    const found = await locateQuote(+h[1], h[3]);
+    if (!found) { toast(`Couldn’t find that passage on page ${h[1]}`); return null; }
+    await pinPdfVersion();
+    const color = HL_COLORS.includes(h[2]) ? h[2] : 'orange';
+    added = { type: 'anno', obj: { id: newAnnoId(), kind: 'hl', color, page: +h[1], rects: found.rects, quote: found.quote, prefix: '', suffix: '', note: '', created: now, updated: now } };
+    _rn.annos = (_rn.annos || []).concat(added.obj);
+  }
+  _chatApplied.add(mi + ':' + bi);
+  await savePaperNotes(_rn); redrawAnnoLayers(); updateReaderNotesCount();
+  if (!quiet) { renderChatMessages(); toast(b.kind === 'note' ? 'Saved to your notes' : 'Highlight added', () => chatUndoAdds([added])); }
+  return added;
+}
+async function chatApplyAll(mi) {
+  const adds = [];
+  for (let bi = 0; bi < chatBlocks(Chat.messages[mi].text).length; bi++) { const a = await chatApplyBlock(mi, bi, true); if (a) adds.push(a); }
+  if (!adds.length) return;
+  renderChatMessages();
+  const n = adds.filter(a => a.type === 'entry').length, h = adds.length - n;
+  toast([n ? `${n} note${n > 1 ? 's' : ''}` : '', h ? `${h} highlight${h > 1 ? 's' : ''}` : ''].filter(Boolean).join(' and ') + ' added', () => chatUndoAdds(adds));
+}
+async function chatUndoAdds(adds) {
+  const now = new Date().toISOString();
+  adds.forEach(a => {
+    if (a.type === 'entry') _rn.entries = _rn.entries.filter(e => e.id !== a.obj.id); else _rn.annos = _rn.annos.filter(x => x.id !== a.obj.id);
+    _rn.deleted = { ...(_rn.deleted || {}), [a.obj.id]: now };
+  });
+  _chatApplied.clear();
+  await savePaperNotes(_rn); redrawAnnoLayers(); updateReaderNotesCount(); renderChatMessages();
+}
+async function chatSaveAsNote(mi) {
+  const m = Chat.messages[mi]; if (!m || notesBusy()) return;
+  if (!await vaultReady()) return;
+  if (!_rn) { setRnState('loading'); await loadReaderNotes(); if (!_rn) return; }
+  const now = new Date().toISOString(), e = { id: newNoteId(), text: m.text.replace(CHAT_BLOCK_RE, (x, kind, first, rest) => kind === 'note' ? rest : '').trim(), created: now, updated: now };
+  _rn.entries = (_rn.entries || []).concat(e);
+  await savePaperNotes(_rn); updateReaderNotesCount();
+  toast('Saved to your notes', () => chatUndoAdds([{ type: 'entry', obj: e }]));
+}
+function chatCopy(mi) { const m = Chat.messages[mi]; if (m) navigator.clipboard.writeText(m.text).then(() => toast('Copied'), () => toastError('Couldn’t copy: the browser blocked the clipboard')); }
+
+/* ---- finding a quoted passage on the page, and jumping to it ---- */
+function waitFor(test, ms) {
+  return new Promise(res => { const t0 = Date.now(); (function tick() { const v = test(); if (v || Date.now() - t0 > ms) return res(v); setTimeout(tick, 60); })(); });
+}
+/* Match on letters and digits only (ignoring spacing, hyphenation at line ends, punctuation and ligatures) */
+function findQuoteRange(pg, quote) {
+  const spans = [...pg.querySelectorAll('.textLayer span')].filter(s => !s.classList.contains('markedContent') && s.firstChild && s.firstChild.nodeType === 3);
+  const key = c => c.normalize('NFKD').replace(/[^\p{L}\p{N}]/gu, '').toLowerCase();
+  let flat = ''; const map = [];
+  spans.forEach(s => { const t = s.firstChild.data; for (let i = 0; i < t.length; i++) { const k = key(t[i]); for (const ch of k) { flat += ch; map.push([s.firstChild, i]); } } });
+  const q = key(quote);
+  if (!q) return null;
+  let at = flat.indexOf(q), len = q.length;
+  const parts = String(quote).split(/\.\.\.|\u2026/).map(key).filter(x => x.length >= 3);
+  if (at < 0 && parts.length > 1) {   // "first part … last part": find the parts in order, span from first to last
+    let from = flat.indexOf(parts[0]), end = from < 0 ? -1 : from + parts[0].length;
+    for (const part of parts.slice(1)) { if (end < 0) break; const i = flat.indexOf(part, end); end = i < 0 || i - end > 3000 ? -1 : i + part.length; }
+    if (from >= 0 && end > from) { at = from; len = end - from; }
+  }
+  if (at < 0 && q.length > 24) {   // a small difference somewhere: anchor on the start and the end
+    const a = flat.indexOf(q.slice(0, 16)), b = a >= 0 ? flat.indexOf(q.slice(-16), a) : -1;
+    if (a >= 0 && b >= 0 && b - a < q.length * 1.6) { at = a; len = b + 16 - a; }
+  }
+  if (at < 0) return null;
+  const r = document.createRange(), s = map[at], e = map[at + len - 1];
+  r.setStart(s[0], s[1]); r.setEnd(e[0], e[1] + 1);
+  return r;
+}
+async function locateQuote(page, quote) {
+  const body = document.getElementById('readerBody'), pg = body.querySelector(`.reader-page[data-page="${page}"]`);
+  if (!pg) return null;
+  if (!pg.querySelector('.textLayer span')) { body.scrollTo({ top: pg.offsetTop - 12 }); await waitFor(() => pg.querySelector('.textLayer span'), 4000); }
+  const r = findQuoteRange(pg, quote);
+  if (!r) return null;
+  const pr = pg.getBoundingClientRect();
+  const rects = mergeLineRects([...r.getClientRects()].filter(x => x.width > 1 && x.height > 1).map(x => [(x.left - pr.left) / pr.width, (x.top - pr.top) / pr.height, x.width / pr.width, x.height / pr.height]));
+  return rects.length ? { pg, rects, quote: r.toString().replace(/\s+/g, ' ').trim() } : null;
+}
+async function jumpToQuote(page, quote) {
+  const found = await locateQuote(page, quote);
+  const body = document.getElementById('readerBody');
+  if (!found) {
+    const pg = body.querySelector(`.reader-page[data-page="${page}"]`);
+    if (pg) body.scrollTo({ top: pg.offsetTop - 12, behavior: 'smooth' });
+    toast(`That passage is on page ${page}; couldn’t pinpoint the exact words`);
+    return;
+  }
+  const { pg, rects } = found;
+  const top = Math.max(0, pg.offsetTop + rects[0][1] * pg.offsetHeight - body.clientHeight * 0.3);
+  const pulse = () => {
+    const layer = pg.querySelector('.annoLayer') || pg;
+    rects.forEach(r => {
+      const d = Object.assign(document.createElement('div'), { className: 'quote-flash' });
+      Object.assign(d.style, { left: r[0] * 100 + '%', top: r[1] * 100 + '%', width: r[2] * 100 + '%', height: r[3] * 100 + '%' });
+      layer.appendChild(d);
+      d.addEventListener('animationend', () => d.remove(), { once: true });
+      setTimeout(() => d.remove(), 1500);
+    });
+  };
+  if (Math.abs(body.scrollTop - top) < 4) return pulse();
+  let fired = false; const go = () => { if (!fired) { fired = true; pulse(); } };
+  body.addEventListener('scrollend', go, { once: true }); setTimeout(go, 900);
+  body.scrollTo({ top, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+}
+
+
 /* --- citing highlights in notes: [[cite:ID p.N "quote"]] ---
    Stored as plain text so notes stay portable; shown everywhere as a pill (citePillHTML). */
 const CITE_RE = /\[\[cite:([\w-]+)([^\]\n]*)\]\]/g;
@@ -6157,11 +6837,18 @@ function citePillHTML(tok, id, rest, notesObj, editable) {
 }
 
 /* --- the note editor: text with citation pills; _rnDraft always holds the plain-text form --- */
-function draftToEditorHTML(text, notesObj) {
+const ANY_CITE_RE = /\[\[cite:([\w-]+)([^\]\n]*)\]\]|\[\[p\.(\d+)\s+"([^"\]\n]*)"\]\]/g;
+function pillsHTML(text, notesObj, editable) {
   let out = '', last = 0;
   const seg = t => esc(t).replace(/\n/g, '<br>');
-  for (const m of String(text).matchAll(CITE_RE)) { out += seg(text.slice(last, m.index)) + citePillHTML(m[0], m[1], m[2], notesObj || null, true); last = m.index + m[0].length; }
-  out += seg(text.slice(last));
+  for (const m of String(text).matchAll(ANY_CITE_RE)) {
+    out += seg(text.slice(last, m.index)) + (m[1] ? citePillHTML(m[0], m[1], m[2], notesObj || null, editable) : citeQuotePill(m[3], m[4], editable ? m[0] : null));
+    last = m.index + m[0].length;
+  }
+  return out + seg(text.slice(last));
+}
+function draftToEditorHTML(text, notesObj) {
+  const out = pillsHTML(String(text), notesObj, true);
   return /\n$/.test(text) ? out + '<br>' : out;   // a trailing line break needs a second <br> to show
 }
 function editorText(ed) {
@@ -6319,13 +7006,13 @@ async function renderNotesMarkdown(el, text, notesObj) {
   if (!(text || '').trim()) { el.innerHTML = ''; return; }
   const wire = () => el.querySelectorAll('.cite-chip[data-anno]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); citeClick(b.dataset.anno, notesObj); }));
   // readable right away (citations as pills), formatted once the Markdown libraries arrive; stays like this offline
-  { let out = '', last = 0; for (const m of String(text).matchAll(CITE_RE)) { out += esc(text.slice(last, m.index)).replace(/\n/g, '<br>') + citePillHTML(m[0], m[1], m[2], notesObj); last = m.index + m[0].length; }
-    el.innerHTML = out + esc(text.slice(last)).replace(/\n/g, '<br>'); wire(); }
+  el.innerHTML = pillsHTML(String(text), notesObj, false); wire();
   try { await loadMdLibs(); } catch (e) { return; }
   const slots = [];
   const slot = html => `@@SLOT${slots.push(html) - 1}@@`;
   let src = text
     .replace(CITE_RE, (m, id, rest) => slot(citePillHTML(m, id, rest, notesObj)))
+    .replace(QUOTE_RE, (m, page, q) => slot(citeQuotePill(page, q)))
     .replace(/\$\$([\s\S]+?)\$\$/g, (m, tex) => slot(katex.renderToString(tex, { displayMode: true, throwOnError: false })))
     .replace(/(^|[^\\$])\$([^\s$](?:[^$\n]*?[^\s$])?)\$/g, (m, pre, tex) => pre + slot(katex.renderToString(tex, { throwOnError: false })));
   let html = DOMPurify.sanitize(marked.parse(src, { breaks: true, gfm: true }));
