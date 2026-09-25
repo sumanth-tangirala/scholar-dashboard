@@ -676,7 +676,7 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .reader-zoom-label { min-width: 52px; font-size: 12.5px; font-variant-numeric: tabular-nums; }
 .reader-pageno { font-size: 12.5px; color: var(--text-muted); font-variant-numeric: tabular-nums; margin-right: 4px; }
 #readerDarkBtn[aria-pressed="true"] { color: var(--accent); }
-.reader-body { flex: 1; overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.reader-body { flex: 1; overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-x pan-y; }   /* two-finger pinch zooms the paper, not the page */
 .reader-body:focus { outline: none; }
 /* no PDF on screen (loading, or the picker): only the PDF's own controls go; Notes stays reachable */
 .reader.no-doc .reader-pageno, .reader.no-doc .reader-zoom, .reader.no-doc #readerDarkBtn, .reader.no-doc .reader-change, .reader.no-doc #readerExternal { visibility: hidden; }
@@ -4897,6 +4897,95 @@ function updateReaderPageNo() {
 }
 document.getElementById('readerBody').addEventListener('scroll', updateReaderPageNo, { passive: true });
 window.addEventListener('resize', () => { if (_reader.doc && _reader.zoom === 'fit' && document.getElementById('reader').classList.contains('open')) { clearTimeout(_reader.rt); _reader.rt = setTimeout(() => layoutReader(false), 200); } });
+/* Whenever the reading area changes width (panel dragged or toggled, window resized), the paper refits (Fit)
+   or re-centres (a set zoom); not mid-drag of the panel edge, which relayouts once on release */
+(function () {
+  const body = document.getElementById('readerBody'), reader = document.getElementById('reader');
+  let t = 0, lastW = 0;
+  new ResizeObserver(() => {
+    const w = body.clientWidth;
+    if (w === lastW) return; lastW = w;
+    if (!_reader.doc || !reader.classList.contains('open') || reader.classList.contains('resizing') || Pinch.active) return;
+    clearTimeout(t);
+    t = setTimeout(() => { if (_reader.zoom === 'fit') _reader.token++; layoutReader(false); }, 120);
+  }).observe(body);
+})();
+
+/* Pinch to zoom the paper: a trackpad pinch (Chrome/Edge send ctrl+wheel; Safari sends gesture events) or two
+   fingers on a touch screen. The pages scale live around your fingers, then redraw sharp at the new zoom with
+   the same spot under your fingers. */
+const Pinch = { active: false, base: 1, scale: 1, cx: 0, cy: 0, anchor: null, timer: 0 };
+const PINCH_MIN = 0.5, PINCH_MAX = 4;
+function pinchStart(x, y) {
+  const body = document.getElementById('readerBody'), pages = body.querySelector('.reader-pages');
+  if (!_reader.doc || !pages) return false;
+  if (Pinch.active) return true;
+  const br = body.getBoundingClientRect();
+  let pg = document.elementFromPoint(x, y); pg = pg && pg.closest && pg.closest('.reader-page');
+  if (!pg) pg = [...body.querySelectorAll('.reader-page')].find(d => { const r = d.getBoundingClientRect(); return r.bottom > y; }) || body.querySelector('.reader-page');
+  const pr = pg.getBoundingClientRect();
+  Object.assign(Pinch, { active: true, base: _reader.scale, scale: 1, cx: x - br.left, cy: y - br.top,
+    anchor: { page: +pg.dataset.page, fx: (x - pr.left) / pr.width, fy: (y - pr.top) / pr.height } });
+  const cr = pages.getBoundingClientRect();
+  pages.style.transformOrigin = `${x - cr.left}px ${y - cr.top}px`;
+  pages.style.willChange = 'transform';
+  hideSelBar(); if (_acId) closeAnnoCard();
+  return true;
+}
+function pinchTo(scale, commitAfter) {
+  const pages = document.querySelector('#readerBody .reader-pages');
+  if (!Pinch.active || !pages) return;
+  Pinch.scale = Math.min(PINCH_MAX, Math.max(PINCH_MIN, Pinch.base * scale)) / Pinch.base;
+  pages.style.transform = `scale(${Pinch.scale})`;
+  clearTimeout(Pinch.timer);
+  if (commitAfter) Pinch.timer = setTimeout(pinchCommit, commitAfter);
+}
+async function pinchCommit() {
+  clearTimeout(Pinch.timer);
+  if (!Pinch.active) return;
+  Pinch.active = false;
+  const body = document.getElementById('readerBody'), a = Pinch.anchor;
+  const z = +(Pinch.base * Pinch.scale).toFixed(3);
+  if (Math.abs(z - Pinch.base) < 0.01) { const pages = body.querySelector('.reader-pages'); if (pages) { pages.style.transform = ''; pages.style.willChange = ''; } return; }
+  _reader.zoom = z; _reader.token++;
+  await layoutReader(false);          // new pages replace the scaled ones (old pixels stretched until redrawn)
+  const pg = body.querySelector(`.reader-page[data-page="${a.page}"]`);
+  if (!pg) return;
+  const br = body.getBoundingClientRect(), pr = pg.getBoundingClientRect();
+  body.scrollLeft += (pr.left + a.fx * pr.width) - (br.left + Pinch.cx);   // the spot you pinched stays under your fingers
+  body.scrollTop += (pr.top + a.fy * pr.height) - (br.top + Pinch.cy);
+}
+(function () {
+  const body = document.getElementById('readerBody');
+  body.addEventListener('wheel', e => {   // trackpad pinch (and ctrl + mouse wheel)
+    if (!e.ctrlKey || !_reader.doc) return;
+    e.preventDefault();
+    if (!pinchStart(e.clientX, e.clientY)) return;
+    const next = Pinch.base * Pinch.scale * Math.exp(-e.deltaY * 0.01);
+    pinchTo(next / Pinch.base, 200);
+  }, { passive: false });
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(type => body.addEventListener(type, e => {   // Safari's trackpad pinch
+    e.preventDefault();
+    if (type === 'gesturestart') pinchStart(e.clientX, e.clientY);
+    else if (type === 'gesturechange') pinchTo(e.scale, 0);
+    else pinchCommit();
+  }, { passive: false }));
+  const touches = new Map(); let startDist = 0;
+  const dist = () => { const [a, b] = [...touches.values()]; return Math.hypot(a.x - b.x, a.y - b.y); };
+  body.addEventListener('pointerdown', e => {
+    if (e.pointerType !== 'touch') return;
+    touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (touches.size === 2) { const [a, b] = [...touches.values()]; if (pinchStart((a.x + b.x) / 2, (a.y + b.y) / 2)) startDist = dist(); }
+  });
+  body.addEventListener('pointermove', e => {
+    if (!touches.has(e.pointerId)) return;
+    touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (touches.size === 2 && Pinch.active && startDist) pinchTo(dist() / startDist, 0);
+  });
+  const lift = e => { if (!touches.delete(e.pointerId)) return; if (touches.size < 2 && Pinch.active && startDist) { startDist = 0; pinchCommit(); } };
+  body.addEventListener('pointerup', lift); body.addEventListener('pointercancel', lift);
+})();
+
 function readerZoom(dir) {
   if (!_reader.doc) return;
   const steps = [0.5, 0.67, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3];
@@ -5986,7 +6075,7 @@ function applyPanelWidth(frac) {
   return px;
 }
 function storedPanelFrac() { try { return parseFloat(localStorage.getItem('scholar_panel_frac')) || null; } catch (e) { return null; } }
-function relayoutAfterPanel() { if (_reader.doc && _reader.zoom === 'fit' && !readerPhone()) { _reader.token++; layoutReader(false); } }
+function relayoutAfterPanel() { if (_reader.doc && !readerPhone()) { if (_reader.zoom === 'fit') _reader.token++; layoutReader(false); } }   // refit, or just re-centre at a set zoom
 (function () {
   const handle = document.getElementById('rpResize'), reader = document.getElementById('reader');
   applyPanelWidth(storedPanelFrac());
