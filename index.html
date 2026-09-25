@@ -741,7 +741,7 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .rn-count:empty { display: none; }
 .annoLayer { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
 .anno-rect { position: absolute; border-radius: 2px; background: var(--hc); opacity: 0.38; transition: opacity 0.15s, box-shadow 0.15s; }
-.reader:not(.dark) .anno-rect { mix-blend-mode: multiply; opacity: 0.55; }
+.reader:not(.dark) .anno-rect { mix-blend-mode: multiply; opacity: 0.38; }
 .anno-rect.note { background: none; opacity: 1; border-bottom: 2px dashed var(--note-line, var(--accent)); border-radius: 0; mix-blend-mode: normal !important; }
 .anno-rect.flash { opacity: 0.75; box-shadow: 0 0 0 2px var(--hc, var(--accent)); }
 .anno-rect.hover { opacity: 0.6; }
@@ -752,12 +752,19 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .anno-mark svg { width: 12px; height: 12px; fill: currentColor; }
 /* light pages: deeper colours so highlights and comment lines stay visible on white */
 .reader:not(.dark) .annoLayer, .reader:not(.dark) .annoMarks { --hl-orange: #ff7a1f; --hl-yellow: var(--hl-orange); --hl-green: #34c26b; --hl-blue: #4b8ef7; --hl-red: #e03a40; --hl-purple: #a66ff2; --note-line: #c47400; }
-.sel-bar { position: fixed; z-index: 340; display: none; align-items: center; gap: 4px; padding: 5px 6px; background: #1d1d20; border: 1px solid rgba(255,255,255,0.14); border-radius: 10px; box-shadow: 0 8px 26px rgba(0,0,0,0.55); }
+.sel-bar { position: fixed; z-index: 340; display: none; align-items: center; gap: 2px; padding: 3px 4px; background: #1d1d20; border: 1px solid rgba(255,255,255,0.14); border-radius: 10px; box-shadow: 0 8px 26px rgba(0,0,0,0.55); }
 .sel-bar.open { display: flex; }
 .sel-dot { width: 22px; height: 22px; border-radius: 50%; border: 2px solid transparent; background: var(--hc); cursor: pointer; transition: transform 0.12s, border-color 0.12s; }
 .sel-dot:hover { transform: scale(1.12); border-color: #fff; }
 .sel-dot.on { border-color: #fff; }
-.sel-sep { width: 1px; height: 20px; background: rgba(255,255,255,0.14); margin: 0 3px; }
+.sel-sep { width: 1px; height: 16px; background: rgba(255,255,255,0.14); margin: 0 3px; }
+.sel-bar .sel-dot { width: 16px; height: 16px; margin: 0 3px; }
+.sel-icon { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 24px; padding: 0; background: none; border: none; border-radius: 6px; color: var(--text-secondary); cursor: pointer; transition: background 0.15s, color 0.15s; }
+.sel-icon:hover { background: rgba(255,255,255,0.08); color: var(--text); }
+.sel-icon svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round; }
+.sel-icon.sel-cite svg path { fill: currentColor; stroke: none; }
+.sel-icon.primary { color: var(--accent); background: rgba(251,177,60,0.14); }
+.sel-icon.primary:hover { background: rgba(251,177,60,0.22); color: var(--accent); }
 .sel-act { background: none; border: none; color: var(--text-secondary); font: inherit; font-size: 12.5px; padding: 4px 8px; border-radius: 6px; cursor: pointer; transition: background 0.15s, color 0.15s; }
 .sel-act:hover { background: rgba(255,255,255,0.08); color: var(--text); }
 .anno-card { position: fixed; z-index: 345; display: none; width: 340px; max-width: calc(100vw - 24px); background: #1b1b1e; border: 1px solid rgba(255,255,255,0.14); border-radius: 12px; box-shadow: 0 14px 40px rgba(0,0,0,0.6); padding: 12px 14px; }
@@ -910,8 +917,7 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 @keyframes ui-rise { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
 @keyframes ui-pop { from { opacity: 0; transform: translateY(4px) scale(0.96); } to { opacity: 1; transform: none; } }
 @keyframes ui-slide { from { opacity: 0.4; transform: translateX(24px); } to { opacity: 1; transform: none; } }
-@keyframes hl-sweep { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
-@keyframes hl-glow { 0% { opacity: 0.8; } 100% { opacity: 0.38; } }
+@keyframes hl-appear { from { opacity: 0; } }
 @keyframes item-in { from { opacity: 0; transform: translateY(-4px); background: rgba(251,177,60,0.12); } to { opacity: 1; transform: none; } }
 .vault-overlay.open { animation: ui-fade 0.18s ease-out; }
 .vault-overlay.open .vault-box { animation: ui-rise 0.22s cubic-bezier(0.2, 0.8, 0.2, 1); }
@@ -919,8 +925,7 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .anno-card.open { animation: ui-pop 0.16s ease-out; transform-origin: 20% 0; }
 .cite-dd.open { animation: ui-pop 0.12s ease-out; }
 .reader.panel-open .reader-panel { animation: ui-slide 0.22s cubic-bezier(0.2, 0.8, 0.2, 1); }
-.anno-rect.fresh { animation: hl-sweep 0.32s cubic-bezier(0.3, 0.7, 0.2, 1) both, hl-glow 0.9s ease-out; }
-.anno-rect.note.fresh { animation: hl-sweep 0.32s cubic-bezier(0.3, 0.7, 0.2, 1) both; }
+.anno-rect.fresh { animation: hl-appear 0.26s ease-out; }   /* fades in to its own final opacity: no sweep, no jump at the end */
 .anno-mark.fresh { animation: ui-pop 0.2s ease-out both; }
 .rp-item.fresh { animation: item-in 0.5s ease-out; }
 .anno-rect { transition: opacity 0.2s, box-shadow 0.2s; }
@@ -5122,11 +5127,12 @@ async function afterUnlock() {
   if (_paperViewActive) { const p = allPapers.find(x => location.hash === '#paper/' + encodeURIComponent(x.id)); if (p) renderPaperDetail(p); }
 }
 async function lockNotes() {
+  await closeAnnoCard();   // the open comment is settled (kept, restored or discarded) while the key is still here
   await finishNotesEdit();
   endDraft('discard');
-  Vault.key = null; Vault.index = null; Vault.cache.clear(); _rn = null;
+  Vault.key = null; Vault.index = null; Vault.cache.clear(); _rn = null; _acPending = null;
   await notesDB('keys', 'readwrite', st => st.delete('k')).catch(() => {});
-  closeAnnoCard(); hideSelBar(); closeNotesModal();
+  hideSelBar(); closeNotesModal();
   if (_reader.paper) { renderReaderPanel(); redrawAnnoLayers(); updateReaderNotesCount(); }
   if (currentTab === 'library') renderLibrary();
   toast('Notes locked');
@@ -5171,6 +5177,12 @@ function indexEntryFor(obj) {
      the open draft), so an orphan from any source is never shown;
    - saving drops saved anchors nothing cites (tombstoned, so a merge can't bring them back). */
 let _rnPendingRefs = [];
+/* Comments follow the same rule: a comment exists only with text. A new one is a draft (_acPending) until
+   something is typed; every way its card closes goes through endCommentSession(), which discards an empty
+   new comment, restores a highlight that was switched to comment-only but left empty, and removes an
+   emptied existing comment (with Undo). Empty comments are never drawn except the one being written. */
+let _acPending = null, _acOrigin = null;
+function isEmptyComment(a) { return a.kind === 'note' && !(a.note || '').trim(); }
 function citedIds(obj, draft, editing) {
   const cited = new Set();
   const scan = t => { for (const m of String(t || '').matchAll(/\[\[cite:([\w-]+)/g)) cited.add(m[1]); };
@@ -5186,8 +5198,9 @@ function citedIds(obj, draft, editing) {
 function visibleAnnos() {
   if (!_rn) return [];
   const cited = citedIds(_rn, _rnEditing ? _rnDraft : '', _rnEditing);
-  return (_rn.annos || []).filter(a => a.kind !== 'ref' || cited.has(a.id))
-    .concat(_rnEditing ? _rnPendingRefs.filter(a => cited.has(a.id)) : []);
+  return (_rn.annos || []).filter(a => (a.kind !== 'ref' || cited.has(a.id)) && (!isEmptyComment(a) || a.id === _acId))
+    .concat(_rnEditing ? _rnPendingRefs.filter(a => cited.has(a.id)) : [])
+    .concat(_acPending ? [_acPending] : []);
 }
 /* Ends the draft either way: 'save' keeps the draft's anchors its text cites, 'discard' drops them all */
 function endDraft(mode, finalText) {
@@ -5208,6 +5221,7 @@ function dropUncitedRefs(obj) {
   const cited = citedIds(obj, '');
   const now = new Date().toISOString();
   obj.annos = (obj.annos || []).filter(a => {
+    if (isEmptyComment(a) && a.id !== _acId) { obj.deleted = { ...(obj.deleted || {}), [a.id]: now }; return false; }
     if (a.kind !== 'ref' || cited.has(a.id)) return true;
     obj.deleted = { ...(obj.deleted || {}), [a.id]: now };
     return false;
@@ -5235,7 +5249,7 @@ function updateNotesSync() {
 let _rn = null;          // notes object of the paper in the reader
 let _rnFilter = { colors: new Set(), comments: false, notes: false, q: '' };
 let _rnEditing = null;   // null, 'new', or the id of the note being edited
-function annoById(id) { return _rn && ((_rn.annos || []).find(a => a.id === id) || _rnPendingRefs.find(a => a.id === id)); }
+function annoById(id) { return _rn && ((_rn.annos || []).find(a => a.id === id) || _rnPendingRefs.find(a => a.id === id) || (_acPending && _acPending.id === id ? _acPending : null)); }
 function newAnnoId() { return 'a' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 async function loadReaderNotes() {
   _rn = null;
@@ -5320,8 +5334,12 @@ function showSelBar() {
   if (info.error) { bar.innerHTML = `<span class="sel-act" style="cursor:default">${esc(info.error)}</span>`; }
   else {
     _selPending = info;
-    bar.innerHTML = HL_COLORS.map(c => `<button class="sel-dot" style="--hc:var(--hl-${c})" title="Highlight: ${escAttr(hlLabel(c))}" onmousedown="event.preventDefault()" onclick="createAnno('hl','${c}')"></button>`).join('')
-      + `<span class="sel-sep"></span><button class="sel-act sel-cite ${_rnEditing ? 'primary' : ''}" onmousedown="event.preventDefault()" onclick="citeSelection()" title="${_rnEditing ? 'Cite this in the note you are writing' : 'Start a note that cites this'}">${ICON_QUOTE}Cite</button><button class="sel-act" onmousedown="event.preventDefault()" onclick="createAnno('note')">Comment</button><button class="sel-act" onmousedown="event.preventDefault()" onclick="copySelQuote()">Copy</button>`;
+    const citeTip = _rnEditing ? 'Cite in the note you are writing' : 'Cite in a new note';
+    bar.innerHTML = HL_COLORS.map(c => `<button class="sel-dot" style="--hc:var(--hl-${c})" title="Highlight: ${escAttr(hlLabel(c))}" aria-label="Highlight: ${escAttr(hlLabel(c))}" onmousedown="event.preventDefault()" onclick="createAnno('hl','${c}')"></button>`).join('')
+      + `<span class="sel-sep"></span>`
+      + `<button class="sel-icon sel-cite ${_rnEditing ? 'primary' : ''}" onmousedown="event.preventDefault()" onclick="citeSelection()" title="${citeTip}" aria-label="${citeTip}">${ICON_QUOTE}</button>`
+      + `<button class="sel-icon" onmousedown="event.preventDefault()" onclick="createAnno('note')" title="Comment" aria-label="Comment">${ICON_COMMENT}</button>`
+      + `<button class="sel-icon" onmousedown="event.preventDefault()" onclick="copySelQuote()" title="Copy quote" aria-label="Copy quote">${ICON_COPY}</button>`;
   }
   const r = info.end || { right: 200, bottom: 200 };
   bar.classList.add('open');
@@ -5370,11 +5388,18 @@ async function createAnno(kind, color) {
   await pinPdfVersion();
   const now = new Date().toISOString();
   const a = { id: newAnnoId(), kind, color: kind === 'hl' ? color : null, page: info.page, rects: info.rects, quote: info.quote, prefix: info.prefix, suffix: info.suffix, note: '', created: now, updated: now };
-  _rn.annos = (_rn.annos || []).concat(a);
   window.getSelection().removeAllRanges();
+  if (kind === 'note') {   // nothing is saved until the comment has text
+    if (_acId) closeAnnoCard();
+    _acPending = a;
+    redrawAnnoLayers();
+    openAnnoCard(a.id, true);
+    return;
+  }
+  _rn.annos = (_rn.annos || []).concat(a);
   await savePaperNotes(_rn);
   updateReaderNotesCount(); redrawAnnoLayers(); renderReaderPanel();
-  document.querySelectorAll(`.anno-rect[data-anno="${a.id}"], .anno-mark[data-anno="${a.id}"]`).forEach((el, i) => { el.style.animationDelay = el.matches('.anno-rect') ? (i * 0.04) + 's' : '0.25s'; el.classList.add('fresh'); });
+  document.querySelectorAll(`.anno-rect[data-anno="${a.id}"], .anno-mark[data-anno="${a.id}"]`).forEach(el => el.classList.add('fresh'));
   const item = document.querySelector(`.rp-item[data-id="${a.id}"]`); if (item) item.classList.add('fresh');
   if (kind === 'note') openAnnoCard(a.id, true);
 }
@@ -5403,6 +5428,8 @@ let _acId = null, _acTimer = null;
 function openAnnoCard(id, focusNote) {
   const a = annoById(id);
   if (!a) return;
+  if (_acId && _acId !== id) closeAnnoCard();
+  if (_acId !== id) _acOrigin = { id, kind: a.kind, color: a.color, note: a.note || '' };
   _acId = id;
   const card = document.getElementById('annoCard');
   card.style.setProperty('--hc', `var(--hl-${a.color || 'orange'})`);
@@ -5429,16 +5456,50 @@ function positionAnnoCard(a) {
   card.style.left = x + 'px'; card.style.top = y + 'px';
 }
 function closeAnnoCard() {
-  if (_acTimer) { clearTimeout(_acTimer); _acTimer = null; acSaveNote(); }
+  const id = _acId, t = document.getElementById('acNote'), text = t && document.getElementById('annoCard').classList.contains('open') ? t.value : null;
+  if (_acTimer) { clearTimeout(_acTimer); _acTimer = null; }
   document.getElementById('annoCard').classList.remove('open');
   document.querySelectorAll('.anno-rect.hover').forEach(r => r.classList.remove('hover'));
   _acId = null;
+  return id ? endCommentSession(id, text) : Promise.resolve();
+}
+/* The one way a comment card's session ends (click away, Esc, scroll, opening another, leaving the reader) */
+async function endCommentSession(id, text) {
+  const a = annoById(id), origin = _acOrigin && _acOrigin.id === id ? _acOrigin : null, now = new Date().toISOString();
+  _acOrigin = null;
+  if (!a || !_rn) { if (_acPending && _acPending.id === id) _acPending = null; return; }
+  let changed = false;
+  if (text != null && (a.note || '') !== text) { a.note = text; a.updated = now; changed = true; }
+  if (a === _acPending) {
+    _acPending = null;
+    if (isEmptyComment(a)) { redrawAnnoLayers(); return; }        // nothing typed: it never existed
+    _rn.annos = (_rn.annos || []).concat(a);
+    await savePaperNotes(_rn);
+  } else if (isEmptyComment(a)) {
+    if (origin && origin.kind === 'hl') {                           // switched to comment-only, then left empty: keep the highlight
+      a.kind = 'hl'; a.color = origin.color; a.updated = now;
+      await savePaperNotes(_rn);
+    } else {                                                        // an existing comment emptied: remove it; Undo brings its words back
+      if (origin && origin.note.trim()) a.note = origin.note;
+      await deleteAnno(id, 'Empty comment removed');
+      return;
+    }
+  } else if (changed) {
+    await savePaperNotes(_rn);
+  }
+  updateReaderNotesCount(); redrawAnnoLayers(); renderReaderPanel();
 }
 function acNoteInput() { clearTimeout(_acTimer); document.getElementById('acState').textContent = 'Saving…'; _acTimer = setTimeout(() => { _acTimer = null; acSaveNote(); }, 600); }
 async function acSaveNote() {
   const a = annoById(_acId), t = document.getElementById('acNote');
   if (!a || !t || a.note === t.value) return;
   a.note = t.value; a.updated = new Date().toISOString();
+  if (a === _acPending) {                     // first words: the comment now exists
+    if (!a.note.trim()) return;
+    _acPending = null;
+    _rn.annos = (_rn.annos || []).concat(a);
+    updateReaderNotesCount();
+  }
   await savePaperNotes(_rn);
   const st = document.getElementById('acState'); if (st) st.textContent = 'Saved · encrypted';
   renderReaderPanel();
@@ -5448,18 +5509,20 @@ async function setAnnoColor(id, color) {
   if (!a) return;
   if (color) { a.kind = 'hl'; a.color = color; } else { a.kind = 'note'; a.color = null; }
   a.updated = new Date().toISOString();
-  await savePaperNotes(_rn);
-  redrawAnnoLayers(); renderReaderPanel(); openAnnoCard(id);
+  if (a === _acPending && a.kind === 'hl') { _acPending = null; _rn.annos = (_rn.annos || []).concat(a); }
+  if (a !== _acPending) await savePaperNotes(_rn);
+  updateReaderNotesCount(); redrawAnnoLayers(); renderReaderPanel(); openAnnoCard(id);
 }
-async function deleteAnno(id) {
+async function deleteAnno(id, message) {
   const a = annoById(id);
   if (!a) return;
+  if (a === _acPending) { _acPending = null; if (_acId === id) { _acId = null; document.getElementById('annoCard').classList.remove('open'); } redrawAnnoLayers(); return; }
   _rn.annos = _rn.annos.filter(x => x.id !== id);
   _rn.deleted = { ...(_rn.deleted || {}), [id]: new Date().toISOString() };
-  closeAnnoCard();
+  if (_acId === id) { _acId = null; _acOrigin = null; if (_acTimer) { clearTimeout(_acTimer); _acTimer = null; } document.getElementById('annoCard').classList.remove('open'); }
   await savePaperNotes(_rn);
   updateReaderNotesCount(); redrawAnnoLayers(); renderReaderPanel();
-  toast('Deleted', async () => {
+  toast(message || 'Deleted', async () => {
     delete _rn.deleted[id];
     a.updated = new Date().toISOString();
     _rn.annos = _rn.annos.concat(a);
@@ -5558,7 +5621,7 @@ let _rnSort = (() => { try { return localStorage.getItem('scholar_rn_sort') || '
 function setRnSort(v) { _rnSort = v; try { localStorage.setItem('scholar_rn_sort', v); } catch (e) {} renderReaderPanel(); }
 function rnItems(n) {
   const notes = (n.entries || []).map(e => ({ type: 'note', id: e.id, e, created: e.created || '', page: 0, y: 0, x: 0 }));
-  const anchored = (n.annos || []).filter(a => a.kind !== 'ref').map(a => ({ type: a.kind === 'hl' ? 'hl' : 'comment', id: a.id, a, created: a.created || '', page: a.page, y: a.rects[0][1], x: a.rects[0][0] }));
+  const anchored = (n.annos || []).filter(a => a.kind !== 'ref' && !isEmptyComment(a)).map(a => ({ type: a.kind === 'hl' ? 'hl' : 'comment', id: a.id, a, created: a.created || '', page: a.page, y: a.rects[0][1], x: a.rects[0][0] }));
   const all = notes.concat(anchored);
   if (_rnSort === 'recent') return all.sort((p, q) => (q.created).localeCompare(p.created));
   return all.sort((p, q) => p.page - q.page || p.y - q.y || p.x - q.x || p.created.localeCompare(q.created));
@@ -5574,6 +5637,8 @@ const ICON_CLOSE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12
 const ICON_EDIT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M14 6l4 4"/></svg>';
 const ICON_TRASH = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>';
 const ICON_QUOTE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 6C6.5 7 4.5 9.6 4.5 13v5h5.5v-5.5H7.2C7.3 10.6 8.3 9 10 8.2z"/><path d="M19 6c-3 1-5 3.6-5 7v5h5.5v-5.5h-2.8c.1-1.9 1.1-3.5 2.8-4.3z"/></svg>';
+const ICON_COMMENT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8l-4 3v-3H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg>';
+const ICON_COPY = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/></svg>';
 const ICON_PLUS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
 const MOD_KEY = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent) ? '\u2318' : 'Ctrl';
 function noteDate(e) {
@@ -5654,6 +5719,7 @@ async function saveNoteEdit(quiet) {
   _rn.entries = _rn.entries || [];
   if (String(editing).startsWith('a:')) {
     const a = annoById(editing.slice(2));
+    if (a && a.kind === 'note' && !text) { if (!quiet) renderReaderPanel(); return deleteAnno(a.id, 'Empty comment removed'); }
     if (a && (a.note || '') !== text) { a.note = text; a.updated = now; _rnFresh = a.id; }
   } else if (editing === 'new') {
     if (text) { const e = { id: newNoteId(), text, created: now, updated: now }; _rn.entries.push(e); _rnFresh = e.id; }
