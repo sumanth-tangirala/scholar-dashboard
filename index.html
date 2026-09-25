@@ -4215,7 +4215,7 @@ function _openGeneric({ title, sub, inputPlaceholder, defaultValue, showInput, s
       input.onkeydown = e => { if (e.key === 'Enter') _resolveGenericInput(); };
     }
     document.getElementById('genericOverlay').classList.add('open');
-    if (showInput) setTimeout(() => input.focus(), 120);
+    if (showInput) setTimeout(() => { input.focus(); input.select(); }, 120);   // a prefilled value is replaced by typing, or edited
   });
 }
 function _resolveGeneric(val) {
@@ -5965,7 +5965,7 @@ function renderRnList(shown, total, anyFilter) {
 function toggleRnColor(c) { _rnFilter.colors.has(c) ? _rnFilter.colors.delete(c) : _rnFilter.colors.add(c); renderReaderPanel(); }
 async function unlockFromPanel() { if (await vaultReady()) { setRnState('loading'); await loadReaderNotes(); } }
 async function renameHlColor(c) {
-  const name = await showPrompt('Name this colour', `What does ${hlLabel(c).toLowerCase()} mean in your highlights?`, hlLabel(c));
+  const name = await showPrompt('Name this colour', 'What do highlights in this colour mean to you?', 'e.g. Key idea', hlLabel(c));   // current name, ready to edit
   if (!name || !Vault.index) return;
   Vault.index.colors = { ...(Vault.index.colors || {}), [c]: name.trim().slice(0, 30) };
   Vault.index.colorsUpdated = new Date().toISOString();
