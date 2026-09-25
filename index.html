@@ -973,6 +973,8 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
   .anno-card { left: 12px !important; right: 12px; width: auto; }
   .cite-dd { left: 12px !important; right: 12px; width: auto; }
 }
+.keys-help .keys-reader, .keys-help.in-reader .keys-site { display: none; }
+.keys-help.in-reader .keys-reader { display: grid; }
 .keys-help { position: fixed; inset: 0; z-index: 400; background: rgba(0,0,0,0.55); display: none; align-items: center; justify-content: center; padding: 16px; }
 .keys-help.open { display: flex; }
 .keys-help-box { background: var(--bg-surface); border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; padding: 20px 24px 22px; width: min(440px, 100%); box-shadow: 0 16px 48px rgba(0,0,0,0.6); }
@@ -1565,7 +1567,15 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
 <div class="keys-help" id="keysHelp" role="dialog" aria-modal="true" aria-labelledby="keysHelpTitle" onclick="if (event.target === this) toggleKeysHelp(false)">
   <div class="keys-help-box">
     <div class="keys-help-head"><h3 id="keysHelpTitle">Keyboard shortcuts</h3><button class="keys-help-close" onclick="toggleKeysHelp(false)" aria-label="Close">&times;</button></div>
-    <dl>
+    <dl class="keys-reader">
+      <dt><kbd>&darr;</kbd> <kbd>&uarr;</kbd> <kbd>Space</kbd></dt><dd>Scroll the paper (PageUp / PageDown, Home / End too)</dd>
+      <dt><kbd>+</kbd> <kbd>&minus;</kbd></dt><dd>Zoom in / out</dd>
+      <dt><kbd>&#8984;</kbd> <kbd>Enter</kbd></dt><dd>Save the note or comment you&rsquo;re writing</dd>
+      <dt><kbd>[[</kbd></dt><dd>In a note: cite one of your highlights</dd>
+      <dt><kbd>Esc</kbd></dt><dd>Close a comment, clear the selection, or close the reader</dd>
+      <dt><kbd>?</kbd></dt><dd>Show this list</dd>
+    </dl>
+    <dl class="keys-site">
       <dt><kbd>/</kbd></dt><dd>Search</dd>
       <dt><kbd>j</kbd> <kbd>k</kbd></dt><dd>Next / previous paper in a list, or on a paper's page</dd>
       <dt><kbd>o</kbd> <kbd>Enter</kbd></dt><dd>Open the selected paper</dd>
@@ -3677,18 +3687,21 @@ document.addEventListener('keydown', e => {
   const t = e.target;
   if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
   if (e.key === '/') {
+    if (document.querySelector('.reader.open')) return;   // the search box is behind the reader
     e.preventDefault();
     if (window.matchMedia('(max-width: 600px)').matches) toggleMobileSearch(true);
     const inp = document.getElementById('searchInput'); inp.focus(); inp.select();
   } else if (e.key === '?') {
     e.preventDefault(); toggleKeysHelp();
   } else if (e.key === 'Escape' && document.getElementById('keysHelp').classList.contains('open')) {
+    e.preventDefault(); e.stopImmediatePropagation();   // this Esc was for the list only (not the reader or a pop-up under it)
     toggleKeysHelp(false);
   }
 });
 function toggleKeysHelp(force) {
   const el = document.getElementById('keysHelp');
   const open = typeof force === 'boolean' ? force : !el.classList.contains('open');
+  el.classList.toggle('in-reader', !!document.querySelector('.reader.open'));   // the keys that work where you are
   el.classList.toggle('open', open);
   if (open) el.querySelector('button').focus();
 }
