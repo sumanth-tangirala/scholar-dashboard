@@ -794,6 +794,11 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .rp-add:hover { background: rgba(251,177,60,0.18); border-color: rgba(251,177,60,0.55); }
 .rp-add svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
 .rp-count { color: var(--text-muted); font-weight: 500; letter-spacing: 0; }
+.rp-skel, .rp-skel-bar { border-radius: 10px; background: rgba(255,255,255,0.045); margin-bottom: 8px; animation: skel 1.3s ease-in-out infinite; }
+.rp-skel-bar { height: 28px; width: 42%; border-radius: 8px; margin-bottom: 14px; }
+.rp-skel:nth-child(3) { animation-delay: 0.15s; } .rp-skel:nth-child(4) { animation-delay: 0.3s; }
+@keyframes skel { 50% { background: rgba(255,255,255,0.08); } }
+@media (prefers-reduced-motion: reduce) { .rp-skel, .rp-skel-bar { animation: none; } }
 .rp-toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
 .rp-toolbar .grow { flex: 1; }
 .rp-count-l { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); }
@@ -4567,6 +4572,7 @@ async function showReader(id) {
   el.classList.add('open'); el.classList.toggle('dark', readerDark());
   document.getElementById('readerDarkBtn').setAttribute('aria-pressed', readerDark() ? 'true' : 'false');
   document.getElementById('readerTitle').textContent = p.title || '';
+  if (!_rn || _rn.id !== p.id) startReaderNotes(); else _rnLoadP = Promise.resolve();   // same paper: notes already here
   const local = await localPdfGet(p.id);
   const src = pdfSourceOf(p);
   if (!local && !src) { showPdfPicker(p, 'none'); return; }
@@ -4587,7 +4593,8 @@ async function loadIntoReader(p, source, isLocal) {
     if (source.url) { ext.href = source.url; ext.style.display = ''; } else ext.style.display = 'none';
     document.getElementById('readerTools').style.visibility = '';
     await layoutReader(true);
-    if (await vaultReady(true)) await loadReaderNotes(); else { _rn = null; updateReaderNotesCount(); renderReaderPanel(); }
+    await (_rnLoadP || startReaderNotes());
+    checkPdfFingerprint();
     if (_pendingJump) { const id = _pendingJump; _pendingJump = null; setTimeout(() => jumpToAnno(id), 400); }
   } catch (e) {
     if (token !== _reader.token) return;
@@ -5032,6 +5039,8 @@ window.addEventListener('online', () => scheduleNotesPush(1000));
 /* ---- unlocking ---- */
 async function vaultMeta() {
   if (Vault.meta !== undefined) return Vault.meta;
+  const local = await nfGet('_vault.json');   // set once and never changes, so a stored copy is final
+  if (local) { Vault.meta = local.env; return Vault.meta; }
   const rec = await nfLoad('_vault.json').catch(() => null);
   Vault.meta = rec ? rec.env : null;
   return Vault.meta;
@@ -5124,7 +5133,10 @@ async function submitVault() {
   }
 }
 async function afterUnlock() {
-  const rec = await nfLoad('_index.json').catch(() => null);
+  const rec = (await nfGet('_index.json')) || await nfLoad('_index.json').catch(() => null);
+  if (rec && !rec.dirty) nfLoad('_index.json').then(async fresh => {   // newer index from another device, in the background
+    if (fresh && !fresh.dirty && fresh.env.updated !== rec.env.updated && Vault.key) { try { Vault.index = await vaultDecrypt(fresh.env); if (currentTab === 'library') renderLibrary(); } catch (e) {} }
+  }).catch(() => {});
   try { Vault.index = rec ? await vaultDecrypt(rec.env) : { v: 1, papers: {}, colors: {}, colorsUpdated: '' }; }
   catch (e) { Vault.index = { v: 1, papers: {}, colors: {}, colorsUpdated: '' }; }
   scheduleNotesPush(500);   // anything left unpushed from an earlier session
@@ -5161,12 +5173,36 @@ function newNoteId() { return 'n' + Date.now().toString(36) + Math.random().toSt
 async function paperNotes(id) {
   if (!Vault.key) return null;
   if (Vault.cache.has(id)) return Vault.cache.get(id);
+  // stale-while-revalidate: show the copy in this browser at once, then check GitHub for a newer one
+  const local = await nfGet(id + '.json');
+  if (local) {
+    let obj = emptyPaperNotes(id);
+    try { obj = normalizeNotes(await vaultDecrypt(local.env)); } catch (e) { console.error('could not decrypt notes for', id, e); }
+    Vault.cache.set(id, obj);
+    if (!local.dirty) revalidatePaperNotes(id, local.env.updated);
+    return obj;
+  }
   const rec = await nfLoad(id + '.json').catch(() => null);
   let obj = emptyPaperNotes(id);
   if (rec) { try { obj = await vaultDecrypt(rec.env); } catch (e) { console.error('could not decrypt notes for', id, e); } }
   normalizeNotes(obj);
   Vault.cache.set(id, obj);
   return obj;
+}
+async function revalidatePaperNotes(id, seen) {
+  const rec = await nfLoad(id + '.json').catch(() => null);   // fetches GitHub; keeps our copy if it has unpushed edits
+  if (!rec || rec.dirty || rec.env.updated === seen || !Vault.key) return;
+  let obj;
+  try { obj = normalizeNotes(await vaultDecrypt(rec.env)); } catch (e) { return; }
+  const cur = Vault.cache.get(id);
+  const local = await nfGet(id + '.json');
+  if (local && local.dirty) return;                             // edited here meanwhile: the push will merge instead
+  Vault.cache.set(id, obj);
+  if (_rn && _rn === cur) {
+    if (_rnEditing || _acId || _acPending) { Vault.cache.set(id, cur); return; }   // never swap under someone typing
+    _rn = obj; updateReaderNotesCount(); redrawAnnoLayers(); renderReaderPanel();
+  }
+  if (_paperViewActive && location.hash === '#paper/' + encodeURIComponent(id)) { const p = allPapers.find(x => x.id === id); if (p) renderPaperDetail(p); }
 }
 function indexEntryFor(obj) {
   const live = (obj.annos || []);
@@ -5256,15 +5292,30 @@ let _rnFilter = { colors: new Set(), comments: false, notes: false, q: '' };
 let _rnEditing = null;   // null, 'new', or the id of the note being edited
 function annoById(id) { return _rn && ((_rn.annos || []).find(a => a.id === id) || _rnPendingRefs.find(a => a.id === id) || (_acPending && _acPending.id === id ? _acPending : null)); }
 function newAnnoId() { return 'a' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+let _rnState = 'ready', _rnLoadP = null;   // 'loading' while the notes for the open paper are being unlocked/decrypted
 async function loadReaderNotes() {
-  _rn = null;
-  if (_reader.paper && Vault.key) _rn = await paperNotes(_reader.paper.id);
-  // warn when the PDF isn't the one these highlights were made on
-  if (_rn && _rn.pdf && _rn.pdf.fp && _reader.doc && _reader.doc.fingerprints && _rn.pdf.fp !== _reader.doc.fingerprints[0] && (_rn.annos || []).length)
-    toast('This PDF differs from the one you annotated, so some highlights may sit slightly off.', null, { duration: 7000 });
+  const pid = _reader.paper && _reader.paper.id;
+  const obj = pid && Vault.key ? await paperNotes(pid) : null;
+  if (!_reader.paper || _reader.paper.id !== pid) return;   // moved on to another paper meanwhile
+  _rn = obj; _rnState = 'ready';
   updateReaderNotesCount();
   renderReaderPanel();
   redrawAnnoLayers();
+}
+/* Starts as soon as the reader opens, alongside the PDF (they don't depend on each other) */
+function startReaderNotes() {
+  _rnState = vaultSupported() ? 'loading' : 'ready';
+  _rn = null; updateReaderNotesCount(); renderReaderPanel();
+  _rnLoadP = (async () => {
+    if (await vaultReady(true)) await loadReaderNotes();
+    else { _rnState = 'ready'; renderReaderPanel(); }
+  })().catch(e => { console.error(e); _rnState = 'ready'; renderReaderPanel(); });
+  return _rnLoadP;
+}
+/* warn when the PDF isn't the one these highlights were made on */
+function checkPdfFingerprint() {
+  if (_rn && _rn.pdf && _rn.pdf.fp && _reader.doc && _reader.doc.fingerprints && _rn.pdf.fp !== _reader.doc.fingerprints[0] && (_rn.annos || []).length)
+    toast('This PDF differs from the one you annotated, so some highlights may sit slightly off.', null, { duration: 7000 });
 }
 function updateReaderNotesCount() {
   const n = _rn ? rnItems(_rn).length : 0;   // everything in the Notes list (citation anchors belong to their notes)
@@ -5597,6 +5648,10 @@ function renderReaderPanel() {
     panel.innerHTML = head + `<div class="rp-locked"><strong>Notes need a secure address</strong>They are encrypted with your browser's built-in cryptography, which only runs on https:// or localhost pages. Open <a class="ig-link" href="${esc(alt)}">scholar.localhost</a> (the same site), or the GitHub Pages site. You'll connect GitHub there once.</div>`;
     return;
   }
+  if (_rnState === 'loading') {
+    panel.innerHTML = head + `<div class="rp-scroll" aria-busy="true" aria-label="Loading notes"><div class="rp-skel-bar"></div>${[64, 92, 78].map(h => `<div class="rp-skel" style="height:${h}px"></div>`).join('')}</div>`;
+    return;
+  }
   if (!Vault.key) {
     panel.innerHTML = head + `<div class="rp-locked"><strong>Your notes are encrypted</strong>Highlights, comments and notes are saved only in encrypted form. Unlock them with your notes password to read and add more.<br><button class="ui-btn ui-btn-primary" onclick="unlockFromPanel()">${Vault.meta === null ? 'Set a notes password' : 'Unlock notes'}</button></div>`;
     return;
@@ -5689,7 +5744,7 @@ function renderRnList(shown, total, anyFilter) {
   list.querySelectorAll('[data-md-anno]').forEach(el => { const a = annoById(el.dataset.mdAnno); if (a) renderNotesMarkdown(el, a.note, _rn); });
 }
 function toggleRnColor(c) { _rnFilter.colors.has(c) ? _rnFilter.colors.delete(c) : _rnFilter.colors.add(c); renderReaderPanel(); }
-async function unlockFromPanel() { if (await vaultReady()) { await loadReaderNotes(); } }
+async function unlockFromPanel() { if (await vaultReady()) { _rnState = 'loading'; renderReaderPanel(); await loadReaderNotes(); } }
 async function renameHlColor(c) {
   const name = await showPrompt('Name this colour', `What does ${hlLabel(c).toLowerCase()} mean in your highlights?`, hlLabel(c));
   if (!name || !Vault.index) return;
