@@ -743,10 +743,13 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 /* comments and citations are lines in navy, apart from the highlight colours and the site's amber */
 .annoLayer, .annoMarks { --note-line: #8aa4f0; --note-ink: #0f1b3d; --ref-tint: rgba(138,164,240,0.16); }
 .anno-rect { position: absolute; border-radius: 2px; background: var(--hc); opacity: 0.38; transition: opacity 0.15s, box-shadow 0.15s; }
-.reader:not(.dark) .anno-rect { mix-blend-mode: multiply; opacity: 0.38; }
+.reader:not(.dark) .anno-rect { mix-blend-mode: multiply; }   /* opacity from .anno-rect, so .hover/.flash still apply */
 .anno-rect.note { background: none; opacity: 1; border-bottom: 2px dashed var(--note-line, var(--accent)); border-radius: 0; mix-blend-mode: normal !important; }
 .anno-rect.flash { opacity: 0.75; box-shadow: 0 0 0 2px var(--hc, var(--accent)); }
 .anno-rect.hover { opacity: 0.6; }
+.anno-rect.note.hover { opacity: 1; border-bottom-style: solid; }
+.anno-rect.ref.hover { opacity: 1; box-shadow: inset 0 -1px 0 var(--note-line, var(--accent)); }
+.reader-page.over-anno .textLayer, .reader-page.over-anno .textLayer span { cursor: pointer; }
 .annoMarks { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
 .anno-mark { position: absolute; width: 18px; height: 18px; margin-top: -9px; padding: 0; border: none; border-radius: 5px; background: var(--hc, var(--accent)); color: #1a1406; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; pointer-events: auto; box-shadow: 0 1px 3px rgba(0,0,0,0.35); transition: transform 0.15s, box-shadow 0.15s; }
 .anno-mark.note { background: var(--note-line, var(--accent)); color: var(--note-ink, #1a1406); }
@@ -5709,6 +5712,26 @@ function jumpToAnno(id) {
     }, 10);
   });
   body.addEventListener('scroll', () => { hideSelBar(); if (_acId) closeAnnoCard(); }, { passive: true });
+  // highlights and lines sit under the text layer, so hovering them is found the same way clicks are
+  let hoverPg = null, hoverId = null, hoverFrame = 0;
+  const setHover = (pg, id) => {
+    if (hoverPg && hoverPg !== pg) hoverPg.classList.remove('over-anno');
+    if (hoverId && hoverId !== id) markHover(hoverId, false);
+    hoverPg = pg; hoverId = id;
+    if (pg) pg.classList.toggle('over-anno', !!id);
+    if (id) markHover(id, true);
+  };
+  body.addEventListener('pointermove', e => {
+    if (e.pointerType !== 'mouse') return;
+    if (e.buttons) { if (hoverId) setHover(null, null); return; }   // selecting text: keep the text cursor
+    cancelAnimationFrame(hoverFrame);
+    hoverFrame = requestAnimationFrame(() => {
+      const pg = e.target.closest && e.target.closest('.reader-page');
+      const a = pg && !e.target.closest('.anno-mark') ? annoAt(pg, e.clientX, e.clientY) : null;
+      setHover(pg, a ? a.id : null);
+    });
+  });
+  body.addEventListener('pointerleave', () => { cancelAnimationFrame(hoverFrame); setHover(null, null); });
   document.addEventListener('selectionchange', () => { const sel = window.getSelection(); if (sel && sel.isCollapsed) document.getElementById('selBar').classList.remove('open'); });
   document.addEventListener('mousedown', e => {
     const card = document.getElementById('annoCard');
