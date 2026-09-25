@@ -708,6 +708,14 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .pp-drop strong { color: var(--text); }
 .pp-foot { margin-top: 18px; font-size: 13px; color: var(--text-muted); }
 .pp-foot button { background: none; border: none; color: var(--accent); font: inherit; cursor: pointer; padding: 0; }
+.pdf-modal { position: absolute; inset: 0; z-index: 336; background: rgba(0,0,0,0.55); display: none; align-items: flex-start; justify-content: center; padding: 9vh 16px 16px; overflow: auto; }
+.pdf-modal.open { display: flex; animation: ui-fade 0.18s ease-out; }
+.pdf-modal-box { position: relative; width: min(560px, 100%); background: var(--bg-surface); border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; box-shadow: 0 16px 48px rgba(0,0,0,0.6); animation: ui-rise 0.22s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.pdf-modal-box .pdf-picker { margin: 0; padding: 24px 24px 20px; max-width: none; }
+.pdf-modal-x { position: absolute; top: 12px; right: 12px; width: 32px; height: 32px; border-radius: 8px; background: none; border: none; color: var(--text-muted); font-size: 22px; line-height: 1; cursor: pointer; transition: background 0.15s, color 0.15s; }
+.pdf-modal-x:hover { background: rgba(255,255,255,0.07); color: var(--text); }
+.pp-row .ui-btn { height: auto; min-height: 42px; }
+@media (prefers-reduced-motion: reduce) { .pdf-modal.open, .pdf-modal-box { animation: none; } }
 .pd-read { display: inline-flex; align-items: center; gap: 7px; margin-left: 8px; padding: 8px 15px; border-radius: 999px; background: var(--accent); color: #1a1406; font: inherit; font-size: 13.5px; font-weight: 600; border: none; cursor: pointer; white-space: nowrap; transition: background 0.15s, transform 0.15s; }
 .pd-read:hover { background: #ffc261; transform: translateY(-1px); }
 .pd-read svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
@@ -1419,13 +1427,16 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
       </span>
       <button class="reader-btn" id="readerDarkBtn" onclick="toggleReaderDark()" title="Dark pages" aria-pressed="true">&#9680;</button>
       <button class="reader-btn reader-text" id="readerNotesBtn" onclick="toggleReaderPanel()" title="Notes, highlights and comments" aria-pressed="false">Notes <span class="rn-count" id="readerNotesCount"></span></button>
-      <button class="reader-btn reader-text" onclick="showPdfPicker(_reader.paper, 'change')" title="Use a different PDF for this paper">Change PDF</button>
+      <button class="reader-btn reader-text" onclick="openPdfChange()" title="Use a different PDF for this paper">Change PDF</button>
       <a class="reader-btn reader-text" id="readerExternal" target="_blank" rel="noopener" title="Open the PDF in a new tab">Open &#8599;</a>
     </div>
   </div>
   <div class="reader-split">
     <div class="reader-body" id="readerBody"></div>
     <aside class="reader-panel" id="readerPanel" aria-label="Notes"></aside>
+  </div>
+  <div class="pdf-modal" id="pdfModal" role="dialog" aria-modal="true" aria-label="Change PDF" onclick="if (event.target === this) closePdfModal()">
+    <div class="pdf-modal-box"><button class="pdf-modal-x" onclick="closePdfModal()" aria-label="Close">&times;</button><div id="pdfModalBody"></div></div>
   </div>
   <div class="sel-bar" id="selBar" role="toolbar" aria-label="Selection"></div>
   <div class="anno-card" id="annoCard" role="dialog" aria-label="Highlight"></div>
@@ -4457,6 +4468,7 @@ function closeReader() {
 }
 function hideReader() {
   const el = document.getElementById('reader');
+  hidePdfModal();
   if (_rnEditing) finishNotesEdit();
   closeAnnoCard(); hideSelBar(); closeCiteDD();
   el.classList.remove('open');
@@ -4632,6 +4644,7 @@ document.addEventListener('keydown', e => {
   if (!document.getElementById('reader').classList.contains('open')) return;
   const t = e.target;
   if (document.getElementById('vaultOverlay').classList.contains('open')) { if (e.key === 'Escape') closeVaultModal(false); return; }
+  if (pdfModalOpen()) { if (e.key === 'Escape') { e.preventDefault(); closePdfModal(); } return; }
   if (t && /^(INPUT|TEXTAREA)$/.test(t.tagName)) { if (e.key === 'Escape' && !_citeCtx) { t.blur(); if (_acId) closeAnnoCard(); } return; }
   if (e.key === 'Escape') {
     e.preventDefault();
@@ -4646,10 +4659,13 @@ document.addEventListener('keydown', e => {
 /* No PDF yet, or the one we have fails: paste an open link (checked before it's saved) or drop a file */
 async function showPdfPicker(p, why, detail) {
   if (!p) return;
-  if (_reader.obs) _reader.obs.disconnect();
-  if (_reader.far) _reader.far.disconnect();
-  if (_reader.doc) { _reader.doc.destroy(); _reader.doc = null; }
-  document.getElementById('readerTools').style.visibility = 'hidden';
+  const inModal = why === 'change';
+  if (!inModal) {
+    if (_reader.obs) _reader.obs.disconnect();
+    if (_reader.far) _reader.far.disconnect();
+    if (_reader.doc) { _reader.doc.destroy(); _reader.doc = null; }
+    document.getElementById('readerTools').style.visibility = 'hidden';
+  }
   const hasLocal = !!(await localPdfGet(p.id));
   const head = why === 'none' ? 'No PDF to read here yet'
     : why === 'failed' ? "This PDF couldn't be opened here"
@@ -4657,13 +4673,13 @@ async function showPdfPicker(p, why, detail) {
   const sub = why === 'none' ? 'This paper has no open PDF on record. If you find one (arXiv, OpenReview, the authors’ page…), paste the link; or use a copy you downloaded.'
     : why === 'failed' ? esc(detail || '')
     : 'Paste a link to an open PDF, or use a file you downloaded.';
-  document.getElementById('readerBody').innerHTML = `<div class="pdf-picker">
+  document.getElementById(inModal ? 'pdfModalBody' : 'readerBody').innerHTML = `<div class="pdf-picker">
     <h3>${head}</h3>
     <p class="pp-why">${sub}</p>
     <label class="pp-label" for="ppLink">Link to an open PDF</label>
     <form class="pp-row" onsubmit="event.preventDefault(); submitPdfLink()">
       <input class="pp-input" id="ppLink" type="url" placeholder="https://arxiv.org/abs/… or a direct .pdf link" value="${esc(why === 'change' ? (p.pdf_url || '') : '')}" autocomplete="off" required>
-      <button class="pp-btn" id="ppCheck" type="submit">Check and save</button>
+      <button class="ui-btn ui-btn-primary" id="ppCheck" type="submit">Check and save</button>
     </form>
     <div class="pp-msg" id="ppMsg">The link is saved for this paper only if the reader can actually open it.</div>
     <label class="pp-label">Or a PDF you downloaded</label>
@@ -4671,7 +4687,7 @@ async function showPdfPicker(p, why, detail) {
       <input type="file" accept="application/pdf,.pdf" onchange="usePdfFile(this.files[0])">
       <strong>Drop a PDF here</strong> or click to choose one.<br>It stays in this browser, on this device only.
     </label>
-    <div class="pp-foot">${hasLocal ? `This paper has a copy stored on this device. <button onclick="removeLocalPdf()">Remove it</button>` : ''}${(hasLocal || pdfSourceOf(p)) && why === 'change' ? ` <button onclick="showReader(_reader.paper.id)">Back to the PDF</button>` : ''}</div>
+    <div class="pp-foot">${hasLocal ? `This paper has a copy stored on this device. <button onclick="removeLocalPdf()">Remove it</button>` : ''}${inModal ? ` <button onclick="closePdfModal()">Keep the current PDF</button>` : ''}</div>
   </div>`;
   setTimeout(() => { const i = document.getElementById('ppLink'); if (i && why !== 'failed') i.focus(); }, 0);
 }
@@ -4691,6 +4707,7 @@ async function submitPdfLink() {
     _stateDirty = true; showSaveBar();
     await localPdfDel(p.id).catch(() => {});
     toast(`PDF saved for this paper (${n} page${n === 1 ? '' : 's'})`);
+    if (pdfModalOpen()) closePdfModal();
     await loadIntoReader(p, { url }, false);
   } catch (e) {
     btn.disabled = false;
@@ -4710,6 +4727,7 @@ async function usePdfFile(file) {
     doc.destroy();
     await localPdfPut(p.id, new Blob([data], { type: 'application/pdf' }));
     toast('PDF stored in this browser for this paper');
+    if (pdfModalOpen()) closePdfModal();
     await loadIntoReader(p, { data }, true);
   } catch (e) {
     msg.className = 'pp-msg err';
@@ -4719,7 +4737,26 @@ async function usePdfFile(file) {
 async function removeLocalPdf() {
   await localPdfDel(_reader.paper.id).catch(() => {});
   toast('Removed the copy stored on this device');
+  if (pdfModalOpen()) closePdfModal();
   showReader(_reader.paper.id);
+}
+/* "Change PDF" is a dialog over the open PDF, with its own history step, so Back just closes it */
+function pdfModalOpen() { return document.getElementById('pdfModal').classList.contains('open'); }
+function openPdfChange() {
+  if (!_reader.paper) return;
+  location.hash = '#read/' + encodeURIComponent(_reader.paper.id) + '/pdf';
+}
+async function showPdfModal() {
+  hideSelBar(); closeAnnoCard();
+  await showPdfPicker(_reader.paper, 'change');
+  document.getElementById('pdfModal').classList.add('open');
+  setTimeout(() => { const i = document.getElementById('ppLink'); if (i) { i.focus(); i.select(); } }, 30);
+}
+function hidePdfModal() { document.getElementById('pdfModal').classList.remove('open'); document.getElementById('pdfModalBody').innerHTML = ''; }
+function closePdfModal() {
+  if (!pdfModalOpen()) return;
+  if (/\/pdf$/.test(location.hash)) history.back();   // drops the dialog's history step
+  else hidePdfModal();
 }
 
 /* ===== ENCRYPTED NOTES =====
@@ -5920,8 +5957,16 @@ function applyHash() {
 
   // PDF reader sits over whatever was on screen
   if (hash.startsWith('read/')) {
-    const id = decodeURIComponent(hash.slice(5));
-    if (id) { showReader(id); return; }
+    let id = decodeURIComponent(hash.slice(5));
+    const wantPdf = /\/pdf$/.test(id);
+    if (wantPdf) id = id.slice(0, -4);
+    if (id) {
+      const same = document.getElementById('reader').classList.contains('open') && _reader.paper && _reader.paper.id === id;
+      if (same) { if (wantPdf) showPdfModal(); else hidePdfModal(); return; }
+      hidePdfModal();
+      showReader(id).then(() => { if (wantPdf && _reader.doc) showPdfModal(); });
+      return;
+    }
   }
   if (document.getElementById('reader').classList.contains('open')) {
     hideReader();
