@@ -557,7 +557,7 @@ body.tok-mode .tok { display: block; flex: 1; min-height: 0; overflow-y: auto; s
 .tok::-webkit-scrollbar { display: none; }
 .tok { scrollbar-width: none; }
 
-.tok-pills { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; flex: 1; min-width: 0; }
+.tok-pills { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; flex: 1; min-width: 0; -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 22px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 22px), transparent); padding-right: 16px; }   /* the fade says the chips scroll */
 .tok-pills::-webkit-scrollbar { display: none; }
 .tok-pill { flex-shrink: 0; background: rgba(255,255,255,0.055); border: 1px solid transparent; color: var(--text-secondary); font: inherit; font-size: 12.5px; padding: 4px 11px; border-radius: 999px; cursor: pointer; white-space: nowrap; }
 .tok-pill.active { background: var(--accent-dim); border-color: rgba(251,177,60,0.7); color: var(--accent); }
@@ -735,9 +735,11 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .pd-actions .pd-read + .pd-open:hover { color: var(--text); border-color: rgba(255,255,255,0.3); background: rgba(255,255,255,0.04); transform: none; }
 @media (max-width: 700px) {
   .reader-bar { gap: 6px; padding: 0 8px; }
-  .reader-back span, .reader-title, #readerExternal, .reader-pageno { display: none; }
-  .reader-btn.reader-text { font-size: 12px; padding: 0 8px; }
-  .reader-tools { flex: 1; justify-content: flex-end; }
+  /* a phone: pinch zooms and there's no Pencil, so the bar keeps just what earns its place, and the title fits */
+  .reader-back span, #readerExternal, .reader-pageno, .reader-zoom, #readerPenBtn { display: none; }
+  .reader-title { font-size: 14px; }
+  .reader-btn.reader-text { font-size: 12px; padding: 0 8px; white-space: nowrap; }
+  .reader-tools { flex: none; gap: 4px; }
   .reader-pages { padding-top: 10px; padding-bottom: 40px; gap: 10px; }
   .pd-read { padding: 7px 12px; margin-left: 4px; }
 }
@@ -1056,6 +1058,10 @@ button.chat-hist-item:hover, button.chat-hist-item:focus-visible { background: r
   .rp-item-acts, .chat-acts, .p-actions, .paper-detail-tags .group-add-wrap { opacity: 1; pointer-events: auto; }
 }
 @media (pointer: coarse) {
+  /* fingers need ~36px: chips, toggles and small action buttons grow on touch screens only (desktop keeps its density) */
+  .pill, .ig-toggle-btn, .tl-chip, .tl-sort button, .lib-hint-btn, .library-actions button, .btn-abs, .btn-link, .p-actions .btn-icon, .btn-quiet-remove, .ui-btn, .rp-chip, .rp-seg button { min-height: 36px; display: inline-flex; align-items: center; justify-content: center; }
+  .p-actions .btn-icon:not(.btn-labelled) { min-width: 36px; }
+  .tok-pill { min-height: 32px; }
   #acNote { min-height: 64px; }   /* room to write a comment by hand (Scribble turns it into text) */
   .ink-bar .ink-done { height: 36px; padding: 0 14px; }
   .sel-bar { gap: 4px; padding: 5px 6px; border-radius: 12px; }
