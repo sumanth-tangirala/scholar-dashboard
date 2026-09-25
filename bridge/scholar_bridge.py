@@ -20,7 +20,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 PORT = int(os.environ.get('SCHOLAR_BRIDGE_PORT', '7823'))
 ORIGINS = {'https://www.sumanthtangirala.com', 'https://sumanthtangirala.com', 'http://scholar.localhost', 'http://localhost'}
-HOME = os.path.expanduser('~/.scholar-bridge')
+HOME = os.path.expanduser(os.environ.get('SCHOLAR_BRIDGE_HOME', '~/.scholar-bridge'))   # override: a separate test copy
 WORK = os.path.join(HOME, 'work')
 CHATS = os.path.join(HOME, 'chats')
 TOKEN_FILE = os.path.join(HOME, 'token')
@@ -72,6 +72,27 @@ def chat_file(pid): return os.path.join(CHATS, safe_id(pid) + '.json')
 
 def load_chat(pid):
     return read_json(chat_file(pid), {'paper': pid, 'session': None, 'model': 'opus', 'messages': []})
+
+
+def archive_current(pid):
+    """Keep the current conversation as an earlier one (a unique name, so nothing is ever overwritten)."""
+    ts = int(time.time())
+    while os.path.exists(chat_file(pid)[:-5] + f'.{ts}.json'): ts += 1
+    os.replace(chat_file(pid), chat_file(pid)[:-5] + f'.{ts}.json')
+
+
+def chat_list(pid):
+    """This paper's conversations: the current one and earlier ones (kept when you start a new chat)."""
+    base, out = safe_id(pid), []
+    for f in os.listdir(CHATS):
+        if f == base + '.json': key = 'current'
+        elif f.startswith(base + '.') and f.endswith('.json') and f[len(base) + 1:-5].isdigit(): key = f[len(base) + 1:-5]
+        else: continue
+        msgs = read_json(os.path.join(CHATS, f), {}).get('messages') or []
+        if not msgs: continue
+        first = next((m.get('text') for m in msgs if m.get('role') == 'user' and m.get('text')), '') or 'Figure or passage'
+        out.append({'id': key, 'title': first[:140], 'count': len(msgs), 'updated': msgs[-1].get('ts') or 0})
+    return sorted(out, key=lambda c: -c['updated'])
 
 
 def ask_permission(code):
@@ -143,6 +164,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == '/health':
             return self.reply(200, {'ok': True, 'version': VERSION, 'paired': self.authed()})
         if not self.authed(): return self.reply(401, {'error': 'not paired'})
+        if path == '/chats':
+            return self.reply(200, {'chats': chat_list(urllib.request.unquote(params.get('paper', '')))})
         if path == '/chat':
             pid = urllib.request.unquote(params.get('paper', ''))
             c = load_chat(pid)
@@ -164,9 +187,17 @@ class Handler(BaseHTTPRequestHandler):
         if path == '/chat/new':
             pid = data.get('paper', '')
             c = load_chat(pid)
-            if c['messages']:   # keep the old conversation on disk, start a fresh one
-                os.replace(chat_file(pid), chat_file(pid)[:-5] + f'.{int(time.time())}.json')
+            if c['messages']: archive_current(pid)   # keep the old conversation, start a fresh one
             write_json(chat_file(pid), {'paper': pid, 'session': None, 'model': c.get('model', 'opus'), 'messages': []})
+            return self.reply(200, {'ok': True})
+        if path == '/chat/switch':   # go back to an earlier conversation; the current one is kept
+            pid, key = data.get('paper', ''), str(data.get('id', ''))
+            if pid in _running: return self.reply(409, {'error': 'busy'})
+            target = chat_file(pid)[:-5] + f'.{key}.json'
+            if not key.isdigit() or not os.path.exists(target): return self.reply(404, {'error': 'no such chat'})
+            cur = chat_file(pid)
+            if load_chat(pid)['messages']: archive_current(pid)
+            os.replace(target, cur)
             return self.reply(200, {'ok': True})
         if path == '/chat/stop':
             p = _running.get(data.get('paper', ''))

@@ -925,6 +925,14 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .rp-text-btn { display: inline-flex; align-items: center; gap: 4px; font: inherit; font-size: 12.5px; color: var(--text-muted); background: none; border: none; border-radius: 7px; padding: 5px 9px 5px 7px; cursor: pointer; transition: background 0.15s, color 0.15s; }
 .rp-text-btn:hover { background: rgba(255,255,255,0.07); color: var(--text); }
 .rp-text-btn svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.reader-panel { position: relative; }
+.chat-hist { position: absolute; right: 10px; z-index: 20; width: min(320px, calc(100% - 20px)); max-height: 60%; overflow: auto; background: #1d1d20; border: 1px solid rgba(255,255,255,0.14); border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.55); padding: 4px; animation: ui-pop 0.16s ease-out; }
+.chat-hist-item { display: flex; flex-direction: column; gap: 2px; width: 100%; text-align: left; font: inherit; background: none; border: none; border-radius: 7px; padding: 7px 9px; cursor: pointer; transition: background 0.15s; }
+button.chat-hist-item:hover, button.chat-hist-item:focus-visible { background: rgba(255,255,255,0.07); outline: none; }
+.chat-hist-item .t { font-size: 13px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-hist-item .m { font-size: 11.5px; color: var(--text-muted); }
+.chat-hist-item.current { cursor: default; }
+.chat-hist-item.current .m { color: var(--accent); }
 .rp-tabs { display: inline-flex; gap: 2px; background: rgba(255,255,255,0.04); border-radius: 8px; padding: 2px; }
 .rp-tabs button { background: none; border: none; color: var(--text-muted); font: inherit; font-size: 13px; font-weight: 600; padding: 4px 12px; border-radius: 6px; cursor: pointer; transition: background 0.15s, color 0.15s; }
 .rp-tabs button:hover { color: var(--text); }
@@ -6288,6 +6296,7 @@ function chatAddPaper() {   // + Paper: starts an @ search at the caret
   t.selectionStart = t.selectionEnd = at + ins.length;
   chatInputChanged(t);
 }
+const ICON_HISTORY = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>';
 const ICON_NOTE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l3 3v15H6z"/><path d="M9 11h6M9 15h6"/></svg>';
 
 function saveBridgeToken(t) { Chat.token = t || ''; try { t ? localStorage.setItem('claude_bridge_token', t) : localStorage.removeItem('claude_bridge_token'); } catch (e) {} }
@@ -6324,9 +6333,10 @@ async function chatOpen(focus) {
 async function chatLoad() {
   const pid = _reader.paper.id;
   try {
-    const r = await bridgeFetch('/chat?paper=' + encodeURIComponent(pid));
+    const [r, hr] = await Promise.all([bridgeFetch('/chat?paper=' + encodeURIComponent(pid)), bridgeFetch('/chats?paper=' + encodeURIComponent(pid)).catch(() => null)]);
     if (r.status === 401) { saveBridgeToken(''); Chat.status = 'unpaired'; return; }
     const j = await r.json();
+    Chat.history = hr && hr.ok ? (await hr.json()).chats || [] : [];
     if (!_reader.paper || _reader.paper.id !== pid) return;
     if (Chat.pid !== pid) { Chat.draft = { quotes: [], images: [], mentions: [] }; Chat.draftText = ''; }   // a draft belongs to its paper
     Object.assign(Chat, { pid, messages: j.messages || [], fresh: j.fresh !== false, model: j.model || 'opus', running: !!j.running, streaming: '', tool: '', error: '', loadedFor: pid });
@@ -6360,7 +6370,7 @@ function renderChatPanel(force) {
   const input = document.getElementById('chatInput'); if (input) Chat.draftText = input.value;
   const ready = Chat.status === 'ready';
   if (ready && pid && Chat.loadedFor !== pid) { chatOpen(); return; }   // another paper: load its chat first
-  const head = `<div class="rp-head">${panelTabsHTML()}<span class="grow"></span>${ready ? `<button class="rp-text-btn" onclick="chatNew()" title="Start a fresh conversation about this paper (this one is kept)">${ICON_PLUS}New chat</button>` : ''}<button class="rp-icon-btn" onclick="toggleReaderPanel(false)" title="Close" aria-label="Close panel">${ICON_CLOSE}</button></div>`;
+  const head = `<div class="rp-head">${panelTabsHTML()}<span class="grow"></span>${ready && (Chat.history || []).some(c => c.id !== 'current') ? `<button class="rp-icon-btn" id="chatHistBtn" onclick="toggleChatHistory(event)" title="Earlier chats about this paper" aria-label="Earlier chats" aria-haspopup="true">${ICON_HISTORY}</button>` : ''}${ready ? `<button class="rp-text-btn" onclick="chatNew()" title="Start a fresh conversation about this paper (this one is kept)">${ICON_PLUS}New chat</button>` : ''}<button class="rp-icon-btn" onclick="toggleReaderPanel(false)" title="Close" aria-label="Close panel">${ICON_CLOSE}</button></div>`;
   const setup = {
     setup: `<p>Chat with Claude about this paper, with your highlights and notes in view. It runs through Claude Code on your laptop.</p><button class="ui-btn ui-btn-primary" onclick="chatConnect()">Connect to Claude Code</button>`,
     unknown: `<p class="chat-dim">Connecting to Claude Code…</p>`,
@@ -6394,10 +6404,38 @@ function chatModel(m) { Chat.model = m; }   // used from the next message; kept 
 function chatEffort(e) { Chat.effort = e; try { e ? localStorage.setItem('chat_effort', e) : localStorage.removeItem('chat_effort'); } catch (x) {} }
 async function chatNew() {
   if (Chat.running) return;
-  if (Chat.messages.length) { try { await bridgeFetch('/chat/new', { method: 'POST', body: JSON.stringify({ paper: _reader.paper.id }) }); } catch (e) {} }
-  Object.assign(Chat, { messages: [], fresh: true, streaming: '', error: '' });
-  renderChatMessages();
+  if (Chat.messages.length) {
+    try { await bridgeFetch('/chat/new', { method: 'POST', body: JSON.stringify({ paper: _reader.paper.id }) }); } catch (e) {}
+    Chat.loadedFor = null; await chatOpen(true);   // reloads the list too: the chat you left is now in History
+    return;
+  }
   const i = document.getElementById('chatInput'); if (i) i.focus();
+}
+/* Earlier chats about this paper: pick one to continue it (Claude remembers it); the current one is kept */
+function toggleChatHistory(e) {
+  e && e.stopPropagation();
+  const old = document.getElementById('chatHist');
+  if (old) { old.remove(); return; }
+  const btn = document.getElementById('chatHistBtn'); if (!btn) return;
+  const day = t => t ? new Date(t * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+  const el = document.createElement('div');
+  el.id = 'chatHist'; el.className = 'chat-hist'; el.setAttribute('role', 'menu');
+  el.innerHTML = (Chat.history || []).map(c => c.id === 'current'
+    ? `<div class="chat-hist-item current"><span class="t">${esc(c.title)}</span><span class="m">Current \u00b7 ${c.count} messages</span></div>`
+    : `<button class="chat-hist-item" role="menuitem" onclick="chatSwitch('${c.id}')"><span class="t">${esc(c.title)}</span><span class="m">${day(c.updated)} \u00b7 ${c.count} messages</span></button>`).join('');
+  document.getElementById('readerPanel').appendChild(el);
+  const b = btn.getBoundingClientRect(), p = document.getElementById('readerPanel').getBoundingClientRect();
+  el.style.top = (b.bottom - p.top + 4) + 'px';
+  setTimeout(() => document.addEventListener('click', function close(ev) { if (!el.contains(ev.target)) { el.remove(); document.removeEventListener('click', close); } }), 0);
+}
+async function chatSwitch(id) {
+  if (Chat.running) return;
+  const h = document.getElementById('chatHist'); if (h) h.remove();
+  try {
+    const r = await bridgeFetch('/chat/switch', { method: 'POST', body: JSON.stringify({ paper: _reader.paper.id, id }) });
+    if (!r.ok) throw new Error();
+  } catch (e) { toastError('Couldn\u2019t open that chat'); return; }
+  Chat.loadedFor = null; chatOpen(true);
 }
 
 const CHAT_STARTERS = [
