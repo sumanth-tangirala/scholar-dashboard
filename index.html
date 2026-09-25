@@ -5700,7 +5700,7 @@ async function deleteAnno(id, message) {
   if (_acId === id) { _acId = null; _acOrigin = null; if (_acTimer) { clearTimeout(_acTimer); _acTimer = null; } document.getElementById('annoCard').classList.remove('open'); }
   await savePaperNotes(_rn);
   updateReaderNotesCount(); redrawAnnoLayers(); renderReaderPanel();
-  toast(message || 'Deleted', async () => {
+  toast(message || (a.kind === 'note' ? 'Comment deleted' : a.note ? 'Highlight and comment deleted' : 'Highlight deleted'), async () => {
     delete _rn.deleted[id];
     a.updated = new Date().toISOString();
     _rn.annos = _rn.annos.concat(a);
@@ -5954,11 +5954,11 @@ async function deleteGeneralNote(id) {
   toast('Note deleted', async () => {
     const now = new Date().toISOString();
     refs.forEach(a => { delete _rn.deleted[a.id]; a.updated = now; if (!_rn.annos.some(x => x.id === a.id)) _rn.annos.push(a); });
-    redrawAnnoLayers();
     delete _rn.deleted[id]; e.updated = now;
     _rn.entries = _rn.entries.concat(e).sort((x, y) => (x.created || '').localeCompare(y.created || ''));
     _rnFresh = id;
-    await savePaperNotes(_rn); renderReaderPanel();
+    redrawAnnoLayers();   // after the note is back, so its citations count as cited and are drawn
+    await savePaperNotes(_rn); renderReaderPanel(); updateReaderNotesCount();
   });
 }
 
