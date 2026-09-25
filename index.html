@@ -58,6 +58,7 @@
 
 
 body { font-family: 'Google Sans', Roboto, -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+[hidden] { display: none !important; }   /* the hidden attribute always wins over a component's display rule */
 .main-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; scroll-behavior: smooth; }   /* the page never scrolls sideways; wide content scrolls inside its own box */
 a { color: inherit; text-decoration: none; }
 
@@ -4092,10 +4093,16 @@ function renderInterests() {
   }
   const main = document.getElementById('interestsMain');
   const pool = currentIGTab === 'interests' ? allInterests : allGroups;
+  // a filter only when it would show something: statuses with nothing in them are hidden (unless selected),
+  // and with a single status left there is nothing to filter, so the row goes
+  let shown = 0;
   document.querySelectorAll('#interestChips .pill').forEach(c => {
-    const st = c.dataset.istatus;
-    c.querySelector('.pill-count').textContent = st === 'all' ? pool.length : pool.filter(x => x.status === st).length;
+    const st = c.dataset.istatus, n = st === 'all' ? pool.length : pool.filter(x => x.status === st).length;
+    c.querySelector('.pill-count').textContent = n;
+    c.hidden = st !== 'all' && !n && currentIStatus !== st;
+    if (st !== 'all' && !c.hidden) shown++;
   });
+  document.getElementById('interestChips').hidden = shown <= 1 && currentIStatus === 'all';
   if (currentIGTab === 'groups') { renderGroupsTab(main); return; }
   let interests = allInterests;
   if (currentIStatus !== 'all') interests = interests.filter(i => i.status === currentIStatus);
@@ -4144,7 +4151,7 @@ function groupCardHTML(g) {
   const paperCount = inGroup.length, readCount = inGroup.filter(p => readSet.has(paperKey(p))).length;
   const notes = g.notes ? `<div class="interest-detail interest-notes" title="${escAttr(g.notes)}">${esc(g.notes)}</div>` : '';
   const showStatus = currentIStatus === 'all' || g.status === 'suggested';
-  const statusBadge = showStatus && g.status ? `<span class="badge badge-${g.status}">${g.status.charAt(0).toUpperCase()+g.status.slice(1)}</span>` : '';
+  const statusBadge = showStatus && g.status && g.status !== 'confirmed' ? `<span class="badge badge-${g.status}">${g.status.charAt(0).toUpperCase()+g.status.slice(1)}</span>` : '';
   let actions = '';
   if (g.status === 'suggested') actions = `<div class="interest-actions"><button class="btn-approve" onclick="event.stopPropagation();updateG('${escAttr(g.group_name)}','confirmed')">Approve</button><button class="btn-reject" onclick="event.stopPropagation();updateG('${escAttr(g.group_name)}','rejected')">Dismiss</button></div>`;
   else if (g.status === 'confirmed') actions = `<div class="interest-actions"><button class="btn-quiet-remove" onclick="event.stopPropagation();updateG('${escAttr(g.group_name)}','rejected')" title="Hide this topic (you can restore it from Rejected)">Remove</button></div>`;
@@ -4221,7 +4228,7 @@ function interestCardHTML(i) {
     ? `<div class="interest-actions"><button class="btn-approve" onclick="event.stopPropagation();updateI('${escAttr(i.interest_name)}','confirmed')">Restore</button></div>`
     : '';
   const showStatus = currentIStatus === 'all' || i.status === 'suggested';
-  const statusBadge = showStatus && i.status ? `<span class="badge badge-${i.status}">${i.status.charAt(0).toUpperCase()+i.status.slice(1)}</span>` : '';
+  const statusBadge = showStatus && i.status && i.status !== 'confirmed' ? `<span class="badge badge-${i.status}">${i.status.charAt(0).toUpperCase()+i.status.slice(1)}</span>` : '';
   const n = interestPaperCount(i.interest_name);
   const count = n ? `<button class="badge badge-venue badge-link" onclick="event.stopPropagation();openInterest('${escAttr(i.interest_name)}')" title="List the papers that match this interest">${n} paper${n !== 1 ? 's' : ''}</button>` : '<span class="badge badge-venue">No papers yet</span>';
   return `<div class="interest-card"><div class="interest-info"><div class="interest-name">${esc(i.interest_name)}</div>${related}${notes}<div class="interest-meta">${statusBadge}${relBadge}${priBadge}${count}</div></div>${actions}</div>`;
