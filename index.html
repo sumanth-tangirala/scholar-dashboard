@@ -1223,6 +1223,7 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
   .top-row::before { left: 16px; }
   .tr-side { flex-direction: row; align-items: center; gap: 10px; margin-top: 6px; }
   .tr-groups { display: none; }
+  .tr-venue-line:empty { display: none; }   /* inside a venue's own list there's no venue to show: no stray gap */
 }
 /* Touch screens: rows stay compact (a tap opens the paper page, which has every action), and hovering never
    changes a row, so Safari doesn't spend the first tap on hover */
@@ -7878,7 +7879,7 @@ function renderPaperDetail(p) {
   let main = '';
   if (hasText(p.summary)) main += `<section class="pd-section"><h2>Summary</h2><p class="pd-prose">${esc(p.summary)}</p></section>`;
   if (hasText(p.abstract)) main += `<section class="pd-section"><h2>Abstract</h2><p class="pd-prose">${esc(p.abstract)}</p></section>`;
-  if (hasNotes || (ix && ix.h + ix.c)) main += `<section class="pd-section pd-notes"><h2>Your notes <button class="pd-edit" onclick="openReader('${ka}', 'new')">+ Add note</button></h2>${hasNotes ? vn.entries.map(e => `<div class="pd-note"><div class="pd-note-top"><span>${esc(noteDate(e))}</span><button class="rp-icon-btn sm" onclick="openReader('${ka}', '${e.id}')" title="Edit note" aria-label="Edit note">${ICON_EDIT}</button></div><div class="pd-prose md" data-pdnote="${e.id}"></div></div>`).join('') : ''}${ix && ix.h + ix.c ? `<div class="pd-notes-meta">${ix.h} highlight${ix.h === 1 ? '' : 's'}${ix.c ? `, ${ix.c} comment${ix.c === 1 ? '' : 's'}` : ''} · <button onclick="openReader('${ka}', 'panel')">Open in the reader</button></div>` : ''}</section>`;
+  if (hasNotes || (ix && ix.h + ix.c)) main += `<section class="pd-section pd-notes"><h2>Your notes <button class="pd-edit" onclick="openReader('${ka}', 'new')">+ Add note</button></h2>${hasNotes ? vn.entries.map(e => `<div class="pd-note"><div class="pd-note-top"><span>${esc(noteDate(e))}</span><button class="rp-icon-btn sm" onclick="openReader('${ka}', '${e.id}')" title="Edit note" aria-label="Edit note">${ICON_EDIT}</button></div><div class="pd-prose md" data-pdnote="${e.id}"></div></div>`).join('') : ''}${ix && ix.h + ix.c ? `<div class="pd-notes-meta">${[ix.h && `${ix.h} highlight${ix.h === 1 ? '' : 's'}`, ix.c && `${ix.c} comment${ix.c === 1 ? '' : 's'}`].filter(Boolean).join(', ')} · <button onclick="openReader('${ka}', 'panel')">Open in the reader</button></div>` : ''}</section>`;
   if (!main) main = `<p class="pd-empty">No summary or abstract yet. Open the paper to read it at the source.</p>`;
 
   // Side panel: facts + editable topics
