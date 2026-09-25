@@ -5561,7 +5561,7 @@ function showSelBar() {
 function copySelQuote() {
   const info = _selPending || selInfo();
   if (!info || info.error) return;
-  navigator.clipboard.writeText(`“${info.quote}” (p. ${info.page})`).then(() => toast('Quote copied'));
+  navigator.clipboard.writeText(`“${info.quote}” (p. ${info.page})`).then(() => toast('Quote copied'), () => toastError('Couldn’t copy: the browser blocked the clipboard'));
   hideSelBar();
 }
 /* Cite a selection: it gets a light anchor (dotted underline) so the citation has somewhere to jump */
@@ -5698,7 +5698,7 @@ async function endCommentSession(id, text) {
 }
 /* the comment box starts as one line and grows with the text, up to ~8 lines, then scrolls */
 function acGrow(t) { if (!t) return; t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight + 2, 190) + 'px'; t.style.overflowY = t.scrollHeight + 2 > 190 ? 'auto' : 'hidden'; }
-function copyAnnoQuote(id) { const a = annoById(id); if (a) navigator.clipboard.writeText('\u201c' + a.quote + '\u201d (p. ' + a.page + ')').then(() => toast('Quote copied')); }
+function copyAnnoQuote(id) { const a = annoById(id); if (a) navigator.clipboard.writeText('\u201c' + a.quote + '\u201d (p. ' + a.page + ')').then(() => toast('Quote copied'), () => toastError('Couldn’t copy: the browser blocked the clipboard')); }
 function acNoteInput() { clearTimeout(_acTimer); _acTimer = setTimeout(() => { _acTimer = null; acSaveNote(); }, 600); }
 async function acSaveNote() {
   const a = annoById(_acId), t = document.getElementById('acNote');
@@ -5712,7 +5712,7 @@ async function acSaveNote() {
   }
   await savePaperNotes(_rn);
   const st = document.getElementById('acState'); if (st) st.textContent = 'Saved · encrypted';
-  renderReaderPanel();
+  if (!_rnEditing) renderReaderPanel();   // don't rebuild a note someone is writing (the list catches up when it closes)
 }
 async function setAnnoColor(id, color) {
   if (notesBusy()) return;
@@ -5810,6 +5810,24 @@ function toggleReaderPanel(force) {
   if (open) renderReaderPanel();
   if (_reader.doc && _reader.zoom === 'fit' && !window.matchMedia('(max-width: 700px)').matches) { _reader.token++; layoutReader(false); }
 }
+/* Re-rendering the panel (a sync finished, a comment saved...) must not rebuild a note being written:
+   the live editor, its caret and its focus are carried over as they are. Returns true if it was kept. */
+function keepLiveEditor(rebuild) {
+  const live = document.getElementById('rpNotes');
+  const keep = live && _rnEditing && live.dataset.editing === String(_rnEditing) ? live : null;
+  const focused = !!keep && document.activeElement === keep;
+  const r = focused && getSelection().rangeCount ? getSelection().getRangeAt(0) : null;
+  const pos = r && { sc: r.startContainer, so: r.startOffset, ec: r.endContainer, eo: r.endOffset };   // plain values: a Range would collapse when the node is detached
+  rebuild();
+  if (!keep) return false;
+  const fresh = document.getElementById('rpNotes');
+  if (fresh && fresh !== keep) fresh.replaceWith(keep);
+  if (focused) {
+    keep.focus({ preventScroll: true });
+    if (pos) { try { const nr = document.createRange(); nr.setStart(pos.sc, pos.so); nr.setEnd(pos.ec, pos.eo); const s = getSelection(); s.removeAllRanges(); s.addRange(nr); } catch (e) {} }
+  }
+  return true;
+}
 function renderReaderPanel() {
   const panel = document.getElementById('readerPanel');
   if (!panel || !document.getElementById('reader').classList.contains('panel-open')) return;
@@ -5833,18 +5851,18 @@ function renderReaderPanel() {
   const anyFilter = f.colors.size || f.comments || f.notes || f.q;
   const shown = rnFilterItems(items);
   const chip = (on, label, click, extra) => `<button class="rp-chip ${on ? 'on' : ''}" onclick="${click}" ${extra || ''}>${label}</button>`;
-  panel.innerHTML = head + `<div class="rp-scroll">
+  const kept = keepLiveEditor(() => { panel.innerHTML = head + `<div class="rp-scroll">
     <div class="rp-toolbar">${_rnEditing === 'new' ? '<span class="rp-count-l">New note</span>' : `<button class="rp-add" onclick="startNewNote()">${ICON_PLUS}Add note</button>`}<span class="grow"></span>
       ${total > 1 ? `<div class="rp-seg" role="group" aria-label="Order"><button class="${_rnSort === 'page' ? 'on' : ''}" onclick="setRnSort('page')" title="Notes first, then in page order">Page</button><button class="${_rnSort === 'recent' ? 'on' : ''}" onclick="setRnSort('recent')" title="Newest first">Recent</button></div>` : ''}</div>
-    ${total ? `<div class="rp-filters">${HL_COLORS.map(c => `<button class="sel-dot ${f.colors.has(c) ? 'on' : ''}" style="--hc:var(--hl-${c})" title="${escAttr(hlLabel(c))}" aria-pressed="${f.colors.has(c)}" onclick="toggleRnColor('${c}')"></button>`).join('')}${chip(f.comments, 'Comments', "_rnFilter.comments=!_rnFilter.comments;renderReaderPanel()")}${chip(f.notes, 'Notes', "_rnFilter.notes=!_rnFilter.notes;renderReaderPanel()")}<input class="rp-search" id="rpSearch" placeholder="Search" value="${esc(f.q)}" oninput="_rnFilter.q=this.value;renderRnList()"></div>` : ''}
+    ${total ? `<div class="rp-filters">${HL_COLORS.map(c => `<button class="sel-dot ${f.colors.has(c) ? 'on' : ''}" style="--hc:var(--hl-${c})" title="${escAttr(hlLabel(c))}" aria-pressed="${f.colors.has(c)}" onclick="toggleRnColor('${c}')"></button>`).join('')}${chip(f.comments, 'Comments', "_rnFilter.comments=!_rnFilter.comments;renderReaderPanel()")}${chip(f.notes, 'Notes', "_rnFilter.notes=!_rnFilter.notes;renderReaderPanel()")}<input class="rp-search" id="rpSearch" placeholder="Search" value="${esc(f.q)}" oninput="_rnFilter.q=this.value;keepLiveEditor(() => renderRnList())"></div>` : ''}
     ${_rnEditing === 'new' ? noteEditorHTML() : ''}
     <div class="rp-list" id="rpList"></div>
     ${total ? `<div class="rp-colors">${HL_COLORS.map(c => `<button onclick="renameHlColor('${c}')" title="Rename this colour"><i style="--hc:var(--hl-${c})"></i>${esc(hlLabel(c))}</button>`).join('')}</div>` : ''}
   </div><div class="rp-foot"><span id="rpSync">${esc(_notesSyncText)}</span></div>`;
   updateNotesSync();
-  renderRnList(shown, total, anyFilter);
+  renderRnList(shown, total, anyFilter); });
   _rnFresh = null;
-  if (_rnEditing) {
+  if (_rnEditing && !kept) {   // an editor that just appeared gets the caret; a kept one stays as it was
     const t = document.getElementById('rpNotes');
     if (t && document.activeElement !== t) { t.focus(); editorCaretEnd(t); }
   }
@@ -5862,8 +5880,9 @@ function rnItems(n) {
 function rnFilterItems(items) {
   const f = _rnFilter, q = f.q.toLowerCase();
   const typed = f.colors.size || f.comments || f.notes;
-  return items.filter(it => !typed || (it.type === 'hl' ? f.colors.has(it.a.color === 'yellow' ? 'orange' : it.a.color) : it.type === 'comment' ? f.comments : f.notes))
-    .filter(it => !q || (it.type === 'note' ? it.e.text : it.a.quote + ' ' + (it.a.note || '')).toLowerCase().includes(q));
+  const editing = it => _rnEditing === it.id || _rnEditing === 'a:' + it.id;   // the item being edited never filters away
+  return items.filter(it => editing(it) || !typed || (it.type === 'hl' ? f.colors.has(it.a.color === 'yellow' ? 'orange' : it.a.color) : it.type === 'comment' ? f.comments : f.notes))
+    .filter(it => editing(it) || !q || (it.type === 'note' ? it.e.text : it.a.quote + ' ' + (it.a.note || '')).toLowerCase().includes(q));
 }
 const ICON_LOCK = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
 const ICON_CLOSE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
@@ -5882,7 +5901,7 @@ function noteDate(e) {
 }
 function noteEditorHTML() {
   const ph = _rnEditing && String(_rnEditing).startsWith('a:') ? 'Your comment on this passage\u2026' : 'Write a note\u2026 Select text in the paper and press \u201c to cite it, or type [[ to cite a highlight.';
-  return `<div class="rp-editor"><div class="rp-notes-edit ${_rnDraft.trim() ? '' : 'is-empty'}" id="rpNotes" contenteditable="true" role="textbox" aria-multiline="true" spellcheck="true" data-ph="${escAttr(ph)}" oninput="editorInput(this)" onkeyup="editorSaveRange(this)" onmouseup="editorSaveRange(this)" onblur="editorSaveRange(this)" onkeydown="editorKey(event)" onpaste="editorPaste(event)" onclick="editorClick(event)" ondrop="event.preventDefault()">${draftToEditorHTML(_rnDraft)}</div>
+  return `<div class="rp-editor"><div class="rp-notes-edit ${_rnDraft.trim() ? '' : 'is-empty'}" id="rpNotes" data-editing="${escAttr(String(_rnEditing))}" contenteditable="true" role="textbox" aria-multiline="true" spellcheck="true" data-ph="${escAttr(ph)}" oninput="editorInput(this)" onkeyup="editorSaveRange(this)" onmouseup="editorSaveRange(this)" onblur="editorSaveRange(this)" onkeydown="editorKey(event)" onpaste="editorPaste(event)" onclick="editorClick(event)" ondrop="event.preventDefault()">${draftToEditorHTML(_rnDraft)}</div>
     <div class="rp-editor-foot"><span class="rp-hint">${MOD_KEY}\u21b5 save \u00b7 Esc cancel</span><span class="grow"></span><button class="ui-btn ui-btn-secondary ui-btn-sm" onmousedown="event.preventDefault()" onclick="cancelNoteEdit()">Cancel</button><button class="ui-btn ui-btn-primary ui-btn-sm" onmousedown="event.preventDefault()" onclick="saveNoteEdit()">Save</button></div></div>`;
 }
 function renderRnList(shown, total, anyFilter) {
