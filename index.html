@@ -1823,8 +1823,10 @@ function restorePapersFromBackup() {
 window.addEventListener('pagehide', writeBackup);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') writeBackup(); });
 window.addEventListener('beforeunload', e => {
-  if (!anyDirty()) return;
-  writeBackup();
+  // a note being written (or the notes box's last keystrokes) isn't saved yet: ask before leaving
+  const noteUnsaved = typeof draftUnsaved === 'function' && (draftUnsaved() || !!_notesSaveTimer);
+  if (!anyDirty() && !noteUnsaved) return;
+  if (anyDirty()) writeBackup();
   e.preventDefault();
   e.returnValue = '';
 });
@@ -5977,11 +5979,17 @@ async function editNote(id) {
   _rnEditing = id; _rnDraft = e.text;
   renderReaderPanel();
 }
+/* What the note being edited said before this edit ('' for a new one) */
+function draftOriginal() {
+  const ed = String(_rnEditing || '');
+  return !ed || ed === 'new' ? '' : ed.startsWith('a:') ? ((annoById(ed.slice(2)) || {}).note || '') : (((_rn && _rn.entries) || []).find(e => e.id === ed) || {}).text || '';
+}
+function draftUnsaved() { return !!_rnEditing && _rnDraft.trim() !== draftOriginal().trim(); }
 /* Cancel is one keystroke (Esc), so a changed draft can be brought back */
 function cancelNoteEdit() {
   const snap = { editing: _rnEditing, draft: _rnDraft, refs: _rnPendingRefs.slice(), pid: _rn && _rn.id };
   const ed = String(snap.editing || '');
-  const orig = !ed || ed === 'new' ? '' : ed.startsWith('a:') ? ((annoById(ed.slice(2)) || {}).note || '') : (((_rn && _rn.entries) || []).find(e => e.id === ed) || {}).text || '';
+  const orig = draftOriginal();
   endDraft('discard'); redrawAnnoLayers(); renderReaderPanel();
   if (!snap.editing || !snap.draft.trim() || snap.draft === orig) return;
   toast(ed === 'new' ? 'Note discarded' : 'Changes discarded', () => {
@@ -6596,7 +6604,7 @@ async function saveNote(key, value) {
 async function deleteNote() {
   if (!_notesKey || !Vault.key) return;
   const key = _notesKey, p = allPapers.find(pp => paperKey(pp) === key);
-  clearTimeout(_notesSaveTimer);
+  clearTimeout(_notesSaveTimer); _notesSaveTimer = null;
   const n = await paperNotes(key);
   const e = _notesNoteId && (n.entries || []).find(x => x.id === _notesNoteId);
   const area = document.getElementById('notesModalArea');
@@ -6626,6 +6634,7 @@ let _notesSaveTimer = null;
 function debouncedSaveNote() {
   clearTimeout(_notesSaveTimer);
   _notesSaveTimer = setTimeout(async () => {
+    _notesSaveTimer = null;
     if (!_notesKey) return;
     const key = _notesKey;
     await saveNote(key, document.getElementById('notesModalArea').value);
@@ -6664,7 +6673,7 @@ function closeNotesModal() {
   if (!modal.classList.contains('open')) return;
   const area = document.getElementById('notesModalArea');
   if (_notesKey) {
-    clearTimeout(_notesSaveTimer);
+    clearTimeout(_notesSaveTimer); _notesSaveTimer = null;
     const key = _notesKey, p = allPapers.find(pp => paperKey(pp) === key);
     saveNote(key, area.value).then(() => { if (p && _paperViewActive) renderPaperDetail(p); });
   }
