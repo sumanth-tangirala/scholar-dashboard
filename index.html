@@ -4643,8 +4643,10 @@ async function layoutReader(restore) {
   const phone = window.matchMedia('(max-width: 700px)').matches;
   const left = Math.max(phone ? 0 : 12, Math.floor((body.clientWidth - w) / 2));
   const oldPages = [...body.querySelectorAll('.reader-page')];
-  // same page size (e.g. the notes panel opened but the page still fits): just re-centre, keep every drawn page
-  if (!restore && oldPages.length === doc.numPages && oldPages[0].offsetWidth === w && oldPages[0].offsetHeight === h) {
+  // same page size and pixel density (e.g. the notes panel opened but the page still fits): just re-centre, keep
+  // every drawn page. A density change (browser zoom, another display) must redraw, or the pages stay blurry.
+  const dpr = window.devicePixelRatio || 1;
+  if (!restore && oldPages.length === doc.numPages && oldPages[0].offsetWidth === w && oldPages[0].offsetHeight === h && _reader.layoutDpr === dpr) {
     const wrap = body.querySelector('.reader-pages');
     wrap.style.paddingLeft = wrap.style.paddingRight = left + 'px';
     if (_reader.token !== _reader.layoutToken)   // the caller cancelled draws in flight: redo those pages
@@ -4679,7 +4681,7 @@ async function layoutReader(restore) {
     const target = body.querySelector(`.reader-page[data-page="${n}"]`);
     if (target) body.scrollTop = frac ? target.offsetTop + frac * target.offsetHeight : target.offsetTop - 12;
   } else body.scrollTop = 0;
-  _reader.layoutToken = _reader.token;
+  _reader.layoutToken = _reader.token; _reader.layoutDpr = dpr;
   updateReaderPageNo();
 }
 async function drawReaderPage(div) {
@@ -4766,9 +4768,19 @@ function watchReaderDpr() {
 }
 function onReaderDpr() {
   watchReaderDpr();
-  if (_reader.doc && document.getElementById('reader').classList.contains('open')) { _reader.token++; layoutReader(false); }
+  checkReaderDpr();
+}
+/* Browsers don't always send that event (it depends on how the density changed), so also compare directly:
+   on resize, focus and returning to the tab, and once a second while the reader is open. It costs a number
+   comparison; a redraw happens only when the pages were drawn for a different density. */
+function checkReaderDpr() {
+  if (!_reader.doc || !_reader.layoutDpr || !document.getElementById('reader').classList.contains('open')) return;
+  if ((window.devicePixelRatio || 1) !== _reader.layoutDpr) { _reader.token++; layoutReader(false); }
 }
 watchReaderDpr();
+['resize', 'focus'].forEach(ev => window.addEventListener(ev, checkReaderDpr));
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkReaderDpr(); });
+setInterval(checkReaderDpr, 1000);
 function currentReaderPage() {
   const body = document.getElementById('readerBody'), mid = body.scrollTop + body.clientHeight * 0.35;
   let n = 1;
