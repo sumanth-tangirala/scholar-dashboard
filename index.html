@@ -678,9 +678,9 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .reader-pageno { font-size: 12.5px; color: var(--text-muted); font-variant-numeric: tabular-nums; margin-right: 4px; }
 #readerDarkBtn[aria-pressed="true"] { color: var(--accent); }
 .reader-body { flex: 1; overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
-.reader-pages { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 18px 12px 60px; min-width: min-content; }
+.reader-pages { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; padding: 18px 12px 60px; width: max-content; min-width: 100%; box-sizing: border-box; }
 .reader-page { position: relative; background: #fff; box-shadow: 0 2px 18px rgba(0,0,0,0.5); flex-shrink: 0; }
-.reader-page canvas { display: block; width: 100%; height: 100%; }
+.reader-page canvas { display: block; }
 .reader.dark .reader-page { background: #1d1d1f; }
 .reader.dark .reader-page canvas { filter: invert(0.9) hue-rotate(180deg); }
 .reader-page .textLayer { position: absolute; inset: 0; overflow: clip; line-height: 1; text-size-adjust: none; forced-color-adjust: none; transform-origin: 0 0; z-index: 1; }
@@ -718,7 +718,7 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
   .reader-back span, .reader-title, #readerExternal, .reader-pageno { display: none; }
   .reader-btn.reader-text { font-size: 12px; padding: 0 8px; }
   .reader-tools { flex: 1; justify-content: flex-end; }
-  .reader-pages { padding: 10px 0 40px; gap: 10px; }
+  .reader-pages { padding-top: 10px; padding-bottom: 40px; gap: 10px; }
   .pd-read { padding: 7px 12px; margin-left: 4px; }
 }
 @media (prefers-reduced-motion: reduce) { .reader-spin { animation-duration: 2.4s; } }
@@ -4282,6 +4282,7 @@ function hideReader() {
   el.classList.remove('open');
   document.body.style.overflow = '';
   if (_reader.obs) _reader.obs.disconnect();
+  if (_reader.far) _reader.far.disconnect();
   if (_reader.doc) { _reader.doc.destroy(); _reader.doc = null; }
   _reader.token++;
   document.getElementById('readerBody').innerHTML = '';
@@ -4338,13 +4339,19 @@ async function layoutReader(restore) {
   const fit = Math.min(body.clientWidth - (window.matchMedia('(max-width: 700px)').matches ? 0 : 36), 1000) / base.width;
   _reader.scale = _reader.zoom === 'fit' ? fit : _reader.zoom;
   document.getElementById('readerZoomLabel').textContent = _reader.zoom === 'fit' ? 'Fit' : Math.round(_reader.scale * 100) + '%';
-  const w = Math.floor(base.width * _reader.scale), h = Math.floor(base.height * _reader.scale);
-  let html = '<div class="reader-pages">';
+  const w = Math.round(base.width * _reader.scale), h = Math.round(base.height * _reader.scale);
+  // pages sit on whole pixels: a half-pixel offset from centering blurs every glyph
+  const phone = window.matchMedia('(max-width: 700px)').matches;
+  const left = Math.max(phone ? 0 : 12, Math.floor((body.clientWidth - w) / 2));
+  let html = `<div class="reader-pages" style="padding-left:${left}px;padding-right:${left}px">`;
   for (let i = 1; i <= doc.numPages; i++) html += `<div class="reader-page" data-page="${i}" style="width:${w}px;height:${h}px"></div>`;
   body.innerHTML = html + '</div>';
   if (_reader.obs) _reader.obs.disconnect();
+  if (_reader.far) _reader.far.disconnect();
   _reader.obs = new IntersectionObserver(es => es.forEach(en => { if (en.isIntersecting) drawReaderPage(en.target); }), { root: body, rootMargin: '900px 0px' });
-  body.querySelectorAll('.reader-page').forEach(d => _reader.obs.observe(d));
+  // pages far out of view give their pixels back (a sharp page is tens of MB)
+  _reader.far = new IntersectionObserver(es => es.forEach(en => { if (!en.isIntersecting) releaseReaderPage(en.target); }), { root: body, rootMargin: '4000px 0px' });
+  body.querySelectorAll('.reader-page').forEach(d => { _reader.obs.observe(d); _reader.far.observe(d); });
   if (keepPage > 1) {
     const target = body.querySelector(`.reader-page[data-page="${keepPage}"]`);
     if (target) body.scrollTop = target.offsetTop - 12;
@@ -4358,12 +4365,20 @@ async function drawReaderPage(div) {
   const page = await _reader.doc.getPage(+div.dataset.page);
   if (token !== _reader.token) return;
   const vp = page.getViewport({ scale: _reader.scale });
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  // One canvas pixel per screen pixel: size the page in whole CSS pixels, give the canvas exactly
+  // that times the screen density, and scale the drawing to fill it. Any mismatch makes the
+  // browser resample the page, which is what softens the text.
+  const cssW = Math.round(vp.width), cssH = Math.round(vp.height);
+  let out = window.devicePixelRatio || 1;
+  const MAX_PIXELS = 16777216;
+  if (cssW * cssH * out * out > MAX_PIXELS) out = Math.sqrt(MAX_PIXELS / (cssW * cssH));
   const canvas = document.createElement('canvas');
-  canvas.width = Math.floor(vp.width * dpr); canvas.height = Math.floor(vp.height * dpr);
-  div.style.width = Math.floor(vp.width) + 'px'; div.style.height = Math.floor(vp.height) + 'px';
+  canvas.width = Math.round(cssW * out); canvas.height = Math.round(cssH * out);
+  canvas.style.width = cssW + 'px'; canvas.style.height = cssH + 'px';
+  div.style.width = cssW + 'px'; div.style.height = cssH + 'px';
   div.appendChild(canvas);
-  await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp, transform: dpr !== 1 ? [dpr, 0, 0, dpr, 0, 0] : null }).promise;
+  const sx = canvas.width / vp.width, sy = canvas.height / vp.height;
+  await page.render({ canvasContext: canvas.getContext('2d', { alpha: false }), viewport: vp, transform: [sx, 0, 0, sy, 0, 0] }).promise;
   if (token !== _reader.token) return;
   const tl = document.createElement('div');
   tl.className = 'textLayer';
@@ -4371,6 +4386,24 @@ async function drawReaderPage(div) {
   div.appendChild(tl);
   try { await new lib.TextLayer({ textContentSource: page.streamTextContent(), container: tl, viewport: vp }).render(); } catch (e) {}
 }
+function releaseReaderPage(div) {
+  if (!div.dataset.drawn) return;
+  div.querySelectorAll('canvas').forEach(c => { c.width = 0; c.height = 0; });
+  div.innerHTML = '';
+  delete div.dataset.drawn;
+}
+/* Moving the window to another screen, or browser zoom, changes the pixel density: redraw sharp */
+let _readerDprMQ = null;
+function watchReaderDpr() {
+  if (_readerDprMQ) _readerDprMQ.removeEventListener('change', onReaderDpr);
+  _readerDprMQ = window.matchMedia(`(resolution: ${window.devicePixelRatio || 1}dppx)`);
+  _readerDprMQ.addEventListener('change', onReaderDpr);
+}
+function onReaderDpr() {
+  watchReaderDpr();
+  if (_reader.doc && document.getElementById('reader').classList.contains('open')) { _reader.token++; layoutReader(false); }
+}
+watchReaderDpr();
 function currentReaderPage() {
   const body = document.getElementById('readerBody'), mid = body.scrollTop + body.clientHeight * 0.35;
   let n = 1;
@@ -4421,6 +4454,7 @@ document.addEventListener('keydown', e => {
 async function showPdfPicker(p, why, detail) {
   if (!p) return;
   if (_reader.obs) _reader.obs.disconnect();
+  if (_reader.far) _reader.far.disconnect();
   if (_reader.doc) { _reader.doc.destroy(); _reader.doc = null; }
   document.getElementById('readerTools').style.visibility = 'hidden';
   const hasLocal = !!(await localPdfGet(p.id));
