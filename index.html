@@ -763,6 +763,8 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .sel-icon:hover { background: rgba(255,255,255,0.08); color: var(--text); }
 .sel-icon svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round; }
 .sel-icon.sel-cite svg path { fill: currentColor; stroke: none; }
+.sel-bar button[aria-disabled="true"] { opacity: 0.35; cursor: not-allowed; transform: none; }
+.sel-bar .sel-dot[aria-disabled="true"]:hover { border-color: transparent; }
 .sel-icon.primary { color: var(--accent); background: rgba(251,177,60,0.14); }
 .sel-icon.primary:hover { background: rgba(251,177,60,0.22); color: var(--accent); }
 .sel-act { background: none; border: none; color: var(--text-secondary); font: inherit; font-size: 12.5px; padding: 4px 8px; border-radius: 6px; cursor: pointer; transition: background 0.15s, color 0.15s; }
@@ -4572,10 +4574,11 @@ async function showReader(id) {
   el.classList.add('open'); el.classList.toggle('dark', readerDark());
   document.getElementById('readerDarkBtn').setAttribute('aria-pressed', readerDark() ? 'true' : 'false');
   document.getElementById('readerTitle').textContent = p.title || '';
-  if (!_rn || _rn.id !== p.id) startReaderNotes(); else _rnLoadP = Promise.resolve();   // same paper: notes already here
+  if (!_rn || _rn.id !== p.id) { _rn = null; _rnLoadP = null; updateReaderNotesCount(); setRnState(vaultSupported() ? 'loading' : 'ready'); }   // loader now; loading starts after the PDF
+  else _rnLoadP = Promise.resolve();   // same paper: notes already here
   const local = await localPdfGet(p.id);
   const src = pdfSourceOf(p);
-  if (!local && !src) { showPdfPicker(p, 'none'); return; }
+  if (!local && !src) { showPdfPicker(p, 'none'); ensureReaderNotes(); return; }
   await loadIntoReader(p, local ? { data: await local.arrayBuffer() } : { url: src }, !!local);
 }
 function readerStatus(html) { document.getElementById('readerBody').innerHTML = `<div class="reader-status">${html}</div>`; }
@@ -4592,14 +4595,15 @@ async function loadIntoReader(p, source, isLocal) {
     const ext = document.getElementById('readerExternal');
     if (source.url) { ext.href = source.url; ext.style.display = ''; } else ext.style.display = 'none';
     document.getElementById('readerTools').style.visibility = '';
-    await layoutReader(true);
-    await (_rnLoadP || startReaderNotes());
+    await layoutReader(true);            // the paper first...
+    await ensureReaderNotes();           // ...then the notes
     checkPdfFingerprint();
     if (_pendingJump) { const id = _pendingJump; _pendingJump = null; setTimeout(() => jumpToAnno(id), 400); }
   } catch (e) {
     if (token !== _reader.token) return;
     console.warn('PDF load failed', e);
     showPdfPicker(p, 'failed', pdfErrorText(e));
+    ensureReaderNotes();
   }
 }
 function pdfErrorText(e) {
@@ -4886,6 +4890,17 @@ function notesDB(store, mode, fn) {
 }
 const nfGet = name => notesDB('files', 'readonly', st => st.get(name)).catch(() => null);
 const nfPut = (name, rec) => notesDB('files', 'readwrite', st => st.put(rec, name));
+/* Read-modify-write of one stored file in a single transaction, so nothing can be written between the read and
+   the write. fn(current) returns the record to store, or undefined to keep it; resolves to what is stored after. */
+const nfUpdate = (name, fn) => notesDB('files', 'readwrite', st => {
+  const out = { result: null }, g = st.get(name);
+  g.onsuccess = () => { const next = fn(g.result); out.result = next === undefined ? g.result : next; if (next !== undefined) st.put(next, name); };
+  return out;
+});
+/* Which stored version the notes in memory came from (its ciphertext). A save made when the stored copy has
+   moved on (e.g. a background fetch stored GitHub's newer copy) can't claim to include it, so it asks the
+   push to merge with GitHub instead. */
+function noteSeen(name, env) { Vault.seen = Vault.seen || {}; if (env !== undefined) Vault.seen[name] = env && env.ct; return Vault.seen[name]; }
 const nfAll = () => new Promise(resolve => {
   const out = [];
   const req = indexedDB.open('scholar_notes', 1);
@@ -4925,18 +4940,19 @@ async function nfLoad(name) {
   const local = await nfGet(name);
   if (local && local.dirty) return local;
   let remote = null;
-  try { remote = await ghNoteRead(name); } catch (e) { if (local) return local; throw e; }
+  try { remote = await ghNoteRead(name); setSyncTrouble(null); }
+  catch (e) { setSyncTrouble(e); if (local) return local; throw e; }   // the one place a failed read is reported
   if (remote && (!local || (remote.env.updated || '') >= (local.env.updated || ''))) {
     const rec = { env: remote.env, sha: remote.sha, base: remote.env.updated, dirty: false };
-    await nfPut(name, rec).catch(() => {});
-    return rec;
+    // store GitHub's copy only if nothing was saved here while it was fetching
+    return nfUpdate(name, cur => ((cur ? cur.env.ct : null) === (local ? local.env.ct : null)) ? rec : undefined).catch(() => rec);
   }
   return local || null;
 }
 async function nfSave(name, obj) {
-  const prev = await nfGet(name);
   const env = await vaultEncrypt(obj);
-  await nfPut(name, { env, sha: prev ? prev.sha : null, base: prev ? prev.base : null, dirty: true });
+  await nfUpdate(name, cur => ({ env, sha: cur ? cur.sha : null, base: cur && cur.env.ct === noteSeen(name) ? cur.base : null, dirty: true }));
+  noteSeen(name, env);
   scheduleNotesPush();
 }
 
@@ -4983,6 +4999,7 @@ async function pushNotes() {
   if (!hasPAT() || !Vault.key) { updateNotesSync(); return; }
   if (Vault.pushing) { Vault.pushAgain = true; return; }
   Vault.pushing = true; Vault.pushAgain = false; updateNotesSync();
+  let sent = false;   // only a sync that reached GitHub counts as saved (and as back online)
   try {
     for (let attempt = 0; ; attempt++) {
       const dirty = (await nfAll()).filter(([, rec]) => rec && rec.dirty);
@@ -5014,18 +5031,26 @@ async function pushNotes() {
         throw e;
       }
       for (const o of out) {
-        const latest = await nfGet(o.name);
-        const changedMeanwhile = latest && latest.env.ct !== o.rec.env.ct;
+        let changedMeanwhile = false;
         // edited while we pushed: keep it dirty, and with no base so the next round merges with what we just sent
-        await nfPut(o.name, changedMeanwhile ? { ...latest, base: null, dirty: true } : { env: o.env, sha: null, base: o.env.updated, dirty: false });
+        await nfUpdate(o.name, cur => {
+          changedMeanwhile = !!cur && cur.env.ct !== o.rec.env.ct;
+          return changedMeanwhile ? { ...cur, base: null, dirty: true } : { env: o.env, sha: null, base: o.env.updated, dirty: false };
+        });
+        sent = true;
         if (changedMeanwhile) Vault.pushAgain = true;
+        else if (o.env !== o.rec.env && noteSeen(o.name) === o.rec.env.ct) noteSeen(o.name, o.env);   // memory holds the merged copy just sent
       }
       break;
     }
-    Vault.lastSaved = Date.now();
+    if (sent) { Vault.lastSaved = Date.now(); setSyncTrouble(null); }
   } catch (e) {
     console.error(e);
-    toastError('Notes not synced yet: ' + e.message + '. They are safe in this browser; trying again shortly.');
+    setSyncTrouble(e);
+    if (!Vault.troubleToasted) {   // once, not every retry
+      Vault.troubleToasted = true;
+      toastError(Vault.trouble === 'offline' ? 'You\u2019re offline. Notes are kept in this browser and will sync when you\u2019re back.' : 'Notes not synced yet: ' + e.message + '. They are safe in this browser; retrying.');
+    }
     scheduleNotesPush(30000);
   } finally {
     Vault.pushing = false;
@@ -5170,38 +5195,55 @@ function normalizeNotes(obj) {
   return obj;
 }
 function newNoteId() { return 'n' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+/* One load per paper: concurrent callers (reader, paper page, an action mid-load) share the same promise
+   and so the same notes object; two copies would silently drop each other's edits. */
 async function paperNotes(id) {
   if (!Vault.key) return null;
   if (Vault.cache.has(id)) return Vault.cache.get(id);
+  Vault.inflight = Vault.inflight || new Map();
+  if (!Vault.inflight.has(id)) Vault.inflight.set(id, loadPaperNotesOnce(id).finally(() => Vault.inflight.delete(id)));
+  return Vault.inflight.get(id);
+}
+async function loadPaperNotesOnce(id) {
   // stale-while-revalidate: show the copy in this browser at once, then check GitHub for a newer one
   const local = await nfGet(id + '.json');
   if (local) {
     let obj = emptyPaperNotes(id);
     try { obj = normalizeNotes(await vaultDecrypt(local.env)); } catch (e) { console.error('could not decrypt notes for', id, e); }
-    Vault.cache.set(id, obj);
+    if (!Vault.key) return null;   // locked while loading
+    Vault.cache.set(id, obj); noteSeen(id + '.json', local.env);
     if (!local.dirty) revalidatePaperNotes(id, local.env.updated);
     return obj;
   }
-  const rec = await nfLoad(id + '.json').catch(() => null);
+  let rec = null;
+  Vault.loadFailed = Vault.loadFailed || new Set();
+  try { rec = await nfLoad(id + '.json'); Vault.loadFailed.delete(id); }
+  catch (e) { Vault.loadFailed.add(id); }   // offline: start from nothing here; the next sync merges with GitHub's copy
   let obj = emptyPaperNotes(id);
   if (rec) { try { obj = await vaultDecrypt(rec.env); } catch (e) { console.error('could not decrypt notes for', id, e); } }
   normalizeNotes(obj);
-  Vault.cache.set(id, obj);
+  if (!Vault.key) return null;   // locked while loading
+  Vault.cache.set(id, obj); noteSeen(id + '.json', rec ? rec.env : null);
   return obj;
 }
+/* Every local change bumps the paper's version; the background check applies GitHub's copy only if the
+   version it started with is still current, so an edit made while it was fetching is never overwritten. */
+function bumpNotesGen(id) { Vault.gen = Vault.gen || {}; Vault.gen[id] = (Vault.gen[id] || 0) + 1; }
+function notesGen(id) { return (Vault.gen && Vault.gen[id]) || 0; }
 async function revalidatePaperNotes(id, seen) {
-  const rec = await nfLoad(id + '.json').catch(() => null);   // fetches GitHub; keeps our copy if it has unpushed edits
+  const g0 = notesGen(id);
+  let rec = null;
+  try { rec = await nfLoad(id + '.json'); } catch (e) { return; }   // fetches GitHub; keeps our copy if it has unpushed edits
   if (!rec || rec.dirty || rec.env.updated === seen || !Vault.key) return;
   let obj;
   try { obj = normalizeNotes(await vaultDecrypt(rec.env)); } catch (e) { return; }
+  if (notesGen(id) !== g0) return;                              // edited here meanwhile: the next sync merges instead
   const cur = Vault.cache.get(id);
   const local = await nfGet(id + '.json');
-  if (local && local.dirty) return;                             // edited here meanwhile: the push will merge instead
-  Vault.cache.set(id, obj);
-  if (_rn && _rn === cur) {
-    if (_rnEditing || _acId || _acPending) { Vault.cache.set(id, cur); return; }   // never swap under someone typing
-    _rn = obj; updateReaderNotesCount(); redrawAnnoLayers(); renderReaderPanel();
-  }
+  if ((local && local.dirty) || notesGen(id) !== g0) return;
+  if (_rn && _rn === cur && (_rnEditing || _acId || _acPending)) return;   // never swap under someone typing; the next save merges instead
+  Vault.cache.set(id, obj); noteSeen(id + '.json', rec.env);
+  if (_rn && _rn === cur) { _rn = obj; updateReaderNotesCount(); redrawAnnoLayers(); renderReaderPanel(); }
   if (_paperViewActive && location.hash === '#paper/' + encodeURIComponent(id)) { const p = allPapers.find(x => x.id === id); if (p) renderPaperDetail(p); }
 }
 function indexEntryFor(obj) {
@@ -5269,17 +5311,39 @@ function dropUncitedRefs(obj) {
   });
 }
 async function savePaperNotes(obj) {
+  bumpNotesGen(obj.id);
   dropUncitedRefs(obj);
   Vault.cache.set(obj.id, obj);
   indexEntryFor(obj);
   await nfSave(obj.id + '.json', obj);
   await nfSave('_index.json', Vault.index);
 }
+/* Sync trouble (no network, GitHub unreachable): shown in the panel, told once, retried quietly */
+function setSyncTrouble(e) {
+  const was = Vault.trouble;
+  Vault.trouble = e ? ((!navigator.onLine || e instanceof TypeError) ? 'offline' : 'error') : null;
+  if (!e) Vault.troubleToasted = false;
+  if (!e && _rnState === 'offline') setRnState('ready');
+  else if (was !== Vault.trouble) updateNotesSync();
+}
+/* Back online: send what was kept here, and fetch notes that couldn't load (unless edited here; the push merges those) */
+window.addEventListener('online', () => {
+  if (!Vault.key) return;
+  scheduleNotesPush(1000);
+  const pid = _rn && _rn.id;
+  if (pid && Vault.loadFailed && Vault.loadFailed.has(pid) && !notesGen(pid) && !_rnEditing && !_acId && !_acPending) {
+    Vault.cache.delete(pid); Vault.loadFailed.delete(pid);
+    setRnState('loading'); loadReaderNotes();
+  } else if (pid) nfGet(pid + '.json').then(l => revalidatePaperNotes(pid, l && l.env.updated));   // anything newer from GitHub; clears "Offline"
+  else nfLoad('_index.json').catch(() => {});
+});
 let _notesSyncText = '';
 function updateNotesSync() {
   const el = document.getElementById('rpSync');
   let t;
-  if (!hasPAT()) t = 'Encrypted · only in this browser until you connect GitHub';
+  if (Vault.trouble === 'offline') t = 'Offline \u00b7 kept in this browser; syncs when you\u2019re back';
+  else if (Vault.trouble === 'error') t = 'Not synced yet \u00b7 kept in this browser; retrying';
+  else if (!hasPAT()) t = 'Encrypted · only in this browser until you connect GitHub';
   else if (Vault.pushing || Vault.pushTimer) t = 'Encrypted · saving…';
   else t = 'Encrypted · saved' + (Vault.lastSaved ? ' ' + agoText(Vault.lastSaved) : '');
   _notesSyncText = t;
@@ -5292,26 +5356,42 @@ let _rnFilter = { colors: new Set(), comments: false, notes: false, q: '' };
 let _rnEditing = null;   // null, 'new', or the id of the note being edited
 function annoById(id) { return _rn && ((_rn.annos || []).find(a => a.id === id) || _rnPendingRefs.find(a => a.id === id) || (_acPending && _acPending.id === id ? _acPending : null)); }
 function newAnnoId() { return 'a' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
-let _rnState = 'ready', _rnLoadP = null;   // 'loading' while the notes for the open paper are being unlocked/decrypted
+/* The open paper's notes are in one of three states, changed only by setRnState():
+     'loading'  not resolved yet: nothing may change them (no highlight, comment, cite or note edit)
+     'ready'    loaded: edit freely
+     'offline'  loading failed (e.g. no network): edit freely; changes stay in this browser and sync, merged, later */
+let _rnState = 'ready', _rnLoadP = null;
+function setRnState(state) {
+  _rnState = state;
+  renderReaderPanel();
+  updateNotesSync();
+  if (document.getElementById('selBar').classList.contains('open')) showSelBar();   // enable/disable its buttons in place
+}
+function notesBusy() {
+  if (_rnState !== 'loading') return false;
+  toast('Your notes are still loading');
+  return true;
+}
 async function loadReaderNotes() {
   const pid = _reader.paper && _reader.paper.id;
   const obj = pid && Vault.key ? await paperNotes(pid) : null;
   if (!_reader.paper || _reader.paper.id !== pid) return;   // moved on to another paper meanwhile
-  _rn = obj; _rnState = 'ready';
+  _rn = obj;
   updateReaderNotesCount();
-  renderReaderPanel();
   redrawAnnoLayers();
+  setRnState(Vault.loadFailed && Vault.loadFailed.has(pid) ? 'offline' : 'ready');
 }
-/* Starts as soon as the reader opens, alongside the PDF (they don't depend on each other) */
+/* Notes are secondary to the paper, so they load once the PDF is on screen (or right away if there is no PDF) */
 function startReaderNotes() {
-  _rnState = vaultSupported() ? 'loading' : 'ready';
-  _rn = null; updateReaderNotesCount(); renderReaderPanel();
+  _rn = null; updateReaderNotesCount();
+  setRnState(vaultSupported() ? 'loading' : 'ready');
   _rnLoadP = (async () => {
     if (await vaultReady(true)) await loadReaderNotes();
-    else { _rnState = 'ready'; renderReaderPanel(); }
-  })().catch(e => { console.error(e); _rnState = 'ready'; renderReaderPanel(); });
+    else setRnState('ready');
+  })().catch(e => { console.error(e); setRnState('ready'); });
   return _rnLoadP;
 }
+function ensureReaderNotes() { return _rnLoadP || startReaderNotes(); }
 /* warn when the PDF isn't the one these highlights were made on */
 function checkPdfFingerprint() {
   if (_rn && _rn.pdf && _rn.pdf.fp && _reader.doc && _reader.doc.fingerprints && _rn.pdf.fp !== _reader.doc.fingerprints[0] && (_rn.annos || []).length)
@@ -5390,11 +5470,13 @@ function showSelBar() {
   if (info.error) { bar.innerHTML = `<span class="sel-act" style="cursor:default">${esc(info.error)}</span>`; }
   else {
     _selPending = info;
-    const citeTip = _rnEditing ? 'Cite in the note you are writing' : 'Cite in a new note';
-    bar.innerHTML = HL_COLORS.map(c => `<button class="sel-dot" style="--hc:var(--hl-${c})" title="Highlight: ${escAttr(hlLabel(c))}" aria-label="Highlight: ${escAttr(hlLabel(c))}" onmousedown="event.preventDefault()" onclick="createAnno('hl','${c}')"></button>`).join('')
+    const busy = _rnState === 'loading', wait = 'Loading your notes\u2026';
+    const dis = busy ? ` aria-disabled="true"` : '';   // not \`disabled\`: that drops mousedown and clears the selection
+    const citeTip = busy ? wait : _rnEditing ? 'Cite in the note you are writing' : 'Cite in a new note';
+    bar.innerHTML = HL_COLORS.map(c => `<button class="sel-dot" style="--hc:var(--hl-${c})"${dis} title="${busy ? wait : 'Highlight: ' + escAttr(hlLabel(c))}" aria-label="Highlight: ${escAttr(hlLabel(c))}" onmousedown="event.preventDefault()" onclick="createAnno('hl','${c}')"></button>`).join('')
       + `<span class="sel-sep"></span>`
-      + `<button class="sel-icon sel-cite ${_rnEditing ? 'primary' : ''}" onmousedown="event.preventDefault()" onclick="citeSelection()" title="${citeTip}" aria-label="${citeTip}">${ICON_QUOTE}</button>`
-      + `<button class="sel-icon" onmousedown="event.preventDefault()" onclick="createAnno('note')" title="Comment" aria-label="Comment">${ICON_COMMENT}</button>`
+      + `<button class="sel-icon sel-cite ${_rnEditing && !busy ? 'primary' : ''}"${dis} onmousedown="event.preventDefault()" onclick="citeSelection()" title="${citeTip}" aria-label="${citeTip}">${ICON_QUOTE}</button>`
+      + `<button class="sel-icon"${dis} onmousedown="event.preventDefault()" onclick="createAnno('note')" title="${busy ? wait : 'Comment'}" aria-label="Comment">${ICON_COMMENT}</button>`
       + `<button class="sel-icon" onmousedown="event.preventDefault()" onclick="copySelQuote()" title="Copy quote" aria-label="Copy quote">${ICON_COPY}</button>`;
   }
   const r = info.end || { right: 200, bottom: 200 };
@@ -5412,11 +5494,12 @@ function copySelQuote() {
 }
 /* Cite a selection: it gets a light anchor (dotted underline) so the citation has somewhere to jump */
 async function citeSelection() {
+  if (notesBusy()) return;
   const info = _selPending || selInfo();
   if (!info || info.error) return;
   hideSelBar();
   if (!await vaultReady()) return;
-  if (!_rn) _rn = await paperNotes(_reader.paper.id);
+  if (!_rn) { setRnState('loading'); await loadReaderNotes(); if (!_rn) return; }
   await pinPdfVersion();
   const now = new Date().toISOString();
   const a = { id: newAnnoId(), kind: 'ref', color: null, page: info.page, rects: info.rects, quote: info.quote, prefix: info.prefix, suffix: info.suffix, note: '', created: now, updated: now };
@@ -5436,11 +5519,12 @@ async function citeSelection() {
   draftChanged();
 }
 async function createAnno(kind, color) {
+  if (notesBusy()) return;
   const info = _selPending || selInfo();
   if (!info || info.error) return;
   hideSelBar();
   if (!await vaultReady()) return;
-  if (!_rn) _rn = await paperNotes(_reader.paper.id);
+  if (!_rn) { setRnState('loading'); await loadReaderNotes(); if (!_rn) return; }
   await pinPdfVersion();
   const now = new Date().toISOString();
   const a = { id: newAnnoId(), kind, color: kind === 'hl' ? color : null, page: info.page, rects: info.rects, quote: info.quote, prefix: info.prefix, suffix: info.suffix, note: '', created: now, updated: now };
@@ -5567,6 +5651,7 @@ async function acSaveNote() {
   renderReaderPanel();
 }
 async function setAnnoColor(id, color) {
+  if (notesBusy()) return;
   const a = annoById(id);
   if (!a) return;
   if (color) { a.kind = 'hl'; a.color = color; } else { a.kind = 'note'; a.color = null; }
@@ -5576,6 +5661,7 @@ async function setAnnoColor(id, color) {
   updateReaderNotesCount(); redrawAnnoLayers(); renderReaderPanel(); openAnnoCard(id);
 }
 async function deleteAnno(id, message) {
+  if (notesBusy()) return;
   const a = annoById(id);
   if (!a) return;
   if (a === _acPending) { _acPending = null; if (_acId === id) { _acId = null; document.getElementById('annoCard').classList.remove('open'); } redrawAnnoLayers(); return; }
@@ -5744,7 +5830,7 @@ function renderRnList(shown, total, anyFilter) {
   list.querySelectorAll('[data-md-anno]').forEach(el => { const a = annoById(el.dataset.mdAnno); if (a) renderNotesMarkdown(el, a.note, _rn); });
 }
 function toggleRnColor(c) { _rnFilter.colors.has(c) ? _rnFilter.colors.delete(c) : _rnFilter.colors.add(c); renderReaderPanel(); }
-async function unlockFromPanel() { if (await vaultReady()) { _rnState = 'loading'; renderReaderPanel(); await loadReaderNotes(); } }
+async function unlockFromPanel() { if (await vaultReady()) { setRnState('loading'); await loadReaderNotes(); } }
 async function renameHlColor(c) {
   const name = await showPrompt('Name this colour', `What does ${hlLabel(c).toLowerCase()} mean in your highlights?`, hlLabel(c));
   if (!name || !Vault.index) return;
@@ -5756,14 +5842,16 @@ async function renameHlColor(c) {
 /* Notes: '+ Add note' opens an editor card; Save (or Cmd/Ctrl+Enter) keeps it, Cancel (or Esc) drops it */
 let _rnDraft = '', _rnFresh = null, _rnCaret = null;
 async function startNewNote(prefill) {
+  if (notesBusy()) return;
   if (!await vaultReady()) return;
-  if (!_rn) _rn = await paperNotes(_reader.paper.id);
+  if (!_rn) { setRnState('loading'); await loadReaderNotes(); if (!_rn) return; }
   if (_rnEditing) await finishNotesEdit();
   _rnEditing = 'new'; _rnDraft = prefill || ''; _rnCaret = null;
   if (!document.getElementById('reader').classList.contains('panel-open')) toggleReaderPanel(true);
   else renderReaderPanel();
 }
 async function editNote(id) {
+  if (notesBusy()) return;
   const e = _rn && (_rn.entries || []).find(x => x.id === id);
   if (!e) return;
   if (_rnEditing && _rnEditing !== id) await finishNotesEdit();
@@ -5772,6 +5860,7 @@ async function editNote(id) {
 }
 function cancelNoteEdit() { endDraft('discard'); redrawAnnoLayers(); renderReaderPanel(); }
 async function editAnnoComment(id) {
+  if (notesBusy()) return;
   const a = annoById(id);
   if (!a) return;
   closeAnnoCard();
@@ -5806,6 +5895,7 @@ function noteEditorKey(e) {
   else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cancelNoteEdit(); }
 }
 async function deleteGeneralNote(id) {
+  if (notesBusy()) return;
   const e = _rn && (_rn.entries || []).find(x => x.id === id);
   if (!e) return;
   const refs = (_rn.annos || []).filter(a => a.kind === 'ref' && e.text.includes('cite:' + a.id));   // Undo brings these back too
@@ -5827,6 +5917,7 @@ async function deleteGeneralNote(id) {
 /* --- citing highlights in notes: [[cite:ID p.N "quote"]] --- */
 function citeToken(a) { const q = a.quote.length > 60 ? a.quote.slice(0, 57).trim() + '…' : a.quote; return `[[cite:${a.id} p.${a.page} "${q.replace(/"/g, "'").replace(/\]/g, ')')}"]]`; }
 async function citeAnno(id) {
+  if (notesBusy()) return;
   const a = annoById(id);
   if (!a) return;
   closeAnnoCard();
