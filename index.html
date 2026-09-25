@@ -4710,7 +4710,46 @@ async function drawReaderPage(div) {
   div.style.setProperty('--scale-factor', _reader.scale);
   div.appendChild(tl);
   renderAnnoLayer(div);
-  try { await new lib.TextLayer({ textContentSource: page.streamTextContent(), container: tl, viewport: vp }).render(); } catch (e) {}
+  try {
+    const tc = await page.getTextContent();
+    await new lib.TextLayer({ textContentSource: tc, container: tl, viewport: vp }).render();
+    if (token === _reader.token) alignTextLayer(tl, tc, page);
+  } catch (e) {}
+}
+/* PDF.js lays each line of invisible, selectable text in a stand-in font (often sans-serif) and stretches it to
+   the line's width, so inside a line the characters drift from the letters on the page by up to a character,
+   and a selection picks up a letter too many or too few. Give each line the paper's own embedded font, and put
+   a justified line's extra width into its spaces (where the PDF put it) instead of stretching every letter. */
+function alignTextLayer(tl, tc, page) {
+  const items = tc.items.filter(it => it.str && it.str.length);
+  const spans = [...tl.querySelectorAll('span')].filter(sp => !sp.classList.contains('markedContent'));
+  if (spans.length !== items.length || spans.some((sp, i) => sp.textContent !== items[i].str)) return;   // can't pair them up: leave PDF.js's layout
+  const simple = sp => /^(scaleX\([^)]*\))?$/.test(sp.style.transform.trim());   // rotated text keeps PDF.js's layout
+  const loaded = name => { try { const f = page.commonObjs.get(name); return (f && f.loadedName) || name; } catch (e) { return name; } };
+  const todo = spans.map((sp, i) => ({ sp, it: items[i] })).filter(o => simple(o.sp));
+  const target = todo.map(o => o.sp.getBoundingClientRect().width);   // reads, then writes, then reads: two layouts per page
+  todo.forEach(o => { o.sp.style.fontFamily = `"${loaded(o.it.fontName)}", ${(tc.styles[o.it.fontName] || {}).fontFamily || 'serif'}`; o.sp.style.transform = 'none'; });
+  const natural = todo.map(o => o.sp.getBoundingClientRect().width);
+  todo.forEach((o, i) => {
+    const spaces = (o.sp.textContent.match(/ /g) || []).length, extra = target[i] - natural[i];
+    if (!natural[i]) return;
+    if (spaces && Math.abs(extra) / natural[i] < 0.25) o.sp.style.wordSpacing = (extra / spaces) + 'px';
+    else o.sp.style.transform = `scaleX(${target[i] / natural[i]})`;
+  });
+}
+/* A selection edge that lands a character or two inside a word (an easy slip) moves to the word's edge */
+function snapToWords(range) {
+  const r = range.cloneRange(), isW = c => /[\p{L}\p{N}]/u.test(c || '');
+  const bounds = (t, o) => { let a = o, b = o; while (a > 0 && isW(t[a - 1])) a--; while (b < t.length && isW(t[b])) b++; return [a, b]; };
+  if (r.startContainer.nodeType === 3) {
+    const n = r.startContainer, o = r.startOffset, [a, b] = bounds(n.data, o);
+    if (o > a && o < b) { if (o - a <= 2) r.setStart(n, a); else if (b - o <= 2) r.setStart(n, b); }
+  }
+  if (r.endContainer.nodeType === 3) {
+    const n = r.endContainer, o = r.endOffset, [a, b] = bounds(n.data, o);
+    if (o > a && o < b) { if (b - o <= 2) r.setEnd(n, b); else if (o - a <= 2) r.setEnd(n, a); }
+  }
+  return r.collapsed || !r.toString().trim() ? range : r;
 }
 function releaseReaderPage(div) {
   if (!div.dataset.drawn && !div.querySelector('canvas')) return;
@@ -5487,7 +5526,11 @@ function redrawAnnoLayers() { _rnDrawnSig = refSig(); document.querySelectorAll(
 function selInfo() {
   const sel = window.getSelection();
   if (!sel || !sel.rangeCount || sel.isCollapsed) return null;
-  const range = sel.getRangeAt(0);
+  const live = sel.getRangeAt(0), range = snapToWords(live);
+  // show the snapped selection, so what you see is what gets highlighted (only when it moved: no selectionchange loop)
+  if (range !== live && (range.startContainer !== live.startContainer || range.startOffset !== live.startOffset || range.endContainer !== live.endContainer || range.endOffset !== live.endOffset)) {
+    sel.removeAllRanges(); sel.addRange(range);
+  }
   const el = n => (n.nodeType === 1 ? n : n.parentElement);
   const a = el(range.startContainer) && el(range.startContainer).closest('.reader-page');
   const b = el(range.endContainer) && el(range.endContainer).closest('.reader-page');
