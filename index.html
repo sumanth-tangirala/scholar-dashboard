@@ -1236,7 +1236,7 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
 .save-dd-empty { padding: 10px 12px; font-size: 12px; color: var(--text-muted); text-align: center; }
 
 /* [7] TOAST — frosted glass + accent border */
-.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: rgba(0,0,0,0.88); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); color: var(--text); padding: 10px 20px; border-radius: 8px; font-size: 13px; border: 1px solid rgba(255,255,255,0.2); border-left: 3px solid var(--accent); box-shadow: 0 8px 32px rgba(0,0,0,0.55); transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1); z-index: 300; pointer-events: none; display: flex; align-items: center; gap: 12px; }
+.toast { position: fixed; bottom: 24px; left: 50%; width: max-content; max-width: calc(100vw - 32px); box-sizing: border-box; transform: translateX(-50%) translateY(80px); background: rgba(0,0,0,0.88); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); color: var(--text); padding: 10px 20px; border-radius: 8px; font-size: 13px; border: 1px solid rgba(255,255,255,0.2); border-left: 3px solid var(--accent); box-shadow: 0 8px 32px rgba(0,0,0,0.55); transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1); z-index: 450; pointer-events: none; display: flex; align-items: center; gap: 12px; }
 .toast.show { transform: translateX(-50%) translateY(0); pointer-events: auto; }
 .toast.error { border-left-color: #e57373; }
 .toast-msg { flex: 1; }
@@ -6070,7 +6070,8 @@ function editorCaretEnd(ed) {
 function editorInsertCite(tok, range) {
   const ed = document.getElementById('rpNotes');
   if (!ed) return false;
-  ed.focus();
+  const shown = document.getElementById('reader').classList.contains('panel-open');
+  if (shown) ed.focus();   // hidden (panel closed, e.g. on a phone): add it without focusing, so no keyboard pops up
   let r = range || (_rnRange && ed.contains(_rnRange.startContainer) ? outsidePill(_rnRange.cloneRange()) : null);
   if (!r) { editorCaretEnd(ed); r = _rnRange.cloneRange(); }
   if (range) r.deleteContents();   // replacing a typed [[query
@@ -6085,7 +6086,8 @@ function editorInsertCite(tok, range) {
   r.insertNode(pill);
   if (prev && !/\s$/.test(prev)) pill.before(document.createTextNode(' '));
   const c = document.createRange(); c.setStartAfter(after || pill); c.collapse(true);
-  const sel = getSelection(); sel.removeAllRanges(); sel.addRange(c);
+  if (shown) { const sel = getSelection(); sel.removeAllRanges(); sel.addRange(c); }
+  else toast('Cited in your note', () => toggleReaderPanel(true), { actionLabel: 'Show' });
   _rnRange = c.cloneRange();
   editorSync(ed);
   return true;
