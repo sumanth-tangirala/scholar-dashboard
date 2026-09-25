@@ -3694,7 +3694,7 @@ function toggleKeysHelp(force) {
 document.addEventListener('keydown', e => {
   if ((e.key !== 'Enter' && e.key !== ' ') || e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
   const t = e.target;
-  if (!t || !t.hasAttribute || !t.hasAttribute('onclick') || t.tabIndex < 0 || /^(BUTTON|A|INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
+  if (!t || !t.hasAttribute || !t.hasAttribute('onclick') || t.tabIndex < 0 || t.isContentEditable || /^(BUTTON|A|INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
   e.preventDefault();
   t.click();
 });
@@ -4744,7 +4744,7 @@ document.addEventListener('keydown', e => {
   const t = e.target;
   if (document.getElementById('vaultOverlay').classList.contains('open')) { if (e.key === 'Escape') closeVaultModal(false); return; }
   if (pdfModalOpen()) { if (e.key === 'Escape') { e.preventDefault(); closePdfModal(); } return; }
-  if (t && /^(INPUT|TEXTAREA)$/.test(t.tagName)) { if (e.key === 'Escape' && !_citeCtx) { t.blur(); if (_acId) closeAnnoCard(); } return; }
+  if (t && (/^(INPUT|TEXTAREA)$/.test(t.tagName) || t.isContentEditable)) { if (e.key === 'Escape' && !_citeCtx) { t.blur(); if (_acId) closeAnnoCard(); } return; }   // typing: no reader shortcuts
   if (e.key === 'Escape') {
     e.preventDefault();
     if (_acId) closeAnnoCard();
@@ -5433,7 +5433,7 @@ function renderAnnoLayer(pageDiv) {
   marks.innerHTML = list.filter(a => a.kind === 'note' || (a.note || '').trim()).sort((x, y) => x.rects[0][1] - y.rects[0][1]).map(a => {
     const y = a.rects[0][1] + a.rects[0][3] / 2;
     const slot = rows.filter(v => Math.abs(v - y) < 0.012).length; rows.push(y);
-    return `<button class="anno-mark ${a.kind === 'note' ? 'note' : ''}" data-anno="${a.id}" style="--hc:var(--hl-${a.color || 'orange'});top:${y * 100}%;right:${6 + slot * 20}px" title="${escAttr((a.note || 'Comment').slice(0, 120))}" aria-label="Open comment" onclick="event.stopPropagation();openAnnoCard('${a.id}')" onmouseenter="markHover('${a.id}',true)" onmouseleave="markHover('${a.id}',false)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8l-4 3v-3H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg></button>`;
+    return `<button class="anno-mark ${a.kind === 'note' ? 'note' : ''}" data-anno="${a.id}" style="--hc:var(--hl-${a.color || 'orange'});top:${y * 100}%;right:${6 + slot * 20}px" title="${escAttr((a.note || 'Comment').slice(0, 120))}" aria-label="Open comment" onclick="event.stopPropagation();openAnnoCard('${a.id}', true)" onmouseenter="markHover('${a.id}',true)" onmouseleave="markHover('${a.id}',false)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8l-4 3v-3H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg></button>`;
   }).join('');
 }
 function markHover(id, on) { document.querySelectorAll(`.anno-rect[data-anno="${id}"]`).forEach(r => r.classList.toggle('hover', on)); }
@@ -5586,12 +5586,12 @@ function openAnnoCard(id, focusNote) {
       <button class="sel-icon sel-cite" onclick="citeAnno('${id}')" title="Cite in a note" aria-label="Cite in a note">${ICON_QUOTE}</button>
       <button class="sel-icon" onclick="copyAnnoQuote('${id}')" title="Copy quote" aria-label="Copy quote">${ICON_COPY}</button>
       <button class="sel-icon danger" onclick="deleteAnno('${id}')" title="Delete" aria-label="Delete">${ICON_TRASH}</button></div>
-    <textarea id="acNote" rows="1" placeholder="Add a comment\u2026" title="Markdown and $math$ work" oninput="acGrow(this); acNoteInput()">${esc(a.note || '')}</textarea>`;
+    <textarea id="acNote" rows="1" placeholder="Add a comment\u2026" title="Markdown and $math$ work \u00b7 ${MOD_KEY}\u21b5 or Esc to close" oninput="acGrow(this); acNoteInput()" onkeydown="if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) { event.preventDefault(); closeAnnoCard(); }">${esc(a.note || '')}</textarea>`;
   card.classList.add('open');
   acGrow(document.getElementById('acNote'));
   positionAnnoCard(a);
   document.querySelectorAll(`.anno-rect[data-anno="${id}"]`).forEach(r => r.classList.add('hover'));
-  if (focusNote) setTimeout(() => document.getElementById('acNote').focus(), 0);
+  if (focusNote) setTimeout(() => { const t = document.getElementById('acNote'); if (!t) return; t.focus(); t.setSelectionRange(t.value.length, t.value.length); }, 0);
 }
 function positionAnnoCard(a) {
   const card = document.getElementById('annoCard');
@@ -5700,6 +5700,7 @@ function jumpToAnno(id) {
   let downAt = null;
   body.addEventListener('pointerdown', e => { downAt = [e.clientX, e.clientY]; });
   body.addEventListener('pointerup', e => {
+    if (e.target.closest && e.target.closest('.anno-mark')) return;   // a margin marker opens its card by its own click
     setTimeout(() => {
       const sel = window.getSelection();
       if (sel && !sel.isCollapsed && body.contains(sel.anchorNode)) { showSelBar(); return; }
@@ -5708,7 +5709,7 @@ function jumpToAnno(id) {
       const pg = e.target.closest && e.target.closest('.reader-page');
       if (!pg || moved) return;
       const a = annoAt(pg, e.clientX, e.clientY);
-      if (a) openAnnoCard(a.id); else closeAnnoCard();
+      if (a) openAnnoCard(a.id, e.pointerType === 'mouse'); else closeAnnoCard();   // mouse: ready to type; touch: no keyboard popping up
     }, 10);
   });
   body.addEventListener('scroll', () => { hideSelBar(); if (_acId) closeAnnoCard(); }, { passive: true });
