@@ -1303,24 +1303,6 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
 .group-add-dd .group-opt:hover { background: var(--hover-bg); color: var(--text-primary); }
 .group-add-dd .group-opt.disabled { opacity: 0.35; pointer-events: none; }
 .badge-interest { background: #1a1a2e; color: #8b8bef; font-size: 11px; border: 1px solid #2a2a4a; }
-.notes-modal { position: fixed; bottom: 24px; right: 24px; width: 360px; height: 320px; min-width: 240px; min-height: 180px; background: var(--bg-surface); border: 1px solid rgba(255,255,255,0.18); border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,0.55); z-index: 9998; display: none; flex-direction: column; overflow: hidden; }
-.notes-resize-handle { position: absolute; bottom: 0; left: 0; width: 18px; height: 18px; cursor: nesw-resize; z-index: 2; }
-.notes-resize-handle::after { content: ''; position: absolute; bottom: 4px; left: 4px; width: 8px; height: 8px; border-left: 2px solid var(--text-muted); border-bottom: 2px solid var(--text-muted); opacity: 0.4; }
-.notes-modal.open { display: flex; }
-.notes-modal-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--border-subtle); font-size: 13px; font-weight: 600; color: var(--text-secondary); user-select: none; cursor: move; gap: 12px; }
-.notes-head { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
-.notes-head strong { font-size: 13.5px; font-weight: 600; color: var(--text); flex-shrink: 0; }
-.notes-paper { font-weight: 400; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.notes-modal-close { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 18px; padding: 0 4px; transition: color 0.15s; }
-.notes-modal-close:hover { color: var(--text); }
-.notes-modal-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 14px 10px 22px; border-top: 1px solid var(--border-subtle); min-height: 40px; }
-.notes-status { font-size: 12px; color: var(--text-muted); }
-.notes-delete { background: none; border: none; font: inherit; font-size: 12.5px; color: var(--text-muted); cursor: pointer; padding: 4px 6px; border-radius: 6px; transition: color 0.15s, background 0.15s; }
-.notes-delete:hover { color: #ff6b6b; background: rgba(255,107,107,0.1); }
-.notes-delete[hidden] { display: none; }
-.notes-modal .nm-edit { flex: 1; width: 100%; box-sizing: border-box; overflow: auto; position: relative; white-space: pre-wrap; overflow-wrap: anywhere; background: transparent; border: none; color: var(--text-secondary); font-size: 14px; line-height: 1.6; padding: 12px 14px; font-family: inherit; min-height: 160px; cursor: text; }
-.notes-modal .nm-edit:focus { outline: none; }
-.notes-modal .nm-edit.is-empty::before { content: attr(data-ph); position: absolute; left: 14px; top: 12px; color: var(--text-muted); font-style: italic; pointer-events: none; }
 .btn-icon.has-notes { color: var(--accent); }
 .btn-triage-info { color: var(--text-muted); }
 .triage-anchor { display: inline-flex; }
@@ -1618,19 +1600,6 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
   </div>
 </div>
 
-<div class="notes-modal" id="notesModal">
-  <div class="notes-modal-header" id="notesModalDrag">
-    <span class="notes-head"><strong id="notesModalTitle">New note</strong><span class="notes-paper" id="notesPaper"></span></span>
-    <button class="notes-modal-close" onclick="closeNotesModal()" title="Close" aria-label="Close notes">&times;</button>
-  </div>
-  <div id="notesModalArea" class="nm-edit is-empty" contenteditable="true" role="textbox" aria-multiline="true" spellcheck="true" data-ph="Add your notes..." oninput="nmInput(this)" onkeydown="nmKey(event)" onpaste="nmPaste(event)" onclick="nmClick(event)" ondrop="event.preventDefault()"></div>
-  <div class="notes-modal-foot">
-    <span class="notes-status" id="notesStatus"></span>
-    <button class="notes-delete" id="notesDelete" onclick="deleteNote()">Delete note</button>
-  </div>
-  <div class="notes-resize-handle" id="notesResizeHandle"></div>
-</div>
-
 <div id="toast" class="toast"></div>
 
 <!-- SAVE BAR -->
@@ -1823,8 +1792,8 @@ function restorePapersFromBackup() {
 window.addEventListener('pagehide', writeBackup);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') writeBackup(); });
 window.addEventListener('beforeunload', e => {
-  // a note being written (or the notes box's last keystrokes) isn't saved yet: ask before leaving
-  const noteUnsaved = typeof draftUnsaved === 'function' && (draftUnsaved() || !!_notesSaveTimer);
+  // a note being written isn't saved yet: ask before leaving
+  const noteUnsaved = typeof draftUnsaved === 'function' && draftUnsaved();
   if (!anyDirty() && !noteUnsaved) return;
   if (anyDirty()) writeBackup();
   e.preventDefault();
@@ -3656,7 +3625,7 @@ document.addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   const t = e.target;
   if (t && (/^(INPUT|TEXTAREA|SELECT|BUTTON|A)$/.test(t.tagName) || t.isContentEditable)) return;
-  if (document.querySelector('.auth-overlay.open, .notes-modal.open, .reader.open')) return;
+  if (document.querySelector('.auth-overlay.open, .reader.open')) return;
   if (_paperViewActive) {
     if (e.key === 'j' || e.key === 'k') {
       const b = document.querySelector(e.key === 'j' ? '.pd-nav-next' : '.pd-nav-prev');
@@ -4572,10 +4541,21 @@ const localPdfDel = id => pdfStore('readwrite', st => st.delete(id));
 
 let _reader = { paper: null, doc: null, zoom: 'fit', scale: 1, obs: null, under: null, token: 0, local: false };
 function readerDark() { try { return localStorage.getItem(READER_DARK_KEY) === 'true'; } catch (e) { return false; } }
-function openReader(key) {
+/* notes: open with the notes panel ('panel'), start a new note ('new') or edit one (its id).
+   The reader is the one place notes are written; the paper page's note buttons come here. */
+function openReader(key, notes) {
   if (document.body.classList.contains('tok-mode')) _tokScrollTop = document.getElementById('tokFeed').scrollTop;
   _reader.under = location.hash.slice(1);   // Back returns to this view, which stays rendered underneath
-  location.hash = '#read/' + encodeURIComponent(key);
+  _reader.pendingNotes = notes ? { key, action: notes } : null;
+  location.hash = '#read/' + encodeURIComponent(key) + (notes ? '/notes' : '');
+}
+/* Runs once the paper's notes are ready (or known to be locked: starting a note then asks for the password) */
+function runPendingNotes() {
+  const p = _reader.pendingNotes;
+  if (!p || !_reader.paper || (paperKey(_reader.paper) !== p.key && _reader.paper.id !== p.key)) return;
+  _reader.pendingNotes = null;
+  if (p.action === 'new') startNewNote('');
+  else if (p.action !== 'panel') editNote(p.action);
 }
 function closeReader() {
   if (history.length > 1 && _reader.under !== null) history.go(_reader.notesStep && /\/notes$/.test(location.hash) ? -2 : -1);   // over the notes step too
@@ -4611,7 +4591,7 @@ async function showReader(id) {
   else _rnLoadP = Promise.resolve();   // same paper: notes already here
   const local = await localPdfGet(p.id);
   const src = pdfSourceOf(p);
-  if (!local && !src) { showPdfPicker(p, 'none'); ensureReaderNotes(); return; }
+  if (!local && !src) { showPdfPicker(p, 'none'); ensureReaderNotes().then(runPendingNotes); return; }
   await loadIntoReader(p, local ? { data: await local.arrayBuffer() } : { url: src }, !!local);
 }
 function readerStatus(html) { document.getElementById('readerBody').innerHTML = `<div class="reader-status">${html}</div>`; }
@@ -4630,13 +4610,14 @@ async function loadIntoReader(p, source, isLocal) {
     document.getElementById('reader').classList.remove('no-doc');
     await layoutReader(true);            // the paper first...
     await ensureReaderNotes();           // ...then the notes
+    runPendingNotes();
     checkPdfFingerprint();
     if (_pendingJump) { const id = _pendingJump; _pendingJump = null; setTimeout(() => jumpToAnno(id), 400); }
   } catch (e) {
     if (token !== _reader.token) return;
     console.warn('PDF load failed', e);
     showPdfPicker(p, 'failed', pdfErrorText(e));
-    ensureReaderNotes();
+    ensureReaderNotes().then(runPendingNotes);
   }
 }
 function pdfErrorText(e) {
@@ -5246,7 +5227,7 @@ async function lockNotes() {
   endDraft('discard');
   Vault.key = null; Vault.index = null; Vault.cache.clear(); _rn = null; _acPending = null;
   await notesDB('keys', 'readwrite', st => st.delete('k')).catch(() => {});
-  hideSelBar(); closeNotesModal();
+  hideSelBar();
   if (_reader.paper) { renderReaderPanel(); redrawAnnoLayers(); updateReaderNotesCount(); }
   if (currentTab === 'library') renderLibrary();
   toast('Notes locked');
@@ -5454,6 +5435,7 @@ async function loadReaderNotes() {
   updateReaderNotesCount();
   redrawAnnoLayers();
   setRnState(Vault.loadFailed && Vault.loadFailed.has(pid) ? 'offline' : 'ready');
+  runPendingNotes();
 }
 /* Notes are secondary to the paper, so they load once the PDF is on screen (or right away if there is no PDF) */
 function startReaderNotes() {
@@ -5461,7 +5443,7 @@ function startReaderNotes() {
   setRnState(vaultSupported() ? 'loading' : 'ready');
   _rnLoadP = (async () => {
     if (await vaultReady(true)) await loadReaderNotes();
-    else setRnState('ready');
+    else { setRnState('ready'); runPendingNotes(); }
   })().catch(e => { console.error(e); setRnState('ready'); });
   return _rnLoadP;
 }
@@ -5989,7 +5971,8 @@ async function editNote(id) {
   if (!e) return;
   if (_rnEditing && _rnEditing !== id) await finishNotesEdit();
   _rnEditing = id; _rnDraft = e.text;
-  renderReaderPanel();
+  if (!document.getElementById('reader').classList.contains('panel-open')) toggleReaderPanel(true);
+  else renderReaderPanel();
 }
 /* What the note being edited said before this edit ('' for a new one) */
 function draftOriginal() {
@@ -6103,22 +6086,6 @@ function editorText(ed) {
   };
   walk(ed);
   return s.replace(/\u00a0/g, ' ');
-}
-/* The floating notes box (outside the reader) is the same pill editor; its .value stays the plain text */
-(function () {
-  const el = document.getElementById('notesModalArea');
-  if (!el) return;
-  Object.defineProperty(el, 'value', {
-    get() { return editorText(el); },
-    set(v) { el.innerHTML = draftToEditorHTML(String(v || ''), el._notesObj); el.classList.toggle('is-empty', !String(v || '').trim()); },
-  });
-})();
-function nmInput(el) { el.classList.toggle('is-empty', !editorText(el).trim() && !el.querySelector('.cite-pill')); debouncedSaveNote(); updateNotesFooter(); }
-function nmKey(e) { if (e.key === 'Enter' && !(e.metaKey || e.ctrlKey)) { e.preventDefault(); document.execCommand('insertLineBreak'); } }
-function nmPaste(e) { e.preventDefault(); const t = (e.clipboardData || window.clipboardData).getData('text/plain'); if (t) document.execCommand('insertText', false, t); }
-function nmClick(e) {
-  const p = e.target.closest('.cite-pill'), el = e.currentTarget, n = el._notesObj;
-  if (p && p.dataset.anno && n && (n.annos || []).some(a => a.id === p.dataset.anno)) { e.preventDefault(); closeNotesModal(); citeClick(p.dataset.anno, n); }
 }
 let _rnRange = null;   // where the caret last was in the editor, so a citation lands there even after clicking the paper
 /* A caret never rests inside a pill (clicking one selects it): move it to just after the pill */
@@ -6423,7 +6390,7 @@ function renderPaperDetail(p) {
       <button class="pd-act ${isStar?'on-star':''}" onclick="toggleStar('${ka}',this);${again}" title="${isStar?'Unstar':'Star'}" aria-label="${isStar?'Unstar':'Star'}">&#9733;<span class="pd-act-label">${isStar?'Starred':'Star'}</span></button>
       <button class="pd-act ${ir?'on-read':''}" onclick="toggleRead('${ka}',this);${again}" title="${ir?'Mark unread':'Mark as read'}" aria-label="${ir?'Mark unread':'Mark as read'}">&#10003;<span class="pd-act-label">${ir?'Read':'Mark read'}</span></button>
       <span class="save-anchor"><button class="pd-act ${inAny?'on-list':''}" onclick="event.stopPropagation();openSaveDD(this,'${ka}')" title="Add to list" aria-label="Add to list">&#9776;<span class="pd-act-label">${inAny?'In a list':'Save'}</span></button></span>
-      <button class="pd-act ${hasNotes?'on-notes':''}" onclick="toggleNotesModal('${ka}')" title="Notes" aria-label="Notes">&#9998;<span class="pd-act-label">Notes</span></button>
+      <button class="pd-act ${hasNotes?'on-notes':''}" onclick="openReader('${ka}', 'panel')" title="Notes" aria-label="Notes">&#9998;<span class="pd-act-label">Notes</span></button>
       <button class="pd-read" onclick="openReader('${ka}')" title="${pdfSourceOf(p) ? 'Read the PDF here' : 'Add a PDF to read it here'}"><svg viewBox="0 0 24 24"><path d="M2 4h7a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H2z"/><path d="M22 4h-7a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h8z"/></svg>Read</button>
       ${p.url ? `<a class="pd-open" href="${esc(p.url)}" target="_blank" rel="noopener"><span class="pd-open-full">Open paper</span><span class="pd-open-short">Open</span><svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>` : ''}
     </div>
@@ -6447,7 +6414,7 @@ function renderPaperDetail(p) {
   let main = '';
   if (hasText(p.summary)) main += `<section class="pd-section"><h2>Summary</h2><p class="pd-prose">${esc(p.summary)}</p></section>`;
   if (hasText(p.abstract)) main += `<section class="pd-section"><h2>Abstract</h2><p class="pd-prose">${esc(p.abstract)}</p></section>`;
-  if (hasNotes || (ix && ix.h + ix.c)) main += `<section class="pd-section pd-notes"><h2>Your notes <button class="pd-edit" onclick="toggleNotesModal('${ka}')">+ Add note</button></h2>${hasNotes ? vn.entries.map(e => `<div class="pd-note"><div class="pd-note-top"><span>${esc(noteDate(e))}</span><button class="rp-icon-btn sm" onclick="toggleNotesModal('${ka}','${e.id}')" title="Edit note" aria-label="Edit note">${ICON_EDIT}</button></div><div class="pd-prose md" data-pdnote="${e.id}"></div></div>`).join('') : ''}${ix && ix.h + ix.c ? `<div class="pd-notes-meta">${ix.h} highlight${ix.h === 1 ? '' : 's'}${ix.c ? `, ${ix.c} comment${ix.c === 1 ? '' : 's'}` : ''} · <button onclick="openReader('${ka}');setTimeout(()=>toggleReaderPanel(true),300)">Open in the reader</button></div>` : ''}</section>`;
+  if (hasNotes || (ix && ix.h + ix.c)) main += `<section class="pd-section pd-notes"><h2>Your notes <button class="pd-edit" onclick="openReader('${ka}', 'new')">+ Add note</button></h2>${hasNotes ? vn.entries.map(e => `<div class="pd-note"><div class="pd-note-top"><span>${esc(noteDate(e))}</span><button class="rp-icon-btn sm" onclick="openReader('${ka}', '${e.id}')" title="Edit note" aria-label="Edit note">${ICON_EDIT}</button></div><div class="pd-prose md" data-pdnote="${e.id}"></div></div>`).join('') : ''}${ix && ix.h + ix.c ? `<div class="pd-notes-meta">${ix.h} highlight${ix.h === 1 ? '' : 's'}${ix.c ? `, ${ix.c} comment${ix.c === 1 ? '' : 's'}` : ''} · <button onclick="openReader('${ka}', 'panel')">Open in the reader</button></div>` : ''}</section>`;
   if (!main) main = `<p class="pd-empty">No summary or abstract yet. Open the paper to read it at the source.</p>`;
 
   // Side panel: facts + editable topics
@@ -6586,170 +6553,6 @@ function closeRelevancePopup() {
 
 function sanitizeNote(s) { return s.replace(/\|/g, '/').replace(/,/g, ';').replace(/\r\n|\r|\n/g, ' // ').replace(/"/g, "'"); }
 function desanitizeNote(s) { return s.replace(/ \/\/ /g, '\n'); }
-
-/* The quick notes box adds one note (or edits one) in the same encrypted list as the reader's panel.
-   Each opening is a session {key, id}: its saves run one after another and all refer to that session,
-   so a save that finishes after the box closed still updates the same note (it used to add a second). */
-let _notesSession = null;
-function saveNote(sess, value) {
-  sess.chain = (sess.chain || Promise.resolve()).then(() => saveNoteNow(sess, value)).catch(e => console.error(e));
-  return sess.chain;
-}
-async function saveNoteNow(sess, value) {
-  if (!Vault.key) return;
-  const key = sess.key, n = await paperNotes(key);
-  if (!n) return;
-  n.entries = n.entries || [];
-  const now = new Date().toISOString();
-  let e = sess.id && n.entries.find(x => x.id === sess.id);
-  if (!e) {
-    if (!value.trim()) return;
-    e = { id: newNoteId(), text: value.trim(), created: now, updated: now };
-    n.entries.push(e); sess.id = e.id;
-  } else if (!value.trim()) {
-    n.entries = n.entries.filter(x => x.id !== e.id);
-    n.deleted = { ...(n.deleted || {}), [e.id]: now };
-    sess.id = null;
-  } else {
-    if (e.text === value.trim()) return;
-    e.text = value.trim(); e.updated = now;
-  }
-  await savePaperNotes(n);
-  if (_reader.paper && _reader.paper.id === key) { _rn = n; renderReaderPanel(); }
-}
-
-async function deleteNote() {
-  const sess = _notesSession;
-  if (!sess || !Vault.key) return;
-  const key = sess.key, p = allPapers.find(pp => paperKey(pp) === key);
-  clearTimeout(_notesSaveTimer); _notesSaveTimer = null;
-  await sess.chain;   // let a save in flight finish first, so its note is the one deleted
-  const n = await paperNotes(key);
-  const e = sess.id && (n.entries || []).find(x => x.id === sess.id);
-  const area = document.getElementById('notesModalArea');
-  if (!e) { area.value = ''; closeNotesModal(); return; }   // nothing saved yet: just discard
-  const prev = { ...e };
-  area.value = '';
-  await saveNote(sess, '');
-  if (p) renderPaperDetail(p);
-  closeNotesModal();
-  toast('Note deleted', async () => {
-    const m = await paperNotes(key);
-    delete (m.deleted || {})[prev.id]; prev.updated = new Date().toISOString();
-    m.entries = (m.entries || []).concat(prev).sort((x, y) => (x.created || '').localeCompare(y.created || ''));
-    await savePaperNotes(m);
-    if (_paperViewActive && p) renderPaperDetail(p);
-  });
-}
-/* Footer shows "Saved" after typing, and offers delete only when there is something to delete */
-function updateNotesFooter(saved) {
-  const area = document.getElementById('notesModalArea');
-  document.getElementById('notesDelete').hidden = !area.value.trim();
-  const st = document.getElementById('notesStatus');
-  st.textContent = saved ? 'Saved \u00b7 encrypted' : (area.value.trim() ? 'Saving…' : '');
-}
-
-let _notesSaveTimer = null;
-function debouncedSaveNote() {
-  clearTimeout(_notesSaveTimer);
-  _notesSaveTimer = setTimeout(async () => {
-    _notesSaveTimer = null;
-    const sess = _notesSession;
-    if (!sess) return;
-    const key = sess.key;
-    await saveNote(sess, document.getElementById('notesModalArea').value);
-    const p = allPapers.find(pp => paperKey(pp) === key);
-    if (p && _paperViewActive) renderPaperDetail(p);
-    updateNotesFooter(true);
-  }, 500);
-}
-
-async function toggleNotesModal(key, noteId) {
-  const modal = document.getElementById('notesModal');
-  if (_notesSession && _notesSession.key === key && modal.classList.contains('open') && !noteId) { closeNotesModal(); return; }
-  if (modal.classList.contains('open')) closeNotesModal();
-  if (!vaultSupported()) { toastError('Notes are encrypted, which needs a secure address: open scholar.localhost or the GitHub Pages site.'); return; }
-  if (!await vaultReady()) return;
-  const n = await paperNotes(key);
-  const p = allPapers.find(pp => paperKey(pp) === key);
-  const area = document.getElementById('notesModalArea');
-  const e = noteId && (n.entries || []).find(x => x.id === noteId);
-  _notesSession = { key, id: e ? e.id : null };
-  area._notesObj = n;   // so its citation pills can be shown and followed
-  area.value = e ? e.text : '';
-  document.getElementById('notesModalTitle').textContent = e ? 'Edit note' : 'New note';
-  document.getElementById('notesPaper').textContent = p ? (p.headline || p.title) : '';
-  modal.classList.add('open');
-  updateNotesFooter();
-  document.getElementById('notesStatus').textContent = '';
-  area.focus();
-  const end = document.createRange(); end.selectNodeContents(area); end.collapse(false);
-  getSelection().removeAllRanges(); getSelection().addRange(end);
-}
-function closeNotesModal() {
-  const modal = document.getElementById('notesModal');
-  if (!modal.classList.contains('open')) return;
-  const area = document.getElementById('notesModalArea');
-  const sess = _notesSession;
-  if (sess) {
-    clearTimeout(_notesSaveTimer); _notesSaveTimer = null;
-    const p = allPapers.find(pp => paperKey(pp) === sess.key);
-    saveNote(sess, area.value).then(() => { if (p && _paperViewActive) renderPaperDetail(p); });
-  }
-  modal.classList.remove('open');
-  _notesSession = null;
-}
-
-/* Draggable + resizable notes modal */
-(function() {
-  let mode = null, ox = 0, oy = 0, startW = 0, startH = 0, startLeft = 0, startTop = 0;
-  function toLeftTop(modal) {
-    if (modal.style.right !== 'auto') {
-      const rect = modal.getBoundingClientRect();
-      modal.style.left = rect.left + 'px';
-      modal.style.top = rect.top + 'px';
-      modal.style.right = 'auto';
-      modal.style.bottom = 'auto';
-    }
-  }
-  document.addEventListener('mousedown', e => {
-    const modal = document.getElementById('notesModal');
-    if (!modal.classList.contains('open')) return;
-    if (e.target.closest('#notesResizeHandle')) {
-      mode = 'resize';
-      toLeftTop(modal);
-      const rect = modal.getBoundingClientRect();
-      ox = e.clientX; oy = e.clientY;
-      startW = rect.width; startH = rect.height; startLeft = rect.left;
-      modal.style.transition = 'none';
-      e.preventDefault();
-    } else if (e.target.closest('#notesModalDrag')) {
-      mode = 'drag';
-      toLeftTop(modal);
-      const rect = modal.getBoundingClientRect();
-      ox = e.clientX - rect.left; oy = e.clientY - rect.top;
-      modal.style.transition = 'none';
-      e.preventDefault();
-    }
-  });
-  document.addEventListener('mousemove', e => {
-    if (!mode) return;
-    const modal = document.getElementById('notesModal');
-    if (mode === 'drag') {
-      modal.style.left = (e.clientX - ox) + 'px';
-      modal.style.top = (e.clientY - oy) + 'px';
-    } else if (mode === 'resize') {
-      const dx = ox - e.clientX;
-      const dy = e.clientY - oy;
-      const newW = Math.max(240, startW + dx);
-      const newH = Math.max(180, startH + dy);
-      modal.style.width = newW + 'px';
-      modal.style.height = newH + 'px';
-      modal.style.left = (startLeft - (newW - startW)) + 'px';
-    }
-  });
-  document.addEventListener('mouseup', () => { mode = null; });
-})();
 
 function toggleGroupAddDD(btn, key) {
   const dd = btn.nextElementSibling;
