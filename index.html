@@ -4801,7 +4801,7 @@ document.addEventListener('keydown', e => {
     const body = document.getElementById('readerBody'), page = body.clientHeight * 0.9;
     e.preventDefault();
     const d = { ArrowDown: 60, ArrowUp: -60, PageDown: page, PageUp: -page, ' ': e.shiftKey ? -page : page }[e.key];
-    if (d != null) body.scrollBy({ top: d, behavior: 'smooth' }); else body.scrollTop = e.key === 'Home' ? 0 : body.scrollHeight;
+    if (d != null) body.scrollBy({ top: d, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); else body.scrollTop = e.key === 'Home' ? 0 : body.scrollHeight;
     body.focus({ preventScroll: true });   // the next keys scroll natively
     return;
   }
