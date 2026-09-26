@@ -835,13 +835,8 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .rp-resize:focus { outline: none; }
 .reader.resizing, .reader.resizing * { cursor: col-resize !important; user-select: none !important; }
 #readerNotesBtn[aria-pressed="true"] { color: var(--accent); border-color: transparent; }
-.rn-count { font-variant-numeric: tabular-nums; color: var(--text-muted); font-size: 12px; }
-/* Notes and chat: the panel's icon, with how many notes the paper has beside it */
-.rt-panel-btn { position: relative; }
+/* Notes and chat: the panel's icon, which shows or hides the panel (no count: a number means nothing on a panel) */
 .rt-panel-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-.rt-panel-btn { gap: 5px; }
-.rt-panel-btn .rn-count { font-size: 12px; font-weight: 600; color: inherit; opacity: 0.8; }
-.rn-count:empty { display: none; }
 .annoLayer { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
 /* comments and citations are lines in navy, apart from the highlight colours and the site's amber */
 .annoLayer, .annoMarks { --note-line: #8aa4f0; --note-ink: #0f1b3d; --ref-tint: rgba(138,164,240,0.16); }
@@ -1822,7 +1817,7 @@ html.no-hover .sel-icon:not(.on):active, html.no-hover .ink-bar .ink-size:not(.o
           <button data-pm="hl" aria-pressed="false" onclick="setPencilMode('hl')" title="Highlight: strokes highlight or underline the text" aria-label="Highlight"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l-5 5v4h4l5-5"/><path d="M9 11l6-6 4 4-6 6z"/><path d="M13 20h8"/></svg></button>
           <button data-pm="write" aria-pressed="false" onclick="setPencilMode('write')" title="Write: the Pencil writes and draws on the page" aria-label="Write"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1.2-4.6L15.6 5a2 2 0 0 1 2.8 0l.6.6a2 2 0 0 1 0 2.8L8.6 18.8z"/><path d="M13.8 6.8l3.4 3.4"/></svg></button>
         </span>
-        <button class="reader-btn rt-panel-btn" id="readerNotesBtn" onclick="toggleReaderPanel()" title="Notes and chat" aria-label="Notes and chat" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M14.5 4v16M17 8.5h1.5M17 11.5h1.5"/></svg><span class="rn-count" id="readerNotesCount"></span></button>
+        <button class="reader-btn rt-panel-btn" id="readerNotesBtn" onclick="toggleReaderPanel()" title="Notes and chat" aria-label="Notes and chat" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M14.5 4v16M17 8.5h1.5M17 11.5h1.5"/></svg></button>
       </span>
       <span class="rt-more-wrap">
         <button class="reader-btn rt-more" id="readerMore" onclick="toggleReaderMenu()" title="More" aria-label="More" aria-haspopup="menu" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
@@ -5116,7 +5111,7 @@ async function showReader(id) {
   document.getElementById('readerBody').focus({ preventScroll: true });   // arrow keys, Space and PageDown scroll the paper
   document.getElementById('readerDarkBtn').setAttribute('aria-pressed', readerDark() ? 'true' : 'false');
   document.getElementById('readerTitle').textContent = p.title || '';
-  if (!_rn || _rn.id !== p.id) { _rn = null; _rnLoadP = null; updateReaderNotesCount(); setRnState(vaultSupported() ? 'loading' : 'ready'); }   // loader now; loading starts after the PDF
+  if (!_rn || _rn.id !== p.id) { _rn = null; _rnLoadP = null; setRnState(vaultSupported() ? 'loading' : 'ready'); }   // loader now; loading starts after the PDF
   else _rnLoadP = Promise.resolve();   // same paper: notes already here
   const local = await localPdfGet(p.id);
   const src = pdfSourceOf(p);
@@ -5798,7 +5793,7 @@ async function pushNotes() {
           else {
             const pid = name.replace(/\.json$/, '');
             if (Vault.cache.has(pid)) Vault.cache.set(pid, merged);
-            if (_rn && _rn.id === pid) { _rn = merged; redrawAnnoLayers(); updateReaderNotesCount(); }
+            if (_rn && _rn.id === pid) { _rn = merged; redrawAnnoLayers(); }
             indexEntryFor(merged);
             await nfSave('_index.json', Vault.index);   // counts include the other device's items (sent next round)
           }
@@ -5958,7 +5953,7 @@ async function resetLocalVault(newMeta) {
   await notesDB('keys', 'readwrite', st => st.clear()).catch(() => {});
   if (newMeta) await nfPut('_vault.json', { env: newMeta, sha: null, base: newMeta.updated, dirty: false }).catch(() => {});
   hideSelBar();
-  if (_reader.paper) { redrawAnnoLayers(); updateReaderNotesCount(); setRnState('ready'); }
+  if (_reader.paper) { redrawAnnoLayers(); setRnState('ready'); }
   if (currentTab === 'library') renderLibrary();
   if (_paperViewActive) { const p = allPapers.find(x => location.hash === '#paper/' + encodeURIComponent(x.id)); if (p) renderPaperDetail(p); }
   toast(newMeta ? 'Your notes were given a new password on another device. Unlock them with it.' : 'Your notes were reset. Set a password to start again.', null, { duration: 6000 });
@@ -5983,7 +5978,7 @@ async function lockNotes() {
   Vault.key = null; Vault.index = null; Vault.cache.clear(); _rn = null; _acPending = null;
   await notesDB('keys', 'readwrite', st => st.delete('k')).catch(() => {});
   hideSelBar();
-  if (_reader.paper) { renderReaderPanel(); redrawAnnoLayers(); updateReaderNotesCount(); }
+  if (_reader.paper) { renderReaderPanel(); redrawAnnoLayers(); }
   if (currentTab === 'library') renderLibrary();
   toast('Notes locked');
 }
@@ -6052,7 +6047,7 @@ async function revalidatePaperNotes(id, seen) {
   if ((local && local.dirty) || notesGen(id) !== g0) return;
   if (_rn && _rn === cur && (_rnEditing || _acId || _acPending)) return;   // never swap under someone typing; the next save merges instead
   Vault.cache.set(id, obj); noteSeen(id + '.json', rec.env);
-  if (_rn && _rn === cur) { _rn = obj; updateReaderNotesCount(); redrawAnnoLayers(); renderReaderPanel(); }
+  if (_rn && _rn === cur) { _rn = obj; redrawAnnoLayers(); renderReaderPanel(); }
   if (_paperViewActive && location.hash === '#paper/' + encodeURIComponent(id)) { const p = allPapers.find(x => x.id === id); if (p) renderPaperDetail(p); }
 }
 /* What the index says about a paper: counts of highlights, comments and notes (chats and citation anchors don't count) */
@@ -6219,14 +6214,13 @@ async function loadReaderNotes() {
   const obj = pid && Vault.key ? await paperNotes(pid) : null;
   if (!_reader.paper || _reader.paper.id !== pid) return;   // moved on to another paper meanwhile
   _rn = obj;
-  updateReaderNotesCount();
   redrawAnnoLayers();
   setRnState(Vault.loadFailed && Vault.loadFailed.has(pid) ? 'offline' : 'ready');
   runPendingNotes();
 }
 /* Notes are secondary to the paper, so they load once the PDF is on screen (or right away if there is no PDF) */
 function startReaderNotes() {
-  _rn = null; updateReaderNotesCount();
+  _rn = null;
   setRnState(vaultSupported() ? 'loading' : 'ready');
   _rnLoadP = (async () => {
     if (await vaultReady(true)) await loadReaderNotes();
@@ -6239,11 +6233,6 @@ function ensureReaderNotes() { return _rnLoadP || startReaderNotes(); }
 function checkPdfFingerprint() {
   if (_rn && _rn.pdf && _rn.pdf.fp && _reader.doc && _reader.doc.fingerprints && _rn.pdf.fp !== _reader.doc.fingerprints[0] && (_rn.annos || []).length)
     toast('This PDF differs from the one you annotated, so some highlights may sit slightly off.', null, { duration: 7000 });
-}
-function updateReaderNotesCount() {
-  const n = _rn ? rnItems(_rn).length : 0;   // everything in the Notes list (citation anchors belong to their notes)
-  document.getElementById('readerNotesCount').textContent = n ? n : '';
-  document.getElementById('readerNotesBtn').setAttribute('aria-label', n ? `Notes and chat (${n} notes)` : 'Notes and chat');
 }
 /* highlights are stored as fractions of the page, so they sit right at any zoom */
 function renderAnnoLayer(pageDiv) {
@@ -6455,7 +6444,7 @@ async function createAnno(kind, color) {
   if (kind === 'hl') rememberHlColor(color);
   _rn.annos = (_rn.annos || []).concat(a);
   await savePaperNotes(_rn);
-  updateReaderNotesCount(); redrawAnnoLayers(); renderReaderPanel();
+  redrawAnnoLayers(); renderReaderPanel();
   annoArrives(a.id);
   const item = document.querySelector(`.rp-item[data-id="${a.id}"]`); if (item) item.classList.add('fresh');
   if (kind === 'note') openAnnoCard(a.id, true);
@@ -6560,7 +6549,7 @@ async function endCommentSession(id, text) {
   } else if (changed) {
     await savePaperNotes(_rn);
   }
-  updateReaderNotesCount(); redrawAnnoLayers(); renderReaderPanel();
+  redrawAnnoLayers(); renderReaderPanel();
 }
 /* the comment box starts as one line and grows with the text, up to ~8 lines, then scrolls */
 function acGrow(t) { if (!t) return; t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight + 2, 190) + 'px'; t.style.overflowY = t.scrollHeight + 2 > 190 ? 'auto' : 'hidden'; }
@@ -6574,7 +6563,6 @@ async function acSaveNote() {
     if (!a.note.trim()) return;
     _acPending = null;
     _rn.annos = (_rn.annos || []).concat(a);
-    updateReaderNotesCount();
   }
   await savePaperNotes(_rn);
   const st = document.getElementById('acState'); if (st) st.textContent = 'Saved · encrypted';
@@ -6588,7 +6576,7 @@ async function setAnnoColor(id, color) {
   a.updated = new Date().toISOString();
   if (a === _acPending && a.kind === 'hl') { _acPending = null; _rn.annos = (_rn.annos || []).concat(a); }
   if (a !== _acPending) await savePaperNotes(_rn);
-  updateReaderNotesCount(); redrawAnnoLayers(); renderReaderPanel(); openAnnoCard(id);
+  redrawAnnoLayers(); renderReaderPanel(); openAnnoCard(id);
 }
 async function deleteAnno(id, message) {
   if (notesBusy()) return;
@@ -6599,13 +6587,13 @@ async function deleteAnno(id, message) {
   _rn.deleted = { ...(_rn.deleted || {}), [id]: new Date().toISOString() };
   if (_acId === id) { _acId = null; _acOrigin = null; if (_acTimer) { clearTimeout(_acTimer); _acTimer = null; } fadeAway(document.getElementById('annoCard')); }
   await Promise.all([savePaperNotes(_rn), annoLeaves(id)]);
-  updateReaderNotesCount(); redrawAnnoLayers(); renderReaderPanel();
+  redrawAnnoLayers(); renderReaderPanel();
   toast(message || (a.kind === 'note' ? 'Comment deleted' : a.note ? 'Highlight and comment deleted' : 'Highlight deleted'), async () => {
     delete _rn.deleted[id];
     a.updated = new Date().toISOString();
     _rn.annos = _rn.annos.concat(a);
     await savePaperNotes(_rn);
-    updateReaderNotesCount(); redrawAnnoLayers(); renderReaderPanel(); annoArrives(id);
+    redrawAnnoLayers(); renderReaderPanel(); annoArrives(id);
   });
 }
 /* On a phone the notes/chat panel covers the paper: a jump into the paper first closes it (the Notes button reopens it) */
@@ -7494,7 +7482,7 @@ async function saveNoteEdit(quiet) {
     if (e && e.text !== text) { e.text = text; e.updated = now; _rnFresh = e.id; }
   }
   await savePaperNotes(_rn);
-  redrawAnnoLayers(); updateReaderNotesCount();
+  redrawAnnoLayers();
   if (!quiet) renderReaderPanel();
 }
 async function finishNotesEdit() { if (_rnEditing) { if (_rnDraft.trim() || String(_rnEditing).startsWith('a:')) await saveNoteEdit(true); else endDraft('discard'); } }
@@ -7511,7 +7499,7 @@ async function deleteGeneralNote(id) {
   _rn.entries = _rn.entries.filter(x => x.id !== id);
   _rn.deleted = { ...(_rn.deleted || {}), [id]: new Date().toISOString() };
   await savePaperNotes(_rn);
-  redrawAnnoLayers(); updateReaderNotesCount(); renderReaderPanel();
+  redrawAnnoLayers(); renderReaderPanel();
   toast('Note deleted', async () => {
     const now = new Date().toISOString();
     refs.forEach(a => { delete _rn.deleted[a.id]; a.updated = now; if (!_rn.annos.some(x => x.id === a.id)) _rn.annos.push(a); });
@@ -7519,7 +7507,7 @@ async function deleteGeneralNote(id) {
     _rn.entries = _rn.entries.concat(e).sort((x, y) => (x.created || '').localeCompare(y.created || ''));
     _rnFresh = id;
     redrawAnnoLayers();   // after the note is back, so its citations count as cited and are drawn
-    await savePaperNotes(_rn); renderReaderPanel(); updateReaderNotesCount();
+    await savePaperNotes(_rn); renderReaderPanel();
   });
 }
 
@@ -8119,7 +8107,7 @@ async function chatApplyBlock(mi, bi, quiet) {
     _rn.annos = (_rn.annos || []).concat(added.obj);
   }
   _chatApplied.add(mi + ':' + bi);
-  await savePaperNotes(_rn); redrawAnnoLayers(); updateReaderNotesCount();
+  await savePaperNotes(_rn); redrawAnnoLayers();
   if (!quiet) { renderChatMessages(); toast(b.kind === 'note' ? 'Saved to your notes' : 'Highlight added', () => chatUndoAdds([added])); }
   return added;
 }
@@ -8138,7 +8126,7 @@ async function chatUndoAdds(adds) {
     _rn.deleted = { ...(_rn.deleted || {}), [a.obj.id]: now };
   });
   _chatApplied.clear();
-  await savePaperNotes(_rn); redrawAnnoLayers(); updateReaderNotesCount(); renderChatMessages();
+  await savePaperNotes(_rn); redrawAnnoLayers(); renderChatMessages();
 }
 async function chatSaveAsNote(mi) {
   const m = Chat.messages[mi]; if (!m || notesBusy()) return;
@@ -8146,7 +8134,7 @@ async function chatSaveAsNote(mi) {
   if (!_rn) { setRnState('loading'); await loadReaderNotes(); if (!_rn) return; }
   const now = new Date().toISOString(), e = { id: newNoteId(), text: m.text.replace(CHAT_BLOCK_RE, (x, kind, first, rest) => kind === 'note' ? rest : '').trim(), created: now, updated: now };
   _rn.entries = (_rn.entries || []).concat(e);
-  await savePaperNotes(_rn); updateReaderNotesCount();
+  await savePaperNotes(_rn);
   toast('Saved to your notes', () => chatUndoAdds([{ type: 'entry', obj: e }]));
 }
 function chatCopy(mi) { const m = Chat.messages[mi]; if (m) navigator.clipboard.writeText(m.text).then(() => toast('Copied'), () => toastError('Couldn’t copy: the browser blocked the clipboard')); }
