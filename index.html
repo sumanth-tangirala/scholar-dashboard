@@ -688,7 +688,12 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .inkLayer path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
 .reader.dark .inkLayer { filter: invert(0.9) hue-rotate(180deg); }   /* like the page: dark ink turns light */
 .reader-body.inking .textLayer, .reader-body.inking .textLayer span { cursor: crosshair; user-select: none; -webkit-user-select: none; }
-.ink-bar { bottom: auto; }   /* docked at the top of the paper (placed in renderInkBar), never over the notes/chat panel */
+.reader-col { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.reader-col .reader-body { flex: 1; min-height: 0; }
+/* the Pencil's tools: a strip across the top of the paper's column (it takes its own height; never over the paper or the panel) */
+.ink-bar { display: none; flex-shrink: 0; align-items: center; justify-content: center; gap: 4px; padding: 6px 12px; background: #151517; border-bottom: 1px solid var(--border); }
+.ink-bar.open { display: flex; }
+.ink-bar .sel-dot { width: 24px; height: 24px; margin: 0 3px; }
 .ink-bar .ink-size { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; background: none; border: none; border-radius: 7px; cursor: pointer; transition: background 0.15s; }
 .ink-bar .ink-size i { display: block; border-radius: 50%; background: var(--text-secondary); }
 .ink-bar .ink-size:hover { background: rgba(255,255,255,0.07); }
@@ -1542,6 +1547,7 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
   .tok-pill { min-height: 32px; }
   .anno-mark { width: 26px; height: 26px; margin-top: -13px; border-radius: 7px; }
   .anno-mark svg { width: 15px; height: 15px; }
+  .ink-bar .sel-dot { width: 28px; height: 28px; margin: 0 4px; }
   .badge-editable { min-height: 30px; display: inline-flex; align-items: center; padding-left: 10px; padding-right: 10px; }
   .rp-add { height: 36px; }
   .toast-undo { min-height: 36px; padding: 0 10px; margin: -8px -8px -8px 0; }
@@ -1727,7 +1733,10 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
     </div>
   </div>
   <div class="reader-split">
-    <div class="reader-body" id="readerBody" tabindex="-1"></div>
+    <div class="reader-col">
+      <div class="ink-bar" id="inkBar" role="toolbar" aria-label="Pencil tools"></div>
+      <div class="reader-body" id="readerBody" tabindex="-1"></div>
+    </div>
     <div class="rp-resize" id="rpResize" role="separator" aria-orientation="vertical" aria-label="Resize the panel" tabindex="0" title="Drag to resize · double-click to reset"></div>
     <aside class="reader-panel" id="readerPanel" aria-label="Notes and chat" data-layout="tabs" data-first="notes" data-active="notes">
       <section class="rp-pane" id="notesPane" aria-label="Notes"></section>
@@ -1739,7 +1748,6 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
     <div class="pdf-modal-box"><button class="pdf-modal-x" onclick="closePdfModal()" aria-label="Close">&times;</button><div id="pdfModalBody"></div></div>
   </div>
   <div class="sel-bar" id="selBar" role="toolbar" aria-label="Selection"></div>
-  <div class="sel-bar ink-bar" id="inkBar" role="toolbar" aria-label="Pen"></div>
   <div class="anno-card" id="annoCard" role="dialog" aria-label="Highlight"></div>
 </div>
 
@@ -6562,7 +6570,10 @@ function setInkTool(tool, color, size) { Ink.tool = tool; if (color) Ink.color =
 /* The Pencil's tools, at the top of the paper (not over the notes/chat panel) */
 function renderInkBar() {
   const bar = document.getElementById('inkBar'), reader = document.getElementById('reader');
-  if (Pencil.mode === 'read' || !reader.classList.contains('open') || !_reader.doc || document.getElementById('readerPenBtn').hidden) { bar.classList.remove('open'); return; }
+  if (Pencil.mode === 'read' || !reader.classList.contains('open') || !_reader.doc || document.getElementById('readerPenBtn').hidden) {
+    if (bar.classList.contains('open')) { const h = bar.offsetHeight; bar.classList.remove('open'); if (reader.classList.contains('open')) document.getElementById('readerBody').scrollTop -= h; }
+    return;
+  }
   if (Pencil.mode === 'hl') {
     const cur = pencilHl();
     bar.innerHTML = HL_COLORS.map(c => `<button class="sel-dot ${cur === c ? 'on' : ''}" style="--hc:var(--hl-${c})" title="Highlight: ${escAttr(hlLabel(c))}" aria-label="Highlight: ${escAttr(hlLabel(c))}" aria-pressed="${cur === c}" onclick="setPencilHl('${c}')"></button>`).join('')
@@ -6573,10 +6584,7 @@ function renderInkBar() {
       + `<span class="sel-sep"></span><button class="sel-icon ${Ink.tool === 'eraser' ? 'on' : ''}" onclick="setInkTool('eraser')" title="Eraser: touch strokes to remove them" aria-label="Eraser">${ICON_ERASER}</button>`
       + `<button class="sel-icon" onclick="undoInk()" ${Ink.undo.length ? '' : 'aria-disabled="true"'} title="Undo" aria-label="Undo">${ICON_UNDO}</button>`;
   }
-  bar.classList.add('open');
-  const r = document.getElementById('readerBody').getBoundingClientRect();
-  bar.style.top = (r.top + 10) + 'px';
-  bar.style.left = Math.max(r.left + 8, r.left + r.width / 2 - bar.offsetWidth / 2) + 'px';
+  if (!bar.classList.contains('open')) { bar.classList.add('open'); document.getElementById('readerBody').scrollTop += bar.offsetHeight; }   // the paper stays put on screen
 }
 function scheduleInkSave() { clearTimeout(Ink.saveTimer); const obj = _rn; Ink.saveTimer = setTimeout(() => { Ink.saveTimer = null; if (obj) savePaperNotes(obj); }, 700); }
 function flushInk() { if (Ink.saveTimer) { clearTimeout(Ink.saveTimer); Ink.saveTimer = null; if (_rn) savePaperNotes(_rn); } }
@@ -6610,9 +6618,29 @@ function caretAt(x, y) {
   const body = document.getElementById('readerBody');
   const onPage = t => t && t.closest && !t.closest('.anno-mark, button, a') && t.closest('.reader-page');
   // Safari: the Pencil would scroll or start a text selection; stop that (fingers still scroll), buttons stay tappable
-  body.addEventListener('touchstart', e => { if (Pencil.mode !== 'read' && [...e.changedTouches].some(t => t.touchType === 'stylus') && onPage(e.target)) e.preventDefault(); }, { passive: false });   // Read: the Pencil behaves like a finger
+  // Safari would turn a Pencil drag into a text selection: the page takes Pencil strokes itself (in Read they scroll)
+  body.addEventListener('touchstart', e => { stopGlide(); if ([...e.changedTouches].some(t => t.touchType === 'stylus') && onPage(e.target)) e.preventDefault(); }, { passive: false });
+  body.addEventListener('wheel', () => stopGlide(), { passive: true });
+  /* Read mode: the Pencil scrolls the paper like a finger, with the same glide after a flick */
+  let glide = 0;
+  function stopGlide() { if (glide) { cancelAnimationFrame(glide); glide = 0; } }
+  function startGlide(vx, vy) {
+    let t0 = performance.now();
+    const step = t => {
+      const dt = Math.min(40, t - t0); t0 = t;
+      body.scrollLeft -= vx * dt; body.scrollTop -= vy * dt;
+      const k = Math.pow(0.95, dt / 16); vx *= k; vy *= k;
+      glide = Math.hypot(vx, vy) > 0.02 ? requestAnimationFrame(step) : 0;
+    };
+    glide = requestAnimationFrame(step);
+  }
   let st = null;
   body.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'pen' && Pencil.mode === 'read' && onPage(e.target)) {
+      stopGlide(); e.preventDefault();
+      st = { id: e.pointerId, mode: 'scroll', x0: e.clientX, y0: e.clientY, lx: e.clientX, ly: e.clientY, lt: e.timeStamp, vx: 0, vy: 0, moved: false };
+      return;
+    }
     const pen = (e.pointerType === 'pen' && Pencil.mode !== 'read') || (Ink.on && e.pointerType === 'mouse' && e.button === 0);
     const pg = pen && onPage(e.target);
     if (!pg || !_reader.doc) return;
@@ -6673,6 +6701,15 @@ function caretAt(x, y) {
   }
   body.addEventListener('pointermove', e => {
     if (!st || e.pointerId !== st.id) return;
+    if (st.mode === 'scroll') {
+      const dx = e.clientX - st.lx, dy = e.clientY - st.ly, dt = Math.max(1, e.timeStamp - st.lt);
+      if (!st.moved && Math.hypot(e.clientX - st.x0, e.clientY - st.y0) < 4) return;
+      st.moved = true;
+      body.scrollLeft -= dx; body.scrollTop -= dy;
+      st.vx = 0.7 * (dx / dt) + 0.3 * st.vx; st.vy = 0.7 * (dy / dt) + 0.3 * st.vy;   // recent speed, for the glide
+      st.lx = e.clientX; st.ly = e.clientY; st.lt = e.timeStamp;
+      return;
+    }
     if (!st.moved && Math.hypot(e.clientX - st.x0, e.clientY - st.y0) < 6) { if (st.mode === 'pen') addPoints(e); return; }
     st.moved = true;
     if (st.mode === 'pen') addPoints(e); else if (st.mode === 'eraser') eraseAt(e); else highlightTo(e);
@@ -6680,6 +6717,7 @@ function caretAt(x, y) {
   const finish = e => {
     if (!st || e.pointerId !== st.id) return;
     const s = st; st = null;
+    if (s.mode === 'scroll') { if (s.moved && e.type !== 'pointercancel' && e.timeStamp - s.lt < 80 && Math.hypot(s.vx, s.vy) > 0.1) startGlide(s.vx, s.vy); return; }
     if (s.mode === 'pen') {
       if (e.type !== 'pointercancel') { st = s; addPoints(e, true); st = null; }   // end exactly where the Pencil lifted
       const k = s.stroke; delete k.pr;
