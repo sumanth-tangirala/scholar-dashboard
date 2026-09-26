@@ -1505,6 +1505,7 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
   .tok-pill { min-height: 32px; }
   .anno-mark { width: 26px; height: 26px; margin-top: -13px; border-radius: 7px; }
   .anno-mark svg { width: 15px; height: 15px; }
+  .badge-editable { min-height: 30px; display: inline-flex; align-items: center; padding-left: 10px; padding-right: 10px; }
   .rp-add { height: 36px; }
   .toast-undo { min-height: 36px; padding: 0 10px; margin: -8px -8px -8px 0; }
   .group-add-dd .group-opt, .copy-dd-item { padding: 11px 14px; font-size: 14px; }
@@ -1854,6 +1855,7 @@ function byTopScore(arr) {
 const MAX_TOPIC_ITEMS = 3;
 
 /* ===== STATE ===== */
+const TOUCH = matchMedia('(pointer: coarse)').matches;   // copy says "tap" and offers files, not drag-and-drop
 let allPapers = [], allInterests = [], allGroups = [];
 /* Papers you hid stay in the CSV (so a digest run never adds them again) but live outside
    allPapers, so no view shows them; Library lists them for restoring */
@@ -4143,7 +4145,7 @@ function renderInterests() {
   const r = (map,k) => k in map ? map[k] : 9;
   Object.values(grouped).forEach(a => a.sort((x,y)=> r(so,x.status)-r(so,y.status) || r(ro,x.relevance_mapping)-r(ro,y.relevance_mapping) || r(po,x.priority_level)-r(po,y.priority_level)));
   const sugN = allInterests.filter(i=>i.status==='suggested').length;
-  let html = `<p class="ig-legend"><strong>Interests</strong> decide how papers rank; each paper lists the ones it matches. They are separate from <a href="#interests/groups" class="ig-link">Topics</a>, which only group papers for browsing.</p><p class="ig-legend"><span class="badge badge-definitely">Must Read</span> <span class="badge badge-probably">Interesting</span> <span class="badge badge-mildly">Tangential</span> sets how papers matching an interest rank. <span class="badge badge-priority">core</span> to <span class="badge badge-priority">low-moderate</span> is your own priority. Click either on an interest to change it.</p>`;
+  let html = `<p class="ig-legend"><strong>Interests</strong> decide how papers rank; each paper lists the ones it matches. They are separate from <a href="#interests/groups" class="ig-link">Topics</a>, which only group papers for browsing.</p><p class="ig-legend"><span class="badge badge-definitely">Must Read</span> <span class="badge badge-probably">Interesting</span> <span class="badge badge-mildly">Tangential</span> sets how papers matching an interest rank. <span class="badge badge-priority">core</span> to <span class="badge badge-priority">low-moderate</span> is your own priority. ${TOUCH ? 'Tap' : 'Click'} either on an interest to change it.</p>`;
   if (sugN > 0 && currentIStatus === 'all') html += `<div style="padding:12px 20px;margin-bottom:16px;background:var(--purple-bg);border:1px solid var(--purple);border-radius:8px;font-size:13px;color:var(--purple);">${sugN} suggested interest${sugN>1?'s':''} from recent papers</div>`;
   ['Application Areas','Methods'].forEach(cat => {
     if (!grouped[cat]) return;
@@ -4346,6 +4348,8 @@ function toggleInterestDropdown(e, name, field) {
   dd.style.position = 'fixed';
   dd.style.left = rect.left + 'px';
   dd.style.top = (rect.bottom + 4) + 'px';
+  const h = dd.offsetHeight;
+  if (rect.bottom + 4 + h > window.innerHeight - 8 && rect.top - 4 - h > 8) dd.style.top = (rect.top - 4 - h) + 'px';   // no room below: open upwards
   _openInterestDD = dd;
   setTimeout(() => document.addEventListener('click', _onInterestDDOutside, true), 0);
 }
@@ -4385,7 +4389,8 @@ function _openGeneric({ title, sub, inputPlaceholder, defaultValue, showInput, s
       if (visBtn) visBtn.style.display = isPassword ? '' : 'none';
       input.classList.remove('error');
     }
-    document.getElementById('genericError').textContent = '';
+    const errEl = document.getElementById('genericError');
+    errEl.textContent = ''; errEl.style.display = showInput ? '' : 'none';   // a confirm has no field to report on: no reserved gap
     const btnsEl = document.getElementById('genericBtns');
     if (cancelLabel) {
       const confirmCls = danger ? 'btn-modal-danger' : 'auth-submit';
@@ -5312,7 +5317,7 @@ async function showPdfPicker(p, why, detail) {
     <p class="pp-why">${why === 'none' ? 'An uploaded PDF stays in the browser it was uploaded in. Drop the same file here to read it on this device too; your notes are already here.' : why === 'failed' ? esc(detail || '') : 'A revised version, for example. Your notes stay with the paper.'}</p>
     <label class="pp-drop" id="ppDrop" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="event.preventDefault();this.classList.remove('over');usePdfFile(event.dataTransfer.files[0])">
       <input type="file" accept="application/pdf,.pdf" onchange="usePdfFile(this.files[0])">
-      <strong>Drop a PDF here</strong> or click to choose one.<br>It stays in this browser, on this device only.
+      ${TOUCH ? '<strong>Choose a PDF</strong> from your files.' : '<strong>Drop a PDF here</strong> or click to choose one.'}<br>It stays in this browser, on this device only.
     </label>
     <div class="pp-msg" id="ppMsg"></div>
     ${inModal ? '<div class="pp-foot"><button onclick="closePdfModal()">Keep the current PDF</button></div>' : ''}
@@ -5337,11 +5342,11 @@ async function showPdfPicker(p, why, detail) {
     <label class="pp-label">Or a PDF you downloaded</label>
     <label class="pp-drop" id="ppDrop" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="event.preventDefault();this.classList.remove('over');usePdfFile(event.dataTransfer.files[0])">
       <input type="file" accept="application/pdf,.pdf" onchange="usePdfFile(this.files[0])">
-      <strong>Drop a PDF here</strong> or click to choose one.<br>It stays in this browser, on this device only.
+      ${TOUCH ? '<strong>Choose a PDF</strong> from your files.' : '<strong>Drop a PDF here</strong> or click to choose one.'}<br>It stays in this browser, on this device only.
     </label>
     <div class="pp-foot">${hasLocal ? `This paper has a copy stored on this device. <button onclick="removeLocalPdf()">Remove it</button>` : ''}${inModal ? ` <button onclick="closePdfModal()">Keep the current PDF</button>` : ''}</div>
   </div>`;
-  setTimeout(() => { const i = document.getElementById('ppLink'); if (i && why !== 'failed') i.focus(); }, 0);
+  if (!matchMedia('(pointer: coarse)').matches) setTimeout(() => { const i = document.getElementById('ppLink'); if (i && why !== 'failed') i.focus(); }, 0);   // touch: no keyboard over the dialog before you choose
 }
 async function submitPdfLink() {
   const p = _reader.paper, input = document.getElementById('ppLink'), msg = document.getElementById('ppMsg'), btn = document.getElementById('ppCheck');
@@ -5402,7 +5407,7 @@ async function showPdfModal() {
   hideSelBar(); closeAnnoCard();
   await showPdfPicker(_reader.paper, 'change');
   document.getElementById('pdfModal').classList.add('open');
-  setTimeout(() => { const i = document.getElementById('ppLink'); if (i) { i.focus(); i.select(); } }, 30);
+  if (!matchMedia('(pointer: coarse)').matches) setTimeout(() => { const i = document.getElementById('ppLink'); if (i) { i.focus(); i.select(); } }, 30);
 }
 function hidePdfModal() { document.getElementById('pdfModal').classList.remove('open'); document.getElementById('pdfModalBody').innerHTML = ''; }
 function closePdfModal() {
