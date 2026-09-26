@@ -663,10 +663,33 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .chip-select.active { background-color: var(--accent-dim); border-color: rgba(251,177,60,0.7); color: var(--accent); }
 /* PDF reader: full-screen, pages drawn by PDF.js */
 .reader { position: fixed; inset: 0; z-index: 320; background: #0b0b0c; display: none; flex-direction: column; }
-.reader.open { display: flex; }
+.reader.open { display: flex; animation: reader-in var(--t-slow) var(--ease); }
+.reader.leaving { display: flex; pointer-events: none; animation: reader-out 0.2s ease-in forwards; }
+@keyframes reader-in { from { opacity: 0; transform: translateY(14px) scale(0.995); } }
+@keyframes reader-out { to { opacity: 0; transform: translateY(10px); } }
+.reader-pages.first-in { animation: ui-fade var(--t-slow) ease-out; }
+.reader-page canvas.page-in { animation: ui-fade 0.2s ease-out; }
+.reader-skel { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 18px 18px 0; }
+.reader-skel div { width: min(100%, 1000px); aspect-ratio: 8.5 / 11; max-height: 70vh; border-radius: 2px; background: linear-gradient(100deg, rgba(255,255,255,0.05) 30%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 70%) 0 0 / 300% 100%; animation: skel-sweep 1.4s ease-in-out infinite; }
+.reader-skel p { margin: 0; font-size: 13px; color: var(--text-muted); }
+@keyframes skel-sweep { from { background-position: 100% 0; } to { background-position: 0 0; } }
 .reader-bar { display: flex; align-items: center; gap: 12px; height: 56px; padding: 0 16px; border-bottom: 1px solid var(--border); background: rgba(17,17,17,0.96); flex-shrink: 0; }
 .reader-title { flex: 1; min-width: 0; font-family: var(--serif); font-size: 16px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.reader-tools { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.reader-tools { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
+/* the bar's tools in clusters: viewing the paper | working on it | more */
+.rt-group { display: inline-flex; align-items: center; gap: 4px; }
+.rt-group + .rt-group, .rt-more-wrap { position: relative; }
+.rt-group + .rt-group::before, .rt-more-wrap::before { content: ''; position: absolute; left: -8px; top: 7px; bottom: 7px; width: 1px; background: var(--border); }
+.rt-more-wrap { display: inline-flex; }
+.rt-more svg { width: 18px; height: 18px; fill: currentColor; }
+.reader-menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 30; display: none; flex-direction: column; min-width: 240px; padding: 4px; background: #1d1d20; border: 1px solid rgba(255,255,255,0.14); border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.55); transform-origin: 100% 0; }
+.reader-menu.open { display: flex; animation: ui-pop 0.14s ease-out; }
+.reader-menu.leaving { display: flex; pointer-events: none; animation: ui-out 0.12s ease-in forwards; }
+.reader-menu > * { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 12px; border: none; border-radius: 7px; background: none; color: var(--text); font: inherit; font-size: 13.5px; text-align: left; text-decoration: none; white-space: nowrap; cursor: pointer; transition: background var(--t-fast); }
+.reader-menu > *:hover { background: rgba(255,255,255,0.07); }
+.reader-menu span { color: var(--text-muted); }
+#readerNotesBtn { border-color: transparent; }
+#readerNotesBtn[aria-pressed="true"] { background: rgba(251,177,60,0.14); border-color: transparent; }
 .reader-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 32px; height: 32px; padding: 0 8px; background: none; border: 1px solid transparent; border-radius: 8px; color: var(--text-secondary); font: inherit; font-size: 15px; cursor: pointer; text-decoration: none; transition: background 0.15s, color 0.15s, border-color 0.15s; }
 .reader-btn:hover { background: rgba(255,255,255,0.07); color: var(--text); }
 .reader-btn svg { width: 18px; height: 18px; fill: currentColor; }
@@ -681,7 +704,13 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .pencil-mode { display: inline-flex; align-items: center; border: 1px solid var(--border); border-radius: 8px; padding: 2px; gap: 2px; }
 .pencil-mode button { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 30px; padding: 0; border: none; border-radius: 6px; background: none; color: var(--text-muted); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.15s, color 0.15s; }
 .pencil-mode button:hover { color: var(--text); }
-.pencil-mode button[aria-pressed="true"] { background: rgba(251,177,60,0.14); color: var(--accent); }
+.pencil-mode button[aria-pressed="true"] { color: var(--accent); }
+/* the chosen mode's tint slides between the three, like a segmented control */
+.pencil-mode { position: relative; }
+.pencil-mode button { position: relative; z-index: 1; }
+.pencil-mode::before { content: ''; position: absolute; top: 2px; left: 2px; width: 36px; height: 30px; border-radius: 6px; background: rgba(251,177,60,0.14); transition: transform var(--t-slow) var(--ease); }
+.pencil-mode[data-mode="hl"]::before { transform: translateX(38px); }
+.pencil-mode[data-mode="write"]::before { transform: translateX(76px); }
 .pencil-mode svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
 .inkLayer { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; overflow: visible; }
@@ -691,17 +720,23 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .reader-col { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 .reader-col .reader-body { flex: 1; min-height: 0; }
 /* the Pencil's tools: a strip across the top of the paper's column (it takes its own height; never over the paper or the panel) */
-.ink-bar { display: none; flex-shrink: 0; align-items: center; justify-content: center; gap: 4px; padding: 6px 12px; background: #151517; border-bottom: 1px solid var(--border); }
+.ink-bar { display: none; flex-shrink: 0; align-items: center; justify-content: center; gap: 4px; min-height: 53px; box-sizing: border-box; padding: 6px 12px; background: #151517; border-bottom: 1px solid var(--border); }   /* 53px: the panel's header height, so their bottom lines meet */
 .ink-bar.open { display: flex; }
 /* full screen: the reader bar goes; the strip above the paper is the one toolbar */
 .reader.zen .reader-bar { display: none; }
-.ink-bar.zen-bar.open { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; min-height: 49px; box-sizing: border-box; }
+.ink-bar.zen-bar.open { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; }
+/* full screen: the toolbar floats over the top of the paper, so hiding it never moves the paper */
+.reader.zen .reader-col { position: relative; }
+.reader.zen .ink-bar { position: absolute; top: 0; left: 0; right: 0; z-index: 6; background: rgba(21,21,23,0.9); -webkit-backdrop-filter: blur(14px) saturate(1.4); backdrop-filter: blur(14px) saturate(1.4); transition: opacity var(--t-slow) var(--ease), transform var(--t-slow) var(--ease); }
+.reader.zen.chrome-hidden .ink-bar { opacity: 0; transform: translateY(-10px); pointer-events: none; }
+.ink-bar.bar-in { animation: bar-in var(--t-slow) var(--ease); }
+@keyframes bar-in { from { opacity: 0; transform: translateY(-10px); } }
 .ink-bar .zb-side, .ink-bar .zb-mid { display: flex; align-items: center; gap: 4px; }
 .ink-bar .zb-right { justify-content: flex-end; gap: 6px; }
 .reader-zen-btn svg { width: 17px; height: 17px; }
 .ink-bar .sel-dot { width: 24px; height: 24px; margin: 0 3px; }
 .ink-bar .sel-icon svg { width: 21px; height: 21px; }
-.erase-cursor { position: fixed; z-index: 330; pointer-events: none; border-radius: 50%; border: 1.5px solid rgba(120,130,150,0.9); background: rgba(255,255,255,0.25); }
+.erase-cursor { position: fixed; z-index: 330; pointer-events: none; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.95); background: rgba(255,255,255,0.18); box-shadow: 0 0 0 1px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.25); }
 .ink-bar .ink-size { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; background: none; border: none; border-radius: 7px; cursor: pointer; transition: background 0.15s; }
 .ink-bar .ink-size i { display: block; border-radius: 50%; background: var(--text-secondary); }
 .ink-bar .ink-size:hover { background: rgba(255,255,255,0.07); }
@@ -714,10 +749,17 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .ink-bar .sel-dot.on.resting { border-color: rgba(255,255,255,0.35); }
 .ink-bar .ink-size.on.resting { background: rgba(255,255,255,0.05); }
 .ink-bar .ink-size.on.resting i { background: var(--text-secondary); }
+.ink-bar .ink-tools { display: flex; align-items: center; gap: 4px; }
+.ink-bar .sel-dot, .ink-bar .ink-size, .ink-bar .ink-size i, .ink-bar .sel-icon { transition: background-color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease), opacity var(--t-fast) var(--ease), transform var(--t-fast) var(--ease); }
+.ink-bar button[aria-disabled="true"] { opacity: 0.35; cursor: default; }
+.ink-tools.swap { animation: tools-swap var(--t-fast) var(--ease); }
+@keyframes tools-swap { from { opacity: 0; transform: translateY(-3px); } }
+.undo-spin { animation: undo-spin 0.3s var(--ease); }
+@keyframes undo-spin { from { transform: rotate(0); } 40% { transform: rotate(-35deg); } to { transform: rotate(0); } }
 .reader-body { flex: 1; overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-x pan-y; }   /* two-finger pinch zooms the paper, not the page */
 .reader-body:focus { outline: none; }
 /* no PDF on screen (loading, or the picker): only the PDF's own controls go; Notes stays reachable */
-.reader.no-doc .reader-pageno, .reader.no-doc .reader-zoom, .reader.no-doc #readerDarkBtn, .reader.no-doc .reader-change, .reader.no-doc #readerExternal { visibility: hidden; }
+.reader.no-doc .reader-pageno, .reader.no-doc .reader-zoom, .reader.no-doc #readerDarkBtn, .reader.no-doc .rt-more-wrap { visibility: hidden; }
 .reader-pages { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; padding: 18px 12px calc(60px + env(safe-area-inset-bottom, 0px)); width: max-content; min-width: 100%; box-sizing: border-box; }
 .reader-page { position: relative; background: #fff; box-shadow: 0 2px 18px rgba(0,0,0,0.5); flex-shrink: 0; }
 .reader-page canvas { display: block; }
@@ -766,10 +808,11 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 @media (max-width: 700px) {
   .reader-bar { gap: 6px; padding: 0 8px; }
   /* a phone: pinch zooms and there's no Pencil, so the bar keeps just what earns its place, and the title fits */
-  .reader-back span, #readerExternal, .reader-pageno, .reader-zoom, .pencil-mode, .reader-zen-btn { display: none; }
+  .reader-back span, .reader-pageno, .reader-zoom, .pencil-mode, .reader-zen-btn { display: none; }
   .reader-title { font-size: 14px; }
   .reader-btn.reader-text { font-size: 12px; padding: 0 8px; white-space: nowrap; }
-  .reader-tools { flex: none; gap: 4px; }
+  .reader-tools, .rt-group { flex: none; gap: 4px; }
+  .rt-group + .rt-group::before, .rt-more-wrap::before { display: none; }
   .reader-pages { padding-top: 10px; padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px)); gap: 10px; }
   .pd-read { padding: 7px 12px; margin-left: 4px; }
 }
@@ -787,8 +830,13 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .rp-resize:hover::after, .rp-resize:focus-visible::after, .rp-resize.dragging::after { background: rgba(251,177,60,0.55); }
 .rp-resize:focus { outline: none; }
 .reader.resizing, .reader.resizing * { cursor: col-resize !important; user-select: none !important; }
-#readerNotesBtn[aria-pressed="true"] { color: var(--accent); border-color: rgba(251,177,60,0.5); }
+#readerNotesBtn[aria-pressed="true"] { color: var(--accent); border-color: transparent; }
 .rn-count { font-variant-numeric: tabular-nums; color: var(--text-muted); font-size: 12px; }
+/* Notes and chat: the panel's icon, with how many notes the paper has as a small badge */
+.rt-panel-btn { position: relative; }
+.rt-panel-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.rt-panel-btn .rn-count { position: absolute; top: 1px; right: -3px; min-width: 15px; height: 15px; padding: 0 4px; box-sizing: border-box; border-radius: 8px; background: #2a2a2e; border: 1px solid #111; color: var(--text-secondary); font-size: 10px; font-weight: 600; line-height: 13px; text-align: center; pointer-events: none; }
+#readerNotesBtn[aria-pressed="true"] .rn-count { background: #3a2f1a; color: var(--accent); }
 .rn-count:empty { display: none; }
 .annoLayer { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
 /* comments and citations are lines in navy, apart from the highlight colours and the site's amber */
@@ -821,9 +869,9 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .sel-dot.on { border-color: #fff; }
 .sel-sep { width: 1px; height: 16px; background: rgba(255,255,255,0.14); margin: 0 3px; }
 .sel-bar .sel-dot { width: 16px; height: 16px; margin: 0 3px; }
-.sel-icon { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 24px; padding: 0; background: none; border: none; border-radius: 6px; color: var(--text-secondary); cursor: pointer; transition: background 0.15s, color 0.15s; }
+.sel-icon { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 28px; padding: 0; background: none; border: none; border-radius: 6px; color: var(--text-secondary); cursor: pointer; transition: background 0.15s, color 0.15s; }
 .sel-icon:hover { background: rgba(255,255,255,0.08); color: var(--text); }
-.sel-icon svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round; }
+.sel-icon svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round; }
 .sel-icon.sel-cite svg path { fill: currentColor; stroke: none; }
 .sel-bar button[aria-disabled="true"] { opacity: 0.35; cursor: not-allowed; transform: none; }
 .sel-bar .sel-dot[aria-disabled="true"]:hover { border-color: transparent; }
@@ -1069,7 +1117,8 @@ body.rp-splitting, body.rp-splitting * { user-select: none !important; -webkit-u
 @keyframes quote-pulse { 0% { background-color: transparent; } 18% { background-color: color-mix(in srgb, var(--note-line, #8aa4f0) 34%, transparent); } 100% { background-color: transparent; } }
 @media (prefers-reduced-motion: reduce) { .quote-flash { animation-duration: 1.6s; animation-timing-function: steps(2, jump-none); } .chat-status { animation: none; } }
 .rp-foot { padding: 8px 14px; border-top: 1px solid var(--border); font-size: 11.5px; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
-.rp-locked { padding: 28px 18px; text-align: center; color: var(--text-secondary); font-size: 13.5px; line-height: 1.6; }
+.rp-locked::before { content: ''; display: block; width: 46px; height: 46px; margin: 0 auto 16px; border-radius: 50%; background: rgba(251,177,60,0.1) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fbb13c' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5' y='11' width='14' height='10' rx='2'/%3E%3Cpath d='M8 11V8a4 4 0 0 1 8 0v3'/%3E%3C/svg%3E") center / 21px no-repeat; }
+.rp-locked { padding: 48px 22px 28px; text-align: center; color: var(--text-secondary); font-size: 13.5px; line-height: 1.6; }
 .rp-locked strong { display: block; color: var(--text); font-size: 15px; margin-bottom: 6px; }
 .rp-locked .ui-btn { margin-top: 16px; }
 .cite-dd { position: fixed; z-index: 350; display: none; width: 320px; max-height: 260px; overflow: auto; background: #1d1d20; border: 1px solid rgba(255,255,255,0.14); border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.55); padding: 4px; }
@@ -1100,7 +1149,9 @@ body.rp-splitting, body.rp-splitting * { user-select: none !important; -webkit-u
 .vault-num { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: var(--accent-dim); color: var(--accent); font-size: 12px; flex-shrink: 0; align-self: center; }
 .vault-why { font-weight: 400; color: var(--text-muted); font-size: 12.5px; }
 .vault-hint { font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-top: -4px; }
-/* motion: short and quiet, and off when the system asks for less */
+/* motion: short and quiet, and off when the system asks for less. Two speeds and one curve for everything:
+   --t-fast for a control changing state, --t-slow for a surface (bar, panel, the reader) coming or going */
+:root { --ease: cubic-bezier(0.2, 0.8, 0.2, 1); --t-fast: 0.15s; --t-slow: 0.26s; }
 @keyframes ui-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes ui-rise { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
 @keyframes ui-pop { from { opacity: 0; transform: translateY(4px) scale(0.96); } to { opacity: 1; transform: none; } }
@@ -1110,14 +1161,25 @@ body.rp-splitting, body.rp-splitting * { user-select: none !important; -webkit-u
 .vault-overlay.open { animation: ui-fade 0.18s ease-out; }
 .vault-overlay.open .vault-box { animation: ui-rise 0.22s cubic-bezier(0.2, 0.8, 0.2, 1); }
 .sel-bar.open { animation: ui-pop 0.14s ease-out; transform-origin: 50% 0; }
+.sel-bar.open.glide { animation: none; transition: left var(--t-fast) var(--ease), top var(--t-fast) var(--ease); }
+.sel-bar.leaving { display: flex; }
+.anno-card.leaving { display: block; }
+.sel-bar.leaving, .anno-card.leaving { pointer-events: none; animation: ui-out 0.14s ease-in forwards; }
+@keyframes ui-out { to { opacity: 0; transform: translateY(3px) scale(0.97); } }
+@media (prefers-reduced-motion: reduce) { .reader, .reader * { animation: none !important; transition-duration: 0s !important; } }
 /* Touch and Apple Pencil (iPad): no hover, so actions that appear on hover are always there, and targets fit a finger */
 @media (hover: none) {
   .rp-item-acts, .chat-acts, .p-actions, .paper-detail-tags .group-add-wrap { opacity: 1; pointer-events: auto; }
 }
 .anno-card.open { animation: ui-pop 0.16s ease-out; transform-origin: 20% 0; }
 .cite-dd.open { animation: ui-pop 0.12s ease-out; }
-.reader.panel-open .reader-panel { animation: ui-slide 0.22s cubic-bezier(0.2, 0.8, 0.2, 1); }
-.anno-rect.fresh { animation: hl-appear 0.26s ease-out; }   /* fades in to its own final opacity: no sweep, no jump at the end */
+.reader.panel-open .reader-panel { animation: ui-slide var(--t-slow) var(--ease); }
+.reader.panel-open.panel-leaving .reader-panel { animation: panel-out 0.18s ease-in forwards; pointer-events: none; }
+@keyframes panel-out { to { opacity: 0; transform: translateX(24px); } }
+.reader-panel.tab-swap .rp-pane > :not(:first-child) { animation: tools-swap var(--t-fast) var(--ease); }
+.anno-rect.fresh { animation: hl-sweep 0.24s var(--ease) backwards; }   /* drawn on left to right by clipping, so its own opacity never jumps */
+@keyframes hl-sweep { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+.anno-rect.gone, .anno-mark.gone { opacity: 0 !important; transition: opacity 0.15s ease-in; }
 .anno-mark.fresh { animation: ui-pop 0.2s ease-out both; }
 .rp-item.fresh { animation: item-in 0.5s ease-out; }
 .anno-rect { transition: opacity 0.2s, box-shadow 0.2s; }
@@ -1559,8 +1621,8 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
 html.no-hover .sel-icon:not(.on):hover, html.no-hover .ink-bar .ink-size:not(.on):hover, html.no-hover .reader-btn:hover, html.no-hover .rp-icon-btn:hover, html.no-hover .rp-text-btn:hover { background: none; }
 html.no-hover .sel-icon:not(.on):hover, html.no-hover .pencil-mode button[aria-pressed="false"]:hover, html.no-hover .reader-btn:hover, html.no-hover .rp-icon-btn:hover, html.no-hover .rp-text-btn:hover { color: var(--text-secondary); }
 html.no-hover .sel-dot:not(.on):hover { transform: none; border-color: transparent; }
-html.no-hover .sel-icon:active, html.no-hover .sel-dot:active, html.no-hover .ink-bar .ink-size:active, html.no-hover .pencil-mode button:active, html.no-hover .reader-btn:active, html.no-hover .rp-icon-btn:active, html.no-hover .rp-text-btn:active { transform: scale(0.9); background: rgba(255,255,255,0.1); transition: transform 0.06s; }
-html.no-hover .sel-dot:active { background: var(--hc); }
+html.no-hover .sel-icon:active, html.no-hover .sel-dot:active, html.no-hover .ink-bar .ink-size:active, html.no-hover .pencil-mode button:active, html.no-hover .reader-btn:active, html.no-hover .rp-icon-btn:active, html.no-hover .rp-text-btn:active { transform: scale(0.88); transition-duration: 0.06s; }
+html.no-hover .sel-icon:not(.on):active, html.no-hover .ink-bar .ink-size:not(.on):active, html.no-hover .reader-btn:active, html.no-hover .rp-icon-btn:active, html.no-hover .rp-text-btn:active { background: rgba(255,255,255,0.08); }
 @media (pointer: coarse) {
   /* fingers need ~36px: chips, toggles and small action buttons grow on touch screens only (desktop keeps its density) */
   .pill, .ig-toggle-btn, .tl-chip, .tl-sort button, .lib-hint-btn, .library-actions button, .btn-abs, .btn-link, .p-actions .btn-icon, .btn-quiet-remove, .ui-btn, .rp-chip, .rp-seg button { min-height: 36px; display: inline-flex; align-items: center; justify-content: center; }
@@ -1736,22 +1798,31 @@ html.no-hover .sel-dot:active { background: var(--hc); }
     <button class="reader-btn reader-back" onclick="closeReader()" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg><span>Back</span></button>
     <div class="reader-title" id="readerTitle"></div>
     <div class="reader-tools" id="readerTools">
-      <span class="reader-pageno" id="readerPageNo"></span>
-      <span class="reader-zoom">
-        <button class="reader-btn" onclick="readerZoom(-1)" title="Zoom out" aria-label="Zoom out">&minus;</button>
-        <button class="reader-btn reader-zoom-label" id="readerZoomLabel" onclick="readerZoom(0)" title="Fit to width">Fit</button>
-        <button class="reader-btn" onclick="readerZoom(1)" title="Zoom in" aria-label="Zoom in">+</button>
+      <span class="rt-group rt-view">
+        <span class="reader-pageno" id="readerPageNo"></span>
+        <span class="reader-zoom">
+          <button class="reader-btn" onclick="readerZoom(-1)" title="Zoom out" aria-label="Zoom out">&minus;</button>
+          <button class="reader-btn reader-zoom-label" id="readerZoomLabel" onclick="readerZoom(0)" title="Fit to width">Fit</button>
+          <button class="reader-btn" onclick="readerZoom(1)" title="Zoom in" aria-label="Zoom in">+</button>
+        </span>
+        <button class="reader-btn" id="readerDarkBtn" onclick="toggleReaderDark()" title="Dark pages" aria-pressed="false">&#9680;</button>
+        <button class="reader-btn reader-zen-btn" id="readerZenBtn" onclick="enterZen()" title="Full screen: just the paper and one toolbar" aria-label="Full screen"><svg viewBox="0 0 24 24" aria-hidden="true" style="fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
       </span>
-      <button class="reader-btn reader-zen-btn" id="readerZenBtn" onclick="enterZen()" title="Full screen: just the paper and one toolbar" aria-label="Full screen"><svg viewBox="0 0 24 24" aria-hidden="true" style="fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
-      <span class="pencil-mode" id="readerPenBtn" role="group" aria-label="What the Apple Pencil does" hidden>
-        <button data-pm="read" aria-pressed="true" onclick="setPencilMode('read')" title="Read: the Pencil scrolls and selects, like a finger" aria-label="Read"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 5h6a4 4 0 0 1 4 4v11a3 3 0 0 0-3-3H2z"/><path d="M22 5h-6a4 4 0 0 0-4 4v11a3 3 0 0 1 3-3h7z"/></svg></button>
-        <button data-pm="hl" aria-pressed="false" onclick="setPencilMode('hl')" title="Highlight: strokes highlight or underline the text" aria-label="Highlight"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l-5 5v4h4l5-5"/><path d="M9 11l6-6 4 4-6 6z"/><path d="M13 20h8"/></svg></button>
-        <button data-pm="write" aria-pressed="false" onclick="setPencilMode('write')" title="Write: the Pencil writes and draws on the page" aria-label="Write"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1.2-4.6L15.6 5a2 2 0 0 1 2.8 0l.6.6a2 2 0 0 1 0 2.8L8.6 18.8z"/><path d="M13.8 6.8l3.4 3.4"/></svg></button>
+      <span class="rt-group rt-work">
+        <span class="pencil-mode" id="readerPenBtn" data-mode="read" role="group" aria-label="What the Apple Pencil does" hidden>
+          <button data-pm="read" aria-pressed="true" onclick="setPencilMode('read')" title="Read: the Pencil scrolls and selects, like a finger" aria-label="Read"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 5h6a4 4 0 0 1 4 4v11a3 3 0 0 0-3-3H2z"/><path d="M22 5h-6a4 4 0 0 0-4 4v11a3 3 0 0 1 3-3h7z"/></svg></button>
+          <button data-pm="hl" aria-pressed="false" onclick="setPencilMode('hl')" title="Highlight: strokes highlight or underline the text" aria-label="Highlight"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l-5 5v4h4l5-5"/><path d="M9 11l6-6 4 4-6 6z"/><path d="M13 20h8"/></svg></button>
+          <button data-pm="write" aria-pressed="false" onclick="setPencilMode('write')" title="Write: the Pencil writes and draws on the page" aria-label="Write"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1.2-4.6L15.6 5a2 2 0 0 1 2.8 0l.6.6a2 2 0 0 1 0 2.8L8.6 18.8z"/><path d="M13.8 6.8l3.4 3.4"/></svg></button>
+        </span>
+        <button class="reader-btn rt-panel-btn" id="readerNotesBtn" onclick="toggleReaderPanel()" title="Notes and chat" aria-label="Notes and chat" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M14.5 4v16M17 8.5h1.5M17 11.5h1.5"/></svg><span class="rn-count" id="readerNotesCount"></span></button>
       </span>
-      <button class="reader-btn" id="readerDarkBtn" onclick="toggleReaderDark()" title="Dark pages" aria-pressed="false">&#9680;</button>
-      <button class="reader-btn reader-text" id="readerNotesBtn" onclick="toggleReaderPanel()" title="Notes, highlights and comments" aria-pressed="false">Notes <span class="rn-count" id="readerNotesCount"></span></button>
-      <button class="reader-btn reader-text reader-change" onclick="openPdfChange()" title="Use a different PDF for this paper">Change PDF</button>
-      <a class="reader-btn reader-text" id="readerExternal" target="_blank" rel="noopener" title="Open the PDF in a new tab">Open &#8599;</a>
+      <span class="rt-more-wrap">
+        <button class="reader-btn rt-more" id="readerMore" onclick="toggleReaderMenu()" title="More" aria-label="More" aria-haspopup="menu" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
+        <span class="reader-menu" id="readerMenu" role="menu">
+          <button class="reader-change" role="menuitem" onclick="toggleReaderMenu(false); openPdfChange()">Use a different PDF…</button>
+          <a id="readerExternal" role="menuitem" target="_blank" rel="noopener" onclick="toggleReaderMenu(false)">Open the PDF in a new tab <span aria-hidden="true">&#8599;</span></a>
+        </span>
+      </span>
     </div>
   </div>
   <div class="reader-split">
@@ -5008,14 +5079,19 @@ function hideReader() {
   const el = document.getElementById('reader');
   hidePdfModal();
   finishNotesEdit();
-  closeAnnoCard(); hideSelBar(); closeCiteDD(); endInk(); exitZen();
+  closeAnnoCard(); hideSelBar(); closeCiteDD(); endInk(); exitZen(true);
+  const wasOpen = el.classList.contains('open');
+  if (!wasOpen && _reader.leaveClear) return;   // already on its way out
   el.classList.remove('open');
   document.body.style.overflow = '';
   if (_reader.obs) _reader.obs.disconnect();
   if (_reader.far) _reader.far.disconnect();
-  if (_reader.doc) { _reader.doc.destroy(); _reader.doc = null; }
   _reader.token++;
-  document.getElementById('readerBody').innerHTML = '';
+  const doc = _reader.doc; _reader.doc = null;
+  const clear = _reader.leaveClear = () => { clearTimeout(_reader.leaveT); _reader.leaveClear = null; el.classList.remove('leaving'); if (doc) doc.destroy(); if (!el.classList.contains('open')) document.getElementById('readerBody').innerHTML = ''; };
+  if (!wasOpen || reduceMotion()) return clear();
+  el.classList.add('leaving');   // fades away over the page underneath, then lets go of the PDF
+  _reader.leaveT = setTimeout(clear, 200);
 }
 async function showReader(id) {
   const p = findPaper(id);
@@ -5024,8 +5100,10 @@ async function showReader(id) {
   const el = document.getElementById('reader');
   if (_reader.paper !== p) { _rnFilter = { colors: new Set(), comments: false, notes: false, q: '' }; endDraft('discard'); endInk(); }
   _reader.paper = p;
+  clearTimeout(_reader.panelT); el.classList.remove('panel-leaving');
   el.classList.toggle('panel-open', window.innerWidth >= 1024);   // notes beside the paper by default; on a phone or an upright iPad the paper needs the width (Notes opens it)
   document.getElementById('readerNotesBtn').setAttribute('aria-pressed', el.classList.contains('panel-open') ? 'true' : 'false'); _reader.zoom = 'fit';
+  if (_reader.leaveClear) _reader.leaveClear();   // reopened while fading out: finish that at once
   el.classList.add('open'); el.classList.toggle('dark', readerDark());
   document.getElementById('readerBody').focus({ preventScroll: true });   // arrow keys, Space and PageDown scroll the paper
   document.getElementById('readerDarkBtn').setAttribute('aria-pressed', readerDark() ? 'true' : 'false');
@@ -5041,7 +5119,7 @@ function readerStatus(html) { document.getElementById('readerBody').innerHTML = 
 async function loadIntoReader(p, source, isLocal) {
   const token = ++_reader.token;
   document.getElementById('reader').classList.add('no-doc');
-  readerStatus('<div class="reader-spin"></div>Loading the PDF…');
+  document.getElementById('readerBody').innerHTML = '<div class="reader-skel" role="status" aria-label="Loading the PDF"><div></div><p>Loading the PDF…</p></div>';   // a page-shaped placeholder where the paper will be
   try {
     const lib = await loadPdfJs();
     const doc = await lib.getDocument({ ...source, isEvalSupported: false, verbosity: 0 }).promise;
@@ -5107,7 +5185,7 @@ async function layoutReader(restore) {
   }
   const keepCanvas = {};
   if (anchor) oldPages.forEach(d => { const c = d.querySelector('canvas'); if (c && Math.abs(+d.dataset.page - anchor.page) <= 2) keepCanvas[d.dataset.page] = c; });
-  let html = `<div class="reader-pages" style="padding-left:${left}px;padding-right:${left}px">`;
+  let html = `<div class="reader-pages${oldPages.length ? '' : ' first-in'}" style="padding-left:${left}px;padding-right:${left}px">`;
   for (let i = 1; i <= doc.numPages; i++) html += `<div class="reader-page" data-page="${i}" style="width:${w}px;height:${h}px"></div>`;
   body.innerHTML = html + '</div>';
   Object.entries(keepCanvas).forEach(([n, c]) => { c.classList.add('stale'); c.style.width = c.style.height = ''; body.querySelector(`.reader-page[data-page="${n}"]`).appendChild(c); });
@@ -5147,10 +5225,11 @@ async function drawReaderPage(div) {
   canvas.width = Math.round(cssW * out); canvas.height = Math.round(cssH * out);
   canvas.style.width = cssW + 'px'; canvas.style.height = cssH + 'px';
   div.style.width = cssW + 'px'; div.style.height = cssH + 'px';
-  div.appendChild(canvas);
   const sx = canvas.width / vp.width, sy = canvas.height / vp.height;
   await page.render({ canvasContext: canvas.getContext('2d', { alpha: false }), viewport: vp, transform: [sx, 0, 0, sy, 0, 0] }).promise;
   if (token !== _reader.token) return;
+  if (!div.querySelector('canvas.stale')) canvas.classList.add('page-in');   // drawn off screen, then shown whole: a first draw fades in; a redraw just sharpens
+  div.appendChild(canvas);
   div.querySelectorAll('canvas.stale').forEach(c => { c.width = 0; c.height = 0; c.remove(); });   // the sharp page is ready
   const tl = document.createElement('div');
   tl.className = 'textLayer';
@@ -5293,14 +5372,14 @@ function pinchTo(scale, commitAfter) {
   clearTimeout(Pinch.timer);
   if (commitAfter) Pinch.timer = setTimeout(pinchCommit, commitAfter);
 }
-async function pinchCommit() {
+async function pinchCommit(zoom) {   // zoom: what to call the result ('fit' from the Fit button), else the scale reached
   clearTimeout(Pinch.timer);
   if (!Pinch.active) return;
   Pinch.active = false;
   const body = document.getElementById('readerBody'), a = Pinch.anchor;
   const z = +(Pinch.base * Pinch.scale).toFixed(3);
-  if (Math.abs(z - Pinch.base) < 0.01) { const pages = body.querySelector('.reader-pages'); if (pages) { pages.style.transform = ''; pages.style.willChange = ''; } return; }
-  _reader.zoom = z; _reader.token++;
+  if (Math.abs(z - Pinch.base) < 0.01) { const pages = body.querySelector('.reader-pages'); if (pages) { pages.style.transform = ''; pages.style.willChange = ''; } if (zoom === 'fit') { _reader.zoom = 'fit'; layoutReader(false); } return; }
+  _reader.zoom = zoom || z; _reader.token++;
   await layoutReader(false);          // new pages replace the scaled ones (old pixels stretched until redrawn)
   const pg = body.querySelector(`.reader-page[data-page="${a.page}"]`);
   if (!pg) return;
@@ -5339,18 +5418,32 @@ async function pinchCommit() {
   body.addEventListener('pointerup', lift); body.addEventListener('pointercancel', lift);
 })();
 
-function readerZoom(dir) {
-  if (!_reader.doc) return;
-  const steps = [0.5, 0.67, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3];
-  if (dir === 0) _reader.zoom = 'fit';
-  else {
-    const cur = _reader.scale;
-    const next = dir > 0 ? steps.find(z => z > cur + 0.01) : [...steps].reverse().find(z => z < cur - 0.01);
-    _reader.zoom = next || cur;
+/* The zoom buttons (and + / -) zoom smoothly: the page scales around the middle of the view, as a pinch would,
+   then redraws sharp at the new size */
+async function readerZoom(dir) {
+  if (!_reader.doc || Pinch.active) return;
+  const steps = [0.5, 0.67, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3], cur = _reader.scale;
+  let zoom, scale;
+  if (dir === 0) {
+    const body = document.getElementById('readerBody'), base = (await _reader.doc.getPage(1)).getViewport({ scale: 1 });
+    zoom = 'fit'; scale = Math.min(body.clientWidth - (window.matchMedia('(max-width: 700px)').matches ? 0 : 36), 1000) / base.width;
+  } else {
+    zoom = scale = (dir > 0 ? steps.find(z => z > cur + 0.01) : [...steps].reverse().find(z => z < cur - 0.01)) || cur;
   }
-  _reader.token++;
-  layoutReader(false);
+  const r = document.getElementById('readerBody').getBoundingClientRect();
+  if (reduceMotion() || Math.abs(scale - cur) < 0.01 || !pinchStart(r.left + r.width / 2, r.top + r.height * 0.4)) { _reader.zoom = zoom; _reader.token++; layoutReader(false); return; }
+  document.getElementById('readerZoomLabel').textContent = zoom === 'fit' ? 'Fit' : Math.round(scale * 100) + '%';
+  const t0 = performance.now(), dur = 200, to = scale / cur;
+  await new Promise(done => { const step = now => { const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3); pinchTo(1 + (to - 1) * e, 0); if (k < 1) requestAnimationFrame(step); else done(); }; requestAnimationFrame(step); });
+  pinchCommit(zoom);
 }
+function toggleReaderMenu(force) {
+  const m = document.getElementById('readerMenu'), b = document.getElementById('readerMore');
+  const open = typeof force === 'boolean' ? force : !m.classList.contains('open');
+  if (open) popIn(m); else fadeAway(m);
+  b.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+document.addEventListener('pointerdown', e => { if (!e.target.closest('.rt-more-wrap')) toggleReaderMenu(false); }, true);
 function toggleReaderDark() {
   const on = !readerDark();
   try { localStorage.setItem(READER_DARK_KEY, on ? 'true' : 'false'); } catch (e) {}
@@ -5374,7 +5467,8 @@ document.addEventListener('keydown', e => {
   }
   if (e.key === 'Escape') {
     e.preventDefault();
-    if (_acId) closeAnnoCard();
+    if (document.getElementById('readerMenu').classList.contains('open')) toggleReaderMenu(false);
+    else if (_acId) closeAnnoCard();
     else if (document.getElementById('selBar').classList.contains('open')) { hideSelBar(); window.getSelection().removeAllRanges(); }
     else if (document.getElementById('reader').classList.contains('zen')) exitZen();   // full screen: Esc leaves it first
     else closeReader();
@@ -6115,6 +6209,7 @@ function checkPdfFingerprint() {
 function updateReaderNotesCount() {
   const n = _rn ? rnItems(_rn).length : 0;   // everything in the Notes list (citation anchors belong to their notes)
   document.getElementById('readerNotesCount').textContent = n ? n : '';
+  document.getElementById('readerNotesBtn').setAttribute('aria-label', n ? `Notes and chat (${n} notes)` : 'Notes and chat');
 }
 /* highlights are stored as fractions of the page, so they sit right at any zoom */
 function renderAnnoLayer(pageDiv) {
@@ -6227,7 +6322,16 @@ function mergeLineRects(rs) {
   return out.map(r => r.map(v => Math.round(v * 10000) / 10000));
 }
 let _selPending = null;
-function hideSelBar() { document.getElementById('selBar').classList.remove('open'); _selPending = null; }
+function hideSelBar() { fadeAway(document.getElementById('selBar')); _selPending = null; }
+/* A popover closes with a short fade (it stops taking taps at once); opening it again cancels the fade */
+function fadeAway(el) {
+  if (!el.classList.contains('open')) return;
+  el.classList.remove('open', 'glide');
+  if (reduceMotion()) return;
+  el.classList.add('leaving');
+  clearTimeout(el._leaveT); el._leaveT = setTimeout(() => el.classList.remove('leaving'), 160);
+}
+function popIn(el) { clearTimeout(el._leaveT); el.classList.remove('leaving'); el.classList.add('open'); }
 let _lastPointer = 'mouse';
 /* html.no-hover while the last input was a finger or Pencil (see the CSS): a real mouse or trackpad moving turns it off */
 (() => { const html = document.documentElement;
@@ -6268,7 +6372,8 @@ function showSelBar() {
       + (readerPhone() || chatElsewhere() ? '' : `<button class="sel-icon" onmousedown="event.preventDefault()" onclick="askAboutSelection()" title="Ask Claude about this" aria-label="Ask Claude about this">${ICON_ASK}</button>`)
       + `<button class="sel-icon" onmousedown="event.preventDefault()" onclick="copySelQuote()" title="Copy quote" aria-label="Copy quote">${ICON_COPY}</button>`;
   }
-  bar.classList.add('open');
+  const moving = bar.classList.contains('open');   // already showing: it glides to the new selection instead of popping again
+  popIn(bar); bar.classList.toggle('glide', moving);
   placeSelBar(bar, info.box || info.end || { left: 150, right: 250, top: 200, bottom: 200 });
 }
 function copySelQuote() {
@@ -6317,9 +6422,21 @@ async function createAnno(kind, color) {
   _rn.annos = (_rn.annos || []).concat(a);
   await savePaperNotes(_rn);
   updateReaderNotesCount(); redrawAnnoLayers(); renderReaderPanel();
-  document.querySelectorAll(`.anno-rect[data-anno="${a.id}"], .anno-mark[data-anno="${a.id}"]`).forEach(el => el.classList.add('fresh'));
+  annoArrives(a.id);
   const item = document.querySelector(`.rp-item[data-id="${a.id}"]`); if (item) item.classList.add('fresh');
   if (kind === 'note') openAnnoCard(a.id, true);
+}
+/* A new (or restored) highlight sweeps on along its lines, one after another, like a marker; its comment marker pops */
+function annoArrives(id) {
+  document.querySelectorAll(`.anno-rect[data-anno="${id}"]`).forEach((el, i) => { el.style.animationDelay = Math.min(i, 6) * 45 + 'ms'; el.classList.add('fresh'); });
+  document.querySelectorAll(`.anno-mark[data-anno="${id}"]`).forEach(el => el.classList.add('fresh'));
+}
+/* ...and a deleted one fades before it's gone */
+function annoLeaves(id) {
+  const els = document.querySelectorAll(`.anno-rect[data-anno="${id}"], .anno-mark[data-anno="${id}"]`);
+  if (!els.length || reduceMotion()) return Promise.resolve();
+  els.forEach(el => el.classList.add('gone'));
+  return new Promise(r => setTimeout(r, 150));
 }
 /* The first highlight on a paper fixes the exact PDF: arXiv's latest version can change later */
 async function pinPdfVersion() {
@@ -6361,7 +6478,7 @@ function openAnnoCard(id, focusNote) {
       <button class="sel-icon" onclick="copyAnnoQuote('${id}')" title="Copy quote" aria-label="Copy quote">${ICON_COPY}</button>
       <button class="sel-icon danger" onclick="deleteAnno('${id}')" title="Delete" aria-label="Delete">${ICON_TRASH}</button></div>
     <textarea id="acNote" rows="1" placeholder="Add a comment\u2026" title="Markdown and $math$ work \u00b7 ${MOD_KEY}\u21b5 or Esc to close" oninput="acGrow(this); acNoteInput()" onkeydown="if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) { event.preventDefault(); closeAnnoCard(); }">${esc(a.note || '')}</textarea>`;
-  card.classList.add('open');
+  popIn(card);
   acGrow(document.getElementById('acNote'));
   positionAnnoCard(a);
   document.querySelectorAll(`.anno-rect[data-anno="${id}"]`).forEach(r => r.classList.add('hover'));
@@ -6380,7 +6497,7 @@ function positionAnnoCard(a) {
 function closeAnnoCard() {
   const id = _acId, t = document.getElementById('acNote'), text = t && document.getElementById('annoCard').classList.contains('open') ? t.value : null;
   if (_acTimer) { clearTimeout(_acTimer); _acTimer = null; }
-  document.getElementById('annoCard').classList.remove('open');
+  fadeAway(document.getElementById('annoCard'));
   document.querySelectorAll('.anno-rect.hover').forEach(r => r.classList.remove('hover'));
   _acId = null;
   return id ? endCommentSession(id, text) : Promise.resolve();
@@ -6443,18 +6560,18 @@ async function deleteAnno(id, message) {
   if (notesBusy()) return;
   const a = annoById(id);
   if (!a) return;
-  if (a === _acPending) { _acPending = null; if (_acId === id) { _acId = null; document.getElementById('annoCard').classList.remove('open'); } redrawAnnoLayers(); return; }
+  if (a === _acPending) { _acPending = null; if (_acId === id) { _acId = null; fadeAway(document.getElementById('annoCard')); } await annoLeaves(id); redrawAnnoLayers(); return; }
   _rn.annos = _rn.annos.filter(x => x.id !== id);
   _rn.deleted = { ...(_rn.deleted || {}), [id]: new Date().toISOString() };
-  if (_acId === id) { _acId = null; _acOrigin = null; if (_acTimer) { clearTimeout(_acTimer); _acTimer = null; } document.getElementById('annoCard').classList.remove('open'); }
-  await savePaperNotes(_rn);
+  if (_acId === id) { _acId = null; _acOrigin = null; if (_acTimer) { clearTimeout(_acTimer); _acTimer = null; } fadeAway(document.getElementById('annoCard')); }
+  await Promise.all([savePaperNotes(_rn), annoLeaves(id)]);
   updateReaderNotesCount(); redrawAnnoLayers(); renderReaderPanel();
   toast(message || (a.kind === 'note' ? 'Comment deleted' : a.note ? 'Highlight and comment deleted' : 'Highlight deleted'), async () => {
     delete _rn.deleted[id];
     a.updated = new Date().toISOString();
     _rn.annos = _rn.annos.concat(a);
     await savePaperNotes(_rn);
-    updateReaderNotesCount(); redrawAnnoLayers(); renderReaderPanel();
+    updateReaderNotesCount(); redrawAnnoLayers(); renderReaderPanel(); annoArrives(id);
   });
 }
 /* On a phone the notes/chat panel covers the paper: a jump into the paper first closes it (the Notes button reopens it) */
@@ -6588,12 +6705,16 @@ function syncPencilUI() {
   Ink.on = Pencil.mode === 'write';
   document.getElementById('readerBody').classList.toggle('inking', Ink.on);
   document.querySelectorAll('#readerPenBtn [data-pm]').forEach(b => b.setAttribute('aria-pressed', b.dataset.pm === Pencil.mode ? 'true' : 'false'));
+  document.getElementById('readerPenBtn').dataset.mode = Pencil.mode;
   renderInkBar();
 }
 function endInk() {   // leaving the paper: save what was drawn, nothing left to undo (the mode is kept for the next paper)
   flushInk();
   Ink.undo = [];
-  document.getElementById('inkBar').classList.remove('open');
+  const bar = document.getElementById('inkBar');
+  if (bar._slide) { cancelAnimationFrame(bar._slide.raf); bar._slide.running = false; }
+  bar.style.height = bar.style.minHeight = bar.style.overflow = bar.style.opacity = bar.style.paddingTop = bar.style.paddingBottom = '';
+  bar.classList.remove('open');
 }
 const ICON_ERASER = '<svg viewBox="0 0 24 24" aria-hidden="true" style="fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M8 20h12M5.5 14.5l8-8a2 2 0 0 1 2.8 0l2.2 2.2a2 2 0 0 1 0 2.8L11 19H8.5l-3-3a1 1 0 0 1 0-1.5z"/><path d="M9 11l5 5"/></svg>';
 const ICON_ERASE_PART = '<svg viewBox="0 0 24 24" aria-hidden="true" style="fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M3 7c3-3 5 3 8 0s5-3 8 0"/><circle cx="12" cy="15" r="4.5" stroke-dasharray="2.2 2.2"/><path d="M5 21h14"/></svg>';
@@ -6606,12 +6727,13 @@ function setInkTool(tool, color, size) {
   savePencil(); renderInkBar();
 }
 /* The Pencil's tools, at the top of the paper (not over the notes/chat panel) */
+const ICON_PANEL = '<svg viewBox="0 0 24 24" aria-hidden="true" style="fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M14.5 4v16M17 8.5h1.5M17 11.5h1.5"/></svg>';
 const ICON_MIN = '<svg viewBox="0 0 24 24" aria-hidden="true" style="fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>';
 function pencilSwitchHTML() {
   if (document.getElementById('readerPenBtn').hidden) return '';
   const b = (m, t, svg) => `<button data-pm="${m}" aria-pressed="${Pencil.mode === m}" onclick="setPencilMode('${m}')" title="${t}" aria-label="${t}">${svg}</button>`;
   const src = document.getElementById('readerPenBtn');
-  return `<span class="pencil-mode">${['read', 'hl', 'write'].map(m => { const o = src.querySelector(`[data-pm="${m}"]`); return b(m, o.getAttribute('aria-label'), o.innerHTML); }).join('')}</span>`;
+  return `<span class="pencil-mode" data-mode="${Pencil.mode}">${['read', 'hl', 'write'].map(m => { const o = src.querySelector(`[data-pm="${m}"]`); return b(m, o.getAttribute('aria-label'), o.innerHTML); }).join('')}</span>`;
 }
 function inkToolsHTML() {
   if (Pencil.mode === 'hl') {
@@ -6629,54 +6751,120 @@ function inkToolsHTML() {
   }
   return '';
 }
+/* Update el to the markup in html, keeping the elements that are already there when only their attributes or text
+   differ: a tapped tool then eases into its new look (CSS transitions need the same element) instead of the whole
+   strip being rebuilt under your finger. Returns false when the structure changed and el was rebuilt. Elements
+   matching `own` are left as they are inside (their contents are morphed separately). */
+function morphInto(el, html, own) {
+  const next = document.createElement(el.tagName); next.innerHTML = html;
+  const mine = n => own && n.matches && n.matches(own);
+  const same = (a, b) => a.childNodes.length === b.childNodes.length && [...a.childNodes].every((n, i) => {
+    const m = b.childNodes[i];
+    return n.nodeType === m.nodeType && (n.nodeType !== 1 || (n.tagName === m.tagName && (mine(n) || same(n, m))));
+  });
+  if (!same(el, next)) { el.innerHTML = html; return false; }
+  const patch = (a, b) => [...a.childNodes].forEach((n, i) => {
+    const m = b.childNodes[i];
+    if (n.nodeType !== 1) { if (n.nodeValue !== m.nodeValue) n.nodeValue = m.nodeValue; return; }
+    [...n.attributes].forEach(at => { if (!m.hasAttribute(at.name)) n.removeAttribute(at.name); });
+    [...m.attributes].forEach(at => { if (n.getAttribute(at.name) !== at.value) n.setAttribute(at.name, at.value); });
+    if (!mine(n)) patch(n, m);
+  });
+  patch(el, next);
+  return true;
+}
 /* The strip above the paper: the Pencil's tools (Highlight/Write), or in full screen the one toolbar there is:
    the Pencil switch, its tools, and on the right Notes (when the panel is closed) and the way out */
 function renderInkBar() {
   const bar = document.getElementById('inkBar'), reader = document.getElementById('reader'), zen = reader.classList.contains('zen');
-  const want = reader.classList.contains('open') && _reader.doc && (zen ? !reader.classList.contains('chrome-hidden') : (Pencil.mode !== 'read' && !document.getElementById('readerPenBtn').hidden));
+  const want = reader.classList.contains('open') && _reader.doc && (zen || (Pencil.mode !== 'read' && !document.getElementById('readerPenBtn').hidden));
   if (!want) {
-    if (bar.classList.contains('open')) keepPaperStill(() => bar.classList.remove('open'));
+    if (barShown(bar)) slideBar(bar, false, () => bar.classList.remove('open'));
     return;
   }
-  const tools = inkToolsHTML();
+  const tools = inkToolsHTML(), toolsEl = bar.querySelector('.ink-tools'), was = toolsEl && toolsEl.dataset.mode;
   bar.classList.toggle('zen-bar', zen);
-  bar.innerHTML = zen
-    ? `<div class="zb-side">${pencilSwitchHTML()}</div><div class="zb-mid">${tools}</div><div class="zb-side zb-right">${reader.classList.contains('panel-open') ? '' : `<button class="rp-text-btn" onclick="toggleReaderPanel(true)" title="Notes and chat">Notes</button>`}<button class="sel-icon" onclick="exitZen()" title="Leave full screen" aria-label="Leave full screen">${ICON_MIN}</button></div>`
-    : tools;
-  if (!bar.classList.contains('open')) keepPaperStill(() => bar.classList.add('open'));
+  morphInto(bar, zen
+    ? `<div class="zb-side">${pencilSwitchHTML()}</div><div class="ink-tools zb-mid" data-mode="${Pencil.mode}"></div><div class="zb-side zb-right">${reader.classList.contains('panel-open') ? '' : `<button class="sel-icon" onclick="toggleReaderPanel(true)" title="Notes and chat" aria-label="Notes and chat">${ICON_PANEL}</button>`}<button class="sel-icon" onclick="exitZen()" title="Leave full screen" aria-label="Leave full screen">${ICON_MIN}</button></div>`
+    : `<div class="ink-tools" data-mode="${Pencil.mode}"></div>`, '.ink-tools');
+  const mid = bar.querySelector('.ink-tools');
+  if (!morphInto(mid, tools) && was && was !== Pencil.mode && bar.classList.contains('open')) {   // Highlight <-> Write: the tools cross-fade
+    mid.classList.remove('swap'); void mid.offsetWidth; mid.classList.add('swap');
+  }
+  if (zen) { if (!bar.classList.contains('open')) { bar.classList.add('open'); replay(bar, 'bar-in'); } }   // full screen: it floats over the paper, so it just fades in
+  else if (!barShown(bar)) slideBar(bar, true, () => bar.classList.add('open'));
+}
+const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+function replay(el, cls) { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }   // (re)start a CSS animation
+function barShown(el) { return el._slide && el._slide.running ? el._slide.show : el.classList.contains('open'); }
+/* A bar above the paper opens or closes by growing or shrinking its height, while what you're reading stays exactly
+   where it is on screen (the scroll follows every frame). apply(true) makes it displayable before it opens;
+   apply(false) hides it once closed. A reversal mid-way continues from the current height. */
+function slideBar(el, show, apply) {
+  const body = document.getElementById('readerBody'), st = el._slide || (el._slide = {});
+  cancelAnimationFrame(st.raf);
+  const top0 = body.getBoundingClientRect().top, o0 = st.running ? +el.style.opacity || 0 : show ? 0 : 1;
+  const from = st.running || !show ? el.offsetHeight : 0;
+  const clearStyle = () => { el.style.height = el.style.minHeight = el.style.overflow = el.style.opacity = el.style.paddingTop = el.style.paddingBottom = ''; };
+  if (show) { apply(true); clearStyle(); }
+  const to = show ? el.offsetHeight : 0;
+  const finish = () => { st.running = false; keepPaperStill(() => { if (!show) apply(false); clearStyle(); }); };   // hidden first, so a closed bar never pops back to full height
+  const settle = () => { if (!_stillDepth) body.scrollTop += body.getBoundingClientRect().top - top0; };   // (inside keepPaperStill, that one settles it)
+  if (reduceMotion() || from === to) { finish(); settle(); return; }
+  Object.assign(el.style, { overflow: 'hidden', minHeight: '0px', paddingTop: '0px', paddingBottom: '0px', height: from + 'px' });   // nothing may hold the height up
+  settle();
+  Object.assign(st, { running: true, show });
+  const t0 = performance.now(), dur = 260;
+  const step = now => {
+    const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3), top = body.getBoundingClientRect().top;
+    el.style.height = Math.round(from + (to - from) * e) + 'px';
+    el.style.opacity = o0 + ((show ? 1 : 0) - o0) * e;
+    body.scrollTop += body.getBoundingClientRect().top - top;
+    if (k < 1) st.raf = requestAnimationFrame(step); else finish();
+  };
+  st.raf = requestAnimationFrame(step);
 }
 /* What's on screen of the paper stays where it is when bars above it appear or go */
-function keepPaperStill(change) {
+let _stillDepth = 0;
+function keepPaperStill(change) {   // nested calls: only the outermost one moves the scroll, once, by the net change
   const body = document.getElementById('readerBody'), t0 = body.getBoundingClientRect().top;
-  change();
-  body.scrollTop += body.getBoundingClientRect().top - t0;
+  _stillDepth++;
+  try { change(); } finally { _stillDepth--; }
+  if (!_stillDepth) body.scrollTop += body.getBoundingClientRect().top - t0;
 }
 /* ===== FULL SCREEN (zen) =====
    Just the paper and one toolbar (plus the notes/chat panel if it's open). A click or tap on the paper hides the
    toolbar, another brings it back. Uses the browser's full screen where there is one; Esc or the minimise button
    leaves. */
+/* In: the reader's bar folds away (the paper stays put, more of it shows), then the one toolbar fades in over the
+   top of the paper. Out: the reverse. */
 async function enterZen() {
-  const r = document.getElementById('reader');
-  if (!r.classList.contains('open') || r.classList.contains('zen')) return;
+  const r = document.getElementById('reader'), top = r.querySelector('.reader-bar');
+  if (!r.classList.contains('open') || r.classList.contains('zen') || _reader.zenIn) return;
   closeAnnoCard(); hideSelBar();
-  keepPaperStill(() => { r.classList.add('zen'); r.classList.remove('chrome-hidden'); });
-  renderInkBar();
+  _reader.zenIn = true;
   const el = document.documentElement;
-  if (el.requestFullscreen && !document.fullscreenElement) { try { await el.requestFullscreen({ navigationUI: 'hide' }); _reader.zenFs = true; } catch (e) {} }
+  const fs = el.requestFullscreen && !document.fullscreenElement ? el.requestFullscreen({ navigationUI: 'hide' }).then(() => { _reader.zenFs = true; }, () => {}) : null;   // asked for at once: it needs the tap
+  slideBar(top, false, () => {
+    _reader.zenIn = false;
+    keepPaperStill(() => { r.classList.add('zen'); r.classList.remove('chrome-hidden'); renderInkBar(); });
+  });
+  if (fs) await fs;
 }
-function exitZen() {
-  const r = document.getElementById('reader');
-  if (!r.classList.contains('zen')) return;
-  keepPaperStill(() => { r.classList.remove('zen', 'chrome-hidden'); document.getElementById('inkBar').classList.remove('zen-bar'); });
-  renderInkBar();
+function exitZen(instant) {
+  const r = document.getElementById('reader'), top = r.querySelector('.reader-bar'), bar = document.getElementById('inkBar');
+  if (_reader.zenIn) { _reader.zenIn = false; slideBar(top, true, () => {}); }   // left before it was all the way in
+  if (r.classList.contains('zen')) {
+    if (Pencil.mode === 'read' || document.getElementById('readerPenBtn').hidden) bar.classList.remove('open');   // floating: it just goes
+    keepPaperStill(() => { r.classList.remove('zen', 'chrome-hidden'); bar.classList.remove('zen-bar'); if (!instant) top.style.height = '0px'; renderInkBar(); });
+    if (!instant) slideBar(top, true, () => {});
+  }
   if (_reader.zenFs && document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
   _reader.zenFs = false;
 }
-function toggleZenChrome() {
+function toggleZenChrome() {   // the floating toolbar fades out of the way and back (CSS)
   const r = document.getElementById('reader');
-  if (!r.classList.contains('zen')) return;
-  r.classList.toggle('chrome-hidden');
-  renderInkBar();
+  if (r.classList.contains('zen')) r.classList.toggle('chrome-hidden');
 }
 document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && _reader.zenFs) { _reader.zenFs = false; exitZen(); } });
 
@@ -6698,6 +6886,8 @@ function undoInk() {
   if (last.added) removeInk(last.added);
   if (last.erased) addInk(last.erased);
   scheduleInkSave(); redrawAnnoLayers(); renderInkBar();
+  const u = document.querySelector('#inkBar [aria-label="Undo"] svg');
+  if (u) { u.classList.remove('undo-spin'); void u.offsetWidth; u.classList.add('undo-spin'); }
 }
 function wholeWords(r) {
   const isW = c => /[\p{L}\p{N}]/u.test(c || '');
@@ -7016,7 +7206,7 @@ function relayoutAfterPanel() { if (_reader.doc && !readerPhone()) { if (_reader
 function readerPhone() { return window.matchMedia('(max-width: 700px)').matches; }
 function toggleReaderPanel(force) {
   const r = document.getElementById('reader');
-  const open = typeof force === 'boolean' ? force : !r.classList.contains('panel-open');
+  const open = typeof force === 'boolean' ? force : !r.classList.contains('panel-open') || r.classList.contains('panel-leaving');
   if (readerPhone() && _reader.paper && r.classList.contains('open')) {
     const onNotes = /\/notes$/.test(location.hash);
     if (open && !onNotes) { _reader.notesStep = true; location.hash = '#read/' + encodeURIComponent(_reader.paper.id) + '/notes'; return; }
@@ -7024,8 +7214,19 @@ function toggleReaderPanel(force) {
   }
   setReaderPanel(open);
 }
-function setReaderPanel(open) {
+function setReaderPanel(open, now) {
   const r = document.getElementById('reader');
+  clearTimeout(_reader.panelT);
+  if (r.classList.contains('panel-leaving')) {
+    r.classList.remove('panel-leaving');
+    if (open) { document.getElementById('readerNotesBtn').setAttribute('aria-pressed', 'true'); return; }   // reopened while sliding out: it just stays
+  }
+  if (!open && !now && r.classList.contains('panel-open') && r.classList.contains('open') && !reduceMotion()) {   // slides out first, then the paper takes the room
+    r.classList.add('panel-leaving');
+    document.getElementById('readerNotesBtn').setAttribute('aria-pressed', 'false');
+    _reader.panelT = setTimeout(() => setReaderPanel(false, true), 180);
+    return;
+  }
   r.classList.toggle('panel-open', open);
   document.getElementById('readerNotesBtn').setAttribute('aria-pressed', open ? 'true' : 'false');
   if (open) {
@@ -7356,7 +7557,7 @@ function setPanelTab(t, focus) {
   const changed = _panelTab !== t;
   _panelTab = t;
   if (!document.getElementById('reader').classList.contains('panel-open')) toggleReaderPanel(true);
-  else if (changed && panelMode() === 'tabs') renderReaderPanel();
+  else if (changed && panelMode() === 'tabs') { renderReaderPanel(); replay(document.getElementById('readerPanel'), 'tab-swap'); }
   if (t === 'chat') chatOpen(focus);
 }
 async function chatOpen(focus) {
