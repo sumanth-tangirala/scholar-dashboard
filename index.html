@@ -982,6 +982,7 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .md-table table { width: 100%; border-collapse: collapse; font-size: 12.5px; line-height: 1.45; }
 .md-table th, .md-table td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid rgba(255,255,255,0.08); overflow-wrap: break-word; }
 .md-table th:first-child, .md-table td:first-child { padding-left: 0; }
+.md-table th + th, .md-table td + td { border-left: 1px solid rgba(255,255,255,0.08); }   /* column lines, as light as the row lines */
 .md-table th { color: var(--text); font-size: 12px; font-weight: 600; border-bottom-color: rgba(255,255,255,0.18); }
 .md-table td:first-child { color: var(--text); font-weight: 500; }
 .md-table tr:last-child td { border-bottom: none; }
