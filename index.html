@@ -1503,6 +1503,10 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
   .pill, .ig-toggle-btn, .tl-chip, .tl-sort button, .lib-hint-btn, .library-actions button, .btn-abs, .btn-link, .p-actions .btn-icon, .btn-quiet-remove, .ui-btn, .rp-chip, .rp-seg button { min-height: 36px; display: inline-flex; align-items: center; justify-content: center; }
   .p-actions .btn-icon:not(.btn-labelled) { min-width: 36px; }
   .tok-pill { min-height: 32px; }
+  .anno-mark { width: 26px; height: 26px; margin-top: -13px; border-radius: 7px; }
+  .anno-mark svg { width: 15px; height: 15px; }
+  .rp-add { height: 36px; }
+  .toast-undo { min-height: 36px; padding: 0 10px; margin: -8px -8px -8px 0; }
   .group-add-dd .group-opt, .copy-dd-item { padding: 11px 14px; font-size: 14px; }
   .badge-group-edit, .pd-topics .group-add-btn, .group-add-btn { height: 32px; }
   .anno-card textarea#acNote { min-height: 64px; }   /* room to write a comment by hand (Scribble turns it into text) */
@@ -6040,11 +6044,11 @@ function renderAnnoLayer(pageDiv) {
   // a marker in the right margin, level with the first line, for anything that carries a comment
   let marks = pageDiv.querySelector('.annoMarks');
   if (!marks) { marks = document.createElement('div'); marks.className = 'annoMarks'; pageDiv.appendChild(marks); }
-  const rows = [];
+  const rows = [], step = matchMedia('(pointer: coarse)').matches ? 30 : 20;   // markers side by side when they share a line
   marks.innerHTML = list.filter(a => a.kind === 'note' || (a.note || '').trim()).sort((x, y) => x.rects[0][1] - y.rects[0][1]).map(a => {
     const y = a.rects[0][1] + a.rects[0][3] / 2;
     const slot = rows.filter(v => Math.abs(v - y) < 0.012).length; rows.push(y);
-    return `<button class="anno-mark ${a.kind === 'note' ? 'note' : ''}" data-anno="${a.id}" style="--hc:${annoHc(a)};top:${y * 100}%;right:${6 + slot * 20}px" title="${escAttr((a.note || 'Comment').replace(CITE_RE, (m, id, rest) => '\u201c' + ((rest.match(/"([^"]*)/) || [])[1] || '\u2026') + '\u201d').slice(0, 120))}" aria-label="Open comment" onclick="event.stopPropagation();openAnnoCard('${a.id}', true)" onmouseenter="markHover('${a.id}',true)" onmouseleave="markHover('${a.id}',false)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8l-4 3v-3H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg></button>`;
+    return `<button class="anno-mark ${a.kind === 'note' ? 'note' : ''}" data-anno="${a.id}" style="--hc:${annoHc(a)};top:${y * 100}%;right:${6 + slot * step}px" title="${escAttr((a.note || 'Comment').replace(CITE_RE, (m, id, rest) => '\u201c' + ((rest.match(/"([^"]*)/) || [])[1] || '\u2026') + '\u201d').slice(0, 120))}" aria-label="Open comment" onclick="event.stopPropagation();openAnnoCard('${a.id}', true)" onmouseenter="markHover('${a.id}',true)" onmouseleave="markHover('${a.id}',false)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8l-4 3v-3H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg></button>`;
   }).join('');
   renderInkLayer(pageDiv);
 }
@@ -6342,9 +6346,18 @@ async function deleteAnno(id, message) {
     updateReaderNotesCount(); redrawAnnoLayers(); renderReaderPanel();
   });
 }
+/* On a phone the notes/chat panel covers the paper: a jump into the paper first closes it (the Notes button reopens it) */
+function revealPaper() {
+  const r = document.getElementById('reader');
+  if (!readerPhone() || !r.classList.contains('panel-open')) return 0;
+  toggleReaderPanel(false);
+  return 320;   // let the panel go before scrolling
+}
 function jumpToAnno(id) {
   const a = annoById(id);
   if (!a) return;
+  const wait = revealPaper();
+  if (wait) { setTimeout(() => jumpToAnno(id), wait); return; }
   const body = document.getElementById('readerBody');
   const pg = body.querySelector(`.reader-page[data-page="${a.page}"]`);
   if (!pg) return;
@@ -7523,6 +7536,8 @@ async function locateQuote(page, quote) {
   return rects.length ? { pg, rects, quote: r.toString().replace(/\s+/g, ' ').trim() } : null;
 }
 async function jumpToQuote(page, quote) {
+  const wait = revealPaper();
+  if (wait) await new Promise(r => setTimeout(r, wait));
   const found = await locateQuote(page, quote);
   const body = document.getElementById('readerBody');
   if (!found) {
