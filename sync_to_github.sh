@@ -19,8 +19,12 @@ MESSAGE="${1:-"Update papers and interests database - $DATE"}"
 find "$DIR/.git" -name '*.lock' -type f -mmin +10 -print -delete 2>/dev/null \
   | sed 's/^/==> Removed stale lock: /' || true
 
+echo "==> Updating link-preview pages (p/<id>/)..."
+python3 "$DIR/make_share_pages.py"
+
 echo "==> Staging changes..."
 git add papers_database.csv interests_database.csv groups_database.csv index.html CLAUDE.md
+git add -A p
 
 # Only commit if there are staged changes.
 if git diff --cached --quiet; then

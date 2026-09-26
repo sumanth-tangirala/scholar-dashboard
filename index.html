@@ -7842,12 +7842,12 @@ function captureNavList(fromEl) {
   _navList = keys.length > 1 ? { keys, label } : null;
 }
 /* Step to another paper without adding history, so Back still returns to the list */
-function goPaper(key) { if (key) location.replace('#paper/' + encodeURIComponent(key)); }
+function goPaper(key) { if (key) location.replace(location.pathname + location.search + '#paper/' + encodeURIComponent(key)); }   // same document: a bare '#...' would resolve against <base>
 function openPaper(id, event) {
   if (event && event.target) captureNavList(event.target);
   const paperId = encodeURIComponent(id);
   if (event && (event.metaKey || event.ctrlKey)) {
-    window.open(location.pathname + '#paper/' + paperId, '_blank');
+    window.open(APP_ROOT + 'p/' + paperId + '/#paper/' + paperId, '_blank');
     return;
   }
   location.hash = '#paper/' + paperId;
@@ -8126,9 +8126,39 @@ function paperBack() {
   }
 }
 
+/* ===== SHAREABLE ADDRESS =====
+   Link previews (WhatsApp, Slack...) never see the part after '#' and don't run scripts, so a '#paper/<id>' link
+   previews as the home page. On a paper page or in the reader the address bar therefore shows
+   <root>/p/<id>/#paper/<id>: p/<id>/ is a small static page with that paper's title, authors and venue (written by
+   make_share_pages.py) that forwards to the app, so a copied link previews the paper and still opens it. Anywhere
+   else the address goes back to <root>/#... . The app's own files resolve against <root> through a <base>. */
+const APP_ROOT = location.pathname.replace(/[^/]*$/, '');   // where index.html lives
+(() => { const b = document.createElement('base'); b.href = APP_ROOT; document.head.prepend(b); })();
+function shareablePath(hash) {
+  const m = hash.match(/^(?:paper|read)\/([^/]+)/), id = m && decodeURIComponent(m[1]);
+  return id && /^[a-z0-9][a-z0-9-]*$/.test(id) && !/^up-[0-9a-f]{12}$/.test(id) ? APP_ROOT + 'p/' + id + '/' : APP_ROOT;   // uploads are private: no page, no preview
+}
+function syncAddress() {
+  const want = shareablePath(location.hash.slice(1));
+  if (location.pathname !== want) history.replaceState(history.state, '', want + location.search + location.hash);
+}
+/* On a /p/ address a plain '#...' link would resolve against <root> and reload the page: route it in place */
+document.addEventListener('click', e => {
+  const a = e.target.closest && e.target.closest('a[href^="#"]');
+  if (!a || location.pathname === APP_ROOT || e.metaKey || e.ctrlKey || e.shiftKey) return;
+  e.preventDefault();
+  history.pushState(null, '', APP_ROOT + location.search + a.getAttribute('href'));
+  applyHash();
+}, true);
+/* Back/Forward between the two address forms: hashchange doesn't always fire when the path differs too */
+let _appliedHash = null;
+window.addEventListener('popstate', () => setTimeout(() => { if (location.hash !== _appliedHash) applyHash(); }, 30));
+
 /* ===== HASH-BASED ROUTING ===== */
 const VALID_TABS = ['all', 'email', 'venues', 'library', 'interests'];
 function applyHash() {
+  syncAddress();
+  _appliedHash = location.hash;
   const hash = location.hash.slice(1); // remove '#'
 
   // PDF reader sits over whatever was on screen

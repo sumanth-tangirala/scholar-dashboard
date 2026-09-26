@@ -338,6 +338,12 @@ The reader's **Chat** tab talks to Claude through **Claude Code on Sumanth's lap
 - From an iPad: `bridge/tailscale_setup.sh` publishes the bridge on the user's private Tailscale network (HTTPS, `tailscale serve`); the page stores that address in localStorage `claude_bridge_url` and pairs as usual (Allow on the Mac). The Mac must be awake.
 - Digest runs never touch `bridge/` or `~/.scholar-bridge/`.
 
+# Link previews (`p/`)
+
+Chat apps preview a link from its static HTML and never see the part after `#`, so each paper has a tiny page `p/<id>/index.html` (title, authors, venue as Open Graph tags) that forwards to `#paper/<id>`. While a paper or its reader is open, the app's address bar shows `<root>/p/<id>/#...`, so a copied link previews the paper.
+- The pages are generated from `papers_database.csv` by `make_share_pages.py`, which `sync_to_github.sh` runs before every commit (it also removes pages of papers no longer in the database). Never edit them by hand.
+- Uploaded (private) papers never get a page and keep the plain address.
+
 # Uploaded papers (usually papers to review)
 
 Library → **To review** lets the user upload a PDF and use the same reader, notes and chat. These papers are confidential and **never go into `papers_database.csv`**:
