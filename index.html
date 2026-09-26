@@ -713,6 +713,10 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .sel-dot { flex-shrink: 0; }   /* colour dots stay round however tight their row is */
 .ink-bar .sel-dot.on { border-color: #fff; }
 .ink-bar .sel-icon.on { background: rgba(255,255,255,0.12); color: var(--text); }
+.ink-bar .sel-icon.ink-eraser.on { background: rgba(251,177,60,0.16); color: var(--accent); }
+.ink-bar .sel-dot.on.resting { border-color: rgba(255,255,255,0.35); }
+.ink-bar .ink-size.on.resting { background: rgba(255,255,255,0.05); }
+.ink-bar .ink-size.on.resting i { background: var(--text-secondary); }
 .reader-body { flex: 1; overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-x pan-y; }   /* two-finger pinch zooms the paper, not the page */
 .reader-body:focus { outline: none; }
 /* no PDF on screen (loading, or the picker): only the PDF's own controls go; Notes stays reachable */
@@ -1549,15 +1553,17 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
   .f-actions, .feed-item:hover .f-actions, .feed-item:focus-within .f-actions,
   .top-row .tr-actions, .top-row:hover .tr-actions, .top-row:focus-within .tr-actions { grid-template-rows: 0fr; opacity: 0; margin-top: 0; }
   .top-row[data-upload] .tr-actions, .top-row[data-upload]:hover .tr-actions { grid-template-rows: 1fr; opacity: 1; margin-top: 10px; }   /* uploads open the reader: Rename/Remove live here */
-  /* iPad Safari keeps :hover on the last thing tapped, so a tapped Undo (or zoom, or tool) looked switched on.
-     On touch, hovering changes nothing; a press gives brief feedback instead; selected tools keep their look. */
-  .sel-icon:not(.on):hover, .ink-bar .ink-size:not(.on):hover, .reader-btn:hover, .rp-icon-btn:hover, .rp-text-btn:hover { background: none; }
-  .sel-icon:not(.on):hover, .pencil-mode button[aria-pressed="false"]:hover, .reader-btn:hover, .rp-icon-btn:hover, .rp-text-btn:hover { color: var(--text-secondary); }
-  .sel-dot:not(.on):hover { transform: none; border-color: transparent; }
-  .sel-icon:active, .sel-dot:active, .ink-bar .ink-size:active, .pencil-mode button:active, .reader-btn:active, .rp-icon-btn:active, .rp-text-btn:active { transform: scale(0.9); background: rgba(255,255,255,0.1); transition: transform 0.06s; }
-  .sel-dot:active { background: var(--hc); }
   .badge-group-edit .group-remove, .badge-group-edit:hover .group-remove { max-width: 30px; width: 26px; height: 26px; opacity: 0.7; margin: 0 -6px 0 2px; }   /* removing a topic needs no hover */
 }
+/* Safari keeps :hover on the last thing tapped, so a tapped Undo (or zoom, or tool) looked switched on. Keyed to the
+   input actually used (html.no-hover, set by script), not to (hover: none): an iPad with a hover-capable Pencil or
+   a trackpad reports hover support, yet taps still leave hover stuck. Hovering then changes nothing; a press gives
+   brief feedback instead; selected tools keep their look. */
+html.no-hover .sel-icon:not(.on):hover, html.no-hover .ink-bar .ink-size:not(.on):hover, html.no-hover .reader-btn:hover, html.no-hover .rp-icon-btn:hover, html.no-hover .rp-text-btn:hover { background: none; }
+html.no-hover .sel-icon:not(.on):hover, html.no-hover .pencil-mode button[aria-pressed="false"]:hover, html.no-hover .reader-btn:hover, html.no-hover .rp-icon-btn:hover, html.no-hover .rp-text-btn:hover { color: var(--text-secondary); }
+html.no-hover .sel-dot:not(.on):hover { transform: none; border-color: transparent; }
+html.no-hover .sel-icon:active, html.no-hover .sel-dot:active, html.no-hover .ink-bar .ink-size:active, html.no-hover .pencil-mode button:active, html.no-hover .reader-btn:active, html.no-hover .rp-icon-btn:active, html.no-hover .rp-text-btn:active { transform: scale(0.9); background: rgba(255,255,255,0.1); transition: transform 0.06s; }
+html.no-hover .sel-dot:active { background: var(--hc); }
 @media (pointer: coarse) {
   /* fingers need ~36px: chips, toggles and small action buttons grow on touch screens only (desktop keeps its density) */
   .pill, .ig-toggle-btn, .tl-chip, .tl-sort button, .lib-hint-btn, .library-actions button, .btn-abs, .btn-link, .p-actions .btn-icon, .btn-quiet-remove, .ui-btn, .rp-chip, .rp-seg button { min-height: 36px; display: inline-flex; align-items: center; justify-content: center; }
@@ -6226,6 +6232,11 @@ function mergeLineRects(rs) {
 let _selPending = null;
 function hideSelBar() { document.getElementById('selBar').classList.remove('open'); _selPending = null; }
 let _lastPointer = 'mouse';
+/* html.no-hover while the last input was a finger or Pencil (see the CSS): a real mouse or trackpad moving turns it off */
+(() => { const html = document.documentElement;
+  if (matchMedia('(hover: none)').matches) html.classList.add('no-hover');
+  addEventListener('pointerdown', e => html.classList.toggle('no-hover', e.pointerType !== 'mouse'), true);
+  addEventListener('pointermove', e => { if (e.pointerType === 'mouse' && !e.buttons) html.classList.remove('no-hover'); }, true); })();
 /* The bar goes above the selection. On touch screens the phone or iPad shows its own Copy/Look Up menu right next
    to the selection, above or below it (we can't see which), so the bar keeps a lane that menu fits in and sits
    beyond it: whichever side the system menu picks, the two never overlap. With no room above, it goes below,
@@ -6592,7 +6603,12 @@ const ICON_ERASER = '<svg viewBox="0 0 24 24" aria-hidden="true" style="fill:non
 const ICON_ERASE_PART = '<svg viewBox="0 0 24 24" aria-hidden="true" style="fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M3 7c3-3 5 3 8 0s5-3 8 0"/><circle cx="12" cy="15" r="4.5" stroke-dasharray="2.2 2.2"/><path d="M5 21h14"/></svg>';
 const ICON_UNDO = '<svg viewBox="0 0 24 24" aria-hidden="true" style="fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>';
 function setPencilHl(v) { Pencil.hl = v; if (v !== 'note') rememberHlColor(v); savePencil(); renderInkBar(); }
-function setInkTool(tool, color, size) { Ink.tool = tool; if (color) Ink.color = color; if (size) Ink.size = size; savePencil(); renderInkBar(); }
+/* The erasers are toggles: tapping the one that's on puts the pen back in your hand, as does tapping a colour or size */
+function setInkTool(tool, color, size) {
+  Ink.tool = tool !== 'pen' && Ink.tool === tool ? 'pen' : tool;
+  if (color) Ink.color = color; if (size) Ink.size = size;
+  savePencil(); renderInkBar();
+}
 /* The Pencil's tools, at the top of the paper (not over the notes/chat panel) */
 const ICON_MIN = '<svg viewBox="0 0 24 24" aria-hidden="true" style="fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>';
 function pencilSwitchHTML() {
@@ -6608,10 +6624,11 @@ function inkToolsHTML() {
       + `<span class="sel-sep"></span><button class="sel-icon ${cur === 'note' ? 'on' : ''}" onclick="setPencilHl('note')" title="Underline and write a comment" aria-label="Underline for a comment" aria-pressed="${cur === 'note'}">${ICON_UNDERLINE}</button>`;
   }
   if (Pencil.mode === 'write') {
-    return Object.entries(PEN_COLORS).map(([k, c]) => `<button class="sel-dot ${Ink.tool === 'pen' && Ink.color === k ? 'on' : ''}" style="--hc:${c}" title="Pen" aria-label="Pen, ${k}" onclick="setInkTool('pen','${k}')"></button>`).join('')
-      + `<span class="sel-sep"></span>` + Object.entries({ fine: 4, medium: 7, bold: 11 }).map(([k, d]) => `<button class="ink-size ${Ink.size === k ? 'on' : ''}" onclick="setInkTool('pen',null,'${k}')" title="${k[0].toUpperCase() + k.slice(1)} line" aria-label="${k} line" aria-pressed="${Ink.size === k}"><i style="width:${d}px;height:${d}px"></i></button>`).join('')
-      + `<span class="sel-sep"></span><button class="sel-icon ${Ink.tool === 'eraser' ? 'on' : ''}" onclick="setInkTool('eraser')" title="Stroke eraser: removes every stroke it touches" aria-label="Stroke eraser">${ICON_ERASER}</button>`
-      + `<button class="sel-icon ${Ink.tool === 'erasePart' ? 'on' : ''}" onclick="setInkTool('erasePart')" title="Partial eraser: rubs out just the part it passes over" aria-label="Partial eraser">${ICON_ERASE_PART}</button>`
+    const pen = Ink.tool === 'pen', rest = pen ? '' : ' resting';   // while erasing, the pen's colour and size stay marked, faded
+    return Object.entries(PEN_COLORS).map(([k, c]) => `<button class="sel-dot${Ink.color === k ? ' on' + rest : ''}" style="--hc:${c}" title="Pen" aria-label="Pen, ${k}" aria-pressed="${pen && Ink.color === k}" onclick="setInkTool('pen','${k}')"></button>`).join('')
+      + `<span class="sel-sep"></span>` + Object.entries({ fine: 4, medium: 7, bold: 11 }).map(([k, d]) => `<button class="ink-size${Ink.size === k ? ' on' + rest : ''}" onclick="setInkTool('pen',null,'${k}')" title="${k[0].toUpperCase() + k.slice(1)} line" aria-label="${k} line" aria-pressed="${pen && Ink.size === k}"><i style="width:${d}px;height:${d}px"></i></button>`).join('')
+      + `<span class="sel-sep"></span><button class="sel-icon ink-eraser ${Ink.tool === 'eraser' ? 'on' : ''}" onclick="setInkTool('eraser')" title="Stroke eraser: removes every stroke it touches (tap again for the pen)" aria-label="Stroke eraser" aria-pressed="${Ink.tool === 'eraser'}">${ICON_ERASER}</button>`
+      + `<button class="sel-icon ink-eraser ${Ink.tool === 'erasePart' ? 'on' : ''}" onclick="setInkTool('erasePart')" title="Partial eraser: rubs out just the part it passes over (tap again for the pen)" aria-label="Partial eraser" aria-pressed="${Ink.tool === 'erasePart'}">${ICON_ERASE_PART}</button>`
       + `<button class="sel-icon" onclick="undoInk()" ${Ink.undo.length ? '' : 'aria-disabled="true"'} title="Undo" aria-label="Undo">${ICON_UNDO}</button>`
       + `<span class="sel-sep"></span><label class="ink-smooth" title="Smoothing: how much the line is evened out as you write"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 15c3-7 6-7 9 0s6 7 9 0"/></svg><input type="range" min="0" max="100" value="${Math.round(Ink.smooth * 100)}" aria-label="Smoothing" oninput="Ink.smooth = this.value / 100" onchange="savePencil()"></label>`;
   }
