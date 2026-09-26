@@ -138,7 +138,7 @@ Other papers: the user's library is in ./library.tsv (tab-separated, one paper p
 
 Notes and highlights: never add to the user's notes unless they explicitly ask you to. When they do, put each note in a fenced block ```note ... ``` (Markdown; you may cite with [[p.N "..."]] inside), and each highlight as ```highlight p.N color "exact words"``` (color is one of orange, green, blue, red, purple). The app saves them for the user.
 
-Be direct and concise; use Markdown and $math$ / $$math$$. Say when something is your inference rather than in the paper.{profile}"""
+Be direct and concise; use Markdown and $math$ / $$math$$. The chat is a narrow side panel (often under 400px): keep tables to about three columns of short cells, and put citations in the text after the table rather than inside its cells. Say when something is your inference rather than in the paper.{profile}"""
 
 
 class Handler(BaseHTTPRequestHandler):

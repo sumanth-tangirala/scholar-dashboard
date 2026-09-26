@@ -827,7 +827,7 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .reader-split .reader-body { flex: 1; min-width: 0; }
 .reader-panel { display: none; width: var(--rp-w, 380px); flex-shrink: 0; border-left: 1px solid var(--border); background: var(--reader-bar); flex-direction: column; min-height: 0; }
 .reader.panel-open .reader-panel { display: flex; }
-/* drag the panel's edge to resize it (10-70% of the window, never narrower than its controls need) */
+/* drag the panel's edge to resize it (10-95% of the window, never narrower than its controls need) */
 .rp-resize { display: none; flex: 0 0 8px; margin: 0 -4px; position: relative; z-index: 3; cursor: col-resize; touch-action: none; }
 .reader.panel-open .rp-resize { display: block; }
 .rp-resize::after { content: ''; position: absolute; top: 0; bottom: 0; left: 3px; width: 2px; background: transparent; transition: background 0.15s; }
@@ -976,6 +976,33 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .md blockquote { border-left: 3px solid var(--border); margin: 0 0 0.7em; padding-left: 10px; color: var(--text-muted); }
 .md a { color: var(--accent); }
 .md .katex-display { margin: 0.5em 0; overflow-x: auto; overflow-y: hidden; }
+/* tables (chat replies, notes): a plain ruled table when there's room; in a narrow chat or panel each row becomes a
+   card, its first cell the title and the others labelled with their column. Decided by the table's own width */
+.md-table { container-type: inline-size; margin: 0.5em 0 0.9em; }
+.md-table table { width: 100%; border-collapse: collapse; font-size: 12.5px; line-height: 1.45; }
+.md-table th, .md-table td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid rgba(255,255,255,0.08); overflow-wrap: break-word; }
+.md-table th:first-child, .md-table td:first-child { padding-left: 0; }
+.md-table th { color: var(--text); font-size: 12px; font-weight: 600; border-bottom-color: rgba(255,255,255,0.18); }
+.md-table td:first-child { color: var(--text); font-weight: 500; }
+.md-table tr:last-child td { border-bottom: none; }
+.md-table .cite-chip { max-width: 11em; }   /* a fixed cap: a % one counts as none when the table sizes its columns, and the pill would ask for its whole quote */
+@container (max-width: 520px) {
+  .md-table:not([data-cols="2"]) :is(table, tbody, tr, td) { display: block; }
+  .md-table:not([data-cols="2"]) thead { display: none; }
+  .md-table:not([data-cols="2"]) tr { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
+  .md-table:not([data-cols="2"]) td { border: none; padding: 0; margin-bottom: 7px; }
+  .md-table:not([data-cols="2"]) td:last-child { margin-bottom: 0; }
+  .md-table:not([data-cols="2"]) td:first-child { font-size: 13px; font-weight: 600; margin-bottom: 9px; }
+  .md-table:not([data-cols="2"]) td:not(:first-child)::before { content: attr(data-label); display: block; font-size: 10.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 1px; }
+  .md-table:not([data-cols="2"]) td:empty { display: none; }
+}
+@container (max-width: 280px) {   /* two columns: cards only when even that doesn't fit */
+  .md-table[data-cols="2"] :is(table, tbody, tr, td) { display: block; }
+  .md-table[data-cols="2"] thead { display: none; }
+  .md-table[data-cols="2"] tr { padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .md-table[data-cols="2"] td { border: none; padding: 0; }
+  .md-table[data-cols="2"] td:not(:first-child)::before { content: attr(data-label) ': '; color: var(--text-muted); }
+}
 /* a citation, in the editor and in saved notes: a pill with the page and a short quote. Passages cited
    straight from the paper are navy like their underline; cited highlights take the highlight's colour */
 .cite-chip { --hc: #8aa4f0; display: inline-flex; align-items: baseline; gap: 5px; max-width: min(100%, 13em); vertical-align: baseline; text-align: left; font: inherit; font-size: 12px; line-height: 1.5; color: var(--text); background: color-mix(in srgb, var(--hc) 14%, transparent); border: 1px solid color-mix(in srgb, var(--hc) 40%, transparent); border-radius: 999px; padding: 0 9px 0 7px; margin: 0 1px; cursor: pointer; white-space: nowrap; transition: background 0.15s, border-color 0.15s; }
@@ -7085,9 +7112,9 @@ function caretAt(x, y) {
 
 /* ===== NOTES PANEL ===== */
 /* Panel width: a share of the window (so it keeps its proportion when the window changes), kept between 10%
-   and 70%, and never narrower than the panel's own controls need */
+   and 95%, and never narrower than the panel's own controls need */
 const RP_MIN_PX = 280;
-function panelWidthBounds() { const w = window.innerWidth, min = panelMode() === 'side' ? 2 * RP_MIN_PX : RP_MIN_PX; return [Math.max(min, w * 0.10), Math.max(min, w * 0.70)]; }
+function panelWidthBounds() { const w = window.innerWidth, min = panelMode() === 'side' ? 2 * RP_MIN_PX : RP_MIN_PX; return [Math.max(min, w * 0.10), Math.max(min, w * 0.95)]; }
 
 /* ===== NOTES + CHAT LAYOUT =====
    Notes and Chat share the side panel as tabs, or are docked together: stacked (one above the other) or side by
@@ -7777,6 +7804,7 @@ async function renderChatMarkdown(el, text, msgIdx) {
   let html = DOMPurify.sanitize(marked.parse(src, { breaks: true, gfm: true }));
   html = html.replace(/@@SLOT(\d+)@@/g, (m, i) => slots[+i]);
   el.innerHTML = html;
+  mdTables(el);
   const blocks = chatBlocks(text);
   el.querySelectorAll('[data-card-note]').forEach(n => { const b = blocks[+n.dataset.cardNote]; if (b) renderNotesMarkdown(n, b.body, _rn); });
   el.querySelectorAll('a[href]').forEach(a => { a.target = '_blank'; a.rel = 'noopener'; });
@@ -8403,8 +8431,19 @@ async function renderNotesMarkdown(el, text, notesObj) {
   let html = DOMPurify.sanitize(marked.parse(src, { breaks: true, gfm: true }));
   html = html.replace(/@@SLOT(\d+)@@/g, (m, i) => slots[+i]);
   el.innerHTML = html;
+  mdTables(el);
   wire();
   el.querySelectorAll('a[href]').forEach(a => { a.target = '_blank'; a.rel = 'noopener'; });
+}
+/* Each Markdown table gets a wrapper (whose width decides table or cards) and its column names on every cell */
+function mdTables(el) {
+  el.querySelectorAll('table').forEach(t => {
+    const heads = [...t.querySelectorAll('thead th')].map(h => h.textContent.trim());
+    t.querySelectorAll('tbody tr').forEach(tr => [...tr.children].forEach((c, i) => { c.dataset.label = heads[i] || ''; }));
+    const wrap = document.createElement('div');
+    wrap.className = 'md-table'; wrap.dataset.cols = heads.length;
+    t.replaceWith(wrap); wrap.appendChild(t);
+  });
 }
 /* a citation in the reader jumps to the highlight; elsewhere it opens the reader there */
 function citeClick(id, notesObj) {
