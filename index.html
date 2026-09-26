@@ -6565,6 +6565,22 @@ function endInk() {   // leaving the paper: save what was drawn, nothing left to
 }
 const ICON_ERASER = '<svg viewBox="0 0 24 24" aria-hidden="true" style="fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M8 20h12M5.5 14.5l8-8a2 2 0 0 1 2.8 0l2.2 2.2a2 2 0 0 1 0 2.8L11 19H8.5l-3-3a1 1 0 0 1 0-1.5z"/><path d="M9 11l5 5"/></svg>';
 const ICON_UNDO = '<svg viewBox="0 0 24 24" aria-hidden="true" style="fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>';
+/* A double tap with a finger (Highlight or Write) swaps to the eraser, and the next one swaps back to the tool you had.
+   (The Pencil's own double-tap on its barrel isn't passed to web pages.) */
+let _beforeEraser = null;
+async function toggleEraser() {
+  if (Pencil.mode === 'read') return;
+  if (Ink.on && Ink.tool === 'eraser') {
+    const b = _beforeEraser || { mode: 'write', tool: 'pen' }; _beforeEraser = null;
+    if (b.mode === 'hl') { Ink.tool = 'pen'; await setPencilMode('hl'); }
+    else setInkTool(b.tool || 'pen');
+  } else {
+    _beforeEraser = { mode: Pencil.mode, tool: Ink.tool };
+    if (Pencil.mode !== 'write') await setPencilMode('write');
+    if (!Ink.on) return;
+    setInkTool('eraser');
+  }
+}
 function setPencilHl(v) { Pencil.hl = v; if (v !== 'note') rememberHlColor(v); savePencil(); renderInkBar(); }
 function setInkTool(tool, color, size) { Ink.tool = tool; if (color) Ink.color = color; if (size) Ink.size = size; savePencil(); renderInkBar(); }
 /* The Pencil's tools, at the top of the paper (not over the notes/chat panel) */
@@ -6621,6 +6637,17 @@ function caretAt(x, y) {
   // Safari would turn a Pencil drag into a text selection: the page takes Pencil strokes itself (in Read they scroll)
   body.addEventListener('touchstart', e => { stopGlide(); if ([...e.changedTouches].some(t => t.touchType === 'stylus') && onPage(e.target)) e.preventDefault(); }, { passive: false });
   body.addEventListener('wheel', () => stopGlide(), { passive: true });
+  // finger double tap (Highlight/Write): eraser and back
+  let tapDown = null, lastTap = null;
+  body.addEventListener('pointerdown', e => { tapDown = e.pointerType === 'touch' && e.isPrimary ? { x: e.clientX, y: e.clientY, t: e.timeStamp } : null; });
+  body.addEventListener('pointerup', e => {
+    if (!tapDown || e.pointerType !== 'touch' || Pencil.mode === 'read') { tapDown = null; return; }
+    const quick = e.timeStamp - tapDown.t < 250 && Math.hypot(e.clientX - tapDown.x, e.clientY - tapDown.y) < 10;
+    tapDown = null;
+    if (!quick) { lastTap = null; return; }
+    if (lastTap && e.timeStamp - lastTap.t < 350 && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 40) { lastTap = null; toggleEraser(); }
+    else lastTap = { x: e.clientX, y: e.clientY, t: e.timeStamp };
+  });
   /* Read mode: the Pencil scrolls the paper like a finger, with the same glide after a flick */
   let glide = 0;
   function stopGlide() { if (glide) { cancelAnimationFrame(glide); glide = 0; } }
