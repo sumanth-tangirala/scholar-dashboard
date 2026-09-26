@@ -677,7 +677,13 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .reader-zoom-label { min-width: 52px; font-size: 12.5px; font-variant-numeric: tabular-nums; }
 .reader-pageno { font-size: 12.5px; color: var(--text-muted); font-variant-numeric: tabular-nums; margin-right: 4px; }
 #readerDarkBtn[aria-pressed="true"] { color: var(--accent); }
-#readerPenBtn[aria-pressed="true"] { color: var(--accent); border-color: rgba(251,177,60,0.5); background: rgba(251,177,60,0.1); }
+/* Apple Pencil: highlight or write, a two-way switch like the zoom group */
+.pencil-mode { display: inline-flex; align-items: center; border: 1px solid var(--border); border-radius: 8px; padding: 2px; gap: 2px; }
+.pencil-mode button { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border: none; border-radius: 6px; background: none; color: var(--text-muted); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.15s, color 0.15s; }
+.pencil-mode button:hover { color: var(--text); }
+.pencil-mode button[aria-pressed="true"] { background: rgba(251,177,60,0.14); color: var(--accent); }
+.pencil-mode svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+@media (max-width: 1100px) { .pencil-mode span { display: none; } .pencil-mode button { padding: 0 8px; } }
 .inkLayer { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; overflow: visible; }
 .inkLayer path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
 .reader.dark .inkLayer { filter: invert(0.9) hue-rotate(180deg); }   /* like the page: dark ink turns light */
@@ -739,7 +745,7 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 @media (max-width: 700px) {
   .reader-bar { gap: 6px; padding: 0 8px; }
   /* a phone: pinch zooms and there's no Pencil, so the bar keeps just what earns its place, and the title fits */
-  .reader-back span, #readerExternal, .reader-pageno, .reader-zoom, #readerPenBtn { display: none; }
+  .reader-back span, #readerExternal, .reader-pageno, .reader-zoom, .pencil-mode { display: none; }
   .reader-title { font-size: 14px; }
   .reader-btn.reader-text { font-size: 12px; padding: 0 8px; white-space: nowrap; }
   .reader-tools { flex: none; gap: 4px; }
@@ -821,7 +827,7 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .ac-foot { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
 .ac-foot .grow { flex: 1; font-size: 11.5px; color: var(--text-muted); }
 .ac-foot .danger:hover { color: #f28b82; }
-.rp-head { display: flex; align-items: center; gap: 4px; padding: 10px 10px 10px 16px; border-bottom: 1px solid var(--border); }
+.rp-head { display: flex; align-items: center; gap: 4px; padding: 10px 10px 10px 16px; border-bottom: 1px solid var(--border); min-height: 53px; box-sizing: border-box; }   /* docked panes' headers line up */
 .rp-icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; background: none; border: none; color: var(--text-muted); cursor: pointer; transition: background 0.15s, color 0.15s; }
 .rp-icon-btn:hover { background: rgba(255,255,255,0.07); color: var(--text); }
 .rp-icon-btn svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
@@ -946,6 +952,33 @@ button.chat-hist-item:hover, button.chat-hist-item:focus-visible { background: r
 .chat-hist-item .m { font-size: 11.5px; color: var(--text-muted); }
 .chat-hist-item.current { cursor: default; }
 .chat-hist-item.current .m { color: var(--accent); }
+/* panes of the side panel: tabs (one shown), stacked, or side by side */
+.rp-pane { display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; min-width: 0; position: relative; }
+.rp-split { display: none; flex: 0 0 7px; position: relative; z-index: 2; touch-action: none; }
+.rp-split::after { content: ''; position: absolute; background: var(--border); transition: background 0.15s; }
+.rp-split:hover::after, .rp-split:focus-visible::after, .rp-split.dragging::after { background: rgba(251,177,60,0.55); }
+.rp-split:focus { outline: none; }
+.reader-panel[data-layout="tabs"][data-active="notes"] #chatPane, .reader-panel[data-layout="tabs"][data-active="chat"] #notesPane { display: none; }
+.reader-panel[data-layout="stack"] .rp-split, .reader-panel[data-layout="side"] .rp-split { display: block; }
+.reader-panel[data-layout="side"] { flex-direction: row; }
+.reader-panel[data-layout="stack"] .rp-split { cursor: row-resize; margin: -3px 0; }
+.reader-panel[data-layout="stack"] .rp-split::after { left: 0; right: 0; top: 3px; height: 1px; }
+.reader-panel[data-layout="side"] .rp-split { cursor: col-resize; margin: 0 -3px; }
+.reader-panel[data-layout="side"] .rp-split::after { top: 0; bottom: 0; left: 3px; width: 1px; }
+.reader-panel .rp-split { order: 1; }
+.reader-panel[data-first="notes"] #notesPane, .reader-panel[data-first="chat"] #chatPane { order: 0; }
+.reader-panel[data-first="notes"] #chatPane, .reader-panel[data-first="chat"] #notesPane { order: 2; }
+.reader-panel:is([data-layout="stack"], [data-layout="side"])[data-first="notes"] #notesPane,
+.reader-panel:is([data-layout="stack"], [data-layout="side"])[data-first="chat"] #chatPane { flex: 0 0 var(--rp-split, 50%); }
+.rp-pane-title { font-size: 13px; font-weight: 600; color: var(--text); padding: 4px 8px; margin-left: -8px; border-radius: 6px; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; transition: background 0.15s; }
+.rp-pane-title:hover { background: rgba(255,255,255,0.06); }
+.rp-tabs button { touch-action: none; }
+body.rp-docking, body.rp-docking * { cursor: grabbing !important; user-select: none !important; -webkit-user-select: none !important; }
+body.rp-splitting, body.rp-splitting * { user-select: none !important; -webkit-user-select: none !important; }
+.dock-ghost { position: fixed; z-index: 470; pointer-events: none; padding: 5px 12px; border-radius: 8px; background: #1d1d20; border: 1px solid rgba(255,255,255,0.18); color: var(--text); font-size: 13px; font-weight: 600; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+.dock-target { position: fixed; z-index: 460; pointer-events: none; border-radius: 10px; background: rgba(251,177,60,0.12); border: 2px solid rgba(251,177,60,0.55); opacity: 0; transition: left 0.12s ease, top 0.12s ease, width 0.12s ease, height 0.12s ease, opacity 0.12s ease; }
+.dock-target.on { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .dock-target { transition: none; } }
 .rp-tabs { display: inline-flex; gap: 2px; background: rgba(255,255,255,0.04); border-radius: 8px; padding: 2px; }
 .rp-tabs button { background: none; border: none; color: var(--text-muted); font: inherit; font-size: 13px; font-weight: 600; padding: 4px 12px; border-radius: 6px; cursor: pointer; transition: background 0.15s, color 0.15s; }
 .rp-tabs button:hover { color: var(--text); }
@@ -1678,7 +1711,10 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
         <button class="reader-btn reader-zoom-label" id="readerZoomLabel" onclick="readerZoom(0)" title="Fit to width">Fit</button>
         <button class="reader-btn" onclick="readerZoom(1)" title="Zoom in" aria-label="Zoom in">+</button>
       </span>
-      <button class="reader-btn" id="readerPenBtn" onclick="toggleInk()" title="Pen: write and draw with Apple Pencil" aria-label="Pen" aria-pressed="false" hidden><svg viewBox="0 0 24 24" aria-hidden="true" style="fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M4 20l1.2-4.6L15.6 5a2 2 0 0 1 2.8 0l.6.6a2 2 0 0 1 0 2.8L8.6 18.8z"/><path d="M13.8 6.8l3.4 3.4"/></svg></button>
+      <span class="pencil-mode" id="readerPenBtn" role="group" aria-label="What the Apple Pencil does" hidden>
+        <button id="pmHl" aria-pressed="true" onclick="toggleInk(false)" title="The Pencil highlights the text it strokes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l-5 5v4h4l5-5"/><path d="M9 11l6-6 4 4-6 6z"/><path d="M13 20h8"/></svg><span>Highlight</span></button>
+        <button id="pmPen" aria-pressed="false" onclick="toggleInk(true)" title="The Pencil writes and draws on the page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1.2-4.6L15.6 5a2 2 0 0 1 2.8 0l.6.6a2 2 0 0 1 0 2.8L8.6 18.8z"/><path d="M13.8 6.8l3.4 3.4"/></svg><span>Write</span></button>
+      </span>
       <button class="reader-btn" id="readerDarkBtn" onclick="toggleReaderDark()" title="Dark pages" aria-pressed="false">&#9680;</button>
       <button class="reader-btn reader-text" id="readerNotesBtn" onclick="toggleReaderPanel()" title="Notes, highlights and comments" aria-pressed="false">Notes <span class="rn-count" id="readerNotesCount"></span></button>
       <button class="reader-btn reader-text reader-change" onclick="openPdfChange()" title="Use a different PDF for this paper">Change PDF</button>
@@ -1688,7 +1724,11 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
   <div class="reader-split">
     <div class="reader-body" id="readerBody" tabindex="-1"></div>
     <div class="rp-resize" id="rpResize" role="separator" aria-orientation="vertical" aria-label="Resize the panel" tabindex="0" title="Drag to resize · double-click to reset"></div>
-    <aside class="reader-panel" id="readerPanel" aria-label="Notes"></aside>
+    <aside class="reader-panel" id="readerPanel" aria-label="Notes and chat" data-layout="tabs" data-first="notes" data-active="notes">
+      <section class="rp-pane" id="notesPane" aria-label="Notes"></section>
+      <div class="rp-split" id="rpSplit" role="separator" tabindex="0" aria-label="Resize notes and chat" title="Drag to resize · double-click to even out"></div>
+      <section class="rp-pane" id="chatPane" aria-label="Chat"></section>
+    </aside>
   </div>
   <div class="pdf-modal" id="pdfModal" role="dialog" aria-modal="true" aria-label="Change PDF" onclick="if (event.target === this) closePdfModal()">
     <div class="pdf-modal-box"><button class="pdf-modal-x" onclick="closePdfModal()" aria-label="Close">&times;</button><div id="pdfModalBody"></div></div>
@@ -1988,7 +2028,12 @@ function normalizeNewlines(text) { return (text || '').replace(/\r\n?/g, '\n'); 
 // The raw CDN sometimes stalls on the cache-busted 2 MB papers file instead of failing,
 // which would leave the page on the skeleton forever; give up after this long.
 const CSV_FETCH_TIMEOUT_MS = 8000;
+/* one quiet retry: a single dropped connection shouldn't cost a list its data */
 async function fetchNormalized(url) {
+  try { return await fetchNormalizedOnce(url); }
+  catch (e) { if (e && e.name === 'AbortError') throw e; await new Promise(r => setTimeout(r, 400)); return fetchNormalizedOnce(url); }
+}
+async function fetchNormalizedOnce(url) {
   try {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), CSV_FETCH_TIMEOUT_MS);
@@ -6457,14 +6502,18 @@ async function toggleInk(on) {
   } else flushInk();
   Ink.on = on;
   document.getElementById('readerBody').classList.toggle('inking', on);
-  document.getElementById('readerPenBtn').setAttribute('aria-pressed', on ? 'true' : 'false');
+  setPencilModeButtons(on);
   renderInkBar();
+}
+function setPencilModeButtons(write) {
+  document.getElementById('pmHl').setAttribute('aria-pressed', write ? 'false' : 'true');
+  document.getElementById('pmPen').setAttribute('aria-pressed', write ? 'true' : 'false');
 }
 function endInk() {   // leaving the paper: save what was drawn, pen off, nothing left to undo
   flushInk();
   Ink.on = false; Ink.undo = [];
   document.getElementById('readerBody').classList.remove('inking');
-  document.getElementById('readerPenBtn').setAttribute('aria-pressed', 'false');
+  setPencilModeButtons(false);
   renderInkBar();
 }
 function renderInkBar() {
@@ -6545,9 +6594,21 @@ function caretAt(x, y) {
     removeInk(hit); st.erased.push(...hit);
     renderInkLayer(st.pg);
   }
+  /* A caret only where the Pencil is over a line of text: in a margin or a gap the browser would pick the "nearest"
+     text, which can be anywhere on the page (the title, typically) */
+  function textCaretAt(x, y) {
+    const over = document.elementFromPoint(x, y), span = over && over.closest && over.closest('.textLayer span');
+    if (!span || !st.pg.contains(span)) return null;
+    const c = caretAt(x, y);
+    return c && c.node.nodeType === 3 && span.contains(c.node) ? c : null;
+  }
   function highlightTo(e) {
-    const a = st.a || (st.a = caretAt(st.x0, st.y0)), b = caretAt(e.clientX, e.clientY), tl = st.pg.querySelector('.textLayer');
-    if (!a || !b || !tl || !tl.contains(a.node) || !tl.contains(b.node)) return;
+    if (st.a === undefined) st.a = textCaretAt(st.x0, st.y0);
+    if (!st.a) return;                                   // started off the text (a margin): not a highlight
+    const b = textCaretAt(e.clientX, e.clientY) || st.b;  // off the text for a moment: keep the last word it touched
+    if (!b) return;
+    st.b = b;
+    const a = st.a;
     const r = document.createRange();
     r.setStart(a.node, a.offset); r.setEnd(b.node, b.offset);
     if (r.collapsed && (a.node !== b.node || a.offset !== b.offset)) { r.setStart(b.node, b.offset); r.setEnd(a.node, a.offset); }   // stroked right to left
@@ -6584,21 +6645,125 @@ function caretAt(x, y) {
 /* Panel width: a share of the window (so it keeps its proportion when the window changes), kept between 10%
    and 70%, and never narrower than the panel's own controls need */
 const RP_MIN_PX = 280;
-function panelWidthBounds() { const w = window.innerWidth; return [Math.max(RP_MIN_PX, w * 0.10), Math.max(RP_MIN_PX, w * 0.70)]; }
+function panelWidthBounds() { const w = window.innerWidth, min = panelMode() === 'side' ? 2 * RP_MIN_PX : RP_MIN_PX; return [Math.max(min, w * 0.10), Math.max(min, w * 0.70)]; }
+
+/* ===== NOTES + CHAT LAYOUT =====
+   Notes and Chat share the side panel as tabs, or are docked together: stacked (one above the other) or side by
+   side, in either order. Drag a tab (or, when docked, a pane's name) onto an edge of the panel to dock it there, or
+   onto the middle to make them tabs again. The divider between docked panes drags. Remembered per browser; a phone
+   always shows one at a time, and side by side needs a wide enough window. */
+const PANEL_LAYOUT_KEY = 'scholar_panel_layout';
+const PanelLayout = (() => { try { return JSON.parse(localStorage.getItem(PANEL_LAYOUT_KEY)) || {}; } catch (e) { return {}; } })();
+function sideFits() { return window.innerWidth >= 1000; }
+function panelMode() {
+  if (readerPhone()) return 'tabs';
+  const m = PanelLayout.mode || 'tabs';
+  return m === 'side' && !sideFits() ? 'stack' : m;
+}
+function panelFirst() { return PanelLayout.first === 'chat' ? 'chat' : 'notes'; }
+function chatShown() { return !readerPhone() && (panelMode() !== 'tabs' || _panelTab === 'chat'); }
+function savePanelLayout() { try { localStorage.setItem(PANEL_LAYOUT_KEY, JSON.stringify(PanelLayout)); } catch (e) {} }
+function applyPanelLayout() {
+  const panel = document.getElementById('readerPanel'), mode = panelMode();
+  panel.dataset.layout = mode; panel.dataset.first = panelFirst(); panel.dataset.active = _panelTab;
+  panel.style.setProperty('--rp-split', (Math.min(0.8, Math.max(0.2, PanelLayout.split || 0.5)) * 100).toFixed(1) + '%');
+}
+function setPanelLayout(mode, first, active) {
+  const wasSide = panelMode() === 'side';
+  PanelLayout.mode = mode; if (first) PanelLayout.first = first;
+  if (active) _panelTab = active;
+  savePanelLayout();
+  if ((panelMode() === 'side') !== wasSide) applyPanelWidth(storedPanelFrac() || (panelMode() === 'side' ? 640 / window.innerWidth : null));
+  applyPanelLayout();
+  document.getElementById('chatRoot') && document.getElementById('chatRoot').remove();   // rebuilt in its new place
+  renderReaderPanel();
+  if (chatShown()) chatOpen(); else renderChatPanel();
+  relayoutAfterPanel();
+}
+window.addEventListener('resize', () => { if (document.getElementById('reader').classList.contains('panel-open')) { const d = document.getElementById('readerPanel').dataset.layout; if (d !== panelMode()) setPanelLayout(PanelLayout.mode || 'tabs'); } });
+/* the divider between docked panes */
+(function () {
+  const sp = document.getElementById('rpSplit'), panel = document.getElementById('readerPanel');
+  let on = false;
+  const ratio = e => { const r = panel.getBoundingClientRect(), side = panelMode() === 'side'; return side ? (e.clientX - r.left) / r.width : (e.clientY - r.top) / r.height; };
+  const set = v => { PanelLayout.split = Math.min(0.8, Math.max(0.2, v)); applyPanelLayout(); };
+  sp.addEventListener('pointerdown', e => { e.preventDefault(); on = true; sp.setPointerCapture(e.pointerId); sp.classList.add('dragging'); document.body.classList.add('rp-splitting'); });
+  sp.addEventListener('pointermove', e => { if (on) set(ratio(e)); });
+  const end = () => { if (!on) return; on = false; sp.classList.remove('dragging'); document.body.classList.remove('rp-splitting'); savePanelLayout(); relayoutAfterPanel(); };
+  sp.addEventListener('pointerup', end); sp.addEventListener('pointercancel', end);
+  sp.addEventListener('dblclick', () => { set(0.5); savePanelLayout(); });
+  sp.addEventListener('keydown', e => {
+    const k = panelMode() === 'side' ? ['ArrowLeft', 'ArrowRight'] : ['ArrowUp', 'ArrowDown'];
+    if (!k.includes(e.key)) return;
+    e.preventDefault(); set((PanelLayout.split || 0.5) + (e.key === k[0] ? -0.05 : 0.05)); savePanelLayout();
+  });
+})();
+/* drag a tab or a pane's name to dock it */
+(function () {
+  const panel = document.getElementById('readerPanel');
+  let d = null, justDragged = false;
+  const other = p => (p === 'notes' ? 'chat' : 'notes');
+  function zoneAt(x, y) {
+    const r = panel.getBoundingClientRect();
+    if (x < r.left || x > r.right || y < r.top || y > r.bottom) return null;
+    const fx = (x - r.left) / r.width, fy = (y - r.top) / r.height;
+    const edges = [['top', fy], ['bottom', 1 - fy]].concat(sideFits() ? [['left', fx], ['right', 1 - fx]] : []).sort((a, b) => a[1] - b[1]);
+    return edges[0][1] < 0.28 ? edges[0][0] : 'center';
+  }
+  function zoneRect(z) {
+    const r = panel.getBoundingClientRect(), h = { top: [0, 0, 1, .5], bottom: [0, .5, 1, .5], left: [0, 0, .5, 1], right: [.5, 0, .5, 1], center: [0, 0, 1, 1] }[z];
+    return { left: r.left + h[0] * r.width, top: r.top + h[1] * r.height, width: h[2] * r.width, height: h[3] * r.height };
+  }
+  function start() {
+    d.ghost = document.createElement('div'); d.ghost.className = 'dock-ghost'; d.ghost.textContent = d.pane === 'notes' ? 'Notes' : 'Chat';
+    d.target = document.createElement('div'); d.target.className = 'dock-target';
+    document.body.append(d.target, d.ghost);
+    document.body.classList.add('rp-docking');
+  }
+  function move(e) {
+    d.ghost.style.left = e.clientX + 12 + 'px'; d.ghost.style.top = e.clientY + 12 + 'px';
+    d.zone = zoneAt(e.clientX, e.clientY);
+    d.target.classList.toggle('on', !!d.zone);
+    if (d.zone) { const r = zoneRect(d.zone); Object.assign(d.target.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px' }); }
+  }
+  function finish(apply) {
+    d.ghost.remove(); d.target.remove(); document.body.classList.remove('rp-docking');
+    if (!apply || !d.zone) return;
+    const p = d.pane;
+    if (d.zone === 'center') setPanelLayout('tabs', null, p);
+    else if (d.zone === 'top' || d.zone === 'bottom') setPanelLayout('stack', d.zone === 'top' ? p : other(p));
+    else setPanelLayout('side', d.zone === 'left' ? p : other(p));
+  }
+  panel.addEventListener('pointerdown', e => {
+    const h = e.target.closest && e.target.closest('[data-dock]');
+    if (!h || readerPhone() || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    d = { pane: h.dataset.dock, id: e.pointerId, x0: e.clientX, y0: e.clientY, on: false };
+  });
+  window.addEventListener('pointermove', e => {
+    if (!d || e.pointerId !== d.id) return;
+    if (!d.on) { if (Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 8) return; d.on = true; start(); }
+    e.preventDefault(); move(e);
+  }, { passive: false });
+  const up = apply => e => { if (!d || e.pointerId !== d.id) return; const was = d; d = null; if (was.on) { d = was; finish(apply); d = null; justDragged = true; setTimeout(() => { justDragged = false; }, 0); } };
+  window.addEventListener('pointerup', up(true)); window.addEventListener('pointercancel', up(false));
+  panel.addEventListener('click', e => { if (justDragged) { e.stopPropagation(); e.preventDefault(); justDragged = false; } }, true);   // the drag's end isn't a tab click
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && d && d.on) { finish(false); d = null; } }, true);
+})();
 function applyPanelWidth(frac) {
   const [lo, hi] = panelWidthBounds();
-  const px = Math.round(Math.min(hi, Math.max(lo, (frac || 380 / 1440) * window.innerWidth)));
+  const px = Math.round(Math.min(hi, Math.max(lo, frac ? frac * window.innerWidth : panelMode() === 'side' ? 640 : 380 / 1440 * window.innerWidth)));
   document.getElementById('reader').style.setProperty('--rp-w', px + 'px');
   return px;
 }
-function storedPanelFrac() { try { return parseFloat(localStorage.getItem('scholar_panel_frac')) || null; } catch (e) { return null; } }
+function panelFracKey() { return panelMode() === 'side' ? 'scholar_panel_frac_side' : 'scholar_panel_frac'; }   // side by side keeps its own (wider) width
+function storedPanelFrac() { try { return parseFloat(localStorage.getItem(panelFracKey())) || null; } catch (e) { return null; } }
 function relayoutAfterPanel() { if (_reader.doc && !readerPhone()) { if (_reader.zoom === 'fit') _reader.token++; layoutReader(false); } }   // refit, or just re-centre at a set zoom
 (function () {
   const handle = document.getElementById('rpResize'), reader = document.getElementById('reader');
   applyPanelWidth(storedPanelFrac());
   let startX = 0, startW = 0, dragging = false;
   const set = px => { const [lo, hi] = panelWidthBounds(); px = Math.min(hi, Math.max(lo, px)); reader.style.setProperty('--rp-w', px + 'px'); return px; };
-  const save = px => { try { localStorage.setItem('scholar_panel_frac', String(px / window.innerWidth)); } catch (e) {} };
+  const save = px => { try { localStorage.setItem(panelFracKey(), String(px / window.innerWidth)); } catch (e) {} };
   handle.addEventListener('pointerdown', e => {
     e.preventDefault(); handle.setPointerCapture(e.pointerId);
     dragging = true; startX = e.clientX; startW = document.getElementById('readerPanel').getBoundingClientRect().width;
@@ -6612,7 +6777,7 @@ function relayoutAfterPanel() { if (_reader.doc && !readerPhone()) { if (_reader
     relayoutAfterPanel();   // the paper refits to the new space once, when you let go
   };
   handle.addEventListener('pointerup', end); handle.addEventListener('pointercancel', end);
-  handle.addEventListener('dblclick', () => { try { localStorage.removeItem('scholar_panel_frac'); } catch (e) {} applyPanelWidth(null); relayoutAfterPanel(); });
+  handle.addEventListener('dblclick', () => { try { localStorage.removeItem(panelFracKey()); } catch (e) {} applyPanelWidth(panelMode() === 'side' ? 640 / window.innerWidth : null); relayoutAfterPanel(); });
   handle.addEventListener('keydown', e => {   // arrow keys resize too
     if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
     e.preventDefault(); e.stopPropagation();
@@ -6640,6 +6805,7 @@ function setReaderPanel(open) {
   document.getElementById('readerNotesBtn').setAttribute('aria-pressed', open ? 'true' : 'false');
   if (open) {
     renderReaderPanel();
+    if (panelMode() !== 'tabs' && !readerPhone()) chatOpen();
     const t = document.getElementById('rpNotes');   // opening the panel on a draft: back to writing it
     if (_rnEditing && t && document.activeElement !== t) { t.focus({ preventScroll: true }); editorCaretEnd(t); }
   }
@@ -6664,10 +6830,12 @@ function keepLiveEditor(rebuild) {
   return true;
 }
 function renderReaderPanel() {
-  const panel = document.getElementById('readerPanel');
+  const panel = document.getElementById('notesPane');
   if (!panel || !document.getElementById('reader').classList.contains('panel-open')) return;
-  if (_panelTab === 'chat' && !readerPhone()) { renderChatPanel(); return; }
-  const head = `<div class="rp-head">${panelTabsHTML()}<span class="grow"></span>${Vault.key ? `<button class="rp-icon-btn" onclick="lockNotes()" title="Lock notes (forget the key on this device)" aria-label="Lock notes">${ICON_LOCK}</button>` : ''}<button class="rp-icon-btn" onclick="toggleReaderPanel(false)" title="Close" aria-label="Close notes">${ICON_CLOSE}</button></div>`;
+  applyPanelLayout();
+  if (panelMode() === 'tabs' && _panelTab === 'chat' && !readerPhone()) { renderChatPanel(); return; }
+  if (chatShown()) { const cr = document.getElementById('chatRoot'); if (!cr || cr.dataset.paper !== (_reader.paper && _reader.paper.id)) chatOpen(); }   // docked beside the notes: it opens with them, for this paper
+  const head = `<div class="rp-head">${paneHeadStart('notes')}<span class="grow"></span>${Vault.key ? `<button class="rp-icon-btn" onclick="lockNotes()" title="Lock notes (forget the key on this device)" aria-label="Lock notes">${ICON_LOCK}</button>` : ''}${paneClose('notes')}</div>`;
   if (!vaultSupported()) {
     const alt = 'http://scholar.localhost' + location.pathname + location.hash;
     panel.innerHTML = head + `<div class="rp-locked"><strong>Notes need a secure address</strong>They are encrypted with your browser's built-in cryptography, which only runs on https:// or localhost pages. Open <a class="ig-link" href="${esc(alt)}">scholar.localhost</a> (the same site), or the GitHub Pages site. You'll connect GitHub there once.</div>`;
@@ -6942,14 +7110,27 @@ async function bridgeCheck() {
 /* Tabs appear on wider screens only: Claude Code runs on the laptop, not a phone */
 function panelTabsHTML() {
   if (readerPhone()) return '<strong>Notes</strong>';
-  return `<div class="rp-tabs" role="tablist"><button role="tab" aria-selected="${_panelTab === 'notes'}" class="${_panelTab === 'notes' ? 'on' : ''}" onclick="setPanelTab('notes')">Notes</button><button role="tab" aria-selected="${_panelTab === 'chat'}" class="${_panelTab === 'chat' ? 'on' : ''}" onclick="setPanelTab('chat')">Chat</button></div>`;
+  const tip = 'Drag to put Notes and Chat side by side or one above the other';
+  return `<div class="rp-tabs" role="tablist"><button role="tab" data-dock="notes" title="${tip}" aria-selected="${_panelTab === 'notes'}" class="${_panelTab === 'notes' ? 'on' : ''}" onclick="setPanelTab('notes')">Notes</button><button role="tab" data-dock="chat" title="${tip}" aria-selected="${_panelTab === 'chat'}" class="${_panelTab === 'chat' ? 'on' : ''}" onclick="setPanelTab('chat')">Chat</button></div>`;
+}
+/* A pane's header: the tabs when Notes and Chat share the space, else its own name, which is also its drag handle */
+function paneHeadStart(pane) {
+  if (panelMode() === 'tabs') return panelTabsHTML();
+  return `<span class="rp-pane-title" data-dock="${pane}" title="Drag onto the other pane to rearrange, or onto its middle to make tabs">${pane === 'notes' ? 'Notes' : 'Chat'}</span>`;
+}
+/* One close button for the dock: in the top pane when stacked, the right pane side by side */
+function paneClose(pane) {
+  const mode = panelMode(), first = panelFirst();
+  if (mode === 'stack' && pane !== first) return '';
+  if (mode === 'side' && pane === first) return '';
+  return `<button class="rp-icon-btn" onclick="toggleReaderPanel(false)" title="Close" aria-label="Close the panel">${ICON_CLOSE}</button>`;
 }
 function setPanelTab(t, focus) {
   if (t === 'chat' && readerPhone()) t = 'notes';
   const changed = _panelTab !== t;
   _panelTab = t;
   if (!document.getElementById('reader').classList.contains('panel-open')) toggleReaderPanel(true);
-  else if (changed) renderReaderPanel();
+  else if (changed && panelMode() === 'tabs') renderReaderPanel();
   if (t === 'chat') chatOpen(focus);
 }
 async function chatOpen(focus) {
@@ -6992,15 +7173,16 @@ async function chatConnect() {
 /* The chat view is built once per paper and then updated in place, so the panel's other re-renders
    (notes syncing, etc.) never disturb what you're typing */
 function renderChatPanel(force) {
-  const panel = document.getElementById('readerPanel');
-  if (!panel || !document.getElementById('reader').classList.contains('panel-open') || _panelTab !== 'chat') return;
+  const panel = document.getElementById('chatPane');
+  if (!panel || !document.getElementById('reader').classList.contains('panel-open') || !chatShown()) return;
+  applyPanelLayout();
   const pid = (_reader.paper && _reader.paper.id) || '';
   const root = document.getElementById('chatRoot');
   if (!force && root && root.dataset.paper === pid && root.dataset.status === Chat.status) return;
   const input = document.getElementById('chatInput'); if (input) Chat.draftText = input.value;
   const ready = Chat.status === 'ready';
   if (ready && pid && Chat.loadedFor !== pid) { chatOpen(); return; }   // another paper: load its chat first
-  const head = `<div class="rp-head">${panelTabsHTML()}<span class="grow"></span>${ready && (Chat.history || []).some(c => c.id !== 'current') ? `<button class="rp-icon-btn" id="chatHistBtn" onclick="toggleChatHistory(event)" title="Earlier chats about this paper" aria-label="Earlier chats" aria-haspopup="true">${ICON_HISTORY}</button>` : ''}${ready ? `<button class="rp-text-btn" onclick="chatNew()" title="Start a fresh conversation about this paper (this one is kept)">${ICON_PLUS}New chat</button>` : ''}<button class="rp-icon-btn" onclick="toggleReaderPanel(false)" title="Close" aria-label="Close panel">${ICON_CLOSE}</button></div>`;
+  const head = `<div class="rp-head">${paneHeadStart('chat')}<span class="grow"></span>${ready && (Chat.history || []).some(c => c.id !== 'current') ? `<button class="rp-icon-btn" id="chatHistBtn" onclick="toggleChatHistory(event)" title="Earlier chats about this paper" aria-label="Earlier chats" aria-haspopup="true">${ICON_HISTORY}</button>` : ''}${ready ? `<button class="rp-text-btn" onclick="chatNew()" title="Start a fresh conversation about this paper (this one is kept)">${ICON_PLUS}New chat</button>` : ''}${paneClose('chat')}</div>`;
   const setup = {
     setup: `<p>Chat with Claude about this paper, with your highlights and notes in view. It runs through Claude Code on your laptop.</p><button class="ui-btn ui-btn-primary" onclick="chatConnect()">Connect to Claude Code</button>`,
     unknown: `<p class="chat-dim">Connecting to Claude Code…</p>`,
@@ -7054,8 +7236,8 @@ function toggleChatHistory(e) {
   el.innerHTML = (Chat.history || []).map(c => c.id === 'current'
     ? `<div class="chat-hist-item current"><span class="t">${esc(c.title)}</span><span class="m">Current \u00b7 ${c.count} messages</span></div>`
     : `<button class="chat-hist-item" role="menuitem" onclick="chatSwitch('${c.id}')"><span class="t">${esc(c.title)}</span><span class="m">${day(c.updated)} \u00b7 ${c.count} messages</span></button>`).join('');
-  document.getElementById('readerPanel').appendChild(el);
-  const b = btn.getBoundingClientRect(), p = document.getElementById('readerPanel').getBoundingClientRect();
+  document.getElementById('chatPane').appendChild(el);
+  const b = btn.getBoundingClientRect(), p = document.getElementById('chatPane').getBoundingClientRect();
   el.style.top = (b.bottom - p.top + 4) + 'px';
   setTimeout(() => document.addEventListener('click', function close(ev) { if (!el.contains(ev.target)) { el.remove(); document.removeEventListener('click', close); } }), 0);
 }
