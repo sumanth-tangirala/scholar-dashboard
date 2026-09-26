@@ -701,9 +701,6 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .reader-zen-btn svg { width: 17px; height: 17px; }
 .ink-bar .sel-dot { width: 24px; height: 24px; margin: 0 3px; }
 .ink-bar .sel-icon svg { width: 21px; height: 21px; }
-.ink-smooth { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 6px; color: var(--text-muted); cursor: pointer; }
-.ink-smooth svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
-.ink-smooth input { width: 96px; height: 28px; accent-color: var(--accent); cursor: pointer; }
 .erase-cursor { position: fixed; z-index: 330; pointer-events: none; border-radius: 50%; border: 1.5px solid rgba(120,130,150,0.9); background: rgba(255,255,255,0.25); }
 .ink-bar .ink-size { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; background: none; border: none; border-radius: 7px; cursor: pointer; transition: background 0.15s; }
 .ink-bar .ink-size i { display: block; border-radius: 50%; background: var(--text-secondary); }
@@ -6558,7 +6555,7 @@ function jumpToAnno(id) {
      encrypted notes as fractions of the page, so they sit right at any zoom; the eraser removes strokes it touches */
 const PEN_COLORS = { ink: '#1f2a44', red: '#d93025', blue: '#1a73e8' };
 const INK_SIZES = { fine: 0.0013, medium: 0.0024, bold: 0.0042 };   // stroke width as a share of the page width
-const Ink = { on: false, tool: 'pen', color: 'ink', size: 'medium', smooth: 0.75, undo: [], saveTimer: null };   // smooth: 0 (raw) .. 1 (smoothest)
+const Ink = { on: false, tool: 'pen', color: 'ink', size: 'medium', smooth: 1, undo: [], saveTimer: null };   // smooth: 0 (raw) .. 1 (smoothest); fixed at the smoothest
 /* What the Pencil does, chosen in the reader bar: 'read' (like a finger: scroll, select), 'hl' (strokes highlight
    the text, or underline it for a comment) or 'write' (ink). Highlight and Write show their tools at the top of the
    paper. Remembered per device. */
@@ -6568,9 +6565,8 @@ const PENCIL_KEY = 'scholar_pencil_v1';
   if (['read', 'hl', 'write'].includes(v.mode)) Pencil.mode = v.mode;
   if (v.hl === 'note' || HL_COLORS.includes(v.hl)) Pencil.hl = v.hl;
   if (PEN_COLORS[v.color]) Ink.color = v.color;
-  if (INK_SIZES[v.size]) Ink.size = v.size;
-  if (typeof v.smooth === 'number') Ink.smooth = Math.min(1, Math.max(0, v.smooth)); } catch (e) {} })();
-function savePencil() { try { localStorage.setItem(PENCIL_KEY, JSON.stringify({ mode: Pencil.mode, hl: Pencil.hl, color: Ink.color, size: Ink.size, smooth: Ink.smooth })); } catch (e) {} }
+  if (INK_SIZES[v.size]) Ink.size = v.size; } catch (e) {} })();
+function savePencil() { try { localStorage.setItem(PENCIL_KEY, JSON.stringify({ mode: Pencil.mode, hl: Pencil.hl, color: Ink.color, size: Ink.size })); } catch (e) {} }
 function lastHlColor() { try { const c = localStorage.getItem('scholar_pen_hl'); return HL_COLORS.includes(c) ? c : 'orange'; } catch (e) { return 'orange'; } }
 function rememberHlColor(c) { try { if (c) localStorage.setItem('scholar_pen_hl', c); } catch (e) {} }
 function pencilHl() { return Pencil.hl || lastHlColor(); }   // a colour, or 'note' (underline + comment)
@@ -6629,8 +6625,7 @@ function inkToolsHTML() {
       + `<span class="sel-sep"></span>` + Object.entries({ fine: 4, medium: 7, bold: 11 }).map(([k, d]) => `<button class="ink-size${Ink.size === k ? ' on' + rest : ''}" onclick="setInkTool('pen',null,'${k}')" title="${k[0].toUpperCase() + k.slice(1)} line" aria-label="${k} line" aria-pressed="${pen && Ink.size === k}"><i style="width:${d}px;height:${d}px"></i></button>`).join('')
       + `<span class="sel-sep"></span><button class="sel-icon ink-eraser ${Ink.tool === 'eraser' ? 'on' : ''}" onclick="setInkTool('eraser')" title="Stroke eraser: removes every stroke it touches (tap again for the pen)" aria-label="Stroke eraser" aria-pressed="${Ink.tool === 'eraser'}">${ICON_ERASER}</button>`
       + `<button class="sel-icon ink-eraser ${Ink.tool === 'erasePart' ? 'on' : ''}" onclick="setInkTool('erasePart')" title="Partial eraser: rubs out just the part it passes over (tap again for the pen)" aria-label="Partial eraser" aria-pressed="${Ink.tool === 'erasePart'}">${ICON_ERASE_PART}</button>`
-      + `<button class="sel-icon" onclick="undoInk()" ${Ink.undo.length ? '' : 'aria-disabled="true"'} title="Undo" aria-label="Undo">${ICON_UNDO}</button>`
-      + `<span class="sel-sep"></span><label class="ink-smooth" title="Smoothing: how much the line is evened out as you write"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 15c3-7 6-7 9 0s6 7 9 0"/></svg><input type="range" min="0" max="100" value="${Math.round(Ink.smooth * 100)}" aria-label="Smoothing" oninput="Ink.smooth = this.value / 100" onchange="savePencil()"></label>`;
+      + `<button class="sel-icon" onclick="undoInk()" ${Ink.undo.length ? '' : 'aria-disabled="true"'} title="Undo" aria-label="Undo">${ICON_UNDO}</button>`;
   }
   return '';
 }
