@@ -8118,7 +8118,7 @@ function toggleGroupAddDD(btn, key) {
 }
 
 function paperBack() {
-  _paperViewActive = false;
+  // the route change clears _paperViewActive itself, after using it to restore the list's scroll position
   if (history.length > 1) {
     history.back();
   } else {
