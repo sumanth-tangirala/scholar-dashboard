@@ -3763,8 +3763,15 @@ function topRowHTML(p, groups, o) {
   </article>`;
 }
 let _overlayReturnFocus = null;
+let _overlayReturn = null;   // the list a paper was opened from, and how far down it was
 function openOverlay() {
   const ol = document.getElementById('overlay');
+  const ret = _overlayReturn; _overlayReturn = null;
+  if (ret && ret.title === document.getElementById('overlayTitle').textContent) {   // back from that paper: same place in the list
+    const body = document.getElementById('overlayBody');
+    body.style.scrollBehavior = 'auto'; body.scrollTop = ret.top;
+    requestAnimationFrame(() => { body.scrollTop = ret.top; body.style.scrollBehavior = ''; });
+  }
   if (!ol.classList.contains('open')) _overlayReturnFocus = document.activeElement;
   ol.classList.remove('closing');
   ol.classList.add('open');
@@ -7831,7 +7838,9 @@ function showPaperDetail(id) {
   _paperViewActive = true;
   if (document.body.classList.contains('tok-mode')) _tokScrollTop = document.getElementById('tokFeed').scrollTop;
 
-  // Close group overlay if open (visually only, don't touch history)
+  // Close group overlay if open (visually only, don't touch history); Back reopens it where you were
+  const ol = document.getElementById('overlay');
+  if (ol.classList.contains('open')) _overlayReturn = { title: document.getElementById('overlayTitle').textContent, top: document.getElementById('overlayBody').scrollTop };
   closeOverlay(true);
 
   // Hide all other sections
