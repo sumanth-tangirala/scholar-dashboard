@@ -115,10 +115,16 @@ a { color: inherit; text-decoration: none; }
 .nav-search input:focus { border-color: var(--accent); }
 .nav-search input::placeholder { color: var(--text-muted); }
 .nav-search-toggle { display: none; }
+/* Refresh: a Home Screen app has no reload button of its own */
+.nav-refresh { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 36px; height: 36px; margin-left: -12px; border-radius: 50%; border: none; background: none; color: var(--text-secondary); cursor: pointer; transition: background var(--t-fast), color var(--t-fast); }
+.nav-refresh:hover { background: rgba(255,255,255,0.08); color: var(--text); }
+.nav-refresh svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.nav-refresh.spinning svg { animation: spin 0.7s linear infinite; }
 @media (max-width: 600px) {
   .nav-search-toggle { display: inline-flex; align-items: center; justify-content: center; margin-left: auto; width: 40px; height: 40px; border-radius: 50%; border: none; background: none; color: var(--text-secondary); cursor: pointer; transition: background 0.15s, color 0.15s; }
   .nav-search-toggle:hover, body.search-open .nav-search-toggle { background: rgba(255,255,255,0.08); color: var(--text); }
   .nav-search-toggle svg { width: 20px; height: 20px; fill: currentColor; }
+
   body.search-open .nav-search { order: 4; flex-basis: 100%; width: 100%; margin: 0 0 10px; }
   body.search-open .nav-search input { font-size: 16px; padding: 10px 14px 10px 38px; }   /* 16px stops iOS zooming in */
 }
@@ -423,6 +429,11 @@ a { color: inherit; text-decoration: none; }
   .nav-tabs { order: 3; flex-basis: 100%; height: 44px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; margin: 0 -24px; padding: 0 12px; }
   .nav-tabs::-webkit-scrollbar { display: none; }
   .nav-tab { padding: 0 12px; flex-shrink: 0; }
+}
+@media (max-width: 600px) {   /* a phone: search and refresh share the brand's line (their tap areas overlap a little) */
+  .navbar .nav-inner { column-gap: 8px; }
+  .nav-search-toggle, .nav-refresh { width: 36px; height: 36px; }
+  .nav-refresh { margin-left: -8px; }
 }
 @media (max-width: 600px) {
   .nav-tabs { margin: 0 -16px; padding: 0 4px; }
@@ -1707,6 +1718,7 @@ html.no-hover .sel-icon:not(.on):active, html.no-hover .ink-bar .ink-size:not(.o
       <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
       <input type="text" id="searchInput" placeholder="Search papers and authors..." oninput="debouncedSearch()" onpaste="setTimeout(debouncedSearch,0)" onkeydown="if (event.key === 'Escape') { event.preventDefault(); this.value = ''; clearTimeout(_searchTimer); hideGlobalSearch(); this.blur(); }">
     </div>
+    <button class="nav-refresh" id="navRefresh" onclick="refreshPage()" title="Refresh: the latest papers and the latest version of the site" aria-label="Refresh"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4.5h-4.5"/></svg></button>
   </div>
 </nav>
 
@@ -2136,10 +2148,21 @@ function restorePapersFromBackup() {
 }
 window.addEventListener('pagehide', writeBackup);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') writeBackup(); });
+/* Refresh (the button in the top bar): fetch the newest copy of the site first, so the reload shows it rather than
+   the browser's cached one. Unsaved changes are backed up here and restored after the reload, as always. */
+let _refreshing = false;
+async function refreshPage() {
+  const btn = document.getElementById('navRefresh');
+  if (btn) btn.classList.add('spinning');
+  try { await fetch(APP_ROOT, { cache: 'reload' }); } catch (e) {}   // offline: still reload from the cache
+  writeBackup();
+  _refreshing = true;
+  location.reload();
+}
 window.addEventListener('beforeunload', e => {
   // a note being written isn't saved yet: ask before leaving
   const noteUnsaved = typeof draftUnsaved === 'function' && draftUnsaved();
-  if (!anyDirty() && !noteUnsaved) return;
+  if (!noteUnsaved && (_refreshing || !anyDirty())) return;   // a refresh keeps unsaved changes (the backup)
   if (anyDirty()) writeBackup();
   e.preventDefault();
   e.returnValue = '';
