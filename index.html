@@ -1549,6 +1549,13 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
   .f-actions, .feed-item:hover .f-actions, .feed-item:focus-within .f-actions,
   .top-row .tr-actions, .top-row:hover .tr-actions, .top-row:focus-within .tr-actions { grid-template-rows: 0fr; opacity: 0; margin-top: 0; }
   .top-row[data-upload] .tr-actions, .top-row[data-upload]:hover .tr-actions { grid-template-rows: 1fr; opacity: 1; margin-top: 10px; }   /* uploads open the reader: Rename/Remove live here */
+  /* iPad Safari keeps :hover on the last thing tapped, so a tapped Undo (or zoom, or tool) looked switched on.
+     On touch, hovering changes nothing; a press gives brief feedback instead; selected tools keep their look. */
+  .sel-icon:not(.on):hover, .ink-bar .ink-size:not(.on):hover, .reader-btn:hover, .rp-icon-btn:hover, .rp-text-btn:hover { background: none; }
+  .sel-icon:not(.on):hover, .pencil-mode button[aria-pressed="false"]:hover, .reader-btn:hover, .rp-icon-btn:hover, .rp-text-btn:hover { color: var(--text-secondary); }
+  .sel-dot:not(.on):hover { transform: none; border-color: transparent; }
+  .sel-icon:active, .sel-dot:active, .ink-bar .ink-size:active, .pencil-mode button:active, .reader-btn:active, .rp-icon-btn:active, .rp-text-btn:active { transform: scale(0.9); background: rgba(255,255,255,0.1); transition: transform 0.06s; }
+  .sel-dot:active { background: var(--hc); }
   .badge-group-edit .group-remove, .badge-group-edit:hover .group-remove { max-width: 30px; width: 26px; height: 26px; opacity: 0.7; margin: 0 -6px 0 2px; }   /* removing a topic needs no hover */
 }
 @media (pointer: coarse) {
