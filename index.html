@@ -662,6 +662,9 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .chip-select:hover { border-color: rgba(255,255,255,0.2); color: var(--text); }
 .chip-select.active { background-color: var(--accent-dim); border-color: rgba(251,177,60,0.7); color: var(--accent); }
 /* PDF reader: full-screen, pages drawn by PDF.js */
+/* the reader's surfaces: every bar and the panel share one tone; popovers (menus, cards, the selection bar) are a
+   step lighter */
+:root { --reader-bar: #141416; }
 .reader { position: fixed; inset: 0; z-index: 320; background: #0b0b0c; display: none; flex-direction: column; }
 .reader.open { display: flex; animation: reader-in var(--t-slow) var(--ease); }
 .reader.leaving { display: flex; pointer-events: none; animation: reader-out 0.2s ease-in forwards; }
@@ -670,10 +673,15 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .reader-pages.first-in { animation: ui-fade var(--t-slow) ease-out; }
 .reader-page canvas.page-in { animation: ui-fade 0.2s ease-out; }
 .reader-skel { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 18px 18px 0; }
-.reader-skel div { width: min(100%, 1000px); aspect-ratio: 8.5 / 11; max-height: 70vh; border-radius: 2px; background: linear-gradient(100deg, rgba(255,255,255,0.05) 30%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 70%) 0 0 / 300% 100%; animation: skel-sweep 1.4s ease-in-out infinite; }
+.reader-skel div { width: min(100%, 1000px); aspect-ratio: 8.5 / 11; max-height: 70vh; border-radius: 2px; background: #dedee1 linear-gradient(100deg, transparent 30%, rgba(255,255,255,0.55) 50%, transparent 70%) 0 0 / 300% 100%; animation: skel-sweep 1.4s ease-in-out infinite; }   /* a dimmed page: the real (white) one arrives without a flash */
+.reader.dark .reader-skel div { background-color: #1d1d1f; background-image: linear-gradient(100deg, transparent 30%, rgba(255,255,255,0.05) 50%, transparent 70%); }
+/* a page not drawn yet shows faint lines of text instead of a blank sheet */
+.reader-page { isolation: isolate; }   /* so the lines below sit under the page's own drawing, not over it */
+.reader-page:not(:has(canvas:not(.page-in)))::before { content: ''; position: absolute; z-index: -1; inset: 11% 14%; background: repeating-linear-gradient(to bottom, rgba(0,0,0,0.055) 0 7px, transparent 7px 19px); }
+.reader.dark .reader-page:not(:has(canvas:not(.page-in)))::before { background: repeating-linear-gradient(to bottom, rgba(255,255,255,0.05) 0 7px, transparent 7px 19px); }
 .reader-skel p { margin: 0; font-size: 13px; color: var(--text-muted); }
 @keyframes skel-sweep { from { background-position: 100% 0; } to { background-position: 0 0; } }
-.reader-bar { display: flex; align-items: center; gap: 12px; height: 56px; padding: 0 16px; border-bottom: 1px solid var(--border); background: rgba(17,17,17,0.96); flex-shrink: 0; }
+.reader-bar { display: flex; align-items: center; gap: 12px; height: 56px; padding: 0 16px; border-bottom: 1px solid var(--border); background: var(--reader-bar); flex-shrink: 0; }
 .reader-title { flex: 1; min-width: 0; font-family: var(--serif); font-size: 16px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .reader-tools { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
 /* the bar's tools in clusters: viewing the paper | working on it | more */
@@ -720,21 +728,17 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .reader-col { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 .reader-col .reader-body { flex: 1; min-height: 0; }
 /* the Pencil's tools: a strip across the top of the paper's column (it takes its own height; never over the paper or the panel) */
-.ink-bar { display: none; flex-shrink: 0; align-items: center; justify-content: center; gap: 4px; min-height: 53px; box-sizing: border-box; padding: 6px 12px; background: #151517; border-bottom: 1px solid var(--border); }   /* 53px: the panel's header height, so their bottom lines meet */
+.ink-bar { display: none; flex-shrink: 0; align-items: center; justify-content: center; gap: 4px; min-height: 53px; box-sizing: border-box; padding: 6px 12px; background: var(--reader-bar); border-bottom: 1px solid var(--border); }   /* 53px: the panel's header height, so their bottom lines meet */
 .ink-bar.open { display: flex; }
 /* full screen: the reader bar goes; the strip above the paper is the one toolbar */
-.reader.zen .reader-bar { display: none; }
+.reader-bar.folded { display: none; }   /* full screen: folded away */
 .ink-bar.zen-bar.open { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; }
-/* full screen: the toolbar floats over the top of the paper, so hiding it never moves the paper */
-.reader.zen .reader-col { position: relative; }
-.reader.zen .ink-bar { position: absolute; top: 0; left: 0; right: 0; z-index: 6; background: rgba(21,21,23,0.9); -webkit-backdrop-filter: blur(14px) saturate(1.4); backdrop-filter: blur(14px) saturate(1.4); transition: opacity var(--t-slow) var(--ease), transform var(--t-slow) var(--ease); }
-.reader.zen.chrome-hidden .ink-bar { opacity: 0; transform: translateY(-10px); pointer-events: none; }
-.ink-bar.bar-in { animation: bar-in var(--t-slow) var(--ease); }
-@keyframes bar-in { from { opacity: 0; transform: translateY(-10px); } }
+.ink-bar > *, .reader-bar > * { opacity: var(--slide-o, 1); }
+.ink-bar.bar-swap > * { animation: tools-swap var(--t-fast) var(--ease); }
 .ink-bar .zb-side, .ink-bar .zb-mid { display: flex; align-items: center; gap: 4px; }
 .ink-bar .zb-right { justify-content: flex-end; gap: 6px; }
 .reader-zen-btn svg { width: 17px; height: 17px; }
-.ink-bar .sel-dot { width: 24px; height: 24px; margin: 0 3px; }
+.ink-bar .sel-dot { width: 24px; height: 24px; margin: 0 3px; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.3); }   /* a light rim: the navy ink shows on the dark bar */
 .ink-bar .sel-icon svg { width: 21px; height: 21px; }
 .erase-cursor { position: fixed; z-index: 330; pointer-events: none; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.95); background: rgba(255,255,255,0.18); box-shadow: 0 0 0 1px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.25); }
 .ink-bar .ink-size { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; background: none; border: none; border-radius: 7px; cursor: pointer; transition: background 0.15s; }
@@ -821,7 +825,7 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 :root { --hl-orange: #ff8a3d; --hl-yellow: var(--hl-orange); --hl-green: #4cc38a; --hl-blue: #5b9bf5; --hl-red: #e5484d; --hl-purple: #b48cf2; }
 .reader-split { flex: 1; min-height: 0; display: flex; }
 .reader-split .reader-body { flex: 1; min-width: 0; }
-.reader-panel { display: none; width: var(--rp-w, 380px); flex-shrink: 0; border-left: 1px solid var(--border); background: #121214; flex-direction: column; min-height: 0; }
+.reader-panel { display: none; width: var(--rp-w, 380px); flex-shrink: 0; border-left: 1px solid var(--border); background: var(--reader-bar); flex-direction: column; min-height: 0; }
 .reader.panel-open .reader-panel { display: flex; }
 /* drag the panel's edge to resize it (10-70% of the window, never narrower than its controls need) */
 .rp-resize { display: none; flex: 0 0 8px; margin: 0 -4px; position: relative; z-index: 3; cursor: col-resize; touch-action: none; }
@@ -832,11 +836,11 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .reader.resizing, .reader.resizing * { cursor: col-resize !important; user-select: none !important; }
 #readerNotesBtn[aria-pressed="true"] { color: var(--accent); border-color: transparent; }
 .rn-count { font-variant-numeric: tabular-nums; color: var(--text-muted); font-size: 12px; }
-/* Notes and chat: the panel's icon, with how many notes the paper has as a small badge */
+/* Notes and chat: the panel's icon, with how many notes the paper has beside it */
 .rt-panel-btn { position: relative; }
 .rt-panel-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-.rt-panel-btn .rn-count { position: absolute; top: 1px; right: -3px; min-width: 15px; height: 15px; padding: 0 4px; box-sizing: border-box; border-radius: 8px; background: #2a2a2e; border: 1px solid #111; color: var(--text-secondary); font-size: 10px; font-weight: 600; line-height: 13px; text-align: center; pointer-events: none; }
-#readerNotesBtn[aria-pressed="true"] .rn-count { background: #3a2f1a; color: var(--accent); }
+.rt-panel-btn { gap: 5px; }
+.rt-panel-btn .rn-count { font-size: 12px; font-weight: 600; color: inherit; opacity: 0.8; }
 .rn-count:empty { display: none; }
 .annoLayer { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
 /* comments and citations are lines in navy, apart from the highlight colours and the site's amber */
@@ -1048,10 +1052,10 @@ body.rp-splitting, body.rp-splitting * { user-select: none !important; -webkit-u
 .dock-target { position: fixed; z-index: 460; pointer-events: none; border-radius: 10px; background: rgba(251,177,60,0.12); border: 2px solid rgba(251,177,60,0.55); opacity: 0; transition: left 0.12s ease, top 0.12s ease, width 0.12s ease, height 0.12s ease, opacity 0.12s ease; }
 .dock-target.on { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { .dock-target { transition: none; } }
-.rp-tabs { display: inline-flex; gap: 2px; background: rgba(255,255,255,0.04); border-radius: 8px; padding: 2px; }
+.rp-tabs { display: inline-flex; gap: 2px; border: 1px solid var(--border); border-radius: 8px; padding: 2px; }   /* the same segmented control as the Pencil switch */
 .rp-tabs button { background: none; border: none; color: var(--text-muted); font: inherit; font-size: 13px; font-weight: 600; padding: 4px 12px; border-radius: 6px; cursor: pointer; transition: background 0.15s, color 0.15s; }
 .rp-tabs button:hover { color: var(--text); }
-.rp-tabs button.on { background: rgba(255,255,255,0.09); color: var(--text); }
+.rp-tabs button.on { background: rgba(251,177,60,0.14); color: var(--accent); }
 .chat-root { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 .chat-setup { padding: 22px 18px; font-size: 13.5px; line-height: 1.55; color: var(--text-secondary); }
 .chat-setup p { margin: 0 0 12px; }
@@ -1176,6 +1180,8 @@ body.rp-splitting, body.rp-splitting * { user-select: none !important; -webkit-u
 .reader.panel-open .reader-panel { animation: ui-slide var(--t-slow) var(--ease); }
 .reader.panel-open.panel-leaving .reader-panel { animation: panel-out 0.18s ease-in forwards; pointer-events: none; }
 @keyframes panel-out { to { opacity: 0; transform: translateX(24px); } }
+@keyframes sheet-in { from { transform: translateY(100%); } }
+@keyframes sheet-out { to { transform: translateY(100%); } }
 .reader-panel.tab-swap .rp-pane > :not(:first-child) { animation: tools-swap var(--t-fast) var(--ease); }
 .anno-rect.fresh { animation: hl-sweep 0.24s var(--ease) backwards; }   /* drawn on left to right by clipping, so its own opacity never jumps */
 @keyframes hl-sweep { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
@@ -1197,6 +1203,8 @@ body.rp-splitting, body.rp-splitting * { user-select: none !important; -webkit-u
 .pd-notes-meta button { background: none; border: none; color: var(--accent); font: inherit; cursor: pointer; padding: 0; }
 @media (max-width: 700px) {
   .reader-panel { position: fixed; left: 0; right: 0; bottom: 0; top: 56px; width: auto; z-index: 330; border-left: none; }
+  .reader.panel-open .reader-panel { animation: sheet-in 0.3s var(--ease); }   /* the whole screen: it rises like an iOS sheet, and goes back down */
+  .reader.panel-open.panel-leaving .reader-panel { animation: sheet-out 0.22s ease-in forwards; }
   .reader.panel-open .rp-resize { display: none; }
   .anno-card { left: 12px !important; right: 12px; width: auto; }
   .cite-dd { left: 12px !important; right: 12px; width: auto; }
@@ -1805,7 +1813,7 @@ html.no-hover .sel-icon:not(.on):active, html.no-hover .ink-bar .ink-size:not(.o
           <button class="reader-btn reader-zoom-label" id="readerZoomLabel" onclick="readerZoom(0)" title="Fit to width">Fit</button>
           <button class="reader-btn" onclick="readerZoom(1)" title="Zoom in" aria-label="Zoom in">+</button>
         </span>
-        <button class="reader-btn" id="readerDarkBtn" onclick="toggleReaderDark()" title="Dark pages" aria-pressed="false">&#9680;</button>
+        <button class="reader-btn" id="readerDarkBtn" onclick="toggleReaderDark()" title="Dark pages" aria-label="Dark pages" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.2" style="fill:none;stroke:currentColor;stroke-width:1.8"/><path d="M12 3.8a8.2 8.2 0 0 1 0 16.4z"/></svg></button>
         <button class="reader-btn reader-zen-btn" id="readerZenBtn" onclick="enterZen()" title="Full screen: just the paper and one toolbar" aria-label="Full screen"><svg viewBox="0 0 24 24" aria-hidden="true" style="fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
       </span>
       <span class="rt-group rt-work">
@@ -5150,9 +5158,29 @@ function pdfErrorText(e) {
   return "The host doesn't let other sites load its PDFs (or the link isn't reachable). Try an arXiv or other open copy, or download it and drop the file in.";
 }
 /* Placeholders for every page at the right size; pages are drawn as they scroll near view */
+/* Where the page you're reading sits on screen, so a relayout (panel opened or closed, full screen, the iPad turned)
+   can carry it smoothly from there to its new place and size instead of snapping */
+function readerView() {
+  const body = document.getElementById('readerBody'), mid = body.getBoundingClientRect().top + body.clientHeight * 0.3;
+  const pg = [...body.querySelectorAll('.reader-page')].find(d => d.getBoundingClientRect().bottom > mid);
+  return pg && { page: pg.dataset.page, rect: pg.getBoundingClientRect() };
+}
+function glideFromView(before) {
+  const body = document.getElementById('readerBody'), wrap = body.querySelector('.reader-pages');
+  const pg = before && wrap && body.querySelector(`.reader-page[data-page="${before.page}"]`);
+  if (!pg || reduceMotion() || Pinch.active || _reader.noGlide) return;
+  const a = pg.getBoundingClientRect(), c = wrap.getBoundingClientRect(), k = before.rect.width / a.width;
+  const tx = before.rect.left - c.left - k * (a.left - c.left), ty = before.rect.top - c.top - k * (a.top - c.top);
+  if (Math.abs(k - 1) < 0.004 && Math.abs(tx) < 1 && Math.abs(ty) < 1) return;
+  Object.assign(wrap.style, { transition: 'none', transformOrigin: '0 0', transform: `translate(${tx}px, ${ty}px) scale(${k})` });
+  wrap.getBoundingClientRect();
+  Object.assign(wrap.style, { transition: 'transform var(--t-slow) var(--ease)', transform: '' });
+  wrap.addEventListener('transitionend', () => { wrap.style.transition = wrap.style.transformOrigin = ''; }, { once: true });
+}
 async function layoutReader(restore) {
   const doc = _reader.doc, body = document.getElementById('readerBody');
   if (!doc) return;
+  const before = restore ? null : readerView();
   const keepPage = restore ? savedReaderPage(_reader.paper.id) : currentReaderPage();
   const first = await doc.getPage(1);
   const base = first.getViewport({ scale: 1 });
@@ -5175,6 +5203,7 @@ async function layoutReader(restore) {
     _reader.layoutToken = _reader.token;
     updateReaderPageNo();
     renderInkBar();   // the paper's area moved (panel opened/closed): keep the Pencil's tools centred over it
+    glideFromView(before);
     return;
   }
   // otherwise keep the exact reading position, and show the old pixels (stretched) until each page is redrawn sharp
@@ -5206,6 +5235,7 @@ async function layoutReader(restore) {
   _reader.layoutToken = _reader.token; _reader.layoutDpr = dpr;
   updateReaderPageNo();
   renderInkBar();
+  glideFromView(before);
 }
 async function drawReaderPage(div) {
   if (div.dataset.drawn) return;
@@ -5228,7 +5258,7 @@ async function drawReaderPage(div) {
   const sx = canvas.width / vp.width, sy = canvas.height / vp.height;
   await page.render({ canvasContext: canvas.getContext('2d', { alpha: false }), viewport: vp, transform: [sx, 0, 0, sy, 0, 0] }).promise;
   if (token !== _reader.token) return;
-  if (!div.querySelector('canvas.stale')) canvas.classList.add('page-in');   // drawn off screen, then shown whole: a first draw fades in; a redraw just sharpens
+  if (!div.querySelector('canvas.stale') && !reduceMotion()) { canvas.classList.add('page-in'); canvas.addEventListener('animationend', () => canvas.classList.remove('page-in'), { once: true }); }   // drawn off screen, then shown whole: a first draw fades in; a redraw just sharpens
   div.appendChild(canvas);
   div.querySelectorAll('canvas.stale').forEach(c => { c.width = 0; c.height = 0; c.remove(); });   // the sharp page is ready
   const tl = document.createElement('div');
@@ -5380,7 +5410,8 @@ async function pinchCommit(zoom) {   // zoom: what to call the result ('fit' fro
   const z = +(Pinch.base * Pinch.scale).toFixed(3);
   if (Math.abs(z - Pinch.base) < 0.01) { const pages = body.querySelector('.reader-pages'); if (pages) { pages.style.transform = ''; pages.style.willChange = ''; } if (zoom === 'fit') { _reader.zoom = 'fit'; layoutReader(false); } return; }
   _reader.zoom = zoom || z; _reader.token++;
-  await layoutReader(false);          // new pages replace the scaled ones (old pixels stretched until redrawn)
+  _reader.noGlide = true;   // the pinch already showed the new size; the scroll below puts your spot back
+  try { await layoutReader(false); } finally { _reader.noGlide = false; }   // new pages replace the scaled ones (old pixels stretched until redrawn)
   const pg = body.querySelector(`.reader-page[data-page="${a.page}"]`);
   if (!pg) return;
   const br = body.getBoundingClientRect(), pr = pg.getBoundingClientRect();
@@ -5444,10 +5475,13 @@ function toggleReaderMenu(force) {
   b.setAttribute('aria-expanded', open ? 'true' : 'false');
 }
 document.addEventListener('pointerdown', e => { if (!e.target.closest('.rt-more-wrap')) toggleReaderMenu(false); }, true);
-function toggleReaderDark() {
-  const on = !readerDark();
+async function toggleReaderDark() {
+  const on = !readerDark(), body = document.getElementById('readerBody');
   try { localStorage.setItem(READER_DARK_KEY, on ? 'true' : 'false'); } catch (e) {}
+  // the pages dim, turn, and come back (animating the colour inversion itself passes through odd tints)
+  if (!reduceMotion() && body.animate) await body.animate([{ opacity: 1 }, { opacity: 0.12 }], { duration: 110, easing: 'ease-in' }).finished.catch(() => {});
   document.getElementById('reader').classList.toggle('dark', on);
+  if (!reduceMotion() && body.animate) body.animate([{ opacity: 0.12 }, { opacity: 1 }], { duration: 170, easing: 'ease-out' });
   document.getElementById('readerDarkBtn').setAttribute('aria-pressed', on ? 'true' : 'false');
 }
 document.addEventListener('keydown', e => {
@@ -6713,7 +6747,7 @@ function endInk() {   // leaving the paper: save what was drawn, nothing left to
   Ink.undo = [];
   const bar = document.getElementById('inkBar');
   if (bar._slide) { cancelAnimationFrame(bar._slide.raf); bar._slide.running = false; }
-  bar.style.height = bar.style.minHeight = bar.style.overflow = bar.style.opacity = bar.style.paddingTop = bar.style.paddingBottom = '';
+  bar.style.height = bar.style.minHeight = bar.style.overflow = bar.style.paddingTop = bar.style.paddingBottom = ''; bar.style.removeProperty('--slide-o');
   bar.classList.remove('open');
 }
 const ICON_ERASER = '<svg viewBox="0 0 24 24" aria-hidden="true" style="fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M8 20h12M5.5 14.5l8-8a2 2 0 0 1 2.8 0l2.2 2.2a2 2 0 0 1 0 2.8L11 19H8.5l-3-3a1 1 0 0 1 0-1.5z"/><path d="M9 11l5 5"/></svg>';
@@ -6777,22 +6811,22 @@ function morphInto(el, html, own) {
    the Pencil switch, its tools, and on the right Notes (when the panel is closed) and the way out */
 function renderInkBar() {
   const bar = document.getElementById('inkBar'), reader = document.getElementById('reader'), zen = reader.classList.contains('zen');
-  const want = reader.classList.contains('open') && _reader.doc && (zen || (Pencil.mode !== 'read' && !document.getElementById('readerPenBtn').hidden));
+  const want = reader.classList.contains('open') && _reader.doc && (zen ? !reader.classList.contains('chrome-hidden') : (Pencil.mode !== 'read' && !document.getElementById('readerPenBtn').hidden));
   if (!want) {
     if (barShown(bar)) slideBar(bar, false, () => bar.classList.remove('open'));
     return;
   }
   const tools = inkToolsHTML(), toolsEl = bar.querySelector('.ink-tools'), was = toolsEl && toolsEl.dataset.mode;
   bar.classList.toggle('zen-bar', zen);
-  morphInto(bar, zen
+  const shellKept = morphInto(bar, zen
     ? `<div class="zb-side">${pencilSwitchHTML()}</div><div class="ink-tools zb-mid" data-mode="${Pencil.mode}"></div><div class="zb-side zb-right">${reader.classList.contains('panel-open') ? '' : `<button class="sel-icon" onclick="toggleReaderPanel(true)" title="Notes and chat" aria-label="Notes and chat">${ICON_PANEL}</button>`}<button class="sel-icon" onclick="exitZen()" title="Leave full screen" aria-label="Leave full screen">${ICON_MIN}</button></div>`
     : `<div class="ink-tools" data-mode="${Pencil.mode}"></div>`, '.ink-tools');
   const mid = bar.querySelector('.ink-tools');
   if (!morphInto(mid, tools) && was && was !== Pencil.mode && bar.classList.contains('open')) {   // Highlight <-> Write: the tools cross-fade
     mid.classList.remove('swap'); void mid.offsetWidth; mid.classList.add('swap');
   }
-  if (zen) { if (!bar.classList.contains('open')) { bar.classList.add('open'); replay(bar, 'bar-in'); } }   // full screen: it floats over the paper, so it just fades in
-  else if (!barShown(bar)) slideBar(bar, true, () => bar.classList.add('open'));
+  if (!shellKept && barShown(bar)) replay(bar, 'bar-swap');   // into or out of full screen with the strip open: its contents cross-fade
+  if (!barShown(bar)) slideBar(bar, true, () => bar.classList.add('open'));
 }
 const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 function replay(el, cls) { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }   // (re)start a CSS animation
@@ -6803,9 +6837,9 @@ function barShown(el) { return el._slide && el._slide.running ? el._slide.show :
 function slideBar(el, show, apply) {
   const body = document.getElementById('readerBody'), st = el._slide || (el._slide = {});
   cancelAnimationFrame(st.raf);
-  const top0 = body.getBoundingClientRect().top, o0 = st.running ? +el.style.opacity || 0 : show ? 0 : 1;
+  const top0 = body.getBoundingClientRect().top, o0 = st.running ? +(el.style.getPropertyValue('--slide-o') || 0) : show ? 0 : 1;
   const from = st.running || !show ? el.offsetHeight : 0;
-  const clearStyle = () => { el.style.height = el.style.minHeight = el.style.overflow = el.style.opacity = el.style.paddingTop = el.style.paddingBottom = ''; };
+  const clearStyle = () => { el.style.height = el.style.minHeight = el.style.overflow = el.style.paddingTop = el.style.paddingBottom = ''; el.style.removeProperty('--slide-o'); };
   if (show) { apply(true); clearStyle(); }
   const to = show ? el.offsetHeight : 0;
   const finish = () => { st.running = false; keepPaperStill(() => { if (!show) apply(false); clearStyle(); }); };   // hidden first, so a closed bar never pops back to full height
@@ -6818,7 +6852,8 @@ function slideBar(el, show, apply) {
   const step = now => {
     const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3), top = body.getBoundingClientRect().top;
     el.style.height = Math.round(from + (to - from) * e) + 'px';
-    el.style.opacity = o0 + ((show ? 1 : 0) - o0) * e;
+    // the bar's own background grows with it; its contents fade in once there's room for them (and out before they'd be cut)
+    el.style.setProperty('--slide-o', show ? o0 + (1 - o0) * Math.max(0, (e - 0.35) / 0.65) : o0 * (1 - Math.min(1, e / 0.6)));
     body.scrollTop += body.getBoundingClientRect().top - top;
     if (k < 1) st.raf = requestAnimationFrame(step); else finish();
   };
@@ -6836,35 +6871,40 @@ function keepPaperStill(change) {   // nested calls: only the outermost one move
    Just the paper and one toolbar (plus the notes/chat panel if it's open). A click or tap on the paper hides the
    toolbar, another brings it back. Uses the browser's full screen where there is one; Esc or the minimise button
    leaves. */
-/* In: the reader's bar folds away (the paper stays put, more of it shows), then the one toolbar fades in over the
-   top of the paper. Out: the reverse. */
+/* In: the reader's bar folds away while the one toolbar takes its place (the paper stays put). Out: the reverse.
+   The toolbar has its own height, like the strip; a tap on the paper slides it away and back. */
 async function enterZen() {
   const r = document.getElementById('reader'), top = r.querySelector('.reader-bar');
-  if (!r.classList.contains('open') || r.classList.contains('zen') || _reader.zenIn) return;
+  if (!r.classList.contains('open') || r.classList.contains('zen')) return;
   closeAnnoCard(); hideSelBar();
-  _reader.zenIn = true;
   const el = document.documentElement;
   const fs = el.requestFullscreen && !document.fullscreenElement ? el.requestFullscreen({ navigationUI: 'hide' }).then(() => { _reader.zenFs = true; }, () => {}) : null;   // asked for at once: it needs the tap
-  slideBar(top, false, () => {
-    _reader.zenIn = false;
-    keepPaperStill(() => { r.classList.add('zen'); r.classList.remove('chrome-hidden'); renderInkBar(); });
-  });
+  r.classList.add('zen'); r.classList.remove('chrome-hidden');
+  renderInkBar();
+  slideBar(top, false, () => top.classList.add('folded'));
   if (fs) await fs;
 }
 function exitZen(instant) {
   const r = document.getElementById('reader'), top = r.querySelector('.reader-bar'), bar = document.getElementById('inkBar');
-  if (_reader.zenIn) { _reader.zenIn = false; slideBar(top, true, () => {}); }   // left before it was all the way in
   if (r.classList.contains('zen')) {
-    if (Pencil.mode === 'read' || document.getElementById('readerPenBtn').hidden) bar.classList.remove('open');   // floating: it just goes
-    keepPaperStill(() => { r.classList.remove('zen', 'chrome-hidden'); bar.classList.remove('zen-bar'); if (!instant) top.style.height = '0px'; renderInkBar(); });
-    if (!instant) slideBar(top, true, () => {});
+    r.classList.remove('zen', 'chrome-hidden');
+    if (instant) {   // the reader is closing: just put things back
+      if (top._slide) { cancelAnimationFrame(top._slide.raf); top._slide.running = false; }
+      top.classList.remove('folded'); top.style.height = top.style.minHeight = top.style.overflow = top.style.paddingTop = top.style.paddingBottom = ''; top.style.removeProperty('--slide-o');
+      bar.classList.remove('zen-bar');
+    } else {
+      slideBar(top, true, () => top.classList.remove('folded'));
+      renderInkBar();
+    }
   }
   if (_reader.zenFs && document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
   _reader.zenFs = false;
 }
-function toggleZenChrome() {   // the floating toolbar fades out of the way and back (CSS)
+function toggleZenChrome() {
   const r = document.getElementById('reader');
-  if (r.classList.contains('zen')) r.classList.toggle('chrome-hidden');
+  if (!r.classList.contains('zen')) return;
+  r.classList.toggle('chrome-hidden');
+  renderInkBar();
 }
 document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && _reader.zenFs) { _reader.zenFs = false; exitZen(); } });
 
@@ -7224,7 +7264,7 @@ function setReaderPanel(open, now) {
   if (!open && !now && r.classList.contains('panel-open') && r.classList.contains('open') && !reduceMotion()) {   // slides out first, then the paper takes the room
     r.classList.add('panel-leaving');
     document.getElementById('readerNotesBtn').setAttribute('aria-pressed', 'false');
-    _reader.panelT = setTimeout(() => setReaderPanel(false, true), 180);
+    _reader.panelT = setTimeout(() => setReaderPanel(false, true), readerPhone() ? 220 : 180);
     return;
   }
   r.classList.toggle('panel-open', open);
