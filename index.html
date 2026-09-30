@@ -345,7 +345,10 @@ html.ro #vaultOverlay { display: none !important; }
 .f-date { white-space: nowrap; }
 .f-topics { display: inline-flex; gap: 6px; min-width: 0; overflow: hidden; }
 .f-topic { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; font-size: 11.5px; color: var(--text-secondary); background: rgba(255,255,255,0.07); padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
-.f-topic.more { padding: 2px 8px; letter-spacing: 0.05em; cursor: default; }
+.f-topic.more { padding: 2px 8px; cursor: default; font-variant-numeric: tabular-nums; }
+.f-topic[hidden] { display: none; }
+.f-topics.solo .f-topic:first-child { flex-shrink: 1; min-width: 0; }   /* only when it's the one chip left: it shortens instead of being cut */
+.f-tn { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .f-star { color: var(--star); }
 .f-rel { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .f-rel i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
@@ -621,19 +624,39 @@ html.no-hover .pd-topic-chip:hover:not(:active) { background: rgba(255,255,255,0
 .pd-info { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 14px; padding: 0 4px; transition: color 0.15s; }
 .pd-info:hover { color: var(--text); }
 .pd-matches { display: flex; flex-wrap: wrap; gap: 6px; }
-.pd-match-row { display: inline-flex; align-items: stretch; gap: 0; }
-.pd-match-list { flex-direction: column; align-items: stretch; gap: 5px; }
-.pd-match-list .pd-match-row { display: flex; }
-.pd-match-list .pd-match { flex: 1; min-width: 0; text-align: left; word-break: normal; overflow-wrap: break-word; }
-.pd-match-list .pd-strength { flex-shrink: 0; justify-content: flex-end; padding: 2px 8px; }
-.pd-match-row .pd-match:has(+ .pd-strength) { border-top-right-radius: 0; border-bottom-right-radius: 0; }
-.pd-strength { display: inline-flex; align-items: center; gap: 4px; font: inherit; font-size: 11.5px; line-height: 1.4; padding: 2px 7px; border-radius: 0 6px 6px 0; border: none; border-left: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.04); color: var(--text-muted); white-space: nowrap; }
-button.pd-strength { cursor: pointer; transition: color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease); }
-button.pd-strength:hover { color: var(--text); background: rgba(255,255,255,0.1); }
-.pd-strength svg { width: 8px; height: 5px; fill: none; stroke: currentColor; stroke-width: 1.4; }
-.pd-strength.lv-definitely { color: #7fcf9a; }   /* a Core interest: it's what can make the paper Must Read */
-.pd-strength.unrated { font-style: italic; }
-.pd-score { margin-left: 8px; font-size: 12.5px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+:root { --lv-definitely: var(--green); --lv-probably: var(--yellow); --lv-mildly: var(--gray-badge); }   /* interest levels = the labels they lead to */
+.rv-head { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.rv-head .f-rel { font-size: 14px; }
+.rv-score { font-size: 13.5px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.rv-head .triage-anchor { margin-left: -2px; }
+.rv-bar { position: relative; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.07); margin: 12px 0 26px; }
+.rv-seg { position: absolute; top: 0; bottom: 0; }
+.rv-seg:first-child { border-radius: 3px 0 0 3px; }
+.rv-cut { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(135deg, rgba(255,255,255,0.18) 0 2px, transparent 2px 4px); }
+.rv-tick { position: absolute; top: -3px; height: 12px; width: 1px; background: rgba(255,255,255,0.4); }
+.rv-tick span { position: absolute; top: 15px; left: -1px; font-size: 11px; line-height: 1; color: var(--text-muted); white-space: nowrap; }
+.rv-group + .rv-group { margin-top: 14px; }
+.rv-gl { display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 2px; }
+.rv-gl i { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.rv-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 10px; padding: 7px 0; border-top: 1px solid rgba(255,255,255,0.06); }
+.rv-gl + .rv-row { border-top: none; }
+.rv-name { justify-self: start; text-align: left; background: none; border: none; padding: 0; font: inherit; font-size: 13.5px; line-height: 1.35; color: var(--text); cursor: pointer; overflow-wrap: normal; word-break: normal; transition: color var(--t-fast) var(--ease); }
+.rv-name:hover { color: var(--accent); }
+.rv-str { display: inline-flex; align-items: center; gap: 7px; width: 112px; min-height: 30px; padding: 0 8px; margin-right: -8px; border-radius: 8px; border: none; background: none; font: inherit; font-size: 12.5px; color: var(--text-secondary); white-space: nowrap; }   /* one width: the meters line up */
+span.rv-str { width: 86px; padding: 0; margin-right: 0; }
+.rv-car { margin-left: auto; }
+button.rv-str { cursor: pointer; transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
+button.rv-str:hover { background: rgba(255,255,255,0.07); color: var(--text); }
+.rv-str.unrated { font-style: italic; }
+.rv-meter { display: inline-flex; align-items: flex-end; gap: 2px; }
+.rv-meter b { width: 3px; border-radius: 1px; background: rgba(255,255,255,0.16); }
+.rv-meter b:nth-child(1) { height: 5px; } .rv-meter b:nth-child(2) { height: 8px; } .rv-meter b:nth-child(3) { height: 11px; }
+.rv-meter b.on { background: currentColor; }
+.rv-car { width: 8px; height: 5px; fill: none; stroke: currentColor; stroke-width: 1.4; opacity: 0.6; }
+.rv-none { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+html.no-hover button.rv-str:hover { background: none; }
+@media (prefers-reduced-motion: reduce) { .rv-name, button.rv-str { transition: none; } }
+
 .pd-match { font: inherit; font-size: 12px; line-height: 1.4; color: var(--text-secondary); background: rgba(255,255,255,0.06); padding: 2px 8px; border-radius: 6px; border: 1px solid transparent; cursor: pointer; text-align: left; transition: border-color 0.15s, color 0.15s; }
 .pd-match:hover { color: var(--text); border-color: rgba(255,255,255,0.22); }
 .badge-link { font: inherit; font-size: 11px; cursor: pointer; border: 1px solid transparent; transition: border-color 0.15s, color 0.15s; }
@@ -1722,9 +1745,22 @@ body.tok-mode .tok-bar { flex-wrap: wrap; row-gap: 8px; }
 .level-dd { max-width: 320px; }
 .level-dd .interest-dropdown-item { display: flex; align-items: flex-start; gap: 10px; white-space: normal; }
 .level-dd-help { font-size: 12px; line-height: 1.4; color: var(--text-muted); }
-.rel-strength { display: block; font-size: 11.5px; color: var(--text-muted); }
-.rel-pts { margin-left: auto; font-size: 12px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
-.relevance-interest-row.muted { opacity: 0.55; }
+.rb-cuts { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+.rb-table { width: 100%; border-collapse: collapse; font-size: 13.5px; line-height: 1.35; }
+.rb-table td { padding: 8px 0; vertical-align: top; border-top: 1px solid rgba(255,255,255,0.07); color: var(--text); }
+.rb-table tr:first-child td { border-top: none; padding-top: 0; }
+.rb-table td.rb-k { width: 78px; padding-right: 8px; line-height: 1.6; }
+.rb-table td.rb-v { width: 48px; text-align: right; font-variant-numeric: tabular-nums; }
+.rb-table tr.rb-sum td { border-top-color: rgba(255,255,255,0.24); font-weight: 600; }
+.rb-table tr.rb-sum td.rb-k { color: var(--text); }
+.rb-k { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); }
+.rb-more .rb-k, .rb-note .rb-k { display: block; }
+.rb-sub { display: block; font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.rb-sub.rb-none { margin-top: 0; font-size: 13px; }
+.rb-more, .rb-note { margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.07); font-size: 12.5px; line-height: 1.5; color: var(--text-secondary); }
+.rb-more .rb-k, .rb-note .rb-k { margin-bottom: 3px; }
+.rb-oth + .rb-oth { margin-top: 2px; }
+.rb-dim { color: var(--text-muted); margin-left: 6px; font-size: 12px; white-space: nowrap; }
 .badge-editable { cursor: pointer; position: relative; user-select: none; }
 .badge-editable:hover { filter: brightness(1.3); }
 .interest-dropdown { position: absolute; z-index: 200; background: #000000ee; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.55); overflow: hidden; min-width: 110px; padding: 5px 0; animation: dropdown-in 0.15s ease forwards; }
@@ -2408,6 +2444,10 @@ function scoreParts(p) {
   const score = (core ? core.value : 0) + (context ? context.value : 0) + bonus + 0.5 * residual;
   return { matches, core, context, next, bonus, residual, score: Math.round(score * 100) / 100 };
 }
+const fmtScore = v => v.toFixed(2);   // two places: parts like a 0.15 bonus must visibly add up to the total
+/* The order matches are listed in: by level, then strength, then name */
+const STRENGTH_RANK = { about: 3, partly: 2, touches: 1 }, LEVEL_RANK = { definitely: 0, probably: 1, mildly: 2 };
+const byMatchOrder = (a, b) => LEVEL_RANK[a.level] - LEVEL_RANK[b.level] || STRENGTH_RANK[b.strength] - STRENGTH_RANK[a.strength] || a.name.localeCompare(b.name);
 function paperScore(p) {
   const parts = scoreParts(p);
   if (parts.matches.length) return parts.score;
@@ -3017,45 +3057,31 @@ function formatDate(d) {
 }
 
 /* Build relevance breakdown inner HTML (used in hover popup) */
+/* "How this was scored": the sum as a table (Core fit, Context, Bonus, Triage, then the Score), the matches that
+   didn't count, and the triage note. The Relevance card shows the matches; this shows the arithmetic. */
 function buildRelevanceBreakdown(p) {
-  const parts = scoreParts(p), residual = parts.residual;
-  const rel = dynamicRelevance(p), sc = paperScore(p);
-  let html = '<div class="relevance-breakdown">';
-  html += `<div class="relevance-score-row">
-    <span class="relevance-score-val sc-${rel === 'definitely' ? 3 : rel === 'probably' ? 2 : 1}">${sc.toFixed(1)}</span>
-    <span class="relevance-score-label"><strong>${relLabel(rel)}</strong><br>Score ${sc.toFixed(1)} · Must Read at ${SCORE_CUTS.definitely}+, Interesting at ${SCORE_CUTS.probably}+</span>
-  </div>`;
-  if (parts.matches.length) {
-    const rows = parts.matches.slice().sort((a, b) => b.value - a.value).map(m => {
-      const counts = m === parts.core || m === parts.context, isBonus = m === parts.next && parts.bonus > 0;
-      return `<div class="relevance-interest-row${counts || isBonus ? '' : ' muted'}">
-        <span class="badge badge-${m.level} relevance-interest-score">${LEVEL_NAME[m.level]}</span>
-        <span class="relevance-interest-name">${esc(m.name)}<span class="rel-strength">${STRENGTH_NAME[m.strength].toLowerCase()} match${m.rated ? '' : ' (not rated yet)'}</span></span>
-        <span class="rel-pts">${counts ? '+' + m.value.toFixed(1) : isBonus ? '+' + parts.bonus.toFixed(2) + ' bonus' : '–'}</span>
-      </div>`;
-    }).join('');
-    html += `<div class="relevance-interests"><div class="relevance-interests-title">How it matches your interests</div>${rows}</div>`;
-    const bits = [`core fit ${(parts.core ? parts.core.value : 0).toFixed(1)}`, `context ${(parts.context ? parts.context.value : 0).toFixed(1)}`];
-    if (parts.bonus) bits.push(`bonus ${parts.bonus.toFixed(2)}`);
-    if (residual) bits.push(`residual ${residual > 0 ? '+' : '−'}${Math.abs(0.5 * residual).toFixed(1)}`);
-    html += `<div class="relevance-formula">${bits.join(' + ').replace('+ residual −', '− residual ')} = ${sc.toFixed(1)}</div>`;
-    html += `<div class="relevance-formula-note">The best Core match and the best other match count in full; the next best adds a small bonus.</div>`;
+  const sp = scoreParts(p), rel = dynamicRelevance(p), sc = paperScore(p);
+  const who = m => m ? `${esc(m.name)}<span class="rb-sub">${LEVEL_NAME[m.level]} · ${STRENGTH_NAME[m.strength].toLowerCase()} match${m.rated ? '' : ' (not rated yet)'}</span>` : `<span class="rb-sub rb-none">none</span>`;
+  const num = (v, sign) => (sign && v > 0 ? '+' : v < 0 ? '−' : '') + fmtScore(Math.abs(v));
+  const row = (k, body, v) => `<tr><td class="rb-k">${k}</td><td>${body}</td><td class="rb-v">${v}</td></tr>`;
+  let rows = '';
+  if (sp.matches.length) {
+    rows += row('Core fit', who(sp.core), num(sp.core ? sp.core.value : 0));
+    rows += row('Context', who(sp.context), num(sp.context ? sp.context.value : 0, true));
+    if (sp.bonus) rows += row('Bonus', who(sp.next), num(sp.bonus, true));
   } else {
-    html += `<div class="relevance-interests"><div class="relevance-interests-title">How it matches your interests</div><div style="font-size:13px;color:var(--text-muted);font-style:italic;">No current interests match, so its stored rating (${esc(relLabel(p.relevance_tier || 'mildly'))}) is used.</div></div>`;
+    rows += row('Stored', `<span class="rb-sub rb-none">No current interest matches; its stored rating (${esc(relLabel(p.relevance_tier || 'mildly'))}) is used</span>`, num(sc));
   }
-  // Residual score
-  const resClass = residual === 0 ? 'zero' : '';
-  const resSign = residual > 0 ? '+' + residual : residual < 0 ? String(residual) : '0';
-  html += `<div class="relevance-residual ${resClass}"><strong>Residual: ${resSign}</strong> \u2014 ${residual > 0 ? 'Boosted: more relevant than interests alone suggest' : residual < 0 ? 'Reduced: less relevant than interests alone suggest' : 'No adjustment'}</div>`;
-
-  // Triage notes
+  rows += row('Triage', `<span class="rb-sub rb-none">${sp.residual > 0 ? 'More relevant than its interests suggest' : sp.residual < 0 ? 'Less relevant than its interests suggest' : 'No adjustment'}</span>`, num(0.5 * sp.residual, true));
+  rows += `<tr class="rb-sum"><td class="rb-k">Score</td><td></td><td class="rb-v">${fmtScore(sc)}</td></tr>`;
+  const others = sp.matches.filter(m => m !== sp.core && m !== sp.context && !(m === sp.next && sp.bonus)).sort(byMatchOrder);
   const notes = (p.notes || '').trim();
-  if (notes) {
-    html += `<div class="relevance-notes">${esc(notes)}</div>`;
-  }
-
-  html += '</div>';
-  return html;
+  return `<div class="relevance-breakdown">
+    <table class="rb-table">${rows}</table>
+    <div class="rb-cuts">Must Read from ${SCORE_CUTS.definitely} · Interesting from ${SCORE_CUTS.probably}</div>
+    ${others.length ? `<div class="rb-more"><span class="rb-k">Not counted</span>${others.map(m => `<div class="rb-oth">${esc(m.name)}<span class="rb-dim">${LEVEL_NAME[m.level]} · ${STRENGTH_NAME[m.strength].toLowerCase()}</span></div>`).join('')}</div>` : ''}
+    ${notes ? `<div class="rb-note"><span class="rb-k">Triage note</span>${esc(notes)}</div>` : ''}
+  </div>`;
 }
 
 /* Sort: relevance tier first, then published year descending (newest first) */
@@ -3846,9 +3872,35 @@ function hasText(v) { return v && v.trim() && v !== 'not specified'; }
 function topicChipsHTML(p) {
   const gs = groupsOfPaper(p);
   if (!gs.length) return '';
-  const more = gs.slice(2);
-  return `<span class="f-topics">${gs.slice(0, 2).map(g => `<span class="f-topic">${gdot(g)}${esc(g)}</span>`).join('')}${more.length ? `<span class="f-topic more" title="${escAttr('Also: ' + more.join(', '))}" aria-label="${escAttr('Also: ' + more.join(', '))}">…</span>` : ''}</span>`;
+  return `<span class="f-topics">${gs.map(g => `<span class="f-topic" data-g="${escAttr(g)}">${gdot(g)}<span class="f-tn">${esc(g)}</span></span>`).join('')}<span class="f-topic more" hidden></span></span>`;
 }
+/* Topic chips on one line show as many whole chips as fit; the rest fold into "+N", whose tooltip names them.
+   Nothing is ever cut mid-chip, and a lone chip too long for its row shortens with an ellipsis. Re-fitted whenever
+   the row changes width (the observer watches each row, not the chips, so fitting can't feed back into itself). */
+function fitChips(box) {
+  const chips = [...box.querySelectorAll('.f-topic:not(.more)')], more = box.querySelector('.f-topic.more');
+  if (!chips.length || !more) return;
+  chips.forEach(c => { c.hidden = false; }); more.hidden = true; box.classList.remove('solo');
+  const fits = () => box.scrollWidth <= box.clientWidth + 1;
+  for (let n = chips.length - 1; n >= 1 && !fits(); n--) {
+    chips[n].hidden = true;
+    const rest = chips.slice(n).map(c => c.dataset.g);
+    more.hidden = false; more.textContent = '+' + rest.length;
+    more.title = 'Also: ' + rest.join(', '); more.setAttribute('aria-label', 'Also: ' + rest.join(', '));
+  }
+  if (!fits()) box.classList.add('solo');   // one chip (and +N) still too wide: that chip shortens
+}
+const _chipRows = new WeakMap();
+const _chipRO = window.ResizeObserver ? new ResizeObserver(es => es.forEach(e => { const b = _chipRows.get(e.target); if (b && b.isConnected) fitChips(b); })) : null;
+function watchChips(root) {
+  (root.matches && root.matches('.f-topics') ? [root] : root.querySelectorAll ? root.querySelectorAll('.f-topics') : []).forEach(b => {
+    const row = b.parentElement; if (!row || _chipRows.get(row) === b) return;
+    _chipRows.set(row, b);
+    if (_chipRO) _chipRO.observe(row); else fitChips(b);
+  });
+}
+new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => { if (n.nodeType === 1) watchChips(n); }))).observe(document.documentElement, { childList: true, subtree: true });
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => document.querySelectorAll('.f-topics').forEach(fitChips));
 function feedMetaHTML(p, showRel, withTopics) {
   const rel = dynamicRelevance(p), k = paperKey(p);
   const venue = hasText(p.venue) ? p.venue : '';
@@ -5295,6 +5347,50 @@ function updateInterestField(name, field, value) {
   refresh();   // every paper that matches it re-scores
 }
 
+/* ===== THE RELEVANCE CARD (paper page) =====
+   The label and score; a bar showing what the score is made of against the Interesting and Must Read cut-offs
+   (each part in its interest's level colour: Core green, Related amber, Peripheral grey, the same as the labels);
+   then the matched interests grouped by level, strongest first, each with its strength (yours to change). The
+   (i) opens the arithmetic ("How this was scored"). */
+const BAR_MAX = 5;
+function relevanceBarHTML(p, sp, sc) {
+  const pct = v => (Math.max(0, Math.min(v, BAR_MAX)) / BAR_MAX * 100).toFixed(2) + '%';
+  const col = lv => `var(--lv-${lv})`;
+  const parts = [];
+  if (sp.core) parts.push([sp.core.value, col(sp.core.level), 1]);
+  if (sp.context) parts.push([sp.context.value, col(sp.context.level), 1]);
+  if (sp.bonus) parts.push([sp.bonus, col(sp.next.level), 0.55]);
+  if (sp.residual > 0) parts.push([0.5 * sp.residual, 'var(--text-secondary)', 0.5]);
+  if (!sp.matches.length) parts.push([sc, 'var(--text-muted)', 0.6]);   // no current interest: the stored rating
+  let x = 0;
+  const segs = parts.map(([v, c, o]) => { const s = `<span class="rv-seg" style="left:${pct(x)};width:${pct(v)};background:color-mix(in srgb, ${c} ${Math.round(o * 58)}%, var(--bg-surface))"></span>`; x += v; return s; }).join('');   // faint, like the site's other data colours
+  const cut = sp.residual < 0 ? `<span class="rv-cut" style="left:${pct(sc)};width:${pct(x - sc)}"></span>` : '';   // a triage deduction
+  const label = `Score ${fmtScore(sc)}` + (sp.core ? `: core fit ${fmtScore(sp.core.value)}` : '') + (sp.context ? `, context ${fmtScore(sp.context.value)}` : '') + (sp.bonus ? `, bonus ${fmtScore(sp.bonus)}` : '') + `. Interesting from ${SCORE_CUTS.probably}, Must Read from ${SCORE_CUTS.definitely}.`;
+  return `<div class="rv-bar" role="img" aria-label="${escAttr(label)}">${segs}${cut}
+    <span class="rv-tick" style="left:${pct(SCORE_CUTS.probably)}"><span>Interesting</span></span>
+    <span class="rv-tick" style="left:${pct(SCORE_CUTS.definitely)}"><span>Must Read</span></span></div>`;
+}
+function strengthMeterHTML(st) {
+  const n = { about: 3, partly: 2, touches: 1 }[st] || 2;
+  return `<span class="rv-meter" aria-hidden="true">${[1, 2, 3].map(k => `<b${k <= n ? ' class="on"' : ''}></b>`).join('')}</span>`;
+}
+function relevanceCardHTML(p) {
+  const sp = scoreParts(p), rel = dynamicRelevance(p), sc = paperScore(p), ka = escAttr(paperKey(p)), own = isOwner();
+  const head = `<div class="rv-head"><span class="f-rel rel-${rel}"><i></i>${relLabel(rel)}</span><span class="rv-score">${fmtScore(sc)}</span><span class="triage-anchor" onmouseenter="showRelevancePopup(this,'${ka}')" onmouseleave="hideRelevancePopup(this)"><button class="pd-info" title="How this was scored" aria-label="How this was scored" aria-expanded="false" onclick="toggleRelevancePopup(event,this.parentElement,'${ka}')">&#9432;</button></span></div>`;
+  const groups = ['definitely', 'probably', 'mildly'].map(lv => {
+    const ms = sp.matches.filter(m => m.level === lv).sort(byMatchOrder);
+    if (!ms.length) return '';
+    return `<div class="rv-group"><div class="rv-gl"><i style="background:var(--lv-${lv})"></i>${LEVEL_NAME[lv]} interests</div>${ms.map(m => {
+      const tip = `${STRENGTH_NAME[m.strength]} match${m.rated ? '' : ' (not rated yet)'}`;
+      const str = own ? `<button class="rv-str${m.rated ? '' : ' unrated'}" onclick="event.stopPropagation();openStrengthDD(event,'${ka}','${escAttr(m.name)}')" title="${escAttr(tip)}. Change how strongly this paper matches it" aria-haspopup="menu">${strengthMeterHTML(m.strength)}${STRENGTH_NAME[m.strength]}<svg class="rv-car" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4"/></svg></button>`
+        : `<span class="rv-str${m.rated ? '' : ' unrated'}" title="${escAttr(tip)}">${strengthMeterHTML(m.strength)}${STRENGTH_NAME[m.strength]}</span>`;
+      return `<div class="rv-row"><button class="rv-name" onclick="openInterest('${escAttr(m.name)}')" title="Papers that match ${escAttr(m.name)}">${esc(m.name)}</button>${str}</div>`;
+    }).join('')}</div>`;
+  }).join('');
+  const none = sp.matches.length ? '' : `<p class="rv-none">No current interest matches this paper, so its stored rating is used.</p>`;
+  return `<div class="pd-card rv-card"><h3>Relevance</h3>${head}${relevanceBarHTML(p, sp, sc)}${groups}${none}</div>`;
+}
+
 /* How strongly a paper matches one of its interests: about / partly about / touches. It re-scores the paper at once
    and saves like your other edits (match_strengths). */
 function openStrengthDD(e, key, name) {
@@ -5328,7 +5424,7 @@ function setMatchStrength(key, name, value) {
   if (_paperViewActive) renderPaperDetail(p);
   refresh();
   const rel = dynamicRelevance(p);
-  toast(`\u201c${name}\u201d: ${STRENGTH_NAME[value || STRENGTH_DEFAULT].toLowerCase()} match \u00b7 score ${paperScore(p).toFixed(1)}${rel !== beforeRel ? ', now ' + relLabel(rel) : ''}`, () => setMatchStrength(key, name, prev));
+  toast(`\u201c${name}\u201d: ${STRENGTH_NAME[value || STRENGTH_DEFAULT].toLowerCase()} match \u00b7 score ${fmtScore(paperScore(p))}${rel !== beforeRel ? ', now ' + relLabel(rel) : ''}`, () => setMatchStrength(key, name, prev));
 }
 
 /* ===== GENERIC MODAL (prompt / confirm) ===== */
@@ -9731,27 +9827,11 @@ function renderPaperDetail(p) {
   const sm = p.source_mode || '';
   const via = sm.includes('email') && sm.includes('web_survey') ? 'Email alert and web survey'
     : sm.includes('email') ? 'Email alert' : sm.includes('web_survey') ? 'Web survey' : '';
-  const matches = (p.matched_interests || '').split('|').map(x => x.trim()).filter(Boolean);
   const facts = [];
   if (hasText(p.venue)) facts.push(['Venue', `${venueLinkHTML(p, '')}${p.venue.trim() !== rowVenueLabel(p) ? `<span class="pd-sub">${esc(p.venue)}</span>` : ''}`]);
   if (paperDate(p)) facts.push(['Published', esc(paperDate(p))]);
   if (p.date_found) facts.push(['Added', esc(shortDate(p.date_found))]);
   if (via) facts.push(['Found via', `${via}${why && why.source ? `<span class="pd-sub">${esc(why.source)} alert</span>` : ''}`]);
-  facts.push(['Relevance', `<span class="f-rel rel-${rel}"><i></i>${relLabel(rel)}</span><span class="pd-score" title="Score (Must Read at ${SCORE_CUTS.definitely}+)">${paperScore(p).toFixed(1)}</span><span class="triage-anchor" onmouseenter="showRelevancePopup(this,'${ka}')" onmouseleave="hideRelevancePopup(this)"><button class="pd-info" title="How this was scored" aria-label="How this was scored" aria-expanded="false" onclick="toggleRelevancePopup(event,this.parentElement,'${ka}')">&#9432;</button></span>`]);
-  if (matches.length) {   // each interest it matches, and how strongly (yours to change)
-    const sp = scoreParts(p), byName = new Map(sp.matches.map(m => [m.name, m]));
-    const ordered = matches.slice().sort((a, b) => ((byName.get(b) || {}).value || 0) - ((byName.get(a) || {}).value || 0));   // strongest first
-    facts.push(['Matches', `<span class="pd-matches pd-match-list">${ordered.map(name => {
-      const m = byName.get(name);
-      const chip = `<button class="pd-match" onclick="openInterest('${escAttr(name)}')" title="Papers that match ${escAttr(name)}">${esc(name)}</button>`;
-      if (!m) return `<span class="pd-match-row">${chip}</span>`;   // not a current interest: no strength to set
-      const tip = `${LEVEL_NAME[m.level]} interest \u00b7 ${STRENGTH_NAME[m.strength].toLowerCase()} match${m.rated ? '' : ' (not rated yet)'} \u00b7 worth ${m.value.toFixed(1)}`;
-      const str = isOwner() ? `<button class="pd-strength lv-${m.level}${m.rated ? '' : ' unrated'}" onclick="event.stopPropagation();openStrengthDD(event,'${ka}','${escAttr(name)}')" title="${escAttr(tip)}. Change how strongly this paper matches it" aria-haspopup="true">${STRENGTH_NAME[m.strength]}<svg viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4"/></svg></button>`
-        : `<span class="pd-strength lv-${m.level}" title="${escAttr(tip)}">${STRENGTH_NAME[m.strength]}</span>`;
-      return `<span class="pd-match-row">${chip}${str}</span>`;
-    }).join('')}</span>`]);
-  }
-
   const groups = (p.theme_groups||'').split('|').map(x => x.trim()).filter(Boolean);
   const x = `<svg width="10" height="10" viewBox="0 0 10 10"><line x1="2" y1="2" x2="8" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="8" y1="2" x2="2" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
   const topics = groups.map(g => `<span class="badge badge-group badge-group-edit">${gdot(norm(g))}${esc(g)}<span class="group-remove" title="Remove topic" onclick="event.stopPropagation();removeGroupFromPaper('${ka}','${escAttr(g)}')">${x}</span></span>`).join('');
@@ -9759,6 +9839,7 @@ function renderPaperDetail(p) {
 
   const aside = `<aside class="pd-aside">
     <div class="pd-card"><dl class="pd-facts">${facts.map(([t, d]) => `<dt>${t}</dt><dd>${d}</dd>`).join('')}</dl></div>
+    ${relevanceCardHTML(p)}
     <div class="pd-card"><h3>Topics</h3><div class="pd-topics paper-detail-tags">${topics}${addBtn}</div></div>
   </aside>`;
 
@@ -9831,9 +9912,9 @@ function showRelevancePopup(anchor, key, pinned) {
   if (pinned) popup.dataset.pinned = '1';
   popup.innerHTML = buildRelevanceBreakdown(p);
   // Keep it on-screen: fit the width to narrow screens, and open upward when there's no room below
-  const w = Math.min(360, window.innerWidth - 24);
+  const w = Math.min(360, window.innerWidth - 32);   // the page's 16px gutters, so on a phone it lines up with the cards
   popup.style.width = w + 'px';
-  popup.style.left = Math.max(12, Math.min(rect.right - w, window.innerWidth - w - 12)) + 'px';
+  popup.style.left = Math.max(16, Math.min(rect.right - w, window.innerWidth - w - 16)) + 'px';
   popup.style.top = (rect.bottom + 8) + 'px';
   popup.addEventListener('mouseenter', () => clearTimeout(_relPopupTimer));
   popup.addEventListener('mouseleave', () => { if (!popup.dataset.pinned) _relPopupTimer = setTimeout(() => popup.remove(), 150); });
