@@ -6,7 +6,7 @@ Controller composition,application,probably,confirmed,Verification work extensio
 Generalist policies,application,probably,confirmed,Diffusion/flow-matching methods,manual,2026-03-30,2026-04-01,Broad multi-task robot policies
 Imitation learning,application,probably,confirmed,"Generative methods (diffusion, flow matching)",manual,2026-03-30,,Learning from demonstrations
 Reinforcement learning,application,probably,confirmed,Complementary to imitation learning,manual,2026-03-30,,Policy learning through reward signals
-Sampling-based motion planning,application,probably,confirmed,"RRT, PRM, variants",manual,2026-03-30,2026-04-01,Past research area — still slightly interested
+Sampling-based motion planning,application,mildly,confirmed,"RRT, PRM, variants",manual,2026-03-30,2026-09-30,Past research area — still slightly interested
 Diffusion models,method,probably,confirmed,"Verification, imitation learning, generalist policies",manual,2026-03-30,,Generative method used across multiple interest areas
 Flow matching,method,probably,confirmed,"Verification, imitation learning, generalist policies",manual,2026-03-30,2026-04-01,Generative method used across multiple interest areas
 Conformal prediction,method,probably,confirmed,Distribution-free uncertainty quantification,manual,2026-03-30,2026-09-28,Key method interest for verification and safety
