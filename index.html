@@ -2370,10 +2370,10 @@ const REL_ORDER = { definitely: 0, probably: 1, mildly: 2 };
 
 /* ===== SCORING: Core first, context second =====
    Each interest has one level, stored in relevance_mapping: Core (definitely), Related (probably), Peripheral
-   (mildly). Each interest a paper matches has a strength, in match_strengths ("Name=about|Other=partly"): the
-   paper is about it, partly about it, or only touches it (rated when the paper is added; you can change it on the
-   paper's page). A paper's score:
-     core fit  3 x the strength of its best Core match        (about 1, partly 0.6, touches 0.25)
+   (mildly). Each interest a paper matches has a strength, in match_strengths ("Name=about|Other=partly"), shown as
+   Strong (the paper is about it), Moderate (partly about it) or Weak (only touches it); rated when the paper is
+   added, and yours to change on the paper's page. A paper's score:
+     core fit  3 x the strength of its best Core match        (Strong 1, Moderate 0.6, Weak 0.25)
    + context   its best other match: Related 1, Peripheral 1/3, times strength
    + bonus     0.2 x the next best match (at most +0.2): a second strong match orders papers that would tie
    + residual  half the triage adjustment (-1, 0 or +1)
@@ -2381,7 +2381,7 @@ const REL_ORDER = { definitely: 0, probably: 1, mildly: 2 };
    the score (SCORE_CUTS): Must Read means about your research (or partly, with a strong related match). */
 const LEVEL_NAME = { definitely: 'Core', probably: 'Related', mildly: 'Peripheral' };
 const STRENGTH = { about: 1, partly: 0.6, touches: 0.25 };
-const STRENGTH_NAME = { about: 'About', partly: 'Partly about', touches: 'Touches' };
+const STRENGTH_NAME = { about: 'Strong', partly: 'Moderate', touches: 'Weak' };   // shown; stored as about / partly / touches
 const STRENGTH_DEFAULT = 'partly';   // a match not rated yet
 const SCORE_CUTS = { definitely: 2.5, probably: 0.6 };   // Must Read at 2.5+, Interesting at 0.6+, else Tangential
 const BONUS = { share: 0.2, max: 0.2 };   // the next best match adds a little: 0.2 x its value, at most 0.2
@@ -3030,7 +3030,7 @@ function buildRelevanceBreakdown(p) {
       const counts = m === parts.core || m === parts.context, isBonus = m === parts.next && parts.bonus > 0;
       return `<div class="relevance-interest-row${counts || isBonus ? '' : ' muted'}">
         <span class="badge badge-${m.level} relevance-interest-score">${LEVEL_NAME[m.level]}</span>
-        <span class="relevance-interest-name">${esc(m.name)}<span class="rel-strength">${STRENGTH_NAME[m.strength].toLowerCase()}${m.rated ? '' : ' (not rated yet)'}</span></span>
+        <span class="relevance-interest-name">${esc(m.name)}<span class="rel-strength">${STRENGTH_NAME[m.strength].toLowerCase()} match${m.rated ? '' : ' (not rated yet)'}</span></span>
         <span class="rel-pts">${counts ? '+' + m.value.toFixed(1) : isBonus ? '+' + parts.bonus.toFixed(2) + ' bonus' : '–'}</span>
       </div>`;
     }).join('');
@@ -5328,7 +5328,7 @@ function setMatchStrength(key, name, value) {
   if (_paperViewActive) renderPaperDetail(p);
   refresh();
   const rel = dynamicRelevance(p);
-  toast(`\u201c${name}\u201d: ${STRENGTH_NAME[value || STRENGTH_DEFAULT].toLowerCase()} \u00b7 score ${paperScore(p).toFixed(1)}${rel !== beforeRel ? ', now ' + relLabel(rel) : ''}`, () => setMatchStrength(key, name, prev));
+  toast(`\u201c${name}\u201d: ${STRENGTH_NAME[value || STRENGTH_DEFAULT].toLowerCase()} match \u00b7 score ${paperScore(p).toFixed(1)}${rel !== beforeRel ? ', now ' + relLabel(rel) : ''}`, () => setMatchStrength(key, name, prev));
 }
 
 /* ===== GENERIC MODAL (prompt / confirm) ===== */
@@ -9745,7 +9745,7 @@ function renderPaperDetail(p) {
       const m = byName.get(name);
       const chip = `<button class="pd-match" onclick="openInterest('${escAttr(name)}')" title="Papers that match ${escAttr(name)}">${esc(name)}</button>`;
       if (!m) return `<span class="pd-match-row">${chip}</span>`;   // not a current interest: no strength to set
-      const tip = `${LEVEL_NAME[m.level]} interest \u00b7 ${STRENGTH_NAME[m.strength].toLowerCase()}${m.rated ? '' : ' (not rated yet)'} \u00b7 worth ${m.value.toFixed(1)}`;
+      const tip = `${LEVEL_NAME[m.level]} interest \u00b7 ${STRENGTH_NAME[m.strength].toLowerCase()} match${m.rated ? '' : ' (not rated yet)'} \u00b7 worth ${m.value.toFixed(1)}`;
       const str = isOwner() ? `<button class="pd-strength lv-${m.level}${m.rated ? '' : ' unrated'}" onclick="event.stopPropagation();openStrengthDD(event,'${ka}','${escAttr(name)}')" title="${escAttr(tip)}. Change how strongly this paper matches it" aria-haspopup="true">${STRENGTH_NAME[m.strength]}<svg viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4"/></svg></button>`
         : `<span class="pd-strength lv-${m.level}" title="${escAttr(tip)}">${STRENGTH_NAME[m.strength]}</span>`;
       return `<span class="pd-match-row">${chip}${str}</span>`;

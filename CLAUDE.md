@@ -190,7 +190,7 @@ Maintain a CSV file (`papers_database.csv`) with these columns:
 | `source_mode` | "email", "web_survey", "email,web_survey", or "manual" (added by hand) |
 | `relevance_tier` | **Static fallback only.** "definitely", "probably", or "mildly". The website now computes relevance dynamically from `matched_interests` + `residual_score` (see below). This column is still written at ingestion time as a snapshot, but the website ignores it when `matched_interests` is populated. |
 | `matched_interests` | Pipe-separated list of interest names from `interests_database.csv` that this paper matches (e.g. `"Conformal prediction\|Data-driven verification"`). **Must use exact `interest_name` values.** |
-| `match_strengths` | How strongly the paper matches each of its interests: `Name=about\|Other=partly\|Third=touches` (about / partly / touches; see Step 4). The website's score uses it. The user can change strengths on the paper's page, so **never overwrite a strength already there**; add ones that are missing. |
+| `match_strengths` | How strongly the paper matches each of its interests: `Name=about\|Other=partly\|Third=touches` (about / partly / touches; see Step 4). The dashboard shows them as **Strong / Moderate / Weak**. The website's score uses it. The user can change strengths on the paper's page, so **never overwrite a strength already there**; add ones that are missing. |
 | `residual_score` | Integer adjustment to the interest-derived relevance score. Typically -1, 0, or +1. `+1` = paper is more relevant than its interests suggest (e.g., directly about data-driven verification of black-box systems, or combines multiple core interests). `-1` = paper is less relevant (e.g., pure theory with no robotics/learning connection). `0` = interest-based score is appropriate. The justification for any non-zero value MUST be noted in the `notes` column. |
 | `theme_groups` | Pipe-separated list of thematic clusters (e.g. `"Safety & Verification\|Conformal Prediction"`). Typically 1–2 groups; up to 5 max for genuinely cross-cutting papers. **Always use canonical group names** — see Step 5 in the Execution Workflow. |
 | `headline` | One-line attention-grabbing takeaway (generated, ~10-15 words). Shown as the main display text on the website. |
@@ -271,7 +271,7 @@ Relevance is computed **dynamically at display time** by the website, from each 
 
 ### At display time (website JS): Core first, context second
 
-- Strength values: about 1, partly 0.6, touches 0.25 (a match with no strength yet counts as partly).
+- Strength values: about 1, partly 0.6, touches 0.25, shown as Strong / Moderate / Weak (a match with no strength yet counts as partly).
 - **Score** = 3 × the strength of the paper's **best Core** match + its **best other** match (Related 1, Peripheral 1/3, times strength) + a small **bonus** for the next best match (0.2 × its value, at most +0.2) + 0.5 × `residual_score`. Only the best of each counts in full, so being tagged with many broad interests can't pile up; the bonus just orders papers that would otherwise tie.
 - **Labels**: Must Read at score 2.5+ (about a Core interest, or partly about one with a strong related match), Interesting at 0.6+, else Tangential. That is roughly the top sixth as Must Read.
 - **Top Papers** order: score × 0.5^(days since `date_found` / 90), so strong papers stay near the top for about a season. The list can also be viewed by week.
