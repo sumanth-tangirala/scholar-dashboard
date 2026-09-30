@@ -272,7 +272,7 @@ Relevance is computed **dynamically at display time** by the website, from each 
 ### At display time (website JS): Core first, context second
 
 - Strength values: about 1, partly 0.6, touches 0.25 (a match with no strength yet counts as partly).
-- **Score** = 3 × the strength of the paper's **best Core** match + its **best other** match (Related 1, Peripheral 1/3, times strength) + 0.5 × `residual_score`. Only the best of each counts, so being tagged with many broad interests can't pile up.
+- **Score** = 3 × the strength of the paper's **best Core** match + its **best other** match (Related 1, Peripheral 1/3, times strength) + a small **bonus** for the next best match (0.2 × its value, at most +0.2) + 0.5 × `residual_score`. Only the best of each counts in full, so being tagged with many broad interests can't pile up; the bonus just orders papers that would otherwise tie.
 - **Labels**: Must Read at score 2.5+ (about a Core interest, or partly about one with a strong related match), Interesting at 0.6+, else Tangential. That is roughly the top sixth as Must Read.
 - **Top Papers** order: score × 0.5^(days since `date_found` / 90), so strong papers stay near the top for about a season. The list can also be viewed by week.
 - The paper page shows the score, and "How this was scored" shows each match, its level and strength, and what counted.
