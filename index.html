@@ -665,6 +665,12 @@ html.no-hover button.rv-str:hover { background: none; }
 .pd-topics .badge-group { background: rgba(255,255,255,0.06); border: 1px solid transparent; color: var(--text-secondary); font-size: 12px; height: 26px; padding: 0 10px; border-radius: 999px; gap: 6px; }
 .pd-topics .badge-group:hover { background: rgba(255,255,255,0.1); }
 .pd-topics .gdot { width: 7px; height: 7px; }
+/* A topic opens its list: the whole pill is the button (its ::before covers the pill), the × sits above it */
+.pd-topics .badge-group-edit { position: relative; }
+.pd-topic-go { all: unset; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.pd-topic-go::before { content: ''; position: absolute; inset: 0; border-radius: inherit; }
+.pd-topic-go:focus-visible::before { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 999px; }
+.pd-topics .group-remove { position: relative; z-index: 1; }
 .pd-topics .group-add-btn { height: 26px; border-radius: 999px; border-color: rgba(255,255,255,0.22); color: var(--text-muted); }
 .pd-topics:focus-within .group-add-wrap { opacity: 1; pointer-events: auto; }
 
@@ -4380,7 +4386,7 @@ function listModel(key) {
   }
   if (key.startsWith(INTEREST_KEY)) {
     const name = key.slice(INTEREST_KEY.length), i = allInterests.find(x => x.interest_name === name);
-    return { kind: 'interest', eyebrow: 'Interest', title: name, sub: i ? `A ${relLabel(i.relevance_mapping || 'mildly')} interest` : '', color: quiet,
+    return { kind: 'interest', eyebrow: 'Interest', title: name, sub: i ? `A ${LEVEL_NAME[i.relevance_mapping] || LEVEL_NAME.mildly} interest` : '', color: quiet,
       all: inTab(allPapers).filter(p => matchesOf(p).includes(name)) };
   }
   return { kind: 'topic', eyebrow: currentTab === 'email' ? 'Topic in your email alerts' : 'Topic', title: key, topic: key, color: groupColor(key), glow: topicGlow([key]),
@@ -9834,7 +9840,7 @@ function renderPaperDetail(p) {
   if (via) facts.push(['Found via', `${via}${why && why.source ? `<span class="pd-sub">${esc(why.source)} alert</span>` : ''}`]);
   const groups = (p.theme_groups||'').split('|').map(x => x.trim()).filter(Boolean);
   const x = `<svg width="10" height="10" viewBox="0 0 10 10"><line x1="2" y1="2" x2="8" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="8" y1="2" x2="2" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
-  const topics = groups.map(g => `<span class="badge badge-group badge-group-edit">${gdot(norm(g))}${esc(g)}<span class="group-remove" title="Remove topic" onclick="event.stopPropagation();removeGroupFromPaper('${ka}','${escAttr(g)}')">${x}</span></span>`).join('');
+  const topics = groups.map(g => `<span class="badge badge-group badge-group-edit"><button class="pd-topic-go" onclick="openGroup('${escAttr(g)}')" title="Papers in ${escAttr(g)}">${gdot(norm(g))}${esc(g)}</button><span class="group-remove" title="Remove topic" onclick="event.stopPropagation();removeGroupFromPaper('${ka}','${escAttr(g)}')">${x}</span></span>`).join('');
   const addBtn = `<span class="group-add-wrap"><button class="group-add-btn" onclick="event.stopPropagation();toggleGroupAddDD(this,'${ka}')">+ Add</button><div class="group-add-dd"></div></span>`;
 
   const aside = `<aside class="pd-aside">
