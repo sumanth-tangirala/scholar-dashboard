@@ -84,8 +84,7 @@ a { color: inherit; text-decoration: none; }
   0% { background-position: -600px 0; }
   100% { background-position: 600px 0; }
 }
-.skeleton-wrap { max-width: 1200px; margin: 0 auto; padding: 24px; transition: opacity 0.4s ease; }
-.skeleton-wrap.hidden { opacity: 0; pointer-events: none; position: absolute; }
+.skeleton-wrap { max-width: 1200px; margin: 0 auto; padding: 24px; }
 .skel-block { display: block; max-width: 100%; border-radius: 8px; background: rgba(255,255,255,0.045); animation: skel 1.3s ease-in-out infinite; }   /* a faint pulse, not a sweep */
 .skel-home { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; height: min(62vh, 580px); }
 .skel-lead { height: 100%; border-radius: 12px; }
@@ -2965,9 +2964,9 @@ function buildGroupOrder() {
 function revealContent() {
   if (_dataLoaded) return;
   _dataLoaded = true;
-  const skel = document.getElementById('skeleton');
-  skel.classList.add('hidden');
-  setTimeout(() => { skel.style.display = 'none'; fitTopPapers(); }, 400);   // the loader held the page's place: fit Top Papers now it's gone
+  document.getElementById('skeleton').style.display = 'none';   // gone at once, and the page (drawn already) fades in where it stood: no loader shapes over the real ones
+  pageIn(document.querySelector('.tab-section.active'));
+  requestAnimationFrame(fitTopPapers);   // the loader held the page's place: fit Top Papers now it's gone
 }
 
 /* ===== NEW SINCE LAST VISIT =====
@@ -3262,6 +3261,7 @@ function switchTab(tab, fromHash) {
   else if (tab === 'venues') renderVenues();
   else if (tab === 'interests') renderInterests();
   if (moved || fromList) jumpScroll(ms, _tabScroll[tab] || 0);
+  if (moved && !fromList && _dataLoaded) pageIn(document.querySelector('.tab-section.active'));   // a new tab arrives as the other views do (from a list, the router fades it)
 }
 function jumpScroll(el, y) { el.style.scrollBehavior = 'auto'; el.scrollTop = y; el.style.scrollBehavior = ''; }
 
