@@ -1528,6 +1528,10 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
 .sf-rail .lp-rail-item { width: 100%; border: none; background: none; font: inherit; text-align: left; cursor: pointer; }
 .sf-rail .lp-rail-item.on { background: rgba(255,255,255,0.08); color: var(--text); }
 .sf-rail .lp-rail-item.on .n { color: var(--text-secondary); }
+.sf-rail .lp-rail-item .l, .sf-rail .lp-rail-item .gdot, .sf-rail .lp-rail-item .sf-star-i, .sf-sheet-body .tl-chip { transition: opacity var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease); }
+.sf-rail .lp-rail-item.zero .l, .sf-rail .lp-rail-item.zero .gdot, .sf-rail .lp-rail-item.zero .sf-star-i { opacity: 0.4; }   /* your other choices leave it no papers */
+.sf-rail .lp-rail-item.zero:hover .l { opacity: 0.7; }
+.sf-sheet-body .tl-chip.zero { opacity: 0.45; }
 .sf-rail .sf-sec + .sf-sec { border-top: 1px solid rgba(255,255,255,0.06); }
 .sf-rail .sf-sec.open { padding-bottom: 12px; }
 .tl-sort.sf-show { height: 32px; padding: 2px; border-radius: 999px; border-color: rgba(255,255,255,0.2); }   /* pills, as the order control is */
@@ -1663,7 +1667,7 @@ body.tok-mode .tok-bar { flex-wrap: wrap; row-gap: 8px; }
   .lp-h { font-size: 17.5px; }
   .lp-also { display: none; }
 }
-@media (prefers-reduced-motion: reduce) { .lp-more, .lp-row, .lp-h, .lp-rail-item, .sf-field, .sf-chip, .sf-x, .sf-opt, .sf-sheet, .sf-scrim, .sf-filters-btn, .sf-sort-btn { transition: none; } .sf-box.sugg-open .sf-sugg { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .lp-more, .lp-row, .lp-h, .lp-rail-item, .sf-field, .sf-chip, .sf-x, .sf-opt, .sf-sheet, .sf-scrim, .sf-filters-btn, .sf-sort-btn, .sf-rail .lp-rail-item .l, .sf-rail .lp-rail-item .gdot, .sf-rail .lp-rail-item .sf-star-i, .sf-sheet-body .tl-chip { transition: none; } .sf-box.sugg-open .sf-sugg { animation: none; } }
 
 .tl-chips { display: flex; flex-wrap: wrap; gap: 6px 5px; }
 .tl-chip { flex-shrink: 0; background: rgba(255,255,255,0.055); border: 1px solid transparent; color: var(--text-secondary); font: inherit; font-size: 12px; padding: 3px 10px; border-radius: 999px; cursor: pointer; white-space: nowrap; transition: background 0.15s, color 0.15s, border-color 0.15s; }
@@ -4440,7 +4444,12 @@ function sfCompute(s) {
   tally('show', r => [r.read ? 'read' : 'unread']);
   tally('starred', r => r.star ? ['1'] : []);
   SF_MULTI.forEach(f => tally(f, r => r.v[f]));
-  return { keys, res, rows, results: rows.filter(r => pass(r)), counts, pass };
+  // what the words alone find, with no filter: the values the sidebar lists and their order, which therefore stay
+  // put while you pick filters (a value your picks rule out stays where it is, at 0)
+  const base = { starred: {} };
+  SF_MULTI.forEach(f => { base[f] = {}; });
+  rows.forEach(r => { if (r.star) base.starred['1'] = (base.starred['1'] || 0) + 1; SF_MULTI.forEach(f => r.v[f].forEach(x => { base[f][x] = (base[f][x] || 0) + 1; })); });
+  return { keys, res, rows, results: rows.filter(r => pass(r)), counts, base, pass };
 }
 function sfSortNow() { const has = sfKeys().length; return SF.sort === 'match' && !has ? 'best' : SF.sort || (has ? 'match' : 'best'); }
 function sfFilterCount() { return (SF.show !== 'all' ? 1 : 0) + (SF.starred ? 1 : 0) + SF_MULTI.reduce((n, f) => n + SF[f].length, 0); }
@@ -4656,8 +4665,8 @@ function renderSearch() {
     <div class="sf-sort"><div class="tl-sort" role="group" aria-label="Order">${sorts.map(([v, l, tip]) => `<button class="${sort === v ? 'active' : ''}" aria-pressed="${sort === v}" title="${escAttr(tip)}" onclick="sfSetSort('${v}')">${l}</button>`).join('')}</div>
     <label class="sf-sort-btn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16M3.5 16.5 7 20l3.5-3.5M17 20V4m-3.5 3.5L17 4l3.5 3.5"/></svg><span>${SF_SHORT[sort]}</span><select aria-label="Order" onchange="sfSetSort(this.value)">${sorts.map(([v, l]) => `<option value="${v}"${sort === v ? ' selected' : ''}>${l}</option>`).join('')}</select></label></div>`;
   // the filters: the sidebar, and the sheet on narrow screens
-  document.getElementById('lpRail').innerHTML = sfFiltersHTML(c, lv, A, 'rail');
-  if (document.getElementById('sfSheet').classList.contains('open')) document.getElementById('sfSheetBody').innerHTML = sfFiltersHTML(c, lv, A, 'sheet');
+  sfPatch(document.getElementById('lpRail'), sfFiltersHTML(c, lv, A, 'rail'));
+  if (document.getElementById('sfSheet').classList.contains('open')) sfPatch(document.getElementById('sfSheetBody'), sfFiltersHTML(c, lv, A, 'sheet'));
   // the papers
   const body = document.getElementById('lpBody');
   body.classList.toggle('ranked', sort === 'best' || sort === 'match');
@@ -4667,34 +4676,38 @@ function renderSearch() {
   if (document.getElementById('sfBox').classList.contains('sugg-open')) sfSuggest();
   updateListBar();
 }
-/* Every filter with its counts; a value with none shows only while it's set (no "0" to press) */
+/* Every filter value your words find, in an order that doesn't move as you pick (by how many papers the words find
+   with it), each with how many papers it would show with your other picks. One those picks rule out is dimmed, with
+   its 0, and can still be chosen: the list never shortens or reorders under you. */
 function sfFiltersHTML(c, lv, A, where) {
   const rail = where === 'rail';
   const on = (f, v) => f === 'starred' ? SF.starred : SF[f].includes(v);
   const item = (f, v, label, dot) => {
     const n = (c.counts[f] || {})[v] || 0, sel = on(f, v);
-    if (!n && !sel) return '';
+    if (!(c.base[f] || {})[v] && !sel) return '';   // the words find no paper with it at all
+    const z = n ? '' : ' zero', tip = n ? '' : ' title="No papers with your other choices"';
     const d = f === 'starred' ? '<i class="sf-star-i" aria-hidden="true">&#9733;</i>' : dot ? `<i class="gdot" style="--gc:${dot}" aria-hidden="true"></i>` : rail ? '<i class="gdot none" aria-hidden="true"></i>' : '';
-    return rail ? `<button class="lp-rail-item${sel ? ' on' : ''}" aria-pressed="${sel}" onclick="sfToggle('${f}','${escAttr(v)}')">${d}<span class="l">${esc(label)}</span><span class="n">${n}</span></button>`
-      : `<button class="tl-chip${sel ? ' active' : ''}" aria-pressed="${sel}" onclick="sfToggle('${f}','${escAttr(v)}')">${d}<span class="l">${esc(label)}</span><span class="n">${n}</span></button>`;
+    const k = ` data-k="${dataAttr(f + ':' + v)}"`;
+    return rail ? `<button class="lp-rail-item${sel ? ' on' : ''}${z}"${k}${tip} aria-pressed="${sel}" onclick="sfToggle('${f}','${escAttr(v)}')">${d}<span class="l">${esc(label)}</span><span class="n">${n}</span></button>`
+      : `<button class="tl-chip${sel ? ' active' : ''}${z}"${k}${tip} aria-pressed="${sel}" onclick="sfToggle('${f}','${escAttr(v)}')">${d}<span class="l">${esc(label)}</span><span class="n">${n}</span></button>`;
   };
   const list = (id, f, vals, label, k, max) => {   // the first k, more behind "Show N more" (up to max); one that's set always shows
     const open = _sfMore.has(id), cap = open ? (max || vals.length) : k;
     const shown = vals.length <= k + 1 && !open ? vals : vals.filter((v, i) => i < cap || on(f, v));
     const rest = Math.min(vals.length, max || vals.length) - shown.length;
-    return shown.map(v => item(f, v, label(v))).join('') + (rest > 0 && !open ? `<button class="sf-more" onclick="sfMore('${id}')">Show ${rest} more</button>` : '');
+    return shown.map(v => item(f, v, label(v))).join('') + (rest > 0 && !open ? `<button class="sf-more" data-k="more:${id}" onclick="sfMore('${id}')">Show ${rest} more</button>` : '');
   };
   const wrap = h => h ? (rail ? h : `<div class="sf-wrap">${h}</div>`) : '';
   const sec = (id, title, body, set) => {   // set: the labels chosen in this group, named on its header while it's closed
     if (!body) return '';
     if (!rail) return `<section class="sf-sec open"><h2>${title}</h2>${body}</section>`;   // the sheet shows every group
     const open = sfIsOpen(id), named = !open && set.length ? `<span class="sel">${esc(set.join(', '))}</span>` : '';
-    return `<section class="sf-sec${open ? ' open' : ''}"><h2><button class="sf-sec-h" onclick="sfSec('${id}')" aria-expanded="${open}"><span class="t">${title}</span>${named}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg></button></h2>${open ? body : ''}</section>`;
+    return `<section class="sf-sec${open ? ' open' : ''}"><h2><button class="sf-sec-h" data-k="sec:${id}" onclick="sfSec('${id}')" aria-expanded="${open}"><span class="t">${title}</span>${named}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg></button></h2>${open ? body : ''}</section>`;
   };
-  const byCount = f => Object.keys(c.counts[f] || {}).concat(SF[f]).filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => ((c.counts[f] || {})[b] || 0) - ((c.counts[f] || {})[a] || 0) || String(a).localeCompare(String(b)));
+  const byCount = f => Object.keys(c.base[f] || {}).concat(SF[f]).filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => ((c.base[f] || {})[b] || 0) - ((c.base[f] || {})[a] || 0) || String(a).localeCompare(String(b)));
   const sc = c.counts.show || {}, scN = { unread: sc.unread || 0, read: sc.read || 0, all: (sc.unread || 0) + (sc.read || 0) };
   const seg = `<div class="tl-sort sf-show" role="radiogroup" aria-label="Show">${SF_SHOW.map(([v, l]) =>
-    `<button role="radio" aria-checked="${SF.show === v}" class="${SF.show === v ? 'active' : ''}" title="${scN[v]} ${scN[v] === 1 ? 'paper' : 'papers'}" onclick="sfSetShow('${v}')">${l}</button>`).join('')}</div>`;
+    `<button role="radio" data-k="show:${v}" aria-checked="${SF.show === v}" class="${SF.show === v ? 'active' : ''}" title="${scN[v]} ${scN[v] === 1 ? 'paper' : 'papers'}" onclick="sfSetShow('${v}')">${l}</button>`).join('')}</div>`;
   const show = seg + wrap(item('starred', '1', 'Starred'));
   const rel = wrap(SF_REL.map(([r, l]) => item('rel', r, l, `var(--lv-${r})`)).join(''));
   const topics = wrap(GROUP_ORDER.concat(SF.topic.filter(g => !GROUP_ORDER.includes(g))).map(g => item('topic', g, g, groupColor(g))).join(''));
@@ -4704,7 +4717,7 @@ function sfFiltersHTML(c, lv, A, where) {
   }).join('');
   const authors = wrap(list('authors', 'author', byCount('author'), a => A.name(a), rail ? 8 : 10, 40));   // more than that: type the name
   const venues = wrap(list('venues', 'venue', byCount('venue'), v => v, rail ? 8 : 10));
-  const years = wrap(Object.keys(c.counts.year || {}).concat(SF.year).filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => b - a).map(y => item('year', y, y)).join(''));
+  const years = wrap(Object.keys(c.base.year || {}).concat(SF.year).filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => b - a).map(y => item('year', y, y)).join(''));
   const src = wrap(Object.keys(SF_SRC).map(x => item('src', x, SF_SRC[x])).join(''));
   const alerts = SHOW_EMAIL_TAB || SF.alert.length ? wrap(byCount('alert').map(a => item('alert', a, a)).join('')) : '';
   return sec('show', 'Show', show, [SF_SHOW.find(([v]) => v === SF.show)[1]].concat(SF.starred ? ['Starred'] : []))
@@ -4804,6 +4817,24 @@ function sfHighlight(root, res) {
       const span = document.createElement('span'); span.innerHTML = out + esc(s.slice(last));
       t.replaceWith(...span.childNodes);
     });
+  });
+}
+/* Redraw the filters: when the same values are there in the same order (a pick changed counts and states only), each
+   control is updated where it is, so its colours ease and nothing loses scroll, hover or focus; a new set of
+   values (new words, a group opened) is drawn afresh, keeping the scroll */
+function sfPatch(box, html) {
+  const t = document.createElement('div'); t.innerHTML = html;
+  const keys = el => [...el.querySelectorAll('[data-k]')].map(e => e.dataset.k).join('\n');
+  if (!box.firstElementChild || keys(box) !== keys(t)) { const top = box.scrollTop; box.innerHTML = html; box.scrollTop = top; return; }
+  const olds = box.querySelectorAll('[data-k]');
+  t.querySelectorAll('[data-k]').forEach((n, i) => {
+    const o = olds[i];
+    if (o.outerHTML === n.outerHTML) return;
+    [...o.attributes].forEach(a => { if (!n.hasAttribute(a.name)) o.removeAttribute(a.name); });
+    [...n.attributes].forEach(a => { if (o.getAttribute(a.name) !== a.value) o.setAttribute(a.name, a.value); });
+    const on = o.querySelector(':scope > .n'), nn = n.querySelector(':scope > .n');
+    if (on && nn && on.textContent !== nn.textContent) on.textContent = nn.textContent;   // a count: only its number, so the label beside it can fade
+    if (o.innerHTML !== n.innerHTML) o.innerHTML = n.innerHTML;
   });
 }
 /* Narrow screens: the filters in a sheet from the bottom, behind the Filters button */
