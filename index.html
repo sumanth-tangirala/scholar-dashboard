@@ -1519,6 +1519,20 @@ html.no-hover .sf-tip:hover::after { opacity: 0; }
 .sf-clear:hover { background: rgba(255,255,255,0.1); color: var(--text); }
 .sf-clear svg { width: 10px; height: 10px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; }
 .sf-field.has-text .sf-clear { display: inline-flex; }
+.sf-help { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 32px; height: 32px; border: none; border-radius: 50%; background: none; color: var(--text-muted); cursor: pointer; transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
+.sf-help:hover, .sf-box.guide-open .sf-help { background: rgba(255,255,255,0.1); color: var(--text); }
+.sf-help svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; }
+/* the guide to fields: the suggestions' look; a row starts that field in the box */
+.sf-guide { display: none; position: absolute; right: 0; top: calc(100% + 6px); z-index: 61; width: min(470px, 100%); padding: 6px; background: var(--bg-surface); border: 1px solid rgba(255,255,255,0.18); border-radius: 12px; box-shadow: 0 16px 40px rgba(0,0,0,0.6); }
+.sf-box.guide-open .sf-guide { display: block; animation: dropdown-in 0.15s ease forwards; }
+.sf-guide h3 { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin: 10px 10px 4px; }
+.sf-g-row { display: flex; align-items: baseline; gap: 12px; width: 100%; min-height: 32px; padding: 6px 10px; border: none; border-radius: 8px; background: none; font: inherit; font-size: 13.5px; text-align: left; cursor: pointer; transition: background-color var(--t-fast) var(--ease); }
+.sf-g-row:hover, .sf-g-row:focus-visible { background: rgba(255,255,255,0.07); outline: none; }
+.sf-g-row .k { flex: 0 0 168px; color: var(--text-muted); white-space: nowrap; }
+.sf-g-row .k b, .sf-g-row .d b, .sf-g-note b { color: var(--text); font-weight: 600; }
+.sf-g-row .d { min-width: 0; color: var(--text-secondary); }
+.sf-g-note { margin: 6px 10px 6px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.07); font-size: 12.5px; line-height: 1.6; color: var(--text-muted); }
+@media (max-width: 600px) { .sf-g-row .k { flex-basis: 146px; } .sf-g-row { font-size: 13px; } }
 .sf-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-width: 0; height: 30px; padding: 0 2px 0 11px; border-radius: 999px; background: rgba(255,255,255,0.08); font-size: 13px; color: var(--text); white-space: nowrap; cursor: default; transition: box-shadow var(--t-fast) var(--ease); }
 .sf-chip .t { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .sf-chip .k { color: var(--text-muted); }
@@ -1732,7 +1746,7 @@ body.tok-mode .tok-bar { flex-wrap: wrap; row-gap: 8px; }
   .lp-also { display: none; }
   #lpBody .lp-row { contain-intrinsic-size: auto 136px; }
 }
-@media (prefers-reduced-motion: reduce) { .lp-more, .lp-row, .lp-h, .lp-rail-item, .sf-field, .sf-chip, .sf-x, .sf-opt, .sf-sheet, .sf-scrim, .sf-filters-btn, .sf-sort-btn, .sf-rail .lp-rail-item .l, .sf-rail .lp-rail-item .gdot, .sf-rail .lp-rail-item .sf-star-i, .sf-sheet-body .tl-chip { transition: none; } .sf-box.sugg-open .sf-sugg, .sf-chip.sf-in, .lp-body.sf-fade { animation: none; } .sf-chip.sf-out { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .lp-more, .lp-row, .lp-h, .lp-rail-item, .sf-field, .sf-chip, .sf-x, .sf-opt, .sf-sheet, .sf-scrim, .sf-filters-btn, .sf-sort-btn, .sf-rail .lp-rail-item .l, .sf-rail .lp-rail-item .gdot, .sf-rail .lp-rail-item .sf-star-i, .sf-sheet-body .tl-chip { transition: none; } .sf-box.sugg-open .sf-sugg, .sf-box.guide-open .sf-guide, .sf-chip.sf-in, .lp-body.sf-fade { animation: none; } .sf-help, .sf-g-row { transition: none; } .sf-chip.sf-out { transition: none; } }
 
 .tl-chips { display: flex; flex-wrap: wrap; gap: 6px 5px; }
 .tl-chip { flex-shrink: 0; background: rgba(255,255,255,0.055); border: 1px solid transparent; color: var(--text-secondary); font: inherit; font-size: 12px; padding: 3px 10px; border-radius: 999px; cursor: pointer; white-space: nowrap; transition: background 0.15s, color 0.15s, border-color 0.15s; }
@@ -2378,8 +2392,10 @@ html.no-hover .sel-icon:not(.on):active, html.no-hover .ink-bar .ink-size:not(.o
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
             <input type="search" id="sfInput" enterkeyhint="search" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Search papers" aria-controls="sfSugg" oninput="sfType(this.value)" onkeydown="sfKey(event)" onfocus="sfSuggest()" onblur="sfBlur()">
             <button class="sf-clear" onclick="sfClearText()" aria-label="Clear the search" title="Clear"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 2l6 6M8 2 2 8"/></svg></button>
+            <button class="sf-help" id="sfHelpBtn" onclick="sfGuide()" aria-label="How to search one field" aria-expanded="false" aria-controls="sfGuide" title="Search one field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><circle cx="12" cy="7.6" r="0.4"/></svg></button>
           </div>
           <div class="sf-sugg" id="sfSugg" role="listbox" aria-label="Suggestions"></div>
+          <div class="sf-guide" id="sfGuide" role="dialog" aria-label="Search one field"></div>
         </div>
         <div class="sf-pills fade-x" id="sfChips" aria-label="Filters"></div>
         <div class="sf-bar" id="sfBar"></div>
@@ -3645,10 +3661,10 @@ document.addEventListener('scroll', () => closeTokMenu(), true);
    While one is open, a tap anywhere else closes it and does nothing more: it never also opens the paper, presses
    the button or starts the swipe underneath (as on iOS). Scrolling outside still closes it and scrolls. Short-lived
    hints (the venue tooltip) don't count. */
-const POPOVERS = '#tokMenu.open, #readerMenu.open, .save-dd, .copy-dd, .interest-dropdown, .abs-popup, .relevance-popup, #chatHist, .sf-box.sugg-open, #sfSheet.open';
+const POPOVERS = '#tokMenu.open, #readerMenu.open, .save-dd, .copy-dd, .interest-dropdown, .abs-popup, .relevance-popup, #chatHist, .sf-box.sugg-open, .sf-box.guide-open, #sfSheet.open';
 let _dismissTap = null;
 function closePopovers() {
-  closeTokMenu(); toggleReaderMenu(false); closeSaveDD(); closeCopyDD(); closeInterestDD(); closeAbsPopup(); closeRelevancePopup(); sfSuggClose(); sfSheet(false);
+  closeTokMenu(); toggleReaderMenu(false); closeSaveDD(); closeCopyDD(); closeInterestDD(); closeAbsPopup(); closeRelevancePopup(); sfSuggClose(); sfGuide(false); sfSheet(false);
   const h = document.getElementById('chatHist'); if (h) h.remove();
 }
 document.addEventListener('pointerdown', e => {
@@ -4471,16 +4487,48 @@ function openTopList() { location.hash = sfAt('rel', 'definitely'); }
 /* ----- Matching ----- */
 const sfEscRe = t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 function sfKeyRe(k) { return new RegExp('(?:^|[^\\p{L}\\p{N}])(' + k.trim().split(/\s+/).map(sfEscRe).join('[\\s\\-–]+') + ')', 'iu'); }
-/* The words in the box: each word a key, "quoted words" one phrase */
-function sfWords(t) {
+/* A word can be aimed at one field: interest:verification, author:lindemann, interest:"data-driven verification".
+   The guide behind the box's i lists them. A word with any other colon (a link, "re:") is just a word. */
+const SF_FIELDS = {
+  title: { w: 4, of: p => (p.headline || '') + '\n' + (p.title || ''), ex: 'diffusion', d: 'the title or headline' },
+  author: { w: 3, of: p => p.authors || '', facet: 'author', ex: 'lindemann', d: 'an author', also: 'by' },
+  topic: { w: 2, of: p => groupsOfPaper(p).join('\n'), facet: 'topic', ex: 'safety', d: 'a topic' },
+  interest: { w: 2, of: p => matchesOf(p).join('\n'), facet: 'interest', ex: 'verification', d: 'an interest' },
+  venue: { w: 2, of: p => (p.venue || '') + '\n' + venueOf(p).name, facet: 'venue', ex: 'icra', d: 'a venue', also: 'in' },
+  year: { w: 1, of: p => sfYear(p), facet: 'year', ex: '2026', d: 'a year' },
+  abstract: { w: 1, of: p => p.abstract || '', ex: 'reachability', d: 'the abstract' },
+  summary: { w: 1, of: p => p.summary || '', ex: 'benchmark', d: 'the summary' },
+  why: { w: 1, of: p => { const y = parseWhy(p); return y ? y.reason + '\n' + y.source : ''; }, ex: 'core', d: 'why it’s here' },
+  relevance: { w: 1, of: p => relLabel(dynamicRelevance(p)), facet: 'rel', ex: 'must', d: 'Must Read, Interesting or Tangential' },
+  source: { w: 1, of: p => (p.source_mode || '').split(',').map(x => x.trim() + ' ' + (SF_SRC[x.trim()] || '')).join('\n'), facet: 'src', ex: 'email', d: 'email alerts, web survey or added by you' },
+  is: { w: 1, ex: 'unread', d: 'read, unread or starred' }
+};
+const SF_ALIAS = { by: 'author', authors: 'author', in: 'venue', topics: 'topic', interests: 'interest', rel: 'relevance', headline: 'title' };
+const sfFieldOf = name => { const f = (name || '').toLowerCase(); return SF_FIELDS[f] ? f : SF_ALIAS[f] || null; };
+const SF_IS = ['read', 'unread', 'starred'];
+/* The keys in the box ({ raw: as typed, f: its field or null, t: what to find, id: for keeping its matches }): each
+   word or "phrase" is one; a field takes every word after it, up to the next field (interest:data driven verification
+   author:ames), unless its value is quoted (interest:"data driven" safety: the words after the quote are plain words) */
+const SF_FIELD_AT = /(^|\s)([A-Za-z]+):/g;
+function sfFieldMarks(text) { return [...text.matchAll(SF_FIELD_AT)].filter(m => sfFieldOf(m[2])).map(m => ({ f: sfFieldOf(m[2]), at: m.index + m[1].length, v: m.index + m[0].length })); }
+function sfWords(text) {
+  text = text || '';
   const out = [];
-  (t || '').replace(/"([^"]+)"|(\S+)/g, (_, ph, w) => { const k = (ph || w.replace(/"/g, '')).trim(); if (k && !out.some(x => x.toLowerCase() === k.toLowerCase())) out.push(k); });
+  const add = (f, t, raw) => { t = (t || '').replace(/"/g, '').replace(/\s+/g, ' ').trim(); if (!t) return; const id = (f || '') + ':' + t.toLowerCase(); if (!out.some(k => k.id === id)) out.push({ raw: raw.trim(), f, t, id }); };
+  const words = seg => seg.replace(/"([^"]+)"?|(\S+)/g, (m, ph, w) => add(null, ph || w, ph || w));
+  const marks = sfFieldMarks(text);
+  words(text.slice(0, marks.length ? marks[0].at : text.length));
+  marks.forEach((k, i) => {
+    const end = i + 1 < marks.length ? marks[i + 1].at : text.length, seg = text.slice(k.v, end), q = seg.match(/^\s*"([^"]*)"?/);
+    if (q) { add(k.f, q[1], text.slice(k.at, k.v + q[0].length)); words(seg.slice(q[0].length)); }
+    else add(k.f, seg, text.slice(k.at, end));
+  });
   return out;
 }
 function sfKeys() { return sfWords(SF.text); }
 const SF_W = [4, 3, 2, 1];   // a match in the headline or title counts most, then authors, venue, and the text
 function sfField(p, re, from) {   // the first of a paper's fields (in SF_W's order, from `from` on) the key appears in, or -1
-  const t = [(p.headline || '') + '\n' + (p.title || ''), p.authors || '', p.venue || '', [p.summary, p.abstract, p.user_notes].filter(Boolean).join('\n')];
+  const y = parseWhy(p), t = [(p.headline || '') + '\n' + (p.title || ''), p.authors || '', p.venue || '', [y && y.reason, p.summary, p.abstract, p.user_notes].filter(Boolean).join('\n')];
   for (let i = from || 0; i < t.length; i++) if (re.test(t[i])) return i;
   return -1;
 }
@@ -4546,9 +4594,10 @@ function sfMemo() {
 }
 function sfCompute(s) {
   s = s || SF;
-  const keys = sfWords(s.text), res = keys.map(sfKeyRe), rows = [], M = sfMemo();
+  const keys = sfWords(s.text), res = keys.map(k => sfKeyRe(k.t)), rows = [], M = sfMemo();
   const hits = keys.map(k => {
-    const id = k.toLowerCase().replace(/\s+/g, ' ');
+    if (k.f === 'is') return null;   // read and starred change as you go: checked each time
+    const id = k.id;
     let h = M.words.get(id);
     if (!h) {
       if (M.words.size > 40) M.words.clear();
@@ -4559,16 +4608,24 @@ function sfCompute(s) {
     return h;
   });
   for (const p of allPapers) {
+    const k = paperKey(p), read = readSet.has(k), star = starSet.has(k);
     let n = 0, w = 0;
     for (let j = 0; j < res.length; j++) {
-      const H = hits[j]; let i = H.get(p);
-      if (i === undefined) { const a = H.from ? H.from.get(p) : 0; H.set(p, i = a === -1 ? -1 : sfField(p, res[j], a || 0)); }
-      if (i >= 0) { n++; w += SF_W[i]; }
+      const key = keys[j], H = hits[j];
+      let i;
+      if (!H) { const v = SF_IS.find(x => x.startsWith(key.t.toLowerCase())); i = (v === 'read' ? read : v === 'unread' ? !read : v === 'starred' ? star : false) ? 0 : -1; }
+      else {
+        i = H.get(p);
+        if (i === undefined) {   // a word anywhere: the first field it's in (SF_W); one aimed at a field: there or not
+          const a = H.from ? H.from.get(p) : 0;
+          H.set(p, i = a === -1 ? -1 : key.f ? (res[j].test(SF_FIELDS[key.f].of(p)) ? 0 : -1) : sfField(p, res[j], a || 0));
+        }
+      }
+      if (i >= 0) { n++; w += key.f ? SF_FIELDS[key.f].w : SF_W[i]; }
     }
     if (keys.length && (s.any ? !n : n < keys.length)) continue;
-    const k = paperKey(p);
     let v = M.vals.get(p); if (!v) M.vals.set(p, v = sfVals(p));
-    rows.push({ p, n, w, v, read: readSet.has(k), star: starSet.has(k) });
+    rows.push({ p, n, w, v, read, star });
   }
   const pass = (r, skip) => {
     if (skip !== 'show' && s.show !== 'all' && s.show !== (r.read ? 'read' : 'unread')) return false;
@@ -4584,7 +4641,8 @@ function sfCompute(s) {
   const base = { starred: {} };
   SF_MULTI.forEach(f => { base[f] = {}; });
   rows.forEach(r => { if (r.star) base.starred['1'] = (base.starred['1'] || 0) + 1; SF_MULTI.forEach(f => r.v[f].forEach(x => { base[f][x] = (base[f][x] || 0) + 1; })); });
-  return { keys, res, rows, results: rows.filter(r => pass(r)), counts, base, pass };
+  const shown = res.filter((r, j) => !keys[j].f || keys[j].f === 'title' || keys[j].f === 'author' || keys[j].f === 'why');   // marked in the rows
+  return { keys, res: shown, rows, results: rows.filter(r => pass(r)), counts, base, pass };
 }
 function sfSortNow() { const has = sfKeys().length; return SF.sort === 'match' && !has ? 'best' : SF.sort || (has ? 'match' : 'best'); }
 function sfFilterCount() { return (SF.show !== 'all' ? 1 : 0) + (SF.starred ? 1 : 0) + SF_MULTI.reduce((n, f) => n + SF[f].length, 0); }
@@ -4756,11 +4814,18 @@ function sfBlur() { if (_sfTimer) sfSyncUrl(); }   // leaving the box (say, to o
 function sfKey(e) {
   const box = document.getElementById('sfBox'), opts = [...document.querySelectorAll('#sfSugg .sf-opt')];
   const at = opts.findIndex(o => o.classList.contains('hl'));
+  // two columns: up and down stay in one (round at its ends), left and right cross to the nearest in the other
+  const cols = [...document.querySelectorAll('#sfSugg .sf-col')].map(c => [...c.querySelectorAll('.sf-opt')]).filter(c => c.length);
+  const cur = opts[at], ci = cur ? cols.findIndex(c => c.includes(cur)) : -1;
+  const go = next => { opts.forEach(o => o.classList.toggle('hl', o === next)); next.scrollIntoView({ block: 'nearest' }); };
   if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && box.classList.contains('sugg-open') && opts.length) {
     e.preventDefault();
-    const next = opts[at < 0 ? (e.key === 'ArrowDown' ? 0 : opts.length - 1) : (at + (e.key === 'ArrowDown' ? 1 : -1) + opts.length) % opts.length];
-    opts.forEach(o => o.classList.toggle('hl', o === next));
-    next.scrollIntoView({ block: 'nearest' });
+    const down = e.key === 'ArrowDown', col = cur ? cols[ci] : cols[0];
+    go(cur ? col[(col.indexOf(cur) + (down ? 1 : -1) + col.length) % col.length] : col[down ? 0 : col.length - 1]);
+  } else if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && box.classList.contains('sugg-open') && cur && cols.length > 1) {
+    e.preventDefault();
+    const to = cols[(ci + (e.key === 'ArrowRight' ? 1 : -1) + cols.length) % cols.length], y = cur.getBoundingClientRect().top;
+    go(to.reduce((a, b) => Math.abs(b.getBoundingClientRect().top - y) < Math.abs(a.getBoundingClientRect().top - y) ? b : a));
   } else if (e.key === 'Enter') {
     e.preventDefault();
     if (box.classList.contains('sugg-open') && at >= 0) { opts[at].click(); return; }
@@ -4768,50 +4833,87 @@ function sfKey(e) {
     if (window.matchMedia('(max-width: 1000px)').matches) e.target.blur();   // a tablet's or phone's Search key: put the keyboard away
   } else if (e.key === 'Escape') {
     e.preventDefault(); e.stopPropagation();
-    if (box.classList.contains('sugg-open')) sfSuggClose();
+    if (box.classList.contains('guide-open')) sfGuide(false);
+    else if (box.classList.contains('sugg-open')) sfSuggClose();
     else if (SF.text) sfClearText();
     else e.target.blur();
   }
 }
-function sfFieldClick(e) { if (!e.target.closest('.sf-clear')) document.getElementById('sfInput').focus(); }
+function sfFieldClick(e) { if (!e.target.closest('.sf-clear, .sf-help')) document.getElementById('sfInput').focus(); }
 
-/* Suggestions while typing: the topics, interests, authors, venues and years that what you've typed names (all of it, or
-   its last word); choosing one adds it as a filter and takes those words out of the box */
+/* Suggestions while typing, from the first letter: the topics, interests, authors, venues and years that what you've
+   typed names (all of it, or its last word); after field: (interest:veri), only that field's values, its most used
+   first while nothing follows the colon. Choosing one adds it as a filter and takes those words out of the box. */
 let _sfOpts = [];
 function sfSuggest() {
-  const box = document.getElementById('sfBox'), el = document.getElementById('sfSugg');
-  const t = SF.text.trim().replace(/"/g, ''), last = t.split(/\s+/).pop() || '';
-  if (!t || document.activeElement !== document.getElementById('sfInput')) { sfSuggClose(); return; }
-  const qs = [...new Set([t, last])].filter(q => q.length >= 2);
-  const A = sfAuthors(), lv = sfLevels(), vc = sfTotal().venue, seen = new Set(), groups = { topic: [], interest: [], author: [], venue: [], year: [] };
+  const box = document.getElementById('sfBox'), el = document.getElementById('sfSugg'), raw = SF.text;
+  if (!raw.trim() || document.activeElement !== document.getElementById('sfInput')) { sfSuggClose(); return; }
+  // what's being typed: the last field's value (every word after it, unless a quote has closed it), or the last word
+  const marks = sfFieldMarks(raw), lastF = marks[marks.length - 1], seg = lastF ? raw.slice(lastF.v) : '', closed = /^\s*"[^"]*"/.test(seg);
+  const field = lastF && !closed ? lastF.f : null, tail = raw.match(/(\S+)$/);
+  const qs = [];   // [what to look for, the text it came from (it leaves the box when one is chosen), only this kind]
+  if (field) { if (SF_FIELDS[field].facet) qs.push([seg.replace(/"/g, '').replace(/\s+/g, ' ').trim(), raw.slice(lastF.at).trim(), SF_FIELDS[field].facet]); }
+  else {
+    const t = raw.trim();
+    if (!marks.length) qs.push([t.replace(/"/g, ''), t, null]);
+    if (tail && tail[1] !== t) qs.push([tail[1].replace(/"/g, ''), tail[1], null]);
+  }
+  const A = sfAuthors(), lv = sfLevels(), vc = sfTotal().venue, seen = new Set(), groups = { topic: [], interest: [], author: [], venue: [], year: [], rel: [], src: [] };
   _sfOpts = [];
-  const add = (f, v, q, inner, n) => { if (seen.has(f + v) || groups[f].length >= (f === 'author' ? 5 : 4)) return; seen.add(f + v); _sfOpts.push({ f, v, q }); groups[f].push(`<button class="sf-opt" role="option" onmousedown="event.preventDefault()" onclick="sfPick(${_sfOpts.length - 1})">${inner}${n != null ? `<span class="n">${n}</span>` : ''}</button>`); };
-  qs.forEach(q => {
-    const re = sfKeyRe(q);
-    const hit = s => { const m = re.exec(s); if (!m) return esc(s); const i = m.index + m[0].length - m[1].length; return esc(s.slice(0, i)) + '<b>' + esc(s.slice(i, i + m[1].length)) + '</b>' + esc(s.slice(i + m[1].length)); };
-    GROUP_ORDER.filter(g => re.test(g) && !SF.topic.includes(g)).forEach(g => add('topic', g, q, `${gdot(g)}<span class="l">${hit(g)}</span>`, sfTotal('topic', g)));
-    Object.keys(lv).filter(n => re.test(n) && !SF.interest.includes(n)).sort((a, b) => sfTotal('interest', b) - sfTotal('interest', a)).forEach(n => add('interest', n, q, `<span class="l"><span class="k">about</span> ${hit(n)}</span>`, sfTotal('interest', n)));
-    A.all().filter(id => !SF.author.includes(id) && (re.test(A.name(id)) || re.test(id))).sort((a, b) => A.count.get(b) - A.count.get(a)).slice(0, 8).forEach(id => add('author', id, q, `<span class="l"><span class="k">by</span> ${hit(A.name(id))}</span>`, A.count.get(id)));
-    Object.keys(vc).filter(v => re.test(v) && !SF.venue.includes(v)).sort((a, b) => vc[b] - vc[a]).forEach(v => add('venue', v, q, `<span class="l"><span class="k">in</span> ${hit(v)}</span>`, vc[v]));
-    if (/^(19|20)\d{2}$/.test(q) && !SF.year.includes(q)) add('year', q, q, `<span class="l"><span class="k">from</span> <b>${q}</b></span>`, sfTotal('year', q));
+  qs.forEach(([q, drop, only]) => {
+    if (!q && !only) return;
+    const re = q ? sfKeyRe(q) : null, has = x => !re || re.test(x), cap = only ? 8 : null;
+    const add = (f, v, inner, n) => { if (seen.has(f + v) || groups[f].length >= (cap || (f === 'author' ? 5 : 4))) return; seen.add(f + v); _sfOpts.push({ f, v, drop }); groups[f].push(`<button class="sf-opt" role="option" onmousedown="event.preventDefault()" onclick="sfPick(${_sfOpts.length - 1})">${inner}${n != null ? `<span class="n">${n}</span>` : ''}</button>`); };
+    const hit = x => { const m = re && re.exec(x); if (!m) return esc(x); const i = m.index + m[0].length - m[1].length; return esc(x.slice(0, i)) + '<b>' + esc(x.slice(i, i + m[1].length)) + '</b>' + esc(x.slice(i + m[1].length)); };
+    const most = f => (a, b) => sfTotal(f, b) - sfTotal(f, a);
+    const want = f => !only || only === f;
+    if (want('topic')) (re ? GROUP_ORDER : GROUP_ORDER.slice().sort(most('topic'))).filter(g => has(g) && !SF.topic.includes(g)).forEach(g => add('topic', g, `${gdot(g)}<span class="l">${hit(g)}</span>`, sfTotal('topic', g)));
+    if (want('interest')) Object.keys(lv).filter(n => has(n) && !SF.interest.includes(n)).sort(most('interest')).forEach(n => add('interest', n, `<span class="l"><span class="k">about</span> ${hit(n)}</span>`, sfTotal('interest', n)));
+    if (want('author')) A.all().filter(id => !SF.author.includes(id) && (!re || re.test(A.name(id)) || re.test(id))).sort((a, b) => A.count.get(b) - A.count.get(a)).slice(0, 8).forEach(id => add('author', id, `<span class="l"><span class="k">by</span> ${hit(A.name(id))}</span>`, A.count.get(id)));
+    if (want('venue')) Object.keys(vc).filter(v => has(v) && !SF.venue.includes(v)).sort((a, b) => vc[b] - vc[a]).forEach(v => add('venue', v, `<span class="l"><span class="k">in</span> ${hit(v)}</span>`, vc[v]));
+    if (only === 'year') Object.keys(sfTotal().year).filter(y => y.startsWith(q) && !SF.year.includes(y)).sort((a, b) => b - a).forEach(y => add('year', y, `<span class="l"><span class="k">from</span> ${hit(y)}</span>`, sfTotal('year', y)));
+    else if (!only && /^(19|20)\d{2}$/.test(q) && !SF.year.includes(q)) add('year', q, `<span class="l"><span class="k">from</span> <b>${q}</b></span>`, sfTotal('year', q));
+    if (only === 'rel') SF_REL.filter(([r, l]) => has(l) && !SF.rel.includes(r)).forEach(([r, l]) => add('rel', r, `<i class="gdot" style="--gc:var(--lv-${r})"></i><span class="l">${hit(l)}</span>`, sfTotal('rel', r)));
+    if (only === 'src') Object.keys(SF_SRC).filter(x => (has(SF_SRC[x]) || has(x)) && !SF.src.includes(x)).forEach(x => add('src', x, `<span class="l">${hit(SF_SRC[x])}</span>`, sfTotal('src', x)));
   });
   if (!_sfOpts.length) { sfSuggClose(); return; }
   const col = list => list.filter(x => x[1].length).map(([h, items]) => `<h3>${h}</h3>${items.join('')}`).join('');
-  const left = col([['Authors', groups.author], ['Years', groups.year]]), right = col([['Topics', groups.topic], ['Interests', groups.interest], ['Venues', groups.venue]]);
+  const left = col([['Authors', groups.author], ['Years', groups.year]]), right = col([['Topics', groups.topic], ['Interests', groups.interest], ['Venues', groups.venue], ['Relevance', groups.rel], ['Source', groups.src]]);
   el.innerHTML = (left ? `<div class="sf-col">${left}</div>` : '') + (right ? `<div class="sf-col">${right}</div>` : '');
   el.classList.toggle('one', !left || !right);
+  sfGuide(false);
   box.classList.add('sugg-open');
 }
 function sfPick(i) {
   const o = _sfOpts[i];
   if (!o) return;
   if (!SF[o.f].includes(o.v)) SF[o.f].push(o.v);
-  const t = SF.text.trim();   // the words it came from leave the box
-  SF.text = t.replace(/"/g, '') === o.q ? '' : t.slice(0, t.length - (t.split(/\s+/).pop() || '').length).trimEnd();
+  const t = SF.text.replace(/\s+$/, '');   // the words it came from leave the box
+  SF.text = o.drop && t.endsWith(o.drop) ? t.slice(0, t.length - o.drop.length).trimEnd() : t;
   const inp = document.getElementById('sfInput'); inp.value = SF.text;
   sfTextState(); sfSuggClose(); clearTimeout(_sfTimer);
   sfCommit();
   inp.focus();   // ready for the next one
+}
+/* The guide to aiming a word at one field, behind the box's i; choosing a field starts it in the box */
+function sfGuide(open) {
+  const box = document.getElementById('sfBox'), g = document.getElementById('sfGuide');
+  if (!box || !g) return;
+  open = open === undefined ? !box.classList.contains('guide-open') : open;
+  if (open && !g.firstChild) {
+    const row = f => { const x = SF_FIELDS[f]; return `<button class="sf-g-row" onclick="sfGuidePick('${f}')"><span class="k"><b>${f}:</b>${x.ex}</span><span class="d">${x.d}${x.also ? `, or <b>${x.also}:</b>` : ''}</span></button>`; };
+    g.innerHTML = `<h3>Search one field</h3>${Object.keys(SF_FIELDS).map(row).join('')}<p class="sf-g-note">A field takes the words after it, up to the next field: <b>interest:data driven author:ames</b>. Words to find anywhere go first (<b>safety interest:verification</b>), or after a quoted value (<b>interest:"data driven" safety</b>). Quotes keep words together anywhere: <b>"safety filter"</b>. Every word must match, unless you choose Match any.</p>`;
+  }
+  if (open) sfSuggClose();
+  box.classList.toggle('guide-open', open);
+  document.getElementById('sfHelpBtn').setAttribute('aria-expanded', open);
+}
+function sfGuidePick(f) {
+  const inp = document.getElementById('sfInput'), t = inp.value;
+  inp.value = t + (t && !/\s$/.test(t) ? ' ' : '') + f + ':';
+  sfGuide(false);
+  inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length);
+  sfType(inp.value);
 }
 function sfSuggClose() { const b = document.getElementById('sfBox'); if (b) b.classList.remove('sugg-open'); }
 
@@ -4888,7 +4990,7 @@ function renderSearch() {
   const chips = sfChipList();
   sfDrawChips(chips.map(([f, v, html, text]) =>
     `<span class="sf-chip${f === 'show' ? ' icon sf-tip' : ''}" data-f="${f}" data-v="${dataAttr(v)}" ${f === 'show' ? 'data-tip' : 'title'}="${escAttr(text)}">${html}<button class="sf-x" onclick="sfRemove(event,'${f}','${escAttr(v)}')" aria-label="Remove ${escAttr(text)}" title="Remove">${SF_X}</button></span>`).join(''));
-  document.getElementById('sfInput').placeholder = window.matchMedia('(max-width: 600px)').matches ? 'Search papers…' : 'Search titles, authors, abstracts and notes…';
+  document.getElementById('sfInput').placeholder = window.matchMedia('(max-width: 600px)').matches ? 'Search papers…' : 'Search titles, authors and abstracts…';
   document.getElementById('lpBarTitle').textContent = [SF.text.trim() ? '“' + SF.text.trim() + '”' : ''].concat(chips.map(x => x[3])).filter(Boolean).join(' · ') || 'All papers';
   document.getElementById('lpBack').textContent = _listBackLabel;
   // the bar: how many, how keys combine, filters (narrow screens), order; updated in place, so a choice eases over
@@ -5037,7 +5139,7 @@ function sfEmptyHTML(c) {
   if (!byWords && (SF_MULTI.some(f => SF[f].length) || SF.starred)) ways.push(`<button class="lp-fold" onclick="sfClearFilters()">Clear the filters</button>`);
   const what = !c.keys.length && !sfFilterCount() ? 'No papers yet.'
     : !c.keys.length && SF.show === 'unread' && sfFilterCount() === 1 ? 'You’ve read everything.'
-    : c.keys.length ? `No papers match ${c.keys.map(k => '“' + esc(k) + '”').join(SF.any ? ' or ' : ' and ')}${sfFilterCount() && !byWords ? ' with these filters' : ''}.` : 'No papers match these filters.';
+    : c.keys.length ? `No papers match ${c.keys.map(k => '“' + esc(k.raw) + '”').join(SF.any ? ' or ' : ' and ')}${sfFilterCount() && !byWords ? ' with these filters' : ''}.` : 'No papers match these filters.';
   return `<div class="lp-empty">${what}${ways.length ? '<br>' + ways.join(' ') : ''}</div>`;
 }
 /* The words you searched for, marked where they appear in each row */
@@ -5088,7 +5190,11 @@ function sfSheet(open) {
   sh.classList.toggle('open', !!open); sc.classList.toggle('open', !!open);
   if (open) setTimeout(() => sh.querySelector('.sf-done').focus({ preventScroll: true }), 50);
 }
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.getElementById('sfSheet')?.classList.contains('open')) { e.preventDefault(); sfSheet(false); } });
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (document.getElementById('sfSheet')?.classList.contains('open')) { e.preventDefault(); sfSheet(false); }
+  else if (document.getElementById('sfBox')?.classList.contains('guide-open')) { e.preventDefault(); sfGuide(false); document.getElementById('sfHelpBtn').focus(); }
+});
 
 /* Best: Must read, then Interesting, then Tangential; within each, the Top Papers score (relevance, fading by
    half every 90 days since added). Topic cards rank the same way (skipping papers already shown higher on the page). */
