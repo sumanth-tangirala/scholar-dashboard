@@ -1524,20 +1524,22 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
 .sf-filters-btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
 .sf-filters-btn .b { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: rgba(255,255,255,0.14); color: var(--text); font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; }
 /* the sidebar of filters: each value with how many papers it would show */
-.sf-rail { padding-top: 0; }
-.sf-rail > .sf-sec:first-child > h2 { margin-top: 20px; }   /* its capitals level with the field's top edge */
+.sf-rail { padding-top: 10px; }   /* the first header's capitals level with the field's top edge */
 .sf-rail .lp-rail-item { width: 100%; border: none; background: none; font: inherit; text-align: left; cursor: pointer; }
 .sf-rail .lp-rail-item.on { background: rgba(255,255,255,0.08); color: var(--text); }
 .sf-rail .lp-rail-item.on .n { color: var(--text-secondary); }
-.sf-sec.fold h2 { margin: 6px 0 0; padding: 0; border-top: 1px solid rgba(255,255,255,0.06); }
-.sf-sec.fold:first-of-type h2, .sf-sec:not(.fold) + .sf-sec.fold h2 { margin-top: 18px; }
-.sf-sec-h { display: flex; align-items: center; width: 100%; padding: 12px 12px 10px; border: none; background: none; font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; cursor: pointer; border-radius: 8px; transition: color var(--t-fast) var(--ease); }
+.sf-rail .sf-sec + .sf-sec { border-top: 1px solid rgba(255,255,255,0.06); }
+.sf-rail .sf-sec.open { padding-bottom: 12px; }
+.sf-rail .sf-sec h2 { margin: 0; padding: 0; }
+.sf-sec-h { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border: none; background: none; font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; cursor: pointer; border-radius: 8px; transition: color var(--t-fast) var(--ease); }
 .sf-sec-h:hover { color: var(--text); }
+.sf-sec-h .t { flex-shrink: 0; }
+.sf-sec-h .sel { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--text-secondary); }   /* what's chosen in a closed group */
 .sf-sec-h svg { width: 14px; height: 14px; margin-left: auto; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform var(--t-fast) var(--ease); }
 .sf-sec.open .sf-sec-h svg { transform: rotate(180deg); }
 .sf-sub { display: flex; align-items: center; gap: 8px; padding: 10px 12px 3px; font-size: 11.5px; color: var(--text-muted); }
 .sf-sub i { width: 6px; height: 6px; border-radius: 50%; }
-.sf-rail .sf-sub:first-of-type { padding-top: 0; }
+.sf-rail .sf-sub:first-of-type { padding-top: 2px; }
 .sf-more { display: block; margin: 2px 0 0; padding: 6px 12px; border: none; border-radius: 8px; background: none; color: var(--text-muted); font: inherit; font-size: 12.5px; cursor: pointer; transition: color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease); }
 .sf-more:hover { color: var(--text); background: rgba(255,255,255,0.045); }
 /* narrow screens: the filters in a sheet from the bottom */
@@ -4289,7 +4291,18 @@ const SF_SRC = { email: 'Email alerts', web_survey: 'Web survey', manual: 'Added
 const SF_REL = [['definitely', 'Must Read'], ['probably', 'Interesting'], ['mildly', 'Tangential']];
 function sfEmpty() { return { keys: [], draft: '', any: false, show: ['unread'], starred: false, rel: [], topic: [], interest: [], author: [], venue: [], year: [], src: [], alert: [], sort: '' }; }
 let SF = sfEmpty();
-let _sfOpen = (() => { try { return new Set(JSON.parse(localStorage.getItem('scholar_sf_open') || '[]')); } catch (e) { return new Set(); } })();   // the folded filter groups you opened
+/* Every group in the sidebar folds; the first four start open, the rest closed, and each stays as you leave it */
+const SF_OPEN_FIRST = ['show', 'rel', 'topics', 'interests'];
+let _sfFold = (() => {
+  try {
+    const m = JSON.parse(localStorage.getItem('scholar_sf_fold') || 'null');
+    if (m) return m;
+    const opened = JSON.parse(localStorage.getItem('scholar_sf_open') || '[]'), was = {};   // the groups opened before every group folded
+    opened.forEach(id => { was[id] = true; });
+    return was;
+  } catch (e) { return {}; }
+})();
+function sfIsOpen(id) { return id in _sfFold ? _sfFold[id] : SF_OPEN_FIRST.includes(id); }
 const _sfMore = new Set();   // groups whose "Show more" was pressed (this visit)
 let _sfTimer = 0;
 
@@ -4508,8 +4521,8 @@ function sfSetSort(v) { SF.sort = v; sfCommit(); }
 function sfSetAny(v) { SF.any = v; sfCommit(); }
 function sfClearFilters() { const keys = SF.keys, any = SF.any, sort = SF.sort, draft = SF.draft; SF = Object.assign(sfEmpty(), { keys, any, sort, draft }); sfCommit(); }
 function sfSec(id) {
-  if (_sfOpen.has(id)) _sfOpen.delete(id); else _sfOpen.add(id);
-  try { localStorage.setItem('scholar_sf_open', JSON.stringify([..._sfOpen])); } catch (e) {}
+  _sfFold[id] = !sfIsOpen(id);
+  try { localStorage.setItem('scholar_sf_fold', JSON.stringify(_sfFold)); localStorage.removeItem('scholar_sf_open'); } catch (e) {}
   renderSearch();
 }
 function sfMore(id) { _sfMore.add(id); renderSearch(); }
@@ -4665,11 +4678,11 @@ function sfFiltersHTML(c, lv, A, where) {
     return shown.map(v => item(f, v, label(v))).join('') + (rest > 0 && !open ? `<button class="sf-more" onclick="sfMore('${id}')">Show ${rest} more</button>` : '');
   };
   const wrap = h => h ? (rail ? h : `<div class="sf-wrap">${h}</div>`) : '';
-  const sec = (id, title, body, fold) => {
+  const sec = (id, title, body, set) => {   // set: the labels chosen in this group, named on its header while it's closed
     if (!body) return '';
-    const open = !fold || !rail || _sfOpen.has(id) || body.includes(' on"') || body.includes(' active"');
-    const head = fold && rail ? `<h2><button class="sf-sec-h" onclick="sfSec('${id}')" aria-expanded="${open}">${title}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg></button></h2>` : `<h2>${title}</h2>`;
-    return `<section class="sf-sec${fold && rail ? ' fold' : ''}${open ? ' open' : ''}">${head}${open ? body : ''}</section>`;
+    if (!rail) return `<section class="sf-sec open"><h2>${title}</h2>${body}</section>`;   // the sheet shows every group
+    const open = sfIsOpen(id), named = !open && set.length ? `<span class="sel">${esc(set.join(', '))}</span>` : '';
+    return `<section class="sf-sec${open ? ' open' : ''}"><h2><button class="sf-sec-h" onclick="sfSec('${id}')" aria-expanded="${open}"><span class="t">${title}</span>${named}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg></button></h2>${open ? body : ''}</section>`;
   };
   const byCount = f => Object.keys(c.counts[f] || {}).concat(SF[f]).filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => ((c.counts[f] || {})[b] || 0) - ((c.counts[f] || {})[a] || 0) || String(a).localeCompare(String(b)));
   const show = wrap(item('show', 'unread', 'Unread') + item('show', 'read', 'Read') + item('starred', '1', 'Starred'));
@@ -4684,8 +4697,10 @@ function sfFiltersHTML(c, lv, A, where) {
   const years = wrap(Object.keys(c.counts.year || {}).concat(SF.year).filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => b - a).map(y => item('year', y, y)).join(''));
   const src = wrap(Object.keys(SF_SRC).map(x => item('src', x, SF_SRC[x])).join(''));
   const alerts = SHOW_EMAIL_TAB || SF.alert.length ? wrap(byCount('alert').map(a => item('alert', a, a)).join('')) : '';
-  return sec('show', 'Show', show) + sec('rel', 'Relevance', rel) + sec('topics', 'Topics', topics) + sec('interests', 'Interests', ints)
-    + sec('authors', 'Authors', authors, true) + sec('venues', 'Venues', venues, true) + sec('years', 'Year', years, true) + sec('src', 'Source', src, true) + sec('alerts', 'Alerts', alerts, true);
+  return sec('show', 'Show', show, SF.show.length === 1 ? [SF.show[0] === 'unread' ? 'Unread' : 'Read'] : [].concat(SF.starred ? ['Starred'] : []))
+    + sec('rel', 'Relevance', rel, SF.rel.map(relLabel)) + sec('topics', 'Topics', topics, SF.topic) + sec('interests', 'Interests', ints, SF.interest)
+    + sec('authors', 'Authors', authors, SF.author.map(a => A.name(a))) + sec('venues', 'Venues', venues, SF.venue) + sec('years', 'Year', years, SF.year)
+    + sec('src', 'Source', src, SF.src.map(x => SF_SRC[x] || x)) + sec('alerts', 'Alerts', alerts, SF.alert);
 }
 /* The papers, in sections (tiers, weeks or months), drawn 60 at a time and more as you scroll: a thousand rows at
    once would hold the page up for half a second */
