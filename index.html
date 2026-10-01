@@ -1572,12 +1572,12 @@ html.no-hover .sf-tip:hover::after { opacity: 0; }
 .sf-count b { color: var(--text-secondary); font-weight: 500; }
 .sf-bar .tl-sort { height: 32px; padding: 2px; border-radius: 999px; border-color: rgba(255,255,255,0.2); }
 .sf-bar .tl-sort button { height: 100%; min-height: 0; padding: 0 13px; border-radius: 999px; white-space: nowrap; }
-.sf-sort { margin-left: 0; }
+.sf-sort { margin-left: auto; }   /* Filters and the count on the left, the order on the right */
 .sf-sort-btn { position: relative; display: none; align-items: center; gap: 7px; height: 32px; padding: 0 13px; border: 1px solid rgba(255,255,255,0.2); border-radius: 999px; color: var(--text-secondary); font-size: 13px; white-space: nowrap; cursor: pointer; transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
 .sf-sort-btn:hover { background: rgba(255,255,255,0.06); color: var(--text); }
 .sf-sort-btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .sf-sort-btn select { position: absolute; inset: 0; width: 100%; opacity: 0; font-size: 16px; cursor: pointer; -webkit-appearance: none; appearance: none; }   /* the system's own picker; 16px so iOS doesn't zoom */
-.sf-filters-btn { display: inline-flex; align-items: center; gap: 7px; height: 32px; margin-left: auto; padding: 0 13px; border: 1px solid rgba(255,255,255,0.2); border-radius: 999px; background: none; color: var(--text-secondary); font: inherit; font-size: 13px; cursor: pointer; transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease); }
+.sf-filters-btn { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 13px; border: 1px solid rgba(255,255,255,0.2); border-radius: 999px; background: none; color: var(--text-secondary); font: inherit; font-size: 13px; cursor: pointer; transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease); }
 .sf-filters-btn:hover { background: rgba(255,255,255,0.06); color: var(--text); }
 .sf-filters-btn.on { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.28); color: var(--text); }   /* the sidebar is showing */
 .sf-filters-btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
@@ -1733,8 +1733,6 @@ body.tok-mode .tok-bar { flex-wrap: wrap; row-gap: 8px; }
   .lp-bar .pd-bar-inner { padding: 8px 24px; }
   .lp-wrap { display: block; padding: 0 24px 96px; }
   .lp-rail { display: none; }
-  .sf-filters-btn { display: inline-flex; margin-left: auto; order: 1; }
-  .sf-sort { margin-left: 0; order: 2; }
   .sf-sort .tl-sort { display: none; }
   .sf-sort-btn { display: inline-flex; }
 }
@@ -5009,8 +5007,8 @@ function renderSearch() {
   const sorts = SF_SORTS.filter(([v]) => v !== 'match' || c.keys.length);
   const fc = sfFilterCount(), wide = !window.matchMedia('(max-width: 1000px)').matches;
   sfPatch(document.getElementById('sfModeSlot'), sfModeHTML(c, 'field'));
-  sfPatch(document.getElementById('sfBar'), `<span class="sf-count" data-k="count"><b>${n}</b> ${n === 1 ? 'paper' : 'papers'}</span>
-    <button class="sf-filters-btn${wide && !_sfRailOff ? ' on' : ''}" data-k="filters" onclick="sfFilters()" ${wide ? `aria-expanded="${!_sfRailOff}" aria-controls="lpRail" title="${_sfRailOff ? 'Show the filters' : 'Hide the filters'}"` : 'aria-haspopup="dialog"'}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M6 12h12M10 18h4"/></svg>Filters${fc ? `<span class="b">${fc}</span>` : ''}</button>
+  sfPatch(document.getElementById('sfBar'), `<button class="sf-filters-btn${wide && !_sfRailOff ? ' on' : ''}" data-k="filters" onclick="sfFilters()" ${wide ? `aria-expanded="${!_sfRailOff}" aria-controls="lpRail" title="${_sfRailOff ? 'Show the filters' : 'Hide the filters'}"` : 'aria-haspopup="dialog"'}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M6 12h12M10 18h4"/></svg>Filters${fc ? `<span class="b">${fc}</span>` : ''}</button>
+    <span class="sf-count" data-k="count"><b>${n}</b> ${n === 1 ? 'paper' : 'papers'}</span>
     <div class="sf-sort"><div class="tl-sort" role="group" aria-label="Order">${sorts.map(([v, l, tip]) => `<button data-k="sort:${v}" class="${sort === v ? 'active' : ''}" aria-pressed="${sort === v}" title="${escAttr(tip)}" onclick="sfSetSort('${v}')">${l}</button>`).join('')}</div>
     <label class="sf-sort-btn" data-k="sortbtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16M3.5 16.5 7 20l3.5-3.5M17 20V4m-3.5 3.5L17 4l3.5 3.5"/></svg><span>${SF_SHORT[sort]}</span><select aria-label="Order" onchange="sfSetSort(this.value)">${sorts.map(([v, l]) => `<option value="${v}"${sort === v ? ' selected' : ''}>${l}</option>`).join('')}</select></label></div>`);
   // the filters: the sidebar, or the sheet on narrow screens (the hidden one isn't drawn)
