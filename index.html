@@ -86,7 +86,18 @@ a { color: inherit; text-decoration: none; }
 }
 .skeleton-wrap { max-width: 1200px; margin: 0 auto; padding: 24px; transition: opacity 0.4s ease; }
 .skeleton-wrap.hidden { opacity: 0; pointer-events: none; position: absolute; }
-.skel-block { border-radius: 8px; background: linear-gradient(90deg, var(--bg-surface) 25%, var(--bg-hover) 50%, var(--bg-surface) 75%); background-size: 600px 100%; animation: shimmer 1.6s ease-in-out infinite; }
+.skel-block { display: block; max-width: 100%; border-radius: 8px; background: rgba(255,255,255,0.045); animation: skel 1.3s ease-in-out infinite; }   /* a faint pulse, not a sweep */
+.skel-home { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; height: min(62vh, 580px); }
+.skel-lead { height: 100%; border-radius: 12px; }
+.skel-side { display: grid; grid-template-rows: repeat(4, 1fr); gap: 2px; }
+.skel-side i { height: 100%; border-radius: 0; animation-delay: 0.15s; }
+.skel-side i:first-child { border-radius: 12px 12px 0 0; } .skel-side i:last-child { border-radius: 0 0 12px 12px; }
+.skeleton-wrap[data-kind="paper"] { max-width: 1032px; padding: 84px 24px 24px; }
+.skel-cols { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 48px; }
+.skeleton-wrap[data-kind="list"] { max-width: none; display: grid; grid-template-columns: 252px minmax(0, 1200px); column-gap: 40px; padding: 56px 32px 24px 24px; }
+@media (max-width: 1000px) { .skeleton-wrap[data-kind="list"] { display: block; padding: 56px 24px 24px; } .skel-rail { display: none; } .skel-cols { grid-template-columns: minmax(0, 1fr); } .skel-cols > i { display: none; } }
+@media (max-width: 700px) { .skel-home { grid-template-columns: minmax(0, 1fr); height: 64vh; } .skel-side { display: none; } .skeleton-wrap[data-kind="paper"], .skeleton-wrap[data-kind="list"] { padding-left: 16px; padding-right: 16px; } }
+@media (prefers-reduced-motion: reduce) { .skel-block { animation: none; } }
 .skel-top-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 24px; }
 .skel-lead { height: 200px; }
 .skel-sidebar { display: flex; flex-direction: column; gap: 1px; }
@@ -280,12 +291,12 @@ html.ro #vaultOverlay { display: none !important; }
 .lead-headline { font-size: 25px; font-weight: 500; line-height: 1.25; letter-spacing: -0.01em; color: var(--text); margin-top: 14px; text-wrap: pretty; transition: color 0.15s; }
 .top-lead:hover .lead-headline { color: #fff; }
 .lead-headline.clamp2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }   /* a very short first screen (fitTopPapers) */
-.lead-title { font-size: 15px; color: var(--text-muted); margin-top: auto; padding-top: 10px; line-height: 1.4; }
-.lead-summary { font-size: 15px; color: var(--text-secondary); line-height: 1.65; margin-top: auto; padding-top: 16px; max-width: 64ch; display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
-.lead-authors { font-size: 13px; color: var(--text-muted); margin-top: auto; padding-top: 16px; }
+.lead-title { font-size: 15px; color: var(--text-muted); padding-top: 10px; line-height: 1.4; }
+.lead-summary { font-size: 15px; color: var(--text-secondary); line-height: 1.65; padding-top: 16px; max-width: 64ch; display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
+.lead-authors { font-size: 13px; color: var(--text-muted); padding-top: 14px; }
 /* the lead's spare height is shared out above its title, summary, authors and buttons (margin-top: auto), so a tall
    card spreads its parts evenly; the paddings keep their usual gaps when there's none to share */
-.lead-actions { margin-top: auto; padding-top: 20px; }
+.lead-actions { margin-top: auto; padding-top: 20px; }   /* the only part pushed down: the card's spare height sits above its buttons, not between its lines */
 .top-lead .f-venue { max-width: none; }
 .lead-acts { gap: 6px; align-items: center; }
 .btn-icon.btn-labelled { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border: 1px solid var(--border); border-radius: 999px; font-size: 13px; line-height: 1.2; }
@@ -319,7 +330,7 @@ html.ro #vaultOverlay { display: none !important; }
 .why-line b { flex-shrink: 0; padding-top: 2px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: color-mix(in srgb, var(--gc, var(--accent)) 70%, #fff); }
 .why-line.one { margin-top: 6px; min-width: 0; }
 .why-line.one span { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.top-lead .lead-why { margin-top: auto; padding-top: 14px; --gc: var(--accent); }
+.top-lead .lead-why { padding-top: 16px; --gc: var(--accent); }
 .top-side .why-line.one { --gc: var(--accent); }
 /* every paper on the page is unread (read ones are hidden), so the side list needs no unread dots */
 .top-side .feed-item::before { display: none; }
@@ -513,12 +524,13 @@ html.no-hover .f-topic.more:hover:not(.open) { background: rgba(255,255,255,0.07
 .v-section { scroll-margin-top: 64px; }
 .v-more { margin: 6px 0 0 -2px; background: none; border: none; color: var(--text-muted); font: inherit; font-size: 13px; padding: 6px 2px; cursor: pointer; transition: color 0.15s; }
 .v-more:hover { color: var(--accent); }
-@media (max-width: 800px) {
-  .v-toolbar { flex-direction: column; align-items: stretch; padding: 12px 16px 10px; }
+@media (max-width: 1000px) {
+  .v-toolbar { flex-direction: column; align-items: stretch; padding: 12px 24px 10px; }
   .v-jump { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
   .v-jump::-webkit-scrollbar { display: none; }
   .v-filter { width: 100%; font-size: 16px; }
 }
+@media (max-width: 600px) { .v-toolbar { padding: 12px 16px 10px; } }
 .v-bar i { display: block; height: 100%; background: var(--accent); opacity: 0.8; border-radius: 4px; }
 .v-count { font-size: 14px; color: var(--text-secondary); text-align: right; font-variant-numeric: tabular-nums; }
 .v-years { display: flex; flex-wrap: wrap; gap: 5px; }
@@ -1818,9 +1830,10 @@ body.tok-mode .tok-bar { flex-wrap: wrap; row-gap: 8px; }
 .ig-empty strong { display: block; color: var(--text); margin-bottom: 4px; }
 .badge-editable::after { content: '\25BE'; margin-left: 5px; opacity: 0.6; font-size: 9px; }
 .badge-editable:hover { filter: none; box-shadow: 0 0 0 1px currentColor inset; }
-.btn-quiet-remove { background: none; border: 1px solid transparent; color: var(--text-muted); font: inherit; font-size: 12px; padding: 4px 10px; border-radius: 999px; cursor: pointer; opacity: 0; transition: opacity 0.15s, color 0.15s, border-color 0.15s; }
+.btn-quiet-remove { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; background: none; border: 1px solid transparent; color: var(--text-muted); font: inherit; border-radius: 8px; cursor: pointer; opacity: 0; transition: opacity 0.15s, color 0.15s, background-color 0.15s; }
+.btn-quiet-remove svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .interest-card:hover .btn-quiet-remove, .btn-quiet-remove:focus-visible { opacity: 1; }
-.btn-quiet-remove:hover { color: #f28b82; border-color: rgba(242,139,130,0.5); }
+.btn-quiet-remove:hover { color: #f28b82; background: rgba(242,139,130,0.1); }
 @media (hover: none) { .btn-quiet-remove { opacity: 1; } }
 .interest-meta { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
 .interest-actions { display: flex; gap: 6px; flex-shrink: 0; }
@@ -2149,6 +2162,7 @@ html.no-hover .sel-icon:not(.on):active, html.no-hover .ink-bar .ink-size:not(.o
 @media (pointer: coarse) {
   /* fingers need ~36px: chips, toggles and small action buttons grow on touch screens only (desktop keeps its density) */
   .pill, .ig-toggle-btn, .tl-chip, .tl-sort button, .lib-hint-btn, .library-actions button, .btn-abs, .btn-link, .p-actions .btn-icon, .btn-quiet-remove, .ui-btn, .rp-chip, .rp-seg button { min-height: 36px; display: inline-flex; align-items: center; justify-content: center; }
+  .btn-quiet-remove { width: 38px; height: 38px; }
   .p-actions .btn-icon:not(.btn-labelled) { min-width: 36px; }
   .lp-rail-item { min-height: 40px; }
   .sf-bar .tl-sort, .sf-filters-btn, .sf-sort-btn { height: 38px; }
@@ -2210,24 +2224,29 @@ html.no-hover .sel-icon:not(.on):active, html.no-hover .ink-bar .ink-size:not(.o
 <div class="main-scroll" id="mainScroll">
 
 <!-- [2] LOADING SKELETON -->
-<div class="skeleton-wrap" id="skeleton">
-  <div style="height:28px;width:200px;margin-bottom:16px;" class="skel-block"></div>
-  <div style="height:14px;width:140px;margin-bottom:20px;" class="skel-block"></div>
-  <div class="skel-top-grid">
-    <div class="skel-topic-card skel-block" style="height:160px;border-radius:12px;"></div>
-    <div class="skel-topic-card skel-block" style="height:160px;border-radius:12px;"></div>
-    <div class="skel-topic-card skel-block" style="height:160px;border-radius:12px;"></div>
-    <div class="skel-topic-card skel-block" style="height:160px;border-radius:12px;"></div>
-    <div class="skel-topic-card skel-block" style="height:160px;border-radius:12px;"></div>
-    <div class="skel-topic-card skel-block" style="height:160px;border-radius:12px;"></div>
-  </div>
-  <div style="height:16px;width:120px;margin-bottom:16px;" class="skel-block"></div>
-  <div class="skel-topics">
-    <div class="skel-topic-card skel-block"></div>
-    <div class="skel-topic-card skel-block"></div>
-    <div class="skel-topic-card skel-block"></div>
-  </div>
-</div>
+<div class="skeleton-wrap" id="skeleton" aria-label="Loading"></div>
+<script>
+/* The loader is shaped like the page being opened (a paper, a search, a tab, the home page), so it gives way to that
+   page rather than to a different one; and only that page's tab is marked meanwhile */
+(function () {
+  var h = location.hash.slice(1), el = document.getElementById('skeleton');
+  var kind = /^(paper|read)\//.test(h) ? 'paper' : /^(search|group\/|interest\/|venue\/|alert\/|top$|latest$)/.test(h) ? 'list' : /^(library|venues|interests)/.test(h) ? 'tab' : 'home';
+  var b = function (w, ht, extra) { return '<i class="skel-block" style="width:' + w + ';height:' + ht + 'px;' + (extra || '') + '"></i>'; };
+  var rows = function (n) { var r = ''; for (var k = 0; k < n; k++) r += '<div class="sf-skel-row"><i></i><i></i><i></i></div>'; return r; };
+  var html = {
+    home: b('260px', 34, 'margin-bottom:12px') + b('380px', 14, 'margin-bottom:34px') + b('130px', 20, 'margin-bottom:18px') +
+      '<div class="skel-home"><i class="skel-block skel-lead"></i><div class="skel-side"><i class="skel-block"></i><i class="skel-block"></i><i class="skel-block"></i><i class="skel-block"></i></div></div>',
+    paper: b('340px', 14, 'margin-bottom:22px') + b('78%', 36, 'margin-bottom:12px') + b('60%', 36, 'margin-bottom:28px') + b('72%', 18, 'margin-bottom:40px') +
+      '<div class="skel-cols"><div>' + b('100%', 13, 'margin-bottom:14px') + b('96%', 13, 'margin-bottom:14px') + b('98%', 13, 'margin-bottom:14px') + b('70%', 13) + '</div><i class="skel-block" style="height:200px;border-radius:12px"></i></div>',
+    list: '<div class="skel-rail">' + b('60px', 10, 'margin:12px 0 16px') + b('100%', 28, 'margin-bottom:8px') + b('100%', 28, 'margin-bottom:8px') + b('100%', 28, 'margin-bottom:24px') + b('70px', 10, 'margin-bottom:16px') + b('100%', 28, 'margin-bottom:8px') + b('100%', 28) + '</div>' +
+      '<div>' + b('100%', 48, 'border-radius:12px;margin:22px 0 18px') + '<div class="sf-skel">' + rows(5) + '</div></div>',
+    tab: b('220px', 36, 'margin-bottom:14px') + b('420px', 14, 'margin-bottom:34px') + b('100%', 68, 'border-radius:12px;margin-bottom:14px') + b('100%', 68, 'border-radius:12px;margin-bottom:14px') + b('100%', 68, 'border-radius:12px')
+  };
+  el.dataset.kind = kind;
+  el.innerHTML = html[kind];
+  if (kind !== 'home') document.querySelectorAll('.nav-tab').forEach(function (t) { t.classList.toggle('active', kind === 'tab' && h.indexOf(t.dataset.tab) === 0); });
+})();
+</script>
 
 <!-- PAPERS TAB (all / email) -->
 <div class="tab-section" id="sec-papers">
@@ -2269,7 +2288,7 @@ html.no-hover .sel-icon:not(.on):active, html.no-hover .ink-bar .ink-size:not(.o
     </div>
   </div>
   <div class="v-toolbar" id="venuesToolbar">
-    <nav class="v-jump" id="venuesJump" aria-label="Jump to a section"></nav>
+    <nav class="v-jump fade-x" id="venuesJump" aria-label="Jump to a section"></nav>
     <input type="search" class="v-filter" id="venuesFilter" placeholder="Filter venues" aria-label="Filter venues" oninput="renderVenues()">
   </div>
   <div class="venues-wrap" id="venuesContent"></div>
@@ -2999,7 +3018,7 @@ function parseWhy(p) {
   let source = '';
   const a = n.match(/^Alert:\s*([^.]+)\.\s*/i);
   if (a) { source = a[1].replace(/\s*\(.*?\)\s*/g, ' ').replace(/\bcitations?\b/ig, '').trim(); n = n.slice(a[0].length); }
-  n = n.replace(/\[residual[^\]]*\]?/ig, '').trim();
+  n = n.replace(/\[residual[^\]]*\]?/ig, '').replace(/\s*\(abstract:[^)]*\)/ig, '').trim();
   const t = n.match(/^(Core|High|Moderate|Low|Medium)\b\s*[—–-]+\s*/i);
   if (t) n = n.slice(t[0].length);
   n = n.replace(/\s*[—–]\s*$/, '').trim();
@@ -4266,6 +4285,7 @@ function renderVenues() {
   const sections = V_KINDS.map(([kind, label]) => ({ kind, label, list: venues.filter(v => v.kind === kind && matches(v)).sort((a, b) => b.n - a.n || a.name.localeCompare(b.name)) })).filter(x => x.list.length);
   document.getElementById('venuesJump').innerHTML = sections.map(x =>
     `<button class="tl-chip" onclick="document.getElementById('vs-${x.kind}').scrollIntoView({behavior:'smooth',block:'start'})">${x.label}<span class="n">${x.list.reduce((n, v) => n + v.n, 0)}</span></button>`).join('');
+  requestAnimationFrame(() => edgeFade(document.getElementById('venuesJump')));   // a row cut by the screen's edge fades out there
   if (!sections.length) {
     document.getElementById('venuesContent').innerHTML = `<div class="tl-empty">No venue matches "${esc(q)}".</div>`;
     return;
@@ -5464,7 +5484,7 @@ function renderInterests() {
   const r = (map,k) => k in map ? map[k] : 9;
   Object.values(grouped).forEach(a => a.sort((x,y)=> r(so,x.status)-r(so,y.status) || r(ro,x.relevance_mapping)-r(ro,y.relevance_mapping) || interestPaperCount(y.interest_name)-interestPaperCount(x.interest_name)));
   const sugN = allInterests.filter(i=>i.status==='suggested').length;
-  let html = `<p class="ig-legend"><strong>Interests</strong> decide how papers rank; each paper lists the ones it matches. They are separate from <a href="#interests/groups" class="ig-link">Topics</a>, which only group papers for browsing.</p><p class="ig-legend">Each interest is <span class="badge badge-definitely">Core</span> (your research), <span class="badge badge-probably">Related</span> or <span class="badge badge-mildly">Peripheral</span>. A paper scores by how strongly it matches: being about a Core interest makes it Must Read, and Related and Peripheral ones add context. The level also sets how hard the weekly survey searches for it.${isOwner() ? ` ${TOUCH ? 'Tap' : 'Click'} an interest\u2019s level to change it.` : ''}</p>`;
+  let html = `<p class="ig-legend"><strong>Interests</strong> rank papers; <a href="#interests/groups" class="ig-link">Topics</a> only group them. Each is <span class="badge badge-definitely">Core</span> (your research), <span class="badge badge-probably">Related</span> or <span class="badge badge-mildly">Peripheral</span>: a paper strongly about a Core interest is Must Read, the others add context, and the level sets how hard the weekly survey looks.${isOwner() ? ` ${TOUCH ? 'Tap' : 'Click'} a level to change it.` : ''}</p>`;
   if (sugN > 0 && currentIStatus === 'all' && isOwner()) html += `<div style="padding:12px 20px;margin-bottom:16px;background:var(--purple-bg);border:1px solid var(--purple);border-radius:8px;font-size:13px;color:var(--purple);">${sugN} suggested interest${sugN>1?'s':''} from recent papers</div>`;
   ['Application Areas','Methods'].forEach(cat => {
     if (!grouped[cat]) return;
@@ -5488,7 +5508,7 @@ function renderGroupsTab(main) {
   const so = {suggested:0,confirmed:1,rejected:2};
   groups = [...groups].sort((a,b) => (so[a.status]||9) - (so[b.status]||9) || (parseInt(a.display_order)||999) - (parseInt(b.display_order)||999));
   const sugN = allGroups.filter(g=>g.status==='suggested').length;
-  let html = `<p class="ig-legend"><strong>Topics</strong> group papers for browsing: the cards on Recent Works and the chips on each paper. They don't change ranking; that is what <a href="#interests/interests" class="ig-link">Interests</a> do.${isOwner() ? ' Drag a topic to reorder the cards.' : ''}</p>`;
+  let html = `<p class="ig-legend"><strong>Topics</strong> group papers for browsing (the cards on Recent Works, the chips on each paper); <a href="#interests/interests" class="ig-link">Interests</a> rank them.${isOwner() ? ' Drag a topic to reorder the cards.' : ''}</p>`;
   if (sugN > 0 && currentIStatus === 'all' && isOwner()) html += `<div style="padding:12px 20px;margin-bottom:16px;background:var(--purple-bg);border:1px solid var(--purple);border-radius:8px;font-size:13px;color:var(--purple);">${sugN} suggested topic${sugN>1?'s':''} from recent papers</div>`;
   html += '<div class="interest-group"><div class="interest-group-inner" style="padding:10px 0">';
   html += groups.map(g => groupCardHTML(g, true)).join('');
@@ -5503,7 +5523,7 @@ function groupCardHTML(g) {
   const statusBadge = showStatus && g.status && g.status !== 'confirmed' ? `<span class="badge badge-${g.status}">${g.status.charAt(0).toUpperCase()+g.status.slice(1)}</span>` : '';
   let actions = '';
   if (g.status === 'suggested') actions = `<div class="interest-actions"><button class="btn-approve" onclick="event.stopPropagation();updateG('${escAttr(g.group_name)}','confirmed')">Approve</button><button class="btn-reject" onclick="event.stopPropagation();updateG('${escAttr(g.group_name)}','rejected')">Dismiss</button></div>`;
-  else if (g.status === 'confirmed') actions = `<div class="interest-actions"><button class="btn-quiet-remove" onclick="event.stopPropagation();updateG('${escAttr(g.group_name)}','rejected')" title="Hide this topic (you can restore it from Rejected)">Remove</button></div>`;
+  else if (g.status === 'confirmed') actions = `<div class="interest-actions"><button class="btn-quiet-remove" onclick="event.stopPropagation();updateG('${escAttr(g.group_name)}','rejected')" title="Remove this topic (you can restore it from Rejected)" aria-label="Remove ${escAttr(g.group_name)}">${ICON_TRASH}</button></div>`;
   else if (g.status === 'rejected') actions = `<div class="interest-actions"><button class="btn-approve" onclick="event.stopPropagation();updateG('${escAttr(g.group_name)}','confirmed')">Restore</button></div>`;
   const handle = `<div class="group-drag-handle" title="Drag to reorder"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg></div>`;
   const drag = isOwner() ? ' draggable="true" ondragstart="gDragStart(event)" ondragover="gDragOver(event)" ondragenter="gDragEnter(event)" ondragleave="gDragLeave(event)" ondrop="gDrop(event)" ondragend="gDragEnd(event)"' : '';   // reordering is yours
@@ -5625,7 +5645,7 @@ function interestCardHTML(i) {
   const actions = i.status==='suggested'
     ? `<div class="interest-actions"><button class="btn-approve" onclick="event.stopPropagation();updateI('${escAttr(i.interest_name)}','confirmed')">Approve</button><button class="btn-reject" onclick="event.stopPropagation();updateI('${escAttr(i.interest_name)}','rejected')">Dismiss</button></div>`
     : i.status==='confirmed'
-    ? `<div class="interest-actions"><button class="btn-quiet-remove" onclick="event.stopPropagation();updateI('${escAttr(i.interest_name)}','rejected')" title="Stop using this interest (you can restore it from Rejected)">Remove</button></div>`
+    ? `<div class="interest-actions"><button class="btn-quiet-remove" onclick="event.stopPropagation();updateI('${escAttr(i.interest_name)}','rejected')" title="Remove this interest (you can restore it from Rejected)" aria-label="Remove ${escAttr(i.interest_name)}">${ICON_TRASH}</button></div>`
     : i.status==='rejected'
     ? `<div class="interest-actions"><button class="btn-approve" onclick="event.stopPropagation();updateI('${escAttr(i.interest_name)}','confirmed')">Restore</button></div>`
     : '';
