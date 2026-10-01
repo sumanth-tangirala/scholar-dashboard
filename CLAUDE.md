@@ -59,7 +59,7 @@ The website (`index.html`) has three tabs:
 
 Papers appear in both paper tabs if their `source_mode` is `"email,web_survey"`.
 
-**Search** (`#search?…`) is one page for finding and browsing papers: keys (words or phrases; all must match, or any) plus filters (Unread/Read/Starred, relevance, topics, interests, authors, venues, year, source) and four orders (Best, Best match, Recently added, Newest published). Topic, interest, venue and Top Papers links open it with that filter set, and the old list addresses (`#group/…`, `#interest/…`, `#venue/…[/year]`, `#top`) redirect to it. Unread is on by default.
+**Search** (`#search?…`) is one page for finding and browsing papers: keys (words or phrases; all must match, or any) plus filters (Unread/Read/Starred, relevance, topics, interests, authors, venues, year, source) and four orders (Best match, with words; Relevance; Recently added; Newest published). Topic, interest, venue and Top Papers links open it with that filter set, and the old list addresses (`#group/…`, `#interest/…`, `#venue/…[/year]`, `#top`) redirect to it. Unread is on by default.
 
 The website dynamically reads `papers_database.csv` and `interests_database.csv` using PapaParse at load time. No build step is needed — just update the CSVs and refresh the page. All three files must be in the same folder.
 
