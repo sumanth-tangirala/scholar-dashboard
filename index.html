@@ -1477,17 +1477,23 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
 /* ===== SEARCH PAGE (renderSearch) ===== */
 /* the field: what's set as chips, then what you're typing; 16px text so iOS doesn't zoom in */
 .sf-box { position: relative; padding-top: 22px; }
-.sf-field { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-height: 48px; padding: 7px 10px 7px 42px; border-radius: 12px; background: rgba(255,255,255,0.045); border: 1px solid rgba(255,255,255,0.16); cursor: text; transition: border-color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease); }
+.sf-field { position: relative; display: flex; align-items: center; gap: 6px; min-height: 48px; padding: 7px 8px 7px 42px; border-radius: 12px; background: rgba(255,255,255,0.045); border: 1px solid rgba(255,255,255,0.16); cursor: text; transition: border-color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease); }
 .sf-field:hover { border-color: rgba(255,255,255,0.24); }
 .sf-field:focus-within { border-color: rgba(255,255,255,0.34); background: rgba(255,255,255,0.06); }
 .sf-field > svg { position: absolute; left: 14px; top: 14px; width: 18px; height: 18px; fill: var(--text-muted); }
-.sf-chips { display: contents; }
+.sf-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.sf-pills:empty { display: none; }
+.sf-chip.icon { padding-left: 9px; }
+.sf-chip .sf-eye, .sf-show .sf-eye { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; display: block; }
+.sf-clear { display: none; align-items: center; justify-content: center; flex-shrink: 0; width: 32px; height: 32px; border: none; border-radius: 50%; background: none; color: var(--text-muted); cursor: pointer; transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
+.sf-clear:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+.sf-clear svg { width: 10px; height: 10px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; }
+.sf-field.has-text .sf-clear { display: inline-flex; }
 .sf-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-width: 0; height: 30px; padding: 0 2px 0 11px; border-radius: 999px; background: rgba(255,255,255,0.08); font-size: 13px; color: var(--text); white-space: nowrap; cursor: default; transition: box-shadow var(--t-fast) var(--ease); }
 .sf-chip .t { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .sf-chip .k { color: var(--text-muted); }
 .sf-chip .gdot { width: 7px; height: 7px; }
 .sf-star { color: var(--star); }
-.sf-chip.armed { box-shadow: 0 0 0 1.5px rgba(255,255,255,0.45); }   /* Backspace once more removes it */
 @keyframes sf-chip-in { from { opacity: 0; transform: scale(0.92); } }
 .sf-chip.sf-in { animation: sf-chip-in 180ms cubic-bezier(0.2, 0.8, 0.2, 1); }
 .sf-chip.sf-out { opacity: 0; transform: scale(0.92); pointer-events: none; transition: opacity 120ms ease-out, transform 120ms ease-out; }
@@ -1496,7 +1502,7 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
 .sf-x { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 26px; height: 26px; border: none; border-radius: 50%; background: none; color: var(--text-muted); cursor: pointer; transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
 .sf-x:hover { background: rgba(255,255,255,0.1); color: var(--text); }
 .sf-x svg { width: 9px; height: 9px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; }
-#sfInput { flex: 1 1 15em; min-width: 15em; height: 32px; padding: 0 4px; background: none; border: none; outline: none; color: var(--text); font: inherit; font-size: 16px; }
+#sfInput { flex: 1 1 auto; min-width: 0; height: 32px; padding: 0 4px; background: none; border: none; outline: none; color: var(--text); font: inherit; font-size: 16px; }
 #sfInput::placeholder { color: var(--text-muted); }
 #sfInput::-webkit-search-cancel-button { display: none; }
 /* suggestions while typing: the words, then the topics, interests, authors, venues and years they name */
@@ -1540,7 +1546,7 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
 .sf-rail .sf-sec + .sf-sec { border-top: 1px solid rgba(255,255,255,0.06); }
 .sf-rail .sf-sec.open { padding-bottom: 12px; }
 .tl-sort.sf-show { height: 32px; padding: 2px; border-radius: 999px; border-color: rgba(255,255,255,0.2); }   /* pills, as the order control is */
-.tl-sort.sf-show button { flex: 1; height: 100%; min-height: 0; padding: 0 10px; border-radius: 999px; white-space: nowrap; }
+.tl-sort.sf-show button { flex: 1; display: inline-flex; align-items: center; justify-content: center; height: 100%; min-height: 0; padding: 0 10px; border-radius: 999px; white-space: nowrap; }
 .sf-rail .sf-show { margin: 2px 12px 6px; }
 .sf-star-i { display: inline-flex; justify-content: center; width: 7px; flex-shrink: 0; font-style: normal; font-size: 11px; color: var(--star); }   /* the width of a dot, so its label lines up with the others */
 .sf-sheet-body .sf-star-i { margin-right: 8px; }
@@ -1675,7 +1681,6 @@ body.tok-mode .tok-bar { flex-wrap: wrap; row-gap: 8px; }
 @media (max-width: 600px) {
   .lp-bar .pd-bar-title { display: block; }   /* (a paper page's phone bar has no room for it; this one does) */
   .lp-bar .pd-bar-inner { padding: 8px 16px; }
-  #sfInput { min-width: 11em; flex-basis: 11em; }
   .lp-wrap { padding: 0 16px 72px; }
   .lp-row { padding: 12px 16px; margin: 0 -16px; }
   .lp-body.ranked .lp-row { grid-template-columns: 24px minmax(0, 1fr); column-gap: 10px; }
@@ -2323,11 +2328,12 @@ html.no-hover .sel-icon:not(.on):active, html.no-hover .ink-bar .ink-size:not(.o
         <div class="sf-box" id="sfBox">
           <div class="sf-field" onclick="sfFieldClick(event)">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-            <span class="sf-chips" id="sfChips"></span>
-            <input type="search" id="sfInput" enterkeyhint="search" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Search papers" aria-controls="sfSugg" oninput="sfType(this.value)" onkeydown="sfKey(event)" onfocus="sfSuggest()">
+            <input type="search" id="sfInput" enterkeyhint="search" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Search papers" aria-controls="sfSugg" oninput="sfType(this.value)" onkeydown="sfKey(event)" onfocus="sfSuggest()" onblur="sfBlur()">
+            <button class="sf-clear" onclick="sfClearText()" aria-label="Clear the search" title="Clear"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 2l6 6M8 2 2 8"/></svg></button>
           </div>
           <div class="sf-sugg" id="sfSugg" role="listbox" aria-label="Suggestions"></div>
         </div>
+        <div class="sf-pills" id="sfChips" aria-label="Filters"></div>
         <div class="sf-bar" id="sfBar"></div>
         <div class="lp-body" id="lpBody"></div>
       </div>
@@ -4347,8 +4353,11 @@ const SF_SORTS = [['best', 'Best', 'Must read, then Interesting, then Tangential
 const SF_SHORT = { best: 'Best', match: 'Best match', added: 'Added', published: 'Published' };   // the order's name on a narrow screen's button
 const SF_SRC = { email: 'Email alerts', web_survey: 'Web survey', manual: 'Added by you' };
 const SF_REL = [['definitely', 'Must Read'], ['probably', 'Interesting'], ['mildly', 'Tangential']];
-const SF_SHOW = [['unread', 'Unread'], ['read', 'Read'], ['all', 'All']];   // one of the three; Starred narrows any of them
-function sfEmpty() { return { keys: [], draft: '', any: false, show: 'unread', starred: false, rel: [], topic: [], interest: [], author: [], venue: [], year: [], src: [], alert: [], sort: '' }; }
+/* Read and unread as eyes: open for papers you've read, struck through for those you haven't */
+const SF_EYE = '<svg class="sf-eye" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+const SF_EYE_OFF = '<svg class="sf-eye" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.9 4.24A9.6 9.6 0 0 1 12 4c6.4 0 10 8 10 8a17.7 17.7 0 0 1-2.2 3.2M6.6 6.6C3.8 8.4 2 12 2 12s3.6 8 10 8a9.7 9.7 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2"/><path d="M3 3l18 18"/></svg>';
+const SF_SHOW = [['all', 'All', ''], ['unread', 'Unread', SF_EYE_OFF], ['read', 'Read', SF_EYE]];   // one of the three; Starred narrows any of them
+function sfEmpty() { return { text: '', any: false, show: 'unread', starred: false, rel: [], topic: [], interest: [], author: [], venue: [], year: [], src: [], alert: [], sort: '' }; }
 let SF = sfEmpty();
 /* Every group in the sidebar folds; the first four start open, the rest closed, and each stays as you leave it */
 const SF_OPEN_FIRST = ['show', 'rel', 'topics', 'interests'];
@@ -4365,12 +4374,11 @@ function sfIsOpen(id) { return id in _sfFold ? _sfFold[id] : SF_OPEN_FIRST.inclu
 const _sfMore = new Set();   // groups whose "Show more" was pressed (this visit)
 let _sfTimer = 0;
 
-/* The address: #search?k=conformal&k=reachability&any=1&show=all&starred=1&rel=…&topic=…&interest=…&author=…&venue=…&year=…&src=…&sort=… */
+/* The address: #search?q=conformal+reachability&any=1&show=all&starred=1&rel=…&topic=…&interest=…&author=…&venue=…&year=…&src=…&sort=… */
 function sfParse(qs) {
   const s = sfEmpty(), u = new URLSearchParams(qs || '');
-  const add = k => { k = k.trim(); if (k && !s.keys.includes(k)) s.keys.push(k); };
-  u.getAll('k').forEach(add);
-  (u.get('q') || '').split(/\s+/).forEach(add);   // older #search?q=… links: each word a key
+  const legacy = u.getAll('k').map(k => k.trim()).filter(Boolean).map(k => /\s/.test(k) ? `"${k}"` : k);   // links from when words were chips
+  s.text = (u.get('q') || legacy.join(' ')).trim();
   s.any = u.get('any') === '1';
   const sh = u.get('show');
   if (sh) s.show = sh === 'read' ? 'read' : sh === 'unread' ? 'unread' : 'all';   // (an older "read,unread" is all of them)
@@ -4382,8 +4390,8 @@ function sfParse(qs) {
 }
 function sfHash(s) {
   const u = new URLSearchParams();
-  s.keys.forEach(k => u.append('k', k));
-  if (s.any && s.keys.length > 1) u.set('any', '1');
+  if (s.text.trim()) u.set('q', s.text.trim());
+  if (s.any && sfWords(s.text).length > 1) u.set('any', '1');
   if (s.show !== 'unread') u.set('show', s.show);
   if (s.starred) u.set('starred', '1');
   SF_MULTI.forEach(f => s[f].forEach(v => u.append(f, v)));
@@ -4412,7 +4420,13 @@ function openTopList() { location.hash = sfAt('rel', 'definitely'); }
 /* ----- Matching ----- */
 const sfEscRe = t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 function sfKeyRe(k) { return new RegExp('(?:^|[^\\p{L}\\p{N}])(' + k.trim().split(/\s+/).map(sfEscRe).join('[\\s\\-–]+') + ')', 'iu'); }
-function sfKeys() { const d = SF.draft.trim(); return d && !SF.keys.some(k => k.toLowerCase() === d.toLowerCase()) ? SF.keys.concat(d) : SF.keys.slice(); }
+/* The words in the box: each word a key, "quoted words" one phrase */
+function sfWords(t) {
+  const out = [];
+  (t || '').replace(/"([^"]+)"|(\S+)/g, (_, ph, w) => { const k = (ph || w.replace(/"/g, '')).trim(); if (k && !out.some(x => x.toLowerCase() === k.toLowerCase())) out.push(k); });
+  return out;
+}
+function sfKeys() { return sfWords(SF.text); }
 const SF_W = [4, 3, 2, 1];   // a match in the headline or title counts most, then authors, venue, and the text
 function sfScore(p, res) {
   if (!res.length) return [0, 0];
@@ -4474,7 +4488,7 @@ function sfVals(p) {
    show with the other filters as they are */
 function sfCompute(s) {
   s = s || SF;
-  const keys = s === SF ? sfKeys() : s.keys, res = keys.map(sfKeyRe), rows = [];
+  const keys = sfWords(s.text), res = keys.map(sfKeyRe), rows = [];
   for (const p of allPapers) {
     const [n, w] = sfScore(p, res);
     if (keys.length && (s.any ? !n : n < keys.length)) continue;
@@ -4512,7 +4526,6 @@ function showSearch(s, o) {
     }
     _listBackLabel = _leftPaper || _paperViewActive ? 'Back' : (TAB_NAMES[currentTab] || 'Back');
   }
-  if (returning) s.draft = SF.draft;   // what you were typing, as you left it
   if (_listKey !== h && !returning) _listShowLow = false;
   SF = s; _listKey = h; _listViewActive = true;
   if (_paperViewActive) { _paperViewActive = false; document.getElementById('sec-paper').classList.remove('active'); }
@@ -4522,7 +4535,8 @@ function showSearch(s, o) {
   document.body.classList.add('sf-on');
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   const inp = document.getElementById('sfInput');
-  if (inp.value !== SF.draft) inp.value = SF.draft;
+  if (inp.value !== SF.text) inp.value = SF.text;
+  sfTextState();
   _sfSync = returning; renderSearch(); _sfSync = false;   // coming back: the whole list now, for the router to scroll to where you were
   if (returning && _sfAnchor) {   // rows near it are drawn at their real height over the next frames: keep it in place until it holds still
     const a = _sfAnchor; let still = 0, n = 0;
@@ -4545,7 +4559,7 @@ function openSearchHere(from) {
   }
   const inp = document.getElementById('sfInput');
   inp.focus();
-  if (typed) { inp.value = SF.draft + typed; sfType(inp.value); }
+  if (typed) { inp.value = (SF.text ? SF.text.trimEnd() + ' ' : '') + typed; sfType(inp.value); }
 }
 /* Where you were in the results: the first row under the bar and how far down it sat. Rows off screen are drawn at
    an estimated height, so a pixel offset alone would land on a different paper after a redraw; the row puts you back. */
@@ -4602,8 +4616,7 @@ function sfRemove(e, f, v) {
   sfDrop(f, v);
 }
 function sfDrop(f, v) {
-  if (f === 'key') SF.keys = SF.keys.filter(k => k !== v);
-  else if (f === 'show') SF.show = 'all';
+  if (f === 'show') SF.show = 'all';
   else if (f === 'starred') SF.starred = false;
   else SF[f] = SF[f].filter(x => x !== v);
   sfCommit();
@@ -4611,7 +4624,7 @@ function sfDrop(f, v) {
 function sfSetShow(v) { SF.show = v; sfCommit(); }
 function sfSetSort(v) { SF.sort = v; sfCommit(); }
 function sfSetAny(v) { SF.any = v; sfCommit(); }
-function sfClearFilters() { const keys = SF.keys, any = SF.any, sort = SF.sort, draft = SF.draft; SF = Object.assign(sfEmpty(), { keys, any, sort, draft }); sfCommit(); }
+function sfClearFilters() { const text = SF.text, any = SF.any, sort = SF.sort; SF = Object.assign(sfEmpty(), { text, any, sort }); sfCommit(); }
 function sfSec(id) {
   _sfFold[id] = !sfIsOpen(id);
   try { localStorage.setItem('scholar_sf_fold', JSON.stringify(_sfFold)); localStorage.removeItem('scholar_sf_open'); } catch (e) {}
@@ -4621,90 +4634,91 @@ function sfMore(id) { _sfMore.add(id); renderSearch(); }
 
 /* ----- The field: chips for what's set, and what you're typing ----- */
 function sfType(v) {
-  SF.draft = v;
-  document.querySelectorAll('#sfChips .armed').forEach(c => c.classList.remove('armed'));
+  SF.text = v;
+  sfTextState();
   sfSuggest();
   clearTimeout(_sfTimer);
-  _sfTimer = setTimeout(renderSearch, 120);
+  _sfTimer = setTimeout(() => { _sfTimer = 0; sfSyncUrl(); renderSearch(); }, 140);
 }
-function sfAddKey(k) {
-  k = (k || '').trim();
-  if (k && !SF.keys.some(x => x.toLowerCase() === k.toLowerCase())) SF.keys.push(k);
-  sfClearDraft();
-  sfCommit();
+function sfSyncUrl() {   // the words into the address (no new Back step), so a reload or a paper and Back keep them
+  if (!_listViewActive) return;
+  _listKey = sfHash(SF);
+  if (location.hash !== _listKey) history.replaceState(null, '', location.pathname + location.search + _listKey);
 }
-function sfClearDraft() { SF.draft = ''; const inp = document.getElementById('sfInput'); inp.value = ''; sfSuggClose(); }
+function sfTextState() { document.querySelector('.sf-field').classList.toggle('has-text', !!SF.text); }
+function sfClearText() {
+  SF.text = ''; const inp = document.getElementById('sfInput'); inp.value = '';
+  sfTextState(); sfSuggClose(); clearTimeout(_sfTimer);
+  sfCommit(); inp.focus();
+}
+function sfBlur() { if (_sfTimer) sfSyncUrl(); }   // leaving the box (say, to open a paper): the words are in the address at once; the results follow as planned, so nothing moves under a click
 function sfKey(e) {
   const box = document.getElementById('sfBox'), opts = [...document.querySelectorAll('#sfSugg .sf-opt')];
   const at = opts.findIndex(o => o.classList.contains('hl'));
   if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && box.classList.contains('sugg-open') && opts.length) {
     e.preventDefault();
-    const next = opts[(at + (e.key === 'ArrowDown' ? 1 : -1) + opts.length) % opts.length];
+    const next = opts[at < 0 ? (e.key === 'ArrowDown' ? 0 : opts.length - 1) : (at + (e.key === 'ArrowDown' ? 1 : -1) + opts.length) % opts.length];
     opts.forEach(o => o.classList.toggle('hl', o === next));
     next.scrollIntoView({ block: 'nearest' });
   } else if (e.key === 'Enter') {
     e.preventDefault();
-    if (box.classList.contains('sugg-open') && at >= 0) opts[at].click();
-    else if (SF.draft.trim()) sfAddKey(SF.draft);
-    else e.target.blur();   // a phone's Search key: put the keyboard away
+    if (box.classList.contains('sugg-open') && at >= 0) { opts[at].click(); return; }
+    sfSuggClose(); clearTimeout(_sfTimer); _sfTimer = 0; sfSyncUrl(); renderSearch();
+    if (window.matchMedia('(max-width: 1000px)').matches) e.target.blur();   // a tablet's or phone's Search key: put the keyboard away
   } else if (e.key === 'Escape') {
     e.preventDefault(); e.stopPropagation();
     if (box.classList.contains('sugg-open')) sfSuggClose();
-    else if (SF.draft) { sfClearDraft(); renderSearch(); }
+    else if (SF.text) sfClearText();
     else e.target.blur();
-  } else if (e.key === 'Backspace' && !e.target.value) {
-    const chips = document.querySelectorAll('#sfChips .sf-chip'), last = chips[chips.length - 1];
-    if (!last) return;
-    e.preventDefault();
-    if (last.classList.contains('armed')) sfRemove(null, last.dataset.f, last.dataset.v);   // the second press removes it
-    else last.classList.add('armed');                                                        // the first marks it
   }
 }
-function sfFieldClick(e) { if (!e.target.closest('.sf-x')) document.getElementById('sfInput').focus(); }
+function sfFieldClick(e) { if (!e.target.closest('.sf-clear')) document.getElementById('sfInput').focus(); }
 
-/* Suggestions while typing: the words themselves, then the topics, interests, authors, venues and years they name */
+/* Suggestions while typing: the topics, interests, authors, venues and years that what you've typed names (all of it, or
+   its last word); choosing one adds it as a filter and takes those words out of the box */
 let _sfOpts = [];
 function sfSuggest() {
-  const q = SF.draft.trim(), box = document.getElementById('sfBox'), el = document.getElementById('sfSugg');
-  if (!q || document.activeElement !== document.getElementById('sfInput')) { sfSuggClose(); return; }
-  const re = sfKeyRe(q), A = sfAuthors(), lv = sfLevels();
-  const hit = s => { const m = re.exec(s); if (!m) return esc(s); const i = m.index + m[0].length - m[1].length; return esc(s.slice(0, i)) + '<b>' + esc(s.slice(i, i + m[1].length)) + '</b>' + esc(s.slice(i + m[1].length)); };
-  const count = sfTotal;
-  const groups = [];
-  _sfOpts = [{ f: 'key', v: q }];
-  const opt = (o, inner, n) => { _sfOpts.push(o); return `<button class="sf-opt" role="option" onmousedown="event.preventDefault()" onclick="sfPick(${_sfOpts.length - 1})">${inner}${n != null ? `<span class="n">${n}</span>` : ''}</button>`; };
-  const words = `<button class="sf-opt hl" role="option" onmousedown="event.preventDefault()" onclick="sfPick(0)"><svg class="sf-opt-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg><span class="l">Search for “<b>${esc(q)}</b>”</span></button>`;
-  const topics = GROUP_ORDER.filter(g => re.test(g) && !SF.topic.includes(g)).slice(0, 4).map(g => opt({ f: 'topic', v: g }, `${gdot(g)}<span class="l">${hit(g)}</span>`, count('topic', g)));
-  const ints = Object.keys(lv).filter(n => re.test(n) && !SF.interest.includes(n)).map(n => [n, count('interest', n)]).sort((a, b) => b[1] - a[1]).slice(0, 4)
-    .map(([n, c]) => opt({ f: 'interest', v: n }, `<span class="l"><span class="k">about</span> ${hit(n)}</span>`, c));
-  const auths = A.all().filter(id => !SF.author.includes(id) && (re.test(A.name(id)) || re.test(id))).sort((a, b) => A.count.get(b) - A.count.get(a)).slice(0, 5)
-    .map(id => opt({ f: 'author', v: id }, `<span class="l"><span class="k">by</span> ${hit(A.name(id))}</span>`, A.count.get(id)));
-  const vc = sfTotal().venue;
-  const vens = Object.keys(vc).filter(v => re.test(v) && !SF.venue.includes(v)).sort((a, b) => vc[b] - vc[a]).slice(0, 4).map(v => opt({ f: 'venue', v }, `<span class="l"><span class="k">in</span> ${hit(v)}</span>`, vc[v]));
-  const years = /^(19|20)\d{2}$/.test(q) && !SF.year.includes(q) ? [opt({ f: 'year', v: q }, `<span class="l"><span class="k">published in</span> <b>${q}</b></span>`, count('year', q))] : [];
-  const col = list => list.filter(x => x[1].length).map(([t, items]) => `<h3>${t}</h3>${items.join('')}`).join('');
-  const left = `<h3>Words</h3>${words}` + col([['Authors', auths], ['Years', years]]), right = col([['Topics', topics], ['Interests', ints], ['Venues', vens]]);
-  el.innerHTML = `<div class="sf-col">${left}</div>${right ? `<div class="sf-col">${right}</div>` : ''}`;
-  el.classList.toggle('one', !right);
+  const box = document.getElementById('sfBox'), el = document.getElementById('sfSugg');
+  const t = SF.text.trim().replace(/"/g, ''), last = t.split(/\s+/).pop() || '';
+  if (!t || document.activeElement !== document.getElementById('sfInput')) { sfSuggClose(); return; }
+  const qs = [...new Set([t, last])].filter(q => q.length >= 2);
+  const A = sfAuthors(), lv = sfLevels(), vc = sfTotal().venue, seen = new Set(), groups = { topic: [], interest: [], author: [], venue: [], year: [] };
+  _sfOpts = [];
+  const add = (f, v, q, inner, n) => { if (seen.has(f + v) || groups[f].length >= (f === 'author' ? 5 : 4)) return; seen.add(f + v); _sfOpts.push({ f, v, q }); groups[f].push(`<button class="sf-opt" role="option" onmousedown="event.preventDefault()" onclick="sfPick(${_sfOpts.length - 1})">${inner}${n != null ? `<span class="n">${n}</span>` : ''}</button>`); };
+  qs.forEach(q => {
+    const re = sfKeyRe(q);
+    const hit = s => { const m = re.exec(s); if (!m) return esc(s); const i = m.index + m[0].length - m[1].length; return esc(s.slice(0, i)) + '<b>' + esc(s.slice(i, i + m[1].length)) + '</b>' + esc(s.slice(i + m[1].length)); };
+    GROUP_ORDER.filter(g => re.test(g) && !SF.topic.includes(g)).forEach(g => add('topic', g, q, `${gdot(g)}<span class="l">${hit(g)}</span>`, sfTotal('topic', g)));
+    Object.keys(lv).filter(n => re.test(n) && !SF.interest.includes(n)).sort((a, b) => sfTotal('interest', b) - sfTotal('interest', a)).forEach(n => add('interest', n, q, `<span class="l"><span class="k">about</span> ${hit(n)}</span>`, sfTotal('interest', n)));
+    A.all().filter(id => !SF.author.includes(id) && (re.test(A.name(id)) || re.test(id))).sort((a, b) => A.count.get(b) - A.count.get(a)).slice(0, 8).forEach(id => add('author', id, q, `<span class="l"><span class="k">by</span> ${hit(A.name(id))}</span>`, A.count.get(id)));
+    Object.keys(vc).filter(v => re.test(v) && !SF.venue.includes(v)).sort((a, b) => vc[b] - vc[a]).forEach(v => add('venue', v, q, `<span class="l"><span class="k">in</span> ${hit(v)}</span>`, vc[v]));
+    if (/^(19|20)\d{2}$/.test(q) && !SF.year.includes(q)) add('year', q, q, `<span class="l"><span class="k">from</span> <b>${q}</b></span>`, sfTotal('year', q));
+  });
+  if (!_sfOpts.length) { sfSuggClose(); return; }
+  const col = list => list.filter(x => x[1].length).map(([h, items]) => `<h3>${h}</h3>${items.join('')}`).join('');
+  const left = col([['Authors', groups.author], ['Years', groups.year]]), right = col([['Topics', groups.topic], ['Interests', groups.interest], ['Venues', groups.venue]]);
+  el.innerHTML = (left ? `<div class="sf-col">${left}</div>` : '') + (right ? `<div class="sf-col">${right}</div>` : '');
+  el.classList.toggle('one', !left || !right);
   box.classList.add('sugg-open');
 }
 function sfPick(i) {
   const o = _sfOpts[i];
   if (!o) return;
-  if (o.f === 'key') { sfAddKey(o.v); return; }
   if (!SF[o.f].includes(o.v)) SF[o.f].push(o.v);
-  sfClearDraft();
+  const t = SF.text.trim();   // the words it came from leave the box
+  SF.text = t.replace(/"/g, '') === o.q ? '' : t.slice(0, t.length - (t.split(/\s+/).pop() || '').length).trimEnd();
+  const inp = document.getElementById('sfInput'); inp.value = SF.text;
+  sfTextState(); sfSuggClose(); clearTimeout(_sfTimer);
   sfCommit();
-  document.getElementById('sfInput').focus();   // ready for the next one
+  inp.focus();   // ready for the next one
 }
 function sfSuggClose() { const b = document.getElementById('sfBox'); if (b) b.classList.remove('sugg-open'); }
 
 /* ----- Drawing it ----- */
 const SF_X = '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 2l6 6M8 2 2 8"/></svg>';
-function sfChipList() {   // [filter, value, label as HTML, label as text], in the field's order
+function sfChipList() {   // [filter, value, label as HTML, label as text]: the filters set, as pills under the box
   const A = sfAuthors(), out = [];
-  SF.keys.forEach(k => out.push(['key', k, `<span class="t">${esc(k)}</span>`, k]));
-  if (SF.show !== 'all') { const l = SF.show === 'unread' ? 'Unread' : 'Read'; out.push(['show', SF.show, `<span class="t">${l}</span>`, l]); }
+  if (SF.show !== 'all') { const l = SF.show === 'unread' ? 'Unread' : 'Read'; out.push(['show', SF.show, SF.show === 'unread' ? SF_EYE_OFF : SF_EYE, l]); }
   if (SF.starred) out.push(['starred', '1', '<span class="sf-star" aria-hidden="true">&#9733;</span><span class="t">Starred</span>', 'Starred']);
   SF.rel.forEach(r => out.push(['rel', r, `<i class="gdot" style="--gc:var(--lv-${r})"></i><span class="t">${relLabel(r)}</span>`, relLabel(r)]));
   SF.topic.forEach(g => out.push(['topic', g, `${gdot(g)}<span class="t">${esc(g)}</span>`, g]));
@@ -4716,8 +4730,8 @@ function sfChipList() {   // [filter, value, label as HTML, label as text], in t
   SF.alert.forEach(a => out.push(['alert', a, `<span class="k">alert</span><span class="t">${esc(a)}</span>`, a]));
   return out;
 }
-/* The field's chips: one that's new fades in, those already there glide to their new places (the field reflows when
-   one comes or goes); nothing moves on the first draw of the page */
+/* The pills: one that's new fades in, those already there glide to their new places (the row reflows when one comes
+   or goes); nothing moves on the first draw of the page */
 let _sfChipsLive = false;
 function sfDrawChips(html) {
   const box = document.getElementById('sfChips'), key = c => c.dataset.f + '\u0000' + c.dataset.v;
@@ -4733,19 +4747,17 @@ function sfDrawChips(html) {
     if (dx || dy) c.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], { duration: 220, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' });
   });
 }
-/* A short name for these results: the one thing set (besides Unread), or "these results" */
-function sfNavLabel() { const c = sfChipList().filter(x => x[0] !== 'show'); return c.length === 1 ? c[0][3] : 'these results'; }
+/* A short name for these results: the words alone, the one filter set (besides read state), or "these results" */
+function sfNavLabel() { const c = sfChipList().filter(x => x[0] !== 'show'), t = SF.text.trim(); return t && !c.length ? '“' + t + '”' : !t && c.length === 1 ? c[0][3] : 'these results'; }
 function renderSearch() {
   if (!_listViewActive) return;
   const c = sfCompute(), lv = sfLevels(), A = sfAuthors();
-  // the field's chips
+  // the pills under the box
   const chips = sfChipList();
   sfDrawChips(chips.map(([f, v, html, text]) =>
-    `<span class="sf-chip" data-f="${f}" data-v="${dataAttr(v)}">${html}<button class="sf-x" onclick="sfRemove(event,'${f}','${escAttr(v)}')" aria-label="Remove ${escAttr(text)}" title="Remove">${SF_X}</button></span>`).join(''));
-  const inp = document.getElementById('sfInput');
-  const narrow = window.matchMedia('(max-width: 600px)').matches;
-  inp.placeholder = narrow ? (chips.length ? 'Add words or a name…' : 'Search papers…') : chips.length ? 'Add words, an author, a topic…' : 'Search words, authors, topics, venues…';
-  document.getElementById('lpBarTitle').textContent = chips.map(x => x[3]).join(' · ') || 'All papers';
+    `<span class="sf-chip${f === 'show' ? ' icon' : ''}" data-f="${f}" data-v="${dataAttr(v)}" title="${escAttr(text)}">${html}<button class="sf-x" onclick="sfRemove(event,'${f}','${escAttr(v)}')" aria-label="Remove ${escAttr(text)}" title="Remove">${SF_X}</button></span>`).join(''));
+  document.getElementById('sfInput').placeholder = window.matchMedia('(max-width: 600px)').matches ? 'Search papers…' : 'Search titles, authors, abstracts and notes…';
+  document.getElementById('lpBarTitle').textContent = [SF.text.trim() ? '“' + SF.text.trim() + '”' : ''].concat(chips.map(x => x[3])).filter(Boolean).join(' · ') || 'All papers';
   document.getElementById('lpBack').textContent = _listBackLabel;
   // the bar: how many, how keys combine, filters (narrow screens), order
   const n = c.results.length, sort = sfSortNow();
@@ -4770,7 +4782,7 @@ function renderSearch() {
     _sfSig = sig;
     updateListBar();
   });
-  document.getElementById('lp').style.setProperty('--gbg', SF.topic.length === 1 ? topicGlow(SF.topic) : 'none');   // one topic: its faint colour
+  document.getElementById('lp').style.setProperty('--gbg', SF.topic.length ? topicGlow(SF.topic) : 'none');   // the topics chosen, faintly, blended left to right as on the paper cards
   if (document.getElementById('sfBox').classList.contains('sugg-open')) sfSuggest();
   updateListBar();
 }
@@ -4804,8 +4816,8 @@ function sfFiltersHTML(c, lv, A, where) {
   };
   const byCount = f => Object.keys(c.base[f] || {}).concat(SF[f]).filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => ((c.base[f] || {})[b] || 0) - ((c.base[f] || {})[a] || 0) || String(a).localeCompare(String(b)));
   const sc = c.counts.show || {}, scN = { unread: sc.unread || 0, read: sc.read || 0, all: (sc.unread || 0) + (sc.read || 0) };
-  const seg = `<div class="tl-sort sf-show" role="radiogroup" aria-label="Show">${SF_SHOW.map(([v, l]) =>
-    `<button role="radio" data-k="show:${v}" aria-checked="${SF.show === v}" class="${SF.show === v ? 'active' : ''}" title="${scN[v]} ${scN[v] === 1 ? 'paper' : 'papers'}" onclick="sfSetShow('${v}')">${l}</button>`).join('')}</div>`;
+  const seg = `<div class="tl-sort sf-show" role="radiogroup" aria-label="Show">${SF_SHOW.map(([v, l, ic]) =>
+    `<button role="radio" data-k="show:${v}" aria-checked="${SF.show === v}" aria-label="${l}" class="${SF.show === v ? 'active' : ''}" title="${l}: ${scN[v]} ${scN[v] === 1 ? 'paper' : 'papers'}" onclick="sfSetShow('${v}')">${ic || l}</button>`).join('')}</div>`;
   const show = seg + wrap(item('starred', '1', 'Starred'));
   const rel = wrap(SF_REL.map(([r, l]) => item('rel', r, l, `var(--lv-${r})`)).join(''));
   const topics = wrap(GROUP_ORDER.concat(SF.topic.filter(g => !GROUP_ORDER.includes(g))).map(g => item('topic', g, g, groupColor(g))).join(''));
@@ -4873,7 +4885,7 @@ function sfEmptyHTML(c) {
   const ways = [];
   const readN = SF.show === 'unread' ? c.rows.filter(r => r.read && c.pass(r, 'show')).length : 0;
   if (readN) ways.push(`<button class="lp-fold" onclick="sfSetShow('all')">Include ${readN} read ${readN === 1 ? 'paper' : 'papers'}</button>`);
-  if (!SF.any && c.keys.length > 1) { const anyN = sfCompute(Object.assign({}, SF, { keys: c.keys, any: true })).results.length; if (anyN) ways.push(`<button class="lp-fold" onclick="sfSetAny(true)">Match any word: ${anyN} ${anyN === 1 ? 'paper' : 'papers'}</button>`); }
+  if (!SF.any && c.keys.length > 1) { const anyN = sfCompute(Object.assign({}, SF, { any: true })).results.length; if (anyN) ways.push(`<button class="lp-fold" onclick="sfSetAny(true)">Match any word: ${anyN} ${anyN === 1 ? 'paper' : 'papers'}</button>`); }
   if (SF_MULTI.some(f => SF[f].length) || SF.starred) ways.push(`<button class="lp-fold" onclick="sfClearFilters()">Clear the filters</button>`);
   const what = !c.keys.length && !sfFilterCount() ? 'No papers yet.'
     : !c.keys.length && SF.show === 'unread' && sfFilterCount() === 1 ? 'You’ve read everything.'
