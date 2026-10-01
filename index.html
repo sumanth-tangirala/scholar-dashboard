@@ -345,7 +345,14 @@ html.ro #vaultOverlay { display: none !important; }
 .f-date { white-space: nowrap; }
 .f-topics { display: inline-flex; gap: 6px; min-width: 0; overflow: hidden; }
 .f-topic { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; font-size: 11.5px; color: var(--text-secondary); background: rgba(255,255,255,0.07); padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
-.f-topic.more { padding: 2px 8px; cursor: default; font-variant-numeric: tabular-nums; }
+.f-topic.more { padding: 2px 8px; cursor: pointer; font-variant-numeric: tabular-nums; transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
+.f-topic.more:hover, .f-topic.more.open { background: rgba(255,255,255,0.13); color: var(--text); }
+html.no-hover .f-topic.more:hover:not(.open) { background: rgba(255,255,255,0.07); color: var(--text-secondary); }
+.tr-line .f-topic.more:hover, .tr-line .f-topic.more.open { background: rgba(255,255,255,0.12); color: var(--text-secondary); }
+/* The topics a "+N" stands for */
+.chip-pop { position: fixed; z-index: 210; display: flex; flex-direction: column; gap: 7px; padding: 10px 12px; max-width: min(280px, calc(100vw - 32px)); background: var(--bg-surface); border: 1px solid rgba(255,255,255,0.18); border-radius: 10px; box-shadow: 0 12px 36px rgba(0,0,0,0.6); font-size: 12.5px; color: var(--text-secondary); animation: dropdown-in 0.15s ease forwards; pointer-events: none; }
+.chip-pop span { display: flex; align-items: center; gap: 8px; }
+.chip-pop .gdot { width: 7px; height: 7px; }
 .f-topic[hidden] { display: none; }
 .f-topics.solo .f-topic:first-child { flex-shrink: 1; min-width: 0; }   /* only when it's the one chip left: it shortens instead of being cut */
 .f-tn { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
@@ -3891,10 +3898,46 @@ function fitChips(box) {
     chips[n].hidden = true;
     const rest = chips.slice(n).map(c => c.dataset.g);
     more.hidden = false; more.textContent = '+' + rest.length;
-    more.title = 'Also: ' + rest.join(', '); more.setAttribute('aria-label', 'Also: ' + rest.join(', '));
+    more.setAttribute('aria-label', 'Also: ' + rest.join(', '));   // the list itself shows on hover or tap (chipPop)
   }
   if (!fits()) box.classList.add('solo');   // one chip (and +N) still too wide: that chip shortens
 }
+/* "+N" names its topics: a mouse shows them while hovering it, a tap (finger or Pencil) toggles them. Its click never
+   reaches the card or row it sits in, so it can't open the paper. Gone on scroll, resize, Esc or a tap elsewhere. */
+let _chipPop = null;
+function hideChipPop() {
+  if (!_chipPop) return;
+  _chipPop.el.remove(); _chipPop.more.classList.remove('open'); _chipPop = null;
+}
+function showChipPop(more) {
+  hideChipPop();
+  const gs = [...more.parentElement.querySelectorAll('.f-topic[hidden]:not(.more)')].map(c => c.dataset.g);
+  if (!gs.length) return;
+  const el = document.createElement('div'); el.className = 'chip-pop'; el.setAttribute('role', 'tooltip');
+  el.innerHTML = gs.map(g => `<span>${gdot(g)}${esc(g)}</span>`).join('');
+  document.body.appendChild(el);
+  const r = more.getBoundingClientRect(), w = el.offsetWidth, h = el.offsetHeight;
+  el.style.left = Math.max(16, Math.min(r.left, window.innerWidth - w - 16)) + 'px';
+  el.style.top = (r.bottom + 6 + h > window.innerHeight - 8 ? r.top - 6 - h : r.bottom + 6) + 'px';
+  more.classList.add('open'); _chipPop = { el, more };
+}
+document.addEventListener('pointerover', e => { const m = e.pointerType === 'mouse' && e.target.closest && e.target.closest('.f-topic.more'); if (m && (!_chipPop || _chipPop.more !== m)) showChipPop(m); });
+document.addEventListener('pointerout', e => { if (e.pointerType === 'mouse' && _chipPop && e.target.closest && e.target.closest('.f-topic.more') === _chipPop.more && !_chipPop.more.contains(e.relatedTarget)) hideChipPop(); });
+let _chipPtr = 'mouse';
+document.addEventListener('pointerdown', e => {
+  _chipPtr = e.pointerType;
+  if (_chipPop && !(e.target.closest && e.target.closest('.f-topic.more'))) hideChipPop();   // a tap elsewhere
+}, true);
+document.addEventListener('click', e => {
+  const m = e.target.closest && e.target.closest('.f-topic.more');
+  if (!m) return;
+  e.preventDefault(); e.stopPropagation();   // not the card's or row's click
+  if (_chipPtr === 'mouse') { if (!_chipPop) showChipPop(m); return; }   // a mouse already shows it on hover
+  if (_chipPop && _chipPop.more === m) hideChipPop(); else showChipPop(m);
+}, true);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') hideChipPop(); });
+window.addEventListener('resize', hideChipPop);
+document.addEventListener('scroll', hideChipPop, true);
 const _chipRows = new WeakMap();
 const _chipRO = window.ResizeObserver ? new ResizeObserver(es => es.forEach(e => { const b = _chipRows.get(e.target); if (b && b.isConnected) fitChips(b); })) : null;
 function watchChips(root) {
