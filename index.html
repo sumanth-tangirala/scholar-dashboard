@@ -1519,6 +1519,9 @@ html.no-hover .sf-tip:hover::after { opacity: 0; }
 .sf-clear:hover { background: rgba(255,255,255,0.1); color: var(--text); }
 .sf-clear svg { width: 10px; height: 10px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; }
 .sf-field.has-text .sf-clear { display: inline-flex; }
+.sf-mode-slot:empty { display: none; }
+.sf-field .tl-sort.sf-mode { height: 30px; padding: 2px; border-radius: 999px; border-color: rgba(255,255,255,0.18); }   /* the bar's segmented control, a size down to sit in the box */
+.sf-field .tl-sort.sf-mode button { height: 100%; padding: 0 11px; border-radius: 999px; font-size: 12.5px; white-space: nowrap; }
 .sf-help { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 32px; height: 32px; border: none; border-radius: 50%; background: none; color: var(--text-muted); cursor: pointer; transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
 .sf-help:hover, .sf-box.guide-open .sf-help { background: rgba(255,255,255,0.1); color: var(--text); }
 .sf-help svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; }
@@ -1640,7 +1643,7 @@ html.no-hover .sf-tip:hover::after { opacity: 0; }
 .sf-sheet-body .tl-sort.sf-mode { width: max-content; height: 38px; padding: 2px; border-radius: 999px; border-color: rgba(255,255,255,0.2); }
 .sf-sheet-body .tl-sort.sf-mode button { height: 100%; padding: 0 16px; border-radius: 999px; font-size: 13.5px; }
 .sf-sheet .sf-words { display: none; }   /* only where the bar has no room for it */
-@media (max-width: 600px) { .sf-bar .sf-mode { display: none; } .sf-sheet .sf-words { display: block; } }
+@media (max-width: 600px) { .sf-field .sf-mode { display: none; } .sf-sheet .sf-words { display: block; } }
 @media (min-width: 601px) { .sf-sheet { left: 50%; right: auto; width: min(600px, 100%); border-radius: 16px 16px 0 0; transform: translate(-50%, 100%); } .sf-sheet.open { transform: translate(-50%, 0); } }
 /* ===== CONTINUE READING: the papers you're partway through, from any of your devices (above Top Papers; a strip
    at the top of the phone feed) ===== */
@@ -1693,7 +1696,7 @@ body.tok-mode .tok-bar { flex-wrap: wrap; row-gap: 8px; }
 .lp-body.ranked .lp-row { grid-template-columns: 30px minmax(0, 1fr); column-gap: 14px; }
 .lp-row:hover { background: rgba(255,255,255,0.035); }
 #lpBody .lp-row { content-visibility: auto; contain-intrinsic-size: auto 96px; }   /* the measured height of a row here, so rows not yet drawn hold their place */
-@media (max-width: 1000px) { #lpBody .lp-row { contain-intrinsic-size: auto 112px; } }
+@media (max-width: 1000px) { #lpBody .lp-row { contain-intrinsic-size: auto 104px; } }
 .lp-num { font-family: var(--serif); font-size: 15px; padding-top: 3px; color: color-mix(in srgb, var(--gc) 65%, #888); font-variant-numeric: tabular-nums; }
 .lp-row-main { min-width: 0; }
 .lp-h { font-family: var(--serif); font-optical-sizing: auto; font-size: 19px; font-weight: 500; line-height: 1.3; color: #ececef; text-wrap: pretty; transition: color var(--t-fast) var(--ease); }
@@ -1734,7 +1737,6 @@ body.tok-mode .tok-bar { flex-wrap: wrap; row-gap: 8px; }
   .sf-sort { margin-left: 0; order: 2; }
   .sf-sort .tl-sort { display: none; }
   .sf-sort-btn { display: inline-flex; }
-  .sf-mode { order: 3; }
 }
 @media (max-width: 600px) {
   .lp-bar .pd-bar-title { display: block; }   /* (a paper page's phone bar has no room for it; this one does) */
@@ -1744,7 +1746,7 @@ body.tok-mode .tok-bar { flex-wrap: wrap; row-gap: 8px; }
   .lp-body.ranked .lp-row { grid-template-columns: 24px minmax(0, 1fr); column-gap: 10px; }
   .lp-h { font-size: 17.5px; }
   .lp-also { display: none; }
-  #lpBody .lp-row { contain-intrinsic-size: auto 136px; }
+  #lpBody .lp-row { contain-intrinsic-size: auto 130px; }
 }
 @media (prefers-reduced-motion: reduce) { .lp-more, .lp-row, .lp-h, .lp-rail-item, .sf-field, .sf-chip, .sf-x, .sf-opt, .sf-sheet, .sf-scrim, .sf-filters-btn, .sf-sort-btn, .sf-rail .lp-rail-item .l, .sf-rail .lp-rail-item .gdot, .sf-rail .lp-rail-item .sf-star-i, .sf-sheet-body .tl-chip { transition: none; } .sf-box.sugg-open .sf-sugg, .sf-box.guide-open .sf-guide, .sf-chip.sf-in, .lp-body.sf-fade { animation: none; } .sf-help, .sf-g-row { transition: none; } .sf-chip.sf-out { transition: none; } }
 
@@ -2391,6 +2393,7 @@ html.no-hover .sel-icon:not(.on):active, html.no-hover .ink-bar .ink-size:not(.o
           <div class="sf-field" onclick="sfFieldClick(event)">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
             <input type="search" id="sfInput" enterkeyhint="search" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Search papers" aria-controls="sfSugg" oninput="sfType(this.value)" onkeydown="sfKey(event)" onfocus="sfSuggest()" onblur="sfBlur()">
+            <span class="sf-mode-slot" id="sfModeSlot"></span>
             <button class="sf-clear" onclick="sfClearText()" aria-label="Clear the search" title="Clear"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 2l6 6M8 2 2 8"/></svg></button>
             <button class="sf-help" id="sfHelpBtn" onclick="sfGuide()" aria-label="How to search one field" aria-expanded="false" aria-controls="sfGuide" title="Search one field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><circle cx="12" cy="7.6" r="0.4"/></svg></button>
           </div>
@@ -4418,6 +4421,9 @@ const SF_SORTS = [['match', 'Best match', 'The papers your words match best firs
   ['best', 'Relevance', 'Must read, then Interesting, then Tangential; the best score first within each'], ['added', 'Recently added', 'Newest to the dashboard first'], ['published', 'Newest published', 'By publication date']];
 const SF_SHORT = { best: 'Relevance', match: 'Best match', added: 'Added', published: 'Published' };   // the order's name on a narrow screen's button
 const SF_SRC = { email: 'Email alerts', web_survey: 'Web survey', manual: 'Added by you' };
+const SF_ALLABLE = ['topic', 'interest', 'author', 'src', 'alert'];   // kinds a paper can have several of: Match all asks for every pick
+/* Match all / any changes something once one kind has two picks: two words, two topics, two authors... */
+function sfCombinable(s) { s = s || SF; return sfWords(s.text).length > 1 || SF_ALLABLE.some(f => s[f].length > 1); }
 const SF_REL = [['definitely', 'Must Read'], ['probably', 'Interesting'], ['mildly', 'Tangential']];
 const SF_COLL = new Intl.Collator();
 /* Read and unread as eyes: open for papers you've read, struck through for those you haven't */
@@ -4458,7 +4464,7 @@ function sfParse(qs) {
 function sfHash(s) {
   const u = new URLSearchParams();
   if (s.text.trim()) u.set('q', s.text.trim());
-  if (s.any && sfWords(s.text).length > 1) u.set('any', '1');
+  if (s.any && sfCombinable(s)) u.set('any', '1');
   if (s.show !== 'unread') u.set('show', s.show);
   if (s.starred) u.set('starred', '1');
   SF_MULTI.forEach(f => s[f].forEach(v => u.append(f, v)));
@@ -4627,15 +4633,20 @@ function sfCompute(s) {
     let v = M.vals.get(p); if (!v) M.vals.set(p, v = sfVals(p));
     rows.push({ p, n, w, v, read, star });
   }
+  // picks of one kind: every one (Match all) or any of them; a kind a paper has only one of (relevance, venue, year)
+  // is always any of them. Different kinds always all apply.
+  const every = f => !s.any && SF_ALLABLE.includes(f);
   const pass = (r, skip) => {
     if (skip !== 'show' && s.show !== 'all' && s.show !== (r.read ? 'read' : 'unread')) return false;
     if (skip !== 'starred' && s.starred && !r.star) return false;
-    for (const f of SF_MULTI) if (f !== skip && s[f].length && !s[f].some(x => r.v[f].includes(x))) return false;
+    for (const f of SF_MULTI) if (f !== skip && s[f].length && !(every(f) ? s[f].every(x => r.v[f].includes(x)) : s[f].some(x => r.v[f].includes(x)))) return false;
     return true;
   };
-  const counts = {}, tally = (f, get) => { const c = counts[f] = {}; rows.forEach(r => { if (pass(r, f)) get(r).forEach(x => { c[x] = (c[x] || 0) + 1; }); }); };
-  tally('starred', r => r.star ? ['1'] : []);
-  SF_MULTI.forEach(f => tally(f, r => r.v[f]));
+  // each value's count: the papers you'd see with it added (a kind combined by "any" leaves its own picks out, since
+  // adding one widens rather than narrows)
+  const counts = {}, tally = (f, get, skip) => { const c = counts[f] = {}; rows.forEach(r => { if (pass(r, skip)) get(r).forEach(x => { c[x] = (c[x] || 0) + 1; }); }); };
+  tally('starred', r => r.star ? ['1'] : [], 'starred');
+  SF_MULTI.forEach(f => tally(f, r => r.v[f], every(f) ? null : f));
   // what the words alone find, with no filter: the values the sidebar lists and their order, which therefore stay
   // put while you pick filters (a value your picks rule out stays where it is, at 0)
   const base = { starred: {} };
@@ -4839,7 +4850,7 @@ function sfKey(e) {
     else e.target.blur();
   }
 }
-function sfFieldClick(e) { if (!e.target.closest('.sf-clear, .sf-help')) document.getElementById('sfInput').focus(); }
+function sfFieldClick(e) { if (!e.target.closest('.sf-clear, .sf-help, .sf-mode')) document.getElementById('sfInput').focus(); }
 
 /* Suggestions while typing, from the first letter: the topics, interests, authors, venues and years that what you've
    typed names (all of it, or its last word); after field: (interest:veri), only that field's values, its most used
@@ -4902,7 +4913,7 @@ function sfGuide(open) {
   open = open === undefined ? !box.classList.contains('guide-open') : open;
   if (open && !g.firstChild) {
     const row = f => { const x = SF_FIELDS[f]; return `<button class="sf-g-row" onclick="sfGuidePick('${f}')"><span class="k"><b>${f}:</b>${x.ex}</span><span class="d">${x.d}${x.also ? `, or <b>${x.also}:</b>` : ''}</span></button>`; };
-    g.innerHTML = `<h3>Search one field</h3>${Object.keys(SF_FIELDS).map(row).join('')}<p class="sf-g-note">A field takes the words after it, up to the next field: <b>interest:data driven author:ames</b>. Words to find anywhere go first (<b>safety interest:verification</b>), or after a quoted value (<b>interest:"data driven" safety</b>). Quotes keep words together anywhere: <b>"safety filter"</b>. Every word must match, unless you choose Match any.</p>`;
+    g.innerHTML = `<h3>Search one field</h3>${Object.keys(SF_FIELDS).map(row).join('')}<p class="sf-g-note">A field takes the words after it, up to the next field: <b>interest:data driven author:ames</b>. Words to find anywhere go first (<b>safety interest:verification</b>), or after a quoted value (<b>interest:"data driven" safety</b>). Quotes keep words together anywhere: <b>"safety filter"</b>. A paper needs every word, and every topic, interest and author you pick, unless you choose <b>Match any</b> (it appears in the box once you have two).</p>`;
   }
   if (open) sfSuggClose();
   box.classList.toggle('guide-open', open);
@@ -4997,7 +5008,8 @@ function renderSearch() {
   const n = c.results.length, sort = sfSortNow();
   const sorts = SF_SORTS.filter(([v]) => v !== 'match' || c.keys.length);
   const fc = sfFilterCount(), wide = !window.matchMedia('(max-width: 1000px)').matches;
-  sfPatch(document.getElementById('sfBar'), `<span class="sf-count" data-k="count"><b>${n}</b> ${n === 1 ? 'paper' : 'papers'}</span>${sfModeHTML(c)}
+  sfPatch(document.getElementById('sfModeSlot'), sfModeHTML(c, 'field'));
+  sfPatch(document.getElementById('sfBar'), `<span class="sf-count" data-k="count"><b>${n}</b> ${n === 1 ? 'paper' : 'papers'}</span>
     <button class="sf-filters-btn${wide && !_sfRailOff ? ' on' : ''}" data-k="filters" onclick="sfFilters()" ${wide ? `aria-expanded="${!_sfRailOff}" aria-controls="lpRail" title="${_sfRailOff ? 'Show the filters' : 'Hide the filters'}"` : 'aria-haspopup="dialog"'}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M6 12h12M10 18h4"/></svg>Filters${fc ? `<span class="b">${fc}</span>` : ''}</button>
     <div class="sf-sort"><div class="tl-sort" role="group" aria-label="Order">${sorts.map(([v, l, tip]) => `<button data-k="sort:${v}" class="${sort === v ? 'active' : ''}" aria-pressed="${sort === v}" title="${escAttr(tip)}" onclick="sfSetSort('${v}')">${l}</button>`).join('')}</div>
     <label class="sf-sort-btn" data-k="sortbtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16M3.5 16.5 7 20l3.5-3.5M17 20V4m-3.5 3.5L17 4l3.5 3.5"/></svg><span>${SF_SHORT[sort]}</span><select aria-label="Order" onchange="sfSetSort(this.value)">${sorts.map(([v, l]) => `<option value="${v}"${sort === v ? ' selected' : ''}>${l}</option>`).join('')}</select></label></div>`);
@@ -5026,11 +5038,13 @@ function renderSearch() {
   if (document.getElementById('sfBox').classList.contains('sugg-open')) sfSuggest();
   updateListBar();
 }
-/* How the words combine, once there are two: in the bar, or (a phone's bar has no room) at the top of the sheet */
-function sfModeHTML(c, sheet) {
-  if (c.keys.length < 2) return '';
-  return `<div class="tl-sort sf-mode" role="group" aria-label="How your words combine">${[[false, 'Match all'], [true, 'Match any']].map(([v, l]) =>
-    `<button data-k="${sheet ? 'w' : ''}any:${v}" class="${SF.any === v ? 'active' : ''}" aria-pressed="${SF.any === v}" onclick="sfSetAny(${v})">${l}</button>`).join('')}</div>`;
+/* How several words, or several topics, interests or authors, combine (once there are two of a kind): in the box beside them (where the suggestions can't cover it; a click
+   leaves you typing), or at the top of the sheet on a phone, whose box has no room */
+function sfModeHTML(c, where) {
+  if (!sfCombinable()) return '';
+  const field = where === 'field';
+  return `<div class="tl-sort sf-mode" role="group" aria-label="How your choices combine">${[[false, 'Match all', 'Every word, topic, interest and author you chose'], [true, 'Match any', 'Any of your words, topics, interests or authors, instead of every one']].map(([v, l, tip]) =>
+    `<button data-k="${field ? 'f' : 'w'}any:${v}" class="${SF.any === v ? 'active' : ''}" aria-pressed="${SF.any === v}" title="${tip}"${field ? ' onmousedown="event.preventDefault()"' : ''} onclick="sfSetAny(${v})">${l}</button>`).join('')}</div>`;
 }
 /* Every filter value your words find, in an order that doesn't move as you pick (by how many papers the words find
    with it), each with how many papers it would show with your other picks. One those picks rule out is dimmed, with
@@ -5076,7 +5090,7 @@ function sfFiltersHTML(c, lv, A, where) {
   const years = wrap(Object.keys(c.base.year || {}).concat(SF.year).filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => b - a).map(y => item('year', y, y)).join(''));
   const src = wrap(Object.keys(SF_SRC).map(x => item('src', x, SF_SRC[x])).join(''));
   const alerts = SHOW_EMAIL_TAB || SF.alert.length ? wrap(byCount('alert').map(a => item('alert', a, a)).join('')) : '';
-  return (rail ? '' : sec('words', 'Your words', sfModeHTML(c, true), []))
+  return (rail ? '' : sec('words', 'Combine', sfModeHTML(c, 'sheet'), []))
     + sec('show', 'Show', show, [SF_SHOW.find(([v]) => v === SF.show)[1]].concat(SF.starred ? ['Starred'] : []))
     + sec('rel', 'Relevance', rel, SF.rel.map(relLabel)) + sec('topics', 'Topics', topics, SF.topic) + sec('interests', 'Interests', ints, SF.interest)
     + sec('authors', 'Authors', authors, SF.author.map(a => A.name(a))) + sec('venues', 'Venues', venues, SF.venue) + sec('years', 'Year', years, SF.year)
@@ -5134,7 +5148,7 @@ function sfEmptyHTML(c) {
   const ways = [];
   const readN = SF.show === 'unread' ? c.rows.filter(r => r.read && c.pass(r, 'show')).length : 0;
   if (readN) ways.push(`<button class="lp-fold" onclick="sfSetShow('all')">Include ${readN} read ${readN === 1 ? 'paper' : 'papers'}</button>`);
-  if (!SF.any && c.keys.length > 1) { const anyN = sfCompute(Object.assign({}, SF, { any: true })).results.length; if (anyN) ways.push(`<button class="lp-fold" onclick="sfSetAny(true)">Match any word: ${anyN} ${anyN === 1 ? 'paper' : 'papers'}</button>`); }
+  if (!SF.any && sfCombinable()) { const anyN = sfCompute(Object.assign({}, SF, { any: true })).results.length; if (anyN) ways.push(`<button class="lp-fold" onclick="sfSetAny(true)">Match any: ${anyN} ${anyN === 1 ? 'paper' : 'papers'}</button>`); }
   const byWords = c.keys.length && !c.rows.length;   // the words alone find nothing: no filter is to blame, so none is offered
   if (!byWords && (SF_MULTI.some(f => SF[f].length) || SF.starred)) ways.push(`<button class="lp-fold" onclick="sfClearFilters()">Clear the filters</button>`);
   const what = !c.keys.length && !sfFilterCount() ? 'No papers yet.'
@@ -5214,11 +5228,11 @@ function shortAuthors(p) {
 }
 const isEmailPaper = p => (p.source_mode || '').includes('email');
 
-/* What a row shows on hover: the paper's own title and its actions. Built the first time the row is hovered or focused
+/* What a row shows on hover: the paper's takeaway (the generated headline) and its actions. Built the first time the row is hovered or focused
    (most rows never are, and touch screens don't show it), which keeps a long list light. */
 function listRowMoreHTML(p) {
-  const differs = hasText(p.title) && p.title.trim() !== (p.headline || '').trim();
-  return `${differs ? `<p class="lp-orig"><i>Paper</i>${esc(p.title)}</p>` : ''}
+  const differs = hasText(p.headline) && hasText(p.title) && p.title.trim() !== p.headline.trim();
+  return `${differs ? `<p class="lp-orig"><i>Takeaway</i>${esc(p.headline)}</p>` : ''}
         <div class="p-action-row">${summaryBtn(p)} ${absBtn(p)} ${linkBtn(p)} <span class="p-actions has-active">${starBtn(p)} ${readBtn(p)} ${saveBtn(p)} ${deleteBtn(p)}</span></div>
         <div class="p-detail-panel" data-summary="${hasText(p.summary) ? dataAttr(p.summary) : ''}" data-abstract="${hasText(p.abstract) ? dataAttr(p.abstract) : ''}"></div>`;
 }
@@ -5241,7 +5255,7 @@ function listRowHTML(p, n, m) {
   return `<article class="lp-row" tabindex="0" data-key="${ka}" onclick="openPaper('${ka}', event)">
     ${n ? `<span class="lp-num">${String(n).padStart(2, '0')}</span>` : ''}
     <div class="lp-row-main">
-      <h3 class="lp-h">${esc(p.headline || p.title)}</h3>
+      <h3 class="lp-h">${esc(p.title || p.headline)}</h3>
       ${why ? `<div class="why-line one"><b>Why</b><span title="${escAttr(why)}">${esc(why)}</span></div>` : ''}
       <div class="lp-meta">${starSet.has(k) ? '<span class="lp-star" title="Starred">&#9733;</span>' : ''}${cardTagsHTML(p, m.kind === 'venue')}${authors ? `<span class="lp-auth" title="${escAttr(p.authors)}">${esc(authors)}</span>` : ''}${others.length ? `<span class="lp-also">${others.map(g => `<span>${gdot(g)}${esc(g)}</span>`).join('')}</span>` : ''}</div>
       <div class="lp-more"><div></div></div>
