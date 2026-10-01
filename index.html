@@ -91,9 +91,12 @@ a { color: inherit; text-decoration: none; }
 .skel-side { display: grid; grid-template-rows: repeat(4, 1fr); gap: 2px; }
 .skel-side i { height: 100%; border-radius: 0; animation-delay: 0.15s; }
 .skel-side i:first-child { border-radius: 12px 12px 0 0; } .skel-side i:last-child { border-radius: 0 0 12px 12px; }
-.skeleton-wrap[data-kind="paper"] { max-width: 1032px; padding: 84px 24px 24px; }
-.skel-cols { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 48px; }
+.skeleton-wrap[data-kind="paper"] { padding: 84px 24px 24px; }
+.skel-cols { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 64px; }
+@media (max-width: 1100px) { .skel-cols { grid-template-columns: minmax(0, 1fr) 300px; gap: 48px; } }
 .skeleton-wrap[data-kind="list"] { max-width: none; display: grid; grid-template-columns: 252px minmax(0, 1200px); column-gap: 40px; padding: 56px 32px 24px 24px; }
+.skeleton-wrap[data-kind="list"][data-rail="off"] { display: block; max-width: 1200px; padding: 56px 24px 24px; }
+.skeleton-wrap[data-rail="off"] .skel-rail { display: none; }
 @media (max-width: 1000px) { .skeleton-wrap[data-kind="list"] { display: block; padding: 56px 24px 24px; } .skel-rail { display: none; } .skel-cols { grid-template-columns: minmax(0, 1fr); } .skel-cols > i { display: none; } }
 @media (max-width: 700px) { .skel-home { grid-template-columns: minmax(0, 1fr); height: 64vh; } .skel-side { display: none; } .skeleton-wrap[data-kind="paper"], .skeleton-wrap[data-kind="list"] { padding-left: 16px; padding-right: 16px; } }
 @media (prefers-reduced-motion: reduce) { .skel-block { animation: none; } }
@@ -558,7 +561,7 @@ html.no-hover .f-topic.more:hover:not(.open) { background: rgba(255,255,255,0.07
 }
 
 /* PAPER PAGE — one scrolling article with a slim sticky bar */
-.pd { --pd-w: 1080px; position: relative; }
+.pd { --pd-w: 1200px; position: relative; }   /* the nav's frame, as every page you reach from it */
 /* a soft glow across the top of the page in the paper's topic colours, left to right (as on a phone feed card);
    the chips at the top of the header name each colour */
 .pd::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 440px; background: var(--gbg); opacity: 0.09; pointer-events: none; -webkit-mask-image: linear-gradient(#000, transparent); mask-image: linear-gradient(#000, transparent); }
@@ -614,7 +617,8 @@ html.no-hover .pd-topic-chip:hover:not(:active) { background: rgba(255,255,255,0
 .pd-head .pd-why .why { margin-top: 0; }
 .pd-head .why { margin-top: 18px; max-width: 72ch; font-size: 13.5px; color: var(--text-muted); border-left: none; padding-left: 0; }
 
-.pd-body { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 56px; margin-top: 32px; padding-top: 32px; border-top: 1px solid var(--border); align-items: start; }
+.pd-body { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 64px; margin-top: 32px; padding-top: 32px; border-top: 1px solid var(--border); align-items: start; }   /* the text keeps its own measure; the cards take the room */
+@media (max-width: 1100px) { .pd-body { grid-template-columns: minmax(0, 1fr) 300px; gap: 48px; } }
 .pd-section + .pd-section { margin-top: 36px; }
 .pd-section h2 { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 12px; }
 .pd-prose { font-family: var(--serif); font-size: 19px; line-height: 1.65; color: #d4d5da; max-width: 68ch; text-wrap: pretty; }
@@ -1472,6 +1476,12 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
 /* the sidebar sits against the window's left edge and the list takes the rest of the width (up to a readable 1200px):
    no centred column with empty margins beside a sidebar. Sidebar text lines up with the Back arrow above it. */
 .lp-wrap { padding: 0 32px 96px 12px; display: grid; grid-template-columns: 252px minmax(0, 1200px); column-gap: 40px; }
+/* the sidebar hidden (the Filters button): the page sits on the nav's frame, as every other page does */
+@media (min-width: 1001px) {
+  .lp.rail-off .lp-wrap { display: block; max-width: 1200px; margin: 0 auto; padding: 0 24px 96px; }
+  .lp.rail-off .lp-rail { display: none; }
+  .lp.rail-off .lp-bar .pd-bar-inner { max-width: 1200px; padding: 8px 24px; }
+}
 .lp-main { min-width: 0; }
 .lp-rail { position: sticky; top: var(--lp-bar-h); align-self: start; max-height: calc(100vh - 150px); overflow-y: auto; overscroll-behavior: contain; padding: 18px 0 24px; scrollbar-width: none; }   /* its scroll stays its own: reaching the end doesn't carry on into the page */
 .lp-rail::-webkit-scrollbar { display: none; }
@@ -1545,13 +1555,14 @@ html.no-hover .sf-tip:hover::after { opacity: 0; }
 .sf-count b { color: var(--text-secondary); font-weight: 500; }
 .sf-bar .tl-sort { height: 32px; padding: 2px; border-radius: 999px; border-color: rgba(255,255,255,0.2); }
 .sf-bar .tl-sort button { height: 100%; min-height: 0; padding: 0 13px; border-radius: 999px; white-space: nowrap; }
-.sf-sort { margin-left: auto; }
+.sf-sort { margin-left: 0; }
 .sf-sort-btn { position: relative; display: none; align-items: center; gap: 7px; height: 32px; padding: 0 13px; border: 1px solid rgba(255,255,255,0.2); border-radius: 999px; color: var(--text-secondary); font-size: 13px; white-space: nowrap; cursor: pointer; transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
 .sf-sort-btn:hover { background: rgba(255,255,255,0.06); color: var(--text); }
 .sf-sort-btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .sf-sort-btn select { position: absolute; inset: 0; width: 100%; opacity: 0; font-size: 16px; cursor: pointer; -webkit-appearance: none; appearance: none; }   /* the system's own picker; 16px so iOS doesn't zoom */
-.sf-filters-btn { display: none; align-items: center; gap: 7px; height: 32px; padding: 0 13px; border: 1px solid rgba(255,255,255,0.2); border-radius: 999px; background: none; color: var(--text-secondary); font: inherit; font-size: 13px; cursor: pointer; transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
+.sf-filters-btn { display: inline-flex; align-items: center; gap: 7px; height: 32px; margin-left: auto; padding: 0 13px; border: 1px solid rgba(255,255,255,0.2); border-radius: 999px; background: none; color: var(--text-secondary); font: inherit; font-size: 13px; cursor: pointer; transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease); }
 .sf-filters-btn:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+.sf-filters-btn.on { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.28); color: var(--text); }   /* the sidebar is showing */
 .sf-filters-btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
 .sf-filters-btn .b { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: rgba(255,255,255,0.14); color: var(--text); font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; }
 /* the sidebar of filters: each value with how many papers it would show */
@@ -2260,6 +2271,7 @@ html.no-hover .sel-icon:not(.on):active, html.no-hover .ink-bar .ink-size:not(.o
     tab: b('220px', 36, 'margin-bottom:14px') + b('420px', 14, 'margin-bottom:34px') + b('100%', 68, 'border-radius:12px;margin-bottom:14px') + b('100%', 68, 'border-radius:12px;margin-bottom:14px') + b('100%', 68, 'border-radius:12px')
   };
   el.dataset.kind = kind;
+  try { if (localStorage.getItem('scholar_sf_rail') === 'off') el.dataset.rail = 'off'; } catch (e) {}
   el.innerHTML = html[kind];
   if (kind !== 'home') document.querySelectorAll('.nav-tab').forEach(function (t) { t.classList.toggle('active', kind === 'tab' && h.indexOf(t.dataset.tab) === 0); });
 })();
@@ -4595,6 +4607,7 @@ function showSearch(s, o) {
   document.getElementById('sec-list').classList.add('active');
   document.body.classList.remove('tok-mode', 'tok-immersive');
   document.body.classList.add('sf-on');
+  document.getElementById('lp').classList.toggle('rail-off', _sfRailOff);
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   const inp = document.getElementById('sfInput');
   if (inp.value !== SF.text) inp.value = SF.text;
@@ -4851,7 +4864,23 @@ function sfComputeShown() {   // what the page shows: the results, and the value
   if (c.rows.length) _sfBase = c.base; else if (_sfBase && c.keys.length) c.base = _sfBase;
   return c;
 }
-const sfRailShown = () => !window.matchMedia('(max-width: 1000px)').matches;
+let _sfRailOff = (() => { try { return localStorage.getItem('scholar_sf_rail') === 'off'; } catch (e) { return false; } })();   // the sidebar hidden (wide screens)
+const sfRailShown = () => !window.matchMedia('(max-width: 1000px)').matches && !_sfRailOff;
+/* Filters: on a phone or tablet the sheet; on a wide screen it shows or hides the sidebar, the list easing to its new place */
+function sfFilters() {
+  if (window.matchMedia('(max-width: 1000px)').matches) { sfSheet(true); return; }
+  const lp = document.getElementById('lp'), main = lp.querySelector('.lp-main'), bar = [...document.querySelectorAll('#lpBar .pd-bar-inner > *')];
+  const m0 = main.getBoundingClientRect().left, b0 = bar.map(e => e.getBoundingClientRect().left);
+  _sfRailOff = !_sfRailOff;
+  try { localStorage.setItem('scholar_sf_rail', _sfRailOff ? 'off' : 'on'); } catch (e) {}
+  lp.classList.toggle('rail-off', _sfRailOff);
+  renderSearch();
+  if (reduceMotion()) return;
+  const o = { duration: 280, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' }, slide = (el, dx) => { if (Math.abs(dx) > 0.5) el.animate([{ transform: `translateX(${dx}px)` }, { transform: 'none' }], o); };
+  slide(main, m0 - main.getBoundingClientRect().left);
+  bar.forEach((e, i) => slide(e, b0[i] - e.getBoundingClientRect().left));
+  if (!_sfRailOff) document.getElementById('lpRail').animate([{ opacity: 0, transform: 'translateX(-12px)' }, { opacity: 1, transform: 'none' }], o);
+}
 function renderSearch() {
   if (!_listViewActive) return;
   const c = sfComputeShown(), lv = sfLevels(), A = sfAuthors();
@@ -4865,9 +4894,9 @@ function renderSearch() {
   // the bar: how many, how keys combine, filters (narrow screens), order; updated in place, so a choice eases over
   const n = c.results.length, sort = sfSortNow();
   const sorts = SF_SORTS.filter(([v]) => v !== 'match' || c.keys.length);
-  const fc = sfFilterCount();
+  const fc = sfFilterCount(), wide = !window.matchMedia('(max-width: 1000px)').matches;
   sfPatch(document.getElementById('sfBar'), `<span class="sf-count" data-k="count"><b>${n}</b> ${n === 1 ? 'paper' : 'papers'}</span>${sfModeHTML(c)}
-    <button class="sf-filters-btn" data-k="filters" onclick="sfSheet(true)" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M6 12h12M10 18h4"/></svg>Filters${fc ? `<span class="b">${fc}</span>` : ''}</button>
+    <button class="sf-filters-btn${wide && !_sfRailOff ? ' on' : ''}" data-k="filters" onclick="sfFilters()" ${wide ? `aria-expanded="${!_sfRailOff}" aria-controls="lpRail" title="${_sfRailOff ? 'Show the filters' : 'Hide the filters'}"` : 'aria-haspopup="dialog"'}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M6 12h12M10 18h4"/></svg>Filters${fc ? `<span class="b">${fc}</span>` : ''}</button>
     <div class="sf-sort"><div class="tl-sort" role="group" aria-label="Order">${sorts.map(([v, l, tip]) => `<button data-k="sort:${v}" class="${sort === v ? 'active' : ''}" aria-pressed="${sort === v}" title="${escAttr(tip)}" onclick="sfSetSort('${v}')">${l}</button>`).join('')}</div>
     <label class="sf-sort-btn" data-k="sortbtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16M3.5 16.5 7 20l3.5-3.5M17 20V4m-3.5 3.5L17 4l3.5 3.5"/></svg><span>${SF_SHORT[sort]}</span><select aria-label="Order" onchange="sfSetSort(this.value)">${sorts.map(([v, l]) => `<option value="${v}"${sort === v ? ' selected' : ''}>${l}</option>`).join('')}</select></label></div>`);
   // the filters: the sidebar, or the sheet on narrow screens (the hidden one isn't drawn)
@@ -5415,7 +5444,7 @@ function renderLibrary() {
     if (mine.length) {
       const { by, dir } = listSort();
       const dirLabel = by === 'name' ? (dir === 'asc' ? 'A\u2013Z' : 'Z\u2013A') : (dir === 'desc' ? 'Newest first' : 'Oldest first');
-      own = `<div class="lib-sec-head"><h3>Your lists</h3><span class="grow"></span>
+      own = `<div class="lib-sec-head"><span class="grow"></span>
         <label class="lib-sort"><span class="sr-only">Sort lists by</span><select onchange="setListSort(this.value)" aria-label="Sort lists by">${[['updated', 'Last updated'], ['created', 'Created'], ['name', 'Name']].map(([v, l]) => `<option value="${v}"${v === by ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
         <button class="lib-sort-dir" onclick="setListSort(null, '${dir === 'asc' ? 'desc' : 'asc'}')" title="Reverse the order" aria-label="Order: ${dirLabel}. Reverse it">${dirLabel}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16M3 16l4 4 4-4M17 20V4M13 8l4-4 4 4"/></svg></button></div>`;
       mine.forEach(name => {
