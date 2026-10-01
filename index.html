@@ -2517,11 +2517,32 @@ function matchStrengths(p) {
   (p.match_strengths || '').split('|').forEach(part => { const k = part.lastIndexOf('='); if (k > 0) { const v = part.slice(k + 1).trim(); if (STRENGTH[v]) out[part.slice(0, k).trim()] = v; } });
   return out;
 }
-function scoreParts(p) {
+/* A paper's score is worked out once and kept until something it depends on changes: its matches, strengths or triage,
+   or any interest's level or status. Those are compared on each use (the interests once per task), so an edit anywhere
+   shows at once; sorting a thousand papers no longer re-parses each one's matches at every comparison. */
+let _ivText = '', _ivVer = 0, _ivChecked = false, _ivByName = new Map();
+function interestsVersion() {
+  if (!_ivChecked) {
+    _ivChecked = true; queueMicrotask(() => { _ivChecked = false; });
+    const t = allInterests.map(i => i.interest_name + '\u0001' + i.status + '\u0001' + i.relevance_mapping).join('\u0002');
+    if (t !== _ivText) { _ivText = t; _ivVer++; _ivByName = new Map(allInterests.filter(i => i.status === 'confirmed').map(i => [i.interest_name, i])); }
+  }
+  return _ivVer;
+}
+const _scoreMemo = new WeakMap();
+function scoreParts(p) {   // (shared: callers read it, never change it)
+  const sig = interestsVersion() + '\u0001' + (p.matched_interests || '') + '\u0001' + (p.match_strengths || '') + '\u0001' + (p.residual_score || '');
+  const m = _scoreMemo.get(p);
+  if (m && m.sig === sig) return m.parts;
+  const parts = computeScoreParts(p);
+  _scoreMemo.set(p, { sig, parts });
+  return parts;
+}
+function computeScoreParts(p) {
   const st = matchStrengths(p);
   const matches = [];
   (p.matched_interests || '').split('|').map(s => s.trim()).filter(Boolean).forEach(name => {
-    const i = allInterests.find(x => x.interest_name === name && x.status === 'confirmed');
+    const i = _ivByName.get(name);
     if (!i) return;
     const level = LEVEL_NAME[i.relevance_mapping] ? i.relevance_mapping : 'mildly', strength = st[name] || STRENGTH_DEFAULT;
     const value = level === 'definitely' ? 3 * STRENGTH[strength] : (level === 'probably' ? 1 : 1 / 3) * STRENGTH[strength];
@@ -3795,7 +3816,12 @@ function fitTopPapers() {
   if (lead) {
     const target = stacked ? Math.max(260, h * 0.5) : h;
     const need = () => { lead.style.alignSelf = 'start'; const v = lead.offsetHeight; lead.style.alignSelf = ''; return v; };
-    if (sum) { let lines = 12; sum.style.webkitLineClamp = lines; while (lines > 2 && need() > target) sum.style.webkitLineClamp = --lines; }
+    if (sum) {   // how many lines fit, from the line height (one measure, not one per line), then trimmed if still over
+      let lines = 12; sum.style.webkitLineClamp = lines;
+      const over = need() - target, lh = parseFloat(getComputedStyle(sum).lineHeight) || 24;
+      if (over > 0) { lines = Math.max(2, Math.min(12, Math.round(sum.offsetHeight / lh)) - Math.ceil(over / lh)); sum.style.webkitLineClamp = lines; }
+      while (lines > 2 && need() > target) sum.style.webkitLineClamp = --lines;
+    }
     for (const el of [lead.querySelector('.lead-authors'), lead.querySelector('.lead-title'), sum, lead.querySelector('.lead-why')]) {
       if (need() <= target) break;
       if (el) el.hidden = true;
@@ -4535,7 +4561,8 @@ function sfToAnchor(a) {   // move the page so that row sits where it was
 function leaveListView() {
   if (!_listViewActive) return false;
   _listViewActive = false;
-  sfSuggClose(); sfSheet(false); _sfChipsLive = false; _sfSig = '';
+  sfSuggClose(); sfSheet(false); _sfChipsLive = false; _sfSig = ''; _sfGen++;
+  document.getElementById('lpBody').innerHTML = '';   // a thousand rows needn't sit in memory behind a paper or a tab; Back draws them again
   document.body.classList.remove('sf-on');
   document.getElementById('sec-list').classList.remove('active');
   return true;
@@ -4916,23 +4943,37 @@ function shortAuthors(p) {
 }
 const isEmailPaper = p => (p.source_mode || '').includes('email');
 
+/* What a row shows on hover: the paper's own title and its actions. Built the first time the row is hovered or focused
+   (most rows never are, and touch screens don't show it), which keeps a long list light. */
+function listRowMoreHTML(p) {
+  const differs = hasText(p.title) && p.title.trim() !== (p.headline || '').trim();
+  return `${differs ? `<p class="lp-orig"><i>Paper</i>${esc(p.title)}</p>` : ''}
+        <div class="p-action-row">${summaryBtn(p)} ${absBtn(p)} ${linkBtn(p)} <span class="p-actions has-active">${starBtn(p)} ${readBtn(p)} ${saveBtn(p)} ${deleteBtn(p)}</span></div>
+        <div class="p-detail-panel" data-summary="${hasText(p.summary) ? dataAttr(p.summary) : ''}" data-abstract="${hasText(p.abstract) ? dataAttr(p.abstract) : ''}"></div>`;
+}
+function fillRowMore(e) {
+  const row = e.target.closest && e.target.closest('.lp-row');
+  if (!row || row.dataset.more) return;
+  const p = allPapers.find(x => paperKey(x) === row.dataset.key) || _hiddenPapers.find(x => paperKey(x) === row.dataset.key);
+  if (!p) return;
+  row.dataset.more = '1';
+  const box = row.querySelector('.lp-more > div');
+  box.innerHTML = listRowMoreHTML(p);
+  if (_sfPlan && _sfPlan.res.length) sfHighlight(box, _sfPlan.res);
+}
+document.addEventListener('DOMContentLoaded', () => { const b = document.getElementById('lpBody'); ['pointerover', 'focusin'].forEach(t => b.addEventListener(t, fillRowMore)); });
 function listRowHTML(p, n, m) {
   const k = paperKey(p), ka = escAttr(k), w = parseWhy(p);
   const why = w && w.reason ? w.reason.replace(/\s*\(abstract:[^)]*\)/i, '') : '';
   const others = groupsOfPaper(p).filter(g => g !== m.topic);
   const authors = shortAuthors(p);
-  const differs = hasText(p.title) && p.title.trim() !== (p.headline || '').trim();
   return `<article class="lp-row" tabindex="0" data-key="${ka}" onclick="openPaper('${ka}', event)">
     ${n ? `<span class="lp-num">${String(n).padStart(2, '0')}</span>` : ''}
     <div class="lp-row-main">
       <h3 class="lp-h">${esc(p.headline || p.title)}</h3>
       ${why ? `<div class="why-line one"><b>Why</b><span title="${escAttr(why)}">${esc(why)}</span></div>` : ''}
       <div class="lp-meta">${starSet.has(k) ? '<span class="lp-star" title="Starred">&#9733;</span>' : ''}${cardTagsHTML(p, m.kind === 'venue')}${authors ? `<span class="lp-auth" title="${escAttr(p.authors)}">${esc(authors)}</span>` : ''}${others.length ? `<span class="lp-also">${others.map(g => `<span>${gdot(g)}${esc(g)}</span>`).join('')}</span>` : ''}</div>
-      <div class="lp-more"><div>
-        ${differs ? `<p class="lp-orig"><i>Paper</i>${esc(p.title)}</p>` : ''}
-        <div class="p-action-row">${summaryBtn(p)} ${absBtn(p)} ${linkBtn(p)} <span class="p-actions has-active">${starBtn(p)} ${readBtn(p)} ${saveBtn(p)} ${deleteBtn(p)}</span></div>
-        <div class="p-detail-panel" data-summary="${hasText(p.summary) ? dataAttr(p.summary) : ''}" data-abstract="${hasText(p.abstract) ? dataAttr(p.abstract) : ''}"></div>
-      </div></div>
+      <div class="lp-more"><div></div></div>
     </div>
   </article>`;
 }
@@ -5373,6 +5414,7 @@ function toggleIStatus(s) {
 }
 let _interestsAutoSwitched = false;
 function renderInterests() {
+  if (currentTab !== 'interests') return;   // drawn when its tab opens (switchTab), not behind other pages
   if (!_interestsAutoSwitched && currentIStatus === 'suggested') {
     const items = currentIGTab === 'interests' ? allInterests : allGroups;
     if (!items.some(x => x.status === 'suggested')) {
@@ -5590,7 +5632,7 @@ function updateI(name, status) {
   const i = allInterests.find(x=>x.interest_name===name);
   if (!i) return;
   const prev = i.status;
-  i.status = status; i.date_updated = new Date().toISOString().split('T')[0];
+  i.status = status; i.date_updated = new Date().toISOString().split('T')[0]; _ivChecked = false;
   updateInterestsBadge();
   renderInterests();
   showSaveBar();
@@ -5648,7 +5690,7 @@ function toggleInterestDropdown(e, name, field) {
 function updateInterestField(name, field, value) {
   const i = allInterests.find(x=>x.interest_name===name); if (!i) return;
   const prev = i.relevance_mapping;
-  i.relevance_mapping = value;
+  i.relevance_mapping = value; _ivChecked = false;
   i.date_updated = new Date().toISOString().split('T')[0];
   renderInterests();
   showSaveBar();
