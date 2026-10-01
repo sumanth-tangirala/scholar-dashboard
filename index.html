@@ -121,11 +121,11 @@ a { color: inherit; text-decoration: none; }
 .nav-tab:hover { color: var(--accent); }
 .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 .nav-tab .tab-badge { margin-left: 6px; font-size: 11px; background: rgba(255,255,255,0.07); padding: 1px 7px; border-radius: 10px; color: var(--text-muted); }
-.nav-search { margin-left: auto; position: relative; width: 260px; flex-shrink: 0; }
-.nav-search input { width: 100%; padding: 8px 12px 8px 36px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 24px; color: var(--text); font-size: 13px; outline: none; transition: border-color 0.3s ease-in-out; }
-.nav-search input:focus { border-color: var(--accent); }
-.nav-search input::placeholder { color: var(--text-muted); }
-.nav-search-toggle { display: none; }
+/* Search: an icon that opens the search page (or "/"); amber while you're on it, as the tab you're on is */
+.nav-search-toggle { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; margin-left: auto; width: 36px; height: 36px; border-radius: 50%; border: none; background: none; color: var(--text-secondary); cursor: pointer; transition: background var(--t-fast), color var(--t-fast); }
+.nav-search-toggle:hover { background: rgba(255,255,255,0.08); color: var(--text); }
+.nav-search-toggle svg { width: 20px; height: 20px; fill: currentColor; }
+body.sf-on .nav-search-toggle { color: var(--accent); }
 /* Refresh: a Home Screen app has no reload button of its own */
 .nav-refresh { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 36px; height: 36px; margin-left: -12px; border-radius: 50%; border: none; background: none; color: var(--text-secondary); cursor: pointer; transition: background var(--t-fast), color var(--t-fast); }
 .nav-refresh:hover { background: rgba(255,255,255,0.08); color: var(--text); }
@@ -145,13 +145,6 @@ html.ro #vaultOverlay { display: none !important; }
 .nav-refresh.spinning svg { animation: spin 0.7s linear infinite; }
 @media (max-width: 600px) { html.ro #navRefresh { display: none; } }
 @media (max-width: 600px) and (display-mode: standalone) { html.ro #navRefresh { display: inline-flex; } }
-@media (max-width: 600px) {
-  .nav-search-toggle { display: inline-flex; align-items: center; justify-content: center; margin-left: auto; width: 40px; height: 40px; border-radius: 50%; border: none; background: none; color: var(--text-secondary); cursor: pointer; transition: background 0.15s, color 0.15s; }
-  .nav-search-toggle:hover { background: rgba(255,255,255,0.08); color: var(--text); }
-  .nav-search-toggle svg { width: 20px; height: 20px; fill: currentColor; }
-
-}
-.nav-search svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; fill: var(--text-muted); }
 
 /* BRIEFING */
 .briefing { max-width: 1200px; margin: 0 auto; padding: 24px 24px 0; display: flex; flex-direction: column; align-items: center; }
@@ -548,7 +541,6 @@ html.no-hover .f-topic.more:hover:not(.open) { background: rgba(255,255,255,0.07
   .nav-inner { flex-wrap: wrap; height: auto; column-gap: 16px; row-gap: 0; }
   .nav-portfolio-link, .nav-brand, .nav-brand-sep { align-self: center; }
   .nav-portfolio-link, .nav-brand { height: 50px; display: flex; align-items: center; }
-  .nav-search { margin-left: auto; }
   .nav-tabs { order: 3; flex-basis: 100%; height: 44px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; margin: 0 -24px; padding: 0 12px; }
   .nav-tabs::-webkit-scrollbar { display: none; }
   .nav-tab { padding: 0 12px; flex-shrink: 0; }
@@ -1500,6 +1492,11 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
 .sf-field > svg { position: absolute; left: 14px; top: 14px; width: 18px; height: 18px; fill: var(--text-muted); }
 .sf-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .sf-pills:empty { display: none; }
+@media (max-width: 600px) {   /* a phone: one row that scrolls sideways, fading at the screen's edges, so the papers stay near the top */
+  .sf-pills { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; margin: 10px -16px 0; padding: 0 16px; }
+  .sf-pills::-webkit-scrollbar { display: none; }
+  .sf-pills .sf-chip { flex-shrink: 0; max-width: calc(100vw - 32px); }
+}
 .sf-chip.icon { padding-left: 9px; }
 .sf-chip .sf-eye, .sf-show .sf-eye { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; display: block; }
 .sf-clear { display: none; align-items: center; justify-content: center; flex-shrink: 0; width: 32px; height: 32px; border: none; border-radius: 50%; background: none; color: var(--text-muted); cursor: pointer; transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
@@ -1614,7 +1611,6 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
 .sf-sheet .sf-words { display: none; }   /* only where the bar has no room for it */
 @media (max-width: 600px) { .sf-bar .sf-mode { display: none; } .sf-sheet .sf-words { display: block; } }
 @media (min-width: 601px) { .sf-sheet { left: 50%; right: auto; width: min(600px, 100%); border-radius: 16px 16px 0 0; transform: translate(-50%, 100%); } .sf-sheet.open { transform: translate(-50%, 0); } }
-body.sf-on .nav-search { visibility: hidden; }   /* the page's own field takes over */
 /* ===== CONTINUE READING: the papers you're partway through, from any of your devices (above Top Papers; a strip
    at the top of the phone feed) ===== */
 .cr-strip { max-width: 1200px; margin: 0 auto; padding: 16px 24px 0; }
@@ -2019,7 +2015,7 @@ body.tok-mode .tok-bar { flex-wrap: wrap; row-gap: 8px; }
 
 /* RESPONSIVE */
 @media (max-width: 900px) { .topics-grid { grid-template-columns: repeat(2, 1fr); } .top-grid { grid-template-columns: 1fr; } .skel-top-grid { grid-template-columns: 1fr; } .skel-topics { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 600px) { .topics-grid { grid-template-columns: 1fr; } .top-grid { grid-template-columns: 1fr; } .nav-search { display: none; } .nav-inner { padding: 0 16px; gap: 12px; } .briefing, .filters, .top-papers, .topics-grid { padding-left: 16px; padding-right: 16px; } .skel-topics { grid-template-columns: 1fr; } .skel-top-grid { grid-template-columns: 1fr; } }
+@media (max-width: 600px) { .topics-grid { grid-template-columns: 1fr; } .top-grid { grid-template-columns: 1fr; } .nav-inner { padding: 0 16px; gap: 12px; } .briefing, .filters, .top-papers, .topics-grid { padding-left: 16px; padding-right: 16px; } .skel-topics { grid-template-columns: 1fr; } .skel-top-grid { grid-template-columns: 1fr; } }
 
 /* AUTH */
 .auth-overlay { position: fixed; inset: 0; z-index: 400; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0); visibility: hidden; pointer-events: none; transition: background 0.2s ease; }
@@ -2230,11 +2226,7 @@ html.no-hover .sel-icon:not(.on):active, html.no-hover .ink-bar .ink-size:not(.o
       <button class="nav-tab" data-tab="library" onclick="switchTab('library')">Library</button>
       <button class="nav-tab" data-tab="interests" onclick="switchTab('interests')">Interests <span class="tab-badge" id="interestsBadge" style="display:none">0</span></button>
     </div>
-    <button class="nav-search-toggle" id="navSearchToggle" onclick="openSearchHere()" aria-label="Search"><svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg></button>
-    <div class="nav-search">
-      <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-      <input type="text" id="searchInput" placeholder="Search papers…" aria-label="Search papers" autocomplete="off" onfocus="openSearchHere(this)">
-    </div>
+    <button class="nav-search-toggle" id="navSearchToggle" onclick="openSearchHere()" aria-label="Search" title="Search (/)"><svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg></button>
     <button class="nav-refresh nav-key" id="navKey" onclick="connectGitHub()" title="Sign in" aria-label="Sign in"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2 20 3M16 7l3 3M18 5l2 2"/></svg></button>
     <button class="nav-refresh" id="navRefresh" onclick="refreshPage()" title="Refresh: the latest papers and the latest version of the site" aria-label="Refresh"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4.5h-4.5"/></svg></button>
   </div>
@@ -2371,7 +2363,7 @@ html.no-hover .sel-icon:not(.on):active, html.no-hover .ink-bar .ink-size:not(.o
           </div>
           <div class="sf-sugg" id="sfSugg" role="listbox" aria-label="Suggestions"></div>
         </div>
-        <div class="sf-pills" id="sfChips" aria-label="Filters"></div>
+        <div class="sf-pills fade-x" id="sfChips" aria-label="Filters"></div>
         <div class="sf-bar" id="sfBar"></div>
         <div class="lp-body" id="lpBody"></div>
       </div>
@@ -4612,19 +4604,15 @@ function showSearch(s, o) {
   if (entering && !_leftPaper) pageIn(document.getElementById('sec-list'));   // (leaving a paper page, the router fades it in)
   if (o && o.focus) inp.focus();
 }
-/* The nav's box, its phone button and "/": the page opens at once, in the same tap, with its field focused (so a
-   phone's keyboard comes up); what was typed in the nav's box carries over */
-function openSearchHere(from) {
-  const typed = from && from.value ? from.value : '';
-  if (from) { from.value = ''; from.blur(); }
+/* The nav's search icon and "/": the page opens at once, in the same tap, with its field focused (so a phone's
+   keyboard comes up); on the page already, it just focuses the field */
+function openSearchHere() {
   if (!_listViewActive) {
     const s = sfEmpty(), wasPaper = _paperViewActive;
     history.pushState(null, '', location.pathname + location.search + sfHash(s));
     _leftPaper = wasPaper; showSearch(s); _leftPaper = false;
   }
-  const inp = document.getElementById('sfInput');
-  inp.focus();
-  if (typed) { inp.value = (SF.text ? SF.text.trimEnd() + ' ' : '') + typed; sfType(inp.value); }
+  document.getElementById('sfInput').focus();
 }
 /* Where you were in the results: the first row under the bar and how far down it sat. Rows off screen are drawn at
    an estimated height, so a pixel offset alone would land on a different paper after a redraw; the row puts you back. */
@@ -4833,6 +4821,14 @@ function sfDrawChips(html) {
   const was = new Map([...box.children].map(c => [key(c), c.getBoundingClientRect()]));
   box.innerHTML = html;
   const animate = _sfChipsLive && !reduceMotion();
+  edgeFade(box);
+  if (_sfChipsLive && box.scrollWidth > box.clientWidth) {   // a phone's single row: a pill just added scrolls into view
+    const add = [...box.children].find(c => !was.has(key(c)));
+    if (add) {
+      const b = box.getBoundingClientRect(), r = add.getBoundingClientRect(), d = r.right > b.right - 44 ? r.right - b.right + 44 : r.left < b.left + 44 ? r.left - b.left - 44 : 0;
+      if (d) box.scrollBy({ left: d, behavior: animate ? 'smooth' : 'auto' });
+    }
+  }
   _sfChipsLive = true;
   if (!animate) return;
   [...box.children].forEach(c => {
