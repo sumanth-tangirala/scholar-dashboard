@@ -1530,6 +1530,13 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
 .sf-rail .lp-rail-item.on .n { color: var(--text-secondary); }
 .sf-rail .sf-sec + .sf-sec { border-top: 1px solid rgba(255,255,255,0.06); }
 .sf-rail .sf-sec.open { padding-bottom: 12px; }
+.tl-sort.sf-show { height: 32px; padding: 2px; border-radius: 999px; border-color: rgba(255,255,255,0.2); }   /* pills, as the order control is */
+.tl-sort.sf-show button { flex: 1; height: 100%; min-height: 0; padding: 0 10px; border-radius: 999px; white-space: nowrap; }
+.sf-rail .sf-show { margin: 2px 12px 6px; }
+.sf-star-i { display: inline-flex; justify-content: center; width: 7px; flex-shrink: 0; font-style: normal; font-size: 11px; color: var(--star); }   /* the width of a dot, so its label lines up with the others */
+.sf-sheet-body .sf-star-i { margin-right: 8px; }
+.sf-sheet-body .tl-sort.sf-show { width: max-content; min-width: 260px; height: 38px; margin-bottom: 10px; }
+.sf-sheet-body .tl-sort.sf-show button { font-size: 13.5px; padding: 0 16px; }
 .sf-rail .sf-sec h2 { margin: 0; padding: 0; }
 .sf-sec-h { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border: none; background: none; font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; cursor: pointer; border-radius: 8px; transition: color var(--t-fast) var(--ease); }
 .sf-sec-h:hover { color: var(--text); }
@@ -4289,7 +4296,8 @@ const SF_SORTS = [['best', 'Best', 'Must read, then Interesting, then Tangential
 const SF_SHORT = { best: 'Best', match: 'Best match', added: 'Added', published: 'Published' };   // the order's name on a narrow screen's button
 const SF_SRC = { email: 'Email alerts', web_survey: 'Web survey', manual: 'Added by you' };
 const SF_REL = [['definitely', 'Must Read'], ['probably', 'Interesting'], ['mildly', 'Tangential']];
-function sfEmpty() { return { keys: [], draft: '', any: false, show: ['unread'], starred: false, rel: [], topic: [], interest: [], author: [], venue: [], year: [], src: [], alert: [], sort: '' }; }
+const SF_SHOW = [['unread', 'Unread'], ['read', 'Read'], ['all', 'All']];   // one of the three; Starred narrows any of them
+function sfEmpty() { return { keys: [], draft: '', any: false, show: 'unread', starred: false, rel: [], topic: [], interest: [], author: [], venue: [], year: [], src: [], alert: [], sort: '' }; }
 let SF = sfEmpty();
 /* Every group in the sidebar folds; the first four start open, the rest closed, and each stays as you leave it */
 const SF_OPEN_FIRST = ['show', 'rel', 'topics', 'interests'];
@@ -4313,7 +4321,8 @@ function sfParse(qs) {
   u.getAll('k').forEach(add);
   (u.get('q') || '').split(/\s+/).forEach(add);   // older #search?q=… links: each word a key
   s.any = u.get('any') === '1';
-  if (u.has('show')) s.show = u.get('show') === 'all' ? [] : u.get('show').split(',').filter(x => x === 'unread' || x === 'read');
+  const sh = u.get('show');
+  if (sh) s.show = sh === 'read' ? 'read' : sh === 'unread' ? 'unread' : 'all';   // (an older "read,unread" is all of them)
   s.starred = u.get('starred') === '1';
   SF_MULTI.forEach(f => { s[f] = [...new Set(u.getAll(f).map(x => x.trim()).filter(Boolean))]; });
   s.topic = s.topic.map(norm);   // an old link to a renamed topic: its new name
@@ -4324,8 +4333,7 @@ function sfHash(s) {
   const u = new URLSearchParams();
   s.keys.forEach(k => u.append('k', k));
   if (s.any && s.keys.length > 1) u.set('any', '1');
-  const show = s.show.slice().sort().join(',');
-  if (show !== 'unread') u.set('show', show || 'all');
+  if (s.show !== 'unread') u.set('show', s.show);
   if (s.starred) u.set('starred', '1');
   SF_MULTI.forEach(f => s[f].forEach(v => u.append(f, v)));
   if (s.sort) u.set('sort', s.sort);
@@ -4423,7 +4431,7 @@ function sfCompute(s) {
     rows.push({ p, n, w, v: sfVals(p), read: readSet.has(k), star: starSet.has(k) });
   }
   const pass = (r, skip) => {
-    if (skip !== 'show' && s.show.length && !s.show.includes(r.read ? 'read' : 'unread')) return false;
+    if (skip !== 'show' && s.show !== 'all' && s.show !== (r.read ? 'read' : 'unread')) return false;
     if (skip !== 'starred' && s.starred && !r.star) return false;
     for (const f of SF_MULTI) if (f !== skip && s[f].length && !s[f].some(x => r.v[f].includes(x))) return false;
     return true;
@@ -4435,7 +4443,7 @@ function sfCompute(s) {
   return { keys, res, rows, results: rows.filter(r => pass(r)), counts, pass };
 }
 function sfSortNow() { const has = sfKeys().length; return SF.sort === 'match' && !has ? 'best' : SF.sort || (has ? 'match' : 'best'); }
-function sfFilterCount() { return (SF.show.length === 1 ? 1 : 0) + (SF.starred ? 1 : 0) + SF_MULTI.reduce((n, f) => n + SF[f].length, 0); }
+function sfFilterCount() { return (SF.show !== 'all' ? 1 : 0) + (SF.starred ? 1 : 0) + SF_MULTI.reduce((n, f) => n + SF[f].length, 0); }
 
 /* ----- Opening it ----- */
 function showSearch(s, o) {
@@ -4504,14 +4512,13 @@ function sfToResults() {
 }
 function sfToggle(f, v) {
   if (f === 'starred') SF.starred = !SF.starred;
-  else if (f === 'show') SF.show = SF.show.includes(v) ? SF.show.filter(x => x !== v) : SF.show.concat(v);
   else SF[f] = SF[f].includes(v) ? SF[f].filter(x => x !== v) : SF[f].concat(v);
   sfCommit();
 }
 function sfRemove(e, f, v) {
   if (e) e.stopPropagation();
   if (f === 'key') SF.keys = SF.keys.filter(k => k !== v);
-  else if (f === 'show') SF.show = [];
+  else if (f === 'show') SF.show = 'all';
   else if (f === 'starred') SF.starred = false;
   else SF[f] = SF[f].filter(x => x !== v);
   sfCommit();
@@ -4612,7 +4619,7 @@ const SF_X = '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 2l6 6M8 2 
 function sfChipList() {   // [filter, value, label as HTML, label as text], in the field's order
   const A = sfAuthors(), out = [];
   SF.keys.forEach(k => out.push(['key', k, `<span class="t">${esc(k)}</span>`, k]));
-  if (SF.show.length === 1) { const l = SF.show[0] === 'unread' ? 'Unread' : 'Read'; out.push(['show', SF.show[0], `<span class="t">${l}</span>`, l]); }
+  if (SF.show !== 'all') { const l = SF.show === 'unread' ? 'Unread' : 'Read'; out.push(['show', SF.show, `<span class="t">${l}</span>`, l]); }
   if (SF.starred) out.push(['starred', '1', '<span class="sf-star" aria-hidden="true">&#9733;</span><span class="t">Starred</span>', 'Starred']);
   SF.rel.forEach(r => out.push(['rel', r, `<i class="gdot" style="--gc:var(--lv-${r})"></i><span class="t">${relLabel(r)}</span>`, relLabel(r)]));
   SF.topic.forEach(g => out.push(['topic', g, `${gdot(g)}<span class="t">${esc(g)}</span>`, g]));
@@ -4663,11 +4670,11 @@ function renderSearch() {
 /* Every filter with its counts; a value with none shows only while it's set (no "0" to press) */
 function sfFiltersHTML(c, lv, A, where) {
   const rail = where === 'rail';
-  const on = (f, v) => f === 'starred' ? SF.starred : f === 'show' ? SF.show.includes(v) : SF[f].includes(v);
+  const on = (f, v) => f === 'starred' ? SF.starred : SF[f].includes(v);
   const item = (f, v, label, dot) => {
     const n = (c.counts[f] || {})[v] || 0, sel = on(f, v);
     if (!n && !sel) return '';
-    const d = dot ? `<i class="gdot" style="--gc:${dot}" aria-hidden="true"></i>` : rail ? '<i class="gdot none" aria-hidden="true"></i>' : '';
+    const d = f === 'starred' ? '<i class="sf-star-i" aria-hidden="true">&#9733;</i>' : dot ? `<i class="gdot" style="--gc:${dot}" aria-hidden="true"></i>` : rail ? '<i class="gdot none" aria-hidden="true"></i>' : '';
     return rail ? `<button class="lp-rail-item${sel ? ' on' : ''}" aria-pressed="${sel}" onclick="sfToggle('${f}','${escAttr(v)}')">${d}<span class="l">${esc(label)}</span><span class="n">${n}</span></button>`
       : `<button class="tl-chip${sel ? ' active' : ''}" aria-pressed="${sel}" onclick="sfToggle('${f}','${escAttr(v)}')">${d}<span class="l">${esc(label)}</span><span class="n">${n}</span></button>`;
   };
@@ -4685,7 +4692,10 @@ function sfFiltersHTML(c, lv, A, where) {
     return `<section class="sf-sec${open ? ' open' : ''}"><h2><button class="sf-sec-h" onclick="sfSec('${id}')" aria-expanded="${open}"><span class="t">${title}</span>${named}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg></button></h2>${open ? body : ''}</section>`;
   };
   const byCount = f => Object.keys(c.counts[f] || {}).concat(SF[f]).filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => ((c.counts[f] || {})[b] || 0) - ((c.counts[f] || {})[a] || 0) || String(a).localeCompare(String(b)));
-  const show = wrap(item('show', 'unread', 'Unread') + item('show', 'read', 'Read') + item('starred', '1', 'Starred'));
+  const sc = c.counts.show || {}, scN = { unread: sc.unread || 0, read: sc.read || 0, all: (sc.unread || 0) + (sc.read || 0) };
+  const seg = `<div class="tl-sort sf-show" role="radiogroup" aria-label="Show">${SF_SHOW.map(([v, l]) =>
+    `<button role="radio" aria-checked="${SF.show === v}" class="${SF.show === v ? 'active' : ''}" title="${scN[v]} ${scN[v] === 1 ? 'paper' : 'papers'}" onclick="sfSetShow('${v}')">${l}</button>`).join('')}</div>`;
+  const show = seg + wrap(item('starred', '1', 'Starred'));
   const rel = wrap(SF_REL.map(([r, l]) => item('rel', r, l, `var(--lv-${r})`)).join(''));
   const topics = wrap(GROUP_ORDER.concat(SF.topic.filter(g => !GROUP_ORDER.includes(g))).map(g => item('topic', g, g, groupColor(g))).join(''));
   const ints = ['definitely', 'probably', 'mildly'].map(l => {
@@ -4697,7 +4707,7 @@ function sfFiltersHTML(c, lv, A, where) {
   const years = wrap(Object.keys(c.counts.year || {}).concat(SF.year).filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => b - a).map(y => item('year', y, y)).join(''));
   const src = wrap(Object.keys(SF_SRC).map(x => item('src', x, SF_SRC[x])).join(''));
   const alerts = SHOW_EMAIL_TAB || SF.alert.length ? wrap(byCount('alert').map(a => item('alert', a, a)).join('')) : '';
-  return sec('show', 'Show', show, SF.show.length === 1 ? [SF.show[0] === 'unread' ? 'Unread' : 'Read'] : [].concat(SF.starred ? ['Starred'] : []))
+  return sec('show', 'Show', show, [SF_SHOW.find(([v]) => v === SF.show)[1]].concat(SF.starred ? ['Starred'] : []))
     + sec('rel', 'Relevance', rel, SF.rel.map(relLabel)) + sec('topics', 'Topics', topics, SF.topic) + sec('interests', 'Interests', ints, SF.interest)
     + sec('authors', 'Authors', authors, SF.author.map(a => A.name(a))) + sec('venues', 'Venues', venues, SF.venue) + sec('years', 'Year', years, SF.year)
     + sec('src', 'Source', src, SF.src.map(x => SF_SRC[x] || x)) + sec('alerts', 'Alerts', alerts, SF.alert);
@@ -4766,12 +4776,12 @@ document.addEventListener('DOMContentLoaded', () => document.getElementById('mai
 /* Nothing matches: say why, and offer the way out that would find something */
 function sfEmptyHTML(c) {
   const ways = [];
-  const readN = SF.show.length === 1 && SF.show[0] === 'unread' ? c.rows.filter(r => r.read && c.pass(r, 'show')).length : 0;
-  if (readN) ways.push(`<button class="lp-fold" onclick="sfSetShow([])">Include ${readN} read ${readN === 1 ? 'paper' : 'papers'}</button>`);
+  const readN = SF.show === 'unread' ? c.rows.filter(r => r.read && c.pass(r, 'show')).length : 0;
+  if (readN) ways.push(`<button class="lp-fold" onclick="sfSetShow('all')">Include ${readN} read ${readN === 1 ? 'paper' : 'papers'}</button>`);
   if (!SF.any && c.keys.length > 1) { const anyN = sfCompute(Object.assign({}, SF, { keys: c.keys, any: true })).results.length; if (anyN) ways.push(`<button class="lp-fold" onclick="sfSetAny(true)">Match any word: ${anyN} ${anyN === 1 ? 'paper' : 'papers'}</button>`); }
   if (SF_MULTI.some(f => SF[f].length) || SF.starred) ways.push(`<button class="lp-fold" onclick="sfClearFilters()">Clear the filters</button>`);
   const what = !c.keys.length && !sfFilterCount() ? 'No papers yet.'
-    : !c.keys.length && SF.show.length === 1 && SF.show[0] === 'unread' && sfFilterCount() === 1 ? 'You’ve read everything.'
+    : !c.keys.length && SF.show === 'unread' && sfFilterCount() === 1 ? 'You’ve read everything.'
     : c.keys.length ? `No papers match ${c.keys.map(k => '“' + esc(k) + '”').join(SF.any ? ' or ' : ' and ')}${sfFilterCount() ? ' with these filters' : ''}.` : 'No papers match these filters.';
   return `<div class="lp-empty">${what}${ways.length ? '<br>' + ways.join(' ') : ''}</div>`;
 }
