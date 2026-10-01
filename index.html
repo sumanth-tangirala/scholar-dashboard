@@ -63,6 +63,7 @@ body { font-family: 'Google Sans', Roboto, -apple-system, BlinkMacSystemFont, sa
 html, body { overscroll-behavior: none; }   /* the app never rubber-bands as a whole; its own lists scroll */
 [hidden] { display: none !important; }   /* the hidden attribute always wins over a component's display rule */
 .main-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; scroll-behavior: smooth; }   /* the page never scrolls sideways; wide content scrolls inside its own box */
+.main-scroll:focus { outline: none; }   /* (focused so the keyboard scrolls it; nothing to show) */
 a { color: inherit; text-decoration: none; }
 
 /* [3] Custom dark scrollbars — only for inner scrollable containers, not the page */
@@ -2278,7 +2279,7 @@ html.no-hover .sel-icon:not(.on):active, html.no-hover .ink-bar .ink-size:not(.o
   </div>
 </nav>
 
-<div class="main-scroll" id="mainScroll">
+<div class="main-scroll" id="mainScroll" tabindex="-1">
 
 <!-- [2] LOADING SKELETON -->
 <div class="skeleton-wrap" id="skeleton" aria-label="Loading"></div>
@@ -2505,6 +2506,7 @@ html.no-hover .sel-icon:not(.on):active, html.no-hover .ink-bar .ink-size:not(.o
     <div class="keys-help-head"><h3 id="keysHelpTitle">Keyboard shortcuts</h3><button class="keys-help-close" onclick="toggleKeysHelp(false)" aria-label="Close">&times;</button></div>
     <div class="kh-grid">
       <section class="kh-sec" data-ctx="all"><h4>Everywhere <span class="kh-sub">g, then a letter: go to a page</span></h4><dl>
+        <dt><kbd>&darr;</kbd> <kbd>&uarr;</kbd> <kbd>Space</kbd></dt><dd>Scroll the page (PageUp / PageDown, Home / End too)</dd>
         <dt><kbd>/</kbd></dt><dd>Search</dd>
         <dt><kbd>g</kbd> <kbd>h</kbd></dt><dd>Recent Works</dd>
         <dt><kbd>g</kbd> <kbd>v</kbd></dt><dd>Venues</dd>
@@ -5475,6 +5477,21 @@ document.addEventListener('keydown', e => {
     const land = e.key === 'x' && readSet.has(key) ? (fresh.find(r => r.dataset.key === nextKey) || fresh.find(r => r.dataset.key === key)) : fresh.find(r => r.dataset.key === key);
     kbSelect(land || fresh[Math.min(i, fresh.length - 1)]);
   }
+});
+/* Reading with the keyboard: every page scrolls inside #mainScroll, not the window, so with focus nowhere (on <body>,
+   as after opening a paper) or up in the nav, the arrow keys, Space and PageDown went to the window, which doesn't
+   move. They're handed to #mainScroll, which then keeps focus, so the keys that follow scroll it natively. */
+document.addEventListener('keydown', e => {
+  if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (!['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', ' ', 'Home', 'End'].includes(e.key)) return;
+  const t = e.target, ms = document.getElementById('mainScroll');
+  const nowhere = !t || t === document.body || t === document.documentElement, inNav = t && t.closest && t.closest('.navbar');
+  if (!nowhere && !(inNav && e.key !== ' ')) return;   // focus is where the keys work on their own (Space still presses a nav button)
+  if (document.querySelector('.reader.open, .auth-overlay.open, .keys-help.open, #vaultOverlay.open, #sfSheet.open')) return;
+  e.preventDefault();
+  const page = ms.clientHeight * 0.9, d = { ArrowDown: 40, ArrowUp: -40, PageDown: page, PageUp: -page, ' ': e.shiftKey ? -page : page }[e.key];   // (40: the browser's own arrow step, as the keys after this one take)
+  if (d != null) ms.scrollBy({ top: d, behavior: reduceMotion() ? 'auto' : 'smooth' }); else ms.scrollTo({ top: e.key === 'Home' ? 0 : ms.scrollHeight, behavior: reduceMotion() ? 'auto' : 'smooth' });
+  ms.focus({ preventScroll: true });
 });
 /* Esc with nothing open: leave a paper's page or the search page (seen before anything closes, so it never does both) */
 document.addEventListener('keydown', e => {
