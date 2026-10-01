@@ -1488,6 +1488,11 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
 .sf-chip .gdot { width: 7px; height: 7px; }
 .sf-star { color: var(--star); }
 .sf-chip.armed { box-shadow: 0 0 0 1.5px rgba(255,255,255,0.45); }   /* Backspace once more removes it */
+@keyframes sf-chip-in { from { opacity: 0; transform: scale(0.92); } }
+.sf-chip.sf-in { animation: sf-chip-in 180ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+.sf-chip.sf-out { opacity: 0; transform: scale(0.92); pointer-events: none; transition: opacity 120ms ease-out, transform 120ms ease-out; }
+@keyframes sf-fade-in { from { opacity: 0; } }
+.lp-body.sf-fade { animation: sf-fade-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1); }   /* new results after a change you made */
 .sf-x { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 26px; height: 26px; border: none; border-radius: 50%; background: none; color: var(--text-muted); cursor: pointer; transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
 .sf-x:hover { background: rgba(255,255,255,0.1); color: var(--text); }
 .sf-x svg { width: 9px; height: 9px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; }
@@ -1667,7 +1672,7 @@ body.tok-mode .tok-bar { flex-wrap: wrap; row-gap: 8px; }
   .lp-h { font-size: 17.5px; }
   .lp-also { display: none; }
 }
-@media (prefers-reduced-motion: reduce) { .lp-more, .lp-row, .lp-h, .lp-rail-item, .sf-field, .sf-chip, .sf-x, .sf-opt, .sf-sheet, .sf-scrim, .sf-filters-btn, .sf-sort-btn, .sf-rail .lp-rail-item .l, .sf-rail .lp-rail-item .gdot, .sf-rail .lp-rail-item .sf-star-i, .sf-sheet-body .tl-chip { transition: none; } .sf-box.sugg-open .sf-sugg { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .lp-more, .lp-row, .lp-h, .lp-rail-item, .sf-field, .sf-chip, .sf-x, .sf-opt, .sf-sheet, .sf-scrim, .sf-filters-btn, .sf-sort-btn, .sf-rail .lp-rail-item .l, .sf-rail .lp-rail-item .gdot, .sf-rail .lp-rail-item .sf-star-i, .sf-sheet-body .tl-chip { transition: none; } .sf-box.sugg-open .sf-sugg, .sf-chip.sf-in, .lp-body.sf-fade { animation: none; } .sf-chip.sf-out { transition: none; } }
 
 .tl-chips { display: flex; flex-wrap: wrap; gap: 6px 5px; }
 .tl-chip { flex-shrink: 0; background: rgba(255,255,255,0.055); border: 1px solid transparent; color: var(--text-secondary); font: inherit; font-size: 12px; padding: 3px 10px; border-radius: 999px; cursor: pointer; white-space: nowrap; transition: background 0.15s, color 0.15s, border-color 0.15s; }
@@ -4499,7 +4504,7 @@ function openSearchHere(from) {
 function leaveListView() {
   if (!_listViewActive) return false;
   _listViewActive = false;
-  sfSuggClose(); sfSheet(false);
+  sfSuggClose(); sfSheet(false); _sfChipsLive = false; _sfSig = '';
   document.body.classList.remove('sf-on');
   document.getElementById('sec-list').classList.remove('active');
   return true;
@@ -4507,9 +4512,11 @@ function leaveListView() {
 function listBack() { if (history.length > 1) history.back(); else location.hash = '#' + currentTab; }
 
 /* ----- Changing it ----- */
+let _sfFade = false, _sfSig = '';   // fade the next redraw of the results if they changed; what they were
 function sfCommit() {
   _listKey = sfHash(SF);
   if (location.hash !== _listKey) history.replaceState(null, '', location.pathname + location.search + _listKey);
+  _sfFade = true;
   renderSearch();
   sfToResults();
 }
@@ -4526,6 +4533,12 @@ function sfToggle(f, v) {
 }
 function sfRemove(e, f, v) {
   if (e) e.stopPropagation();
+  const chip = (e && e.target.closest && e.target.closest('.sf-chip')) || [...document.querySelectorAll('#sfChips .sf-chip')].find(c => c.dataset.f === f && c.dataset.v === v);
+  if (chip && chip.classList.contains('sf-out')) return;   // already going
+  if (chip && !reduceMotion()) { chip.classList.add('sf-out'); setTimeout(() => sfDrop(f, v), 130); return; }
+  sfDrop(f, v);
+}
+function sfDrop(f, v) {
   if (f === 'key') SF.keys = SF.keys.filter(k => k !== v);
   else if (f === 'show') SF.show = 'all';
   else if (f === 'starred') SF.starred = false;
@@ -4640,6 +4653,23 @@ function sfChipList() {   // [filter, value, label as HTML, label as text], in t
   SF.alert.forEach(a => out.push(['alert', a, `<span class="k">alert</span><span class="t">${esc(a)}</span>`, a]));
   return out;
 }
+/* The field's chips: one that's new fades in, those already there glide to their new places (the field reflows when
+   one comes or goes); nothing moves on the first draw of the page */
+let _sfChipsLive = false;
+function sfDrawChips(html) {
+  const box = document.getElementById('sfChips'), key = c => c.dataset.f + '\u0000' + c.dataset.v;
+  const was = new Map([...box.children].map(c => [key(c), c.getBoundingClientRect()]));
+  box.innerHTML = html;
+  const animate = _sfChipsLive && !reduceMotion();
+  _sfChipsLive = true;
+  if (!animate) return;
+  [...box.children].forEach(c => {
+    const r0 = was.get(key(c));
+    if (!r0) { c.classList.add('sf-in'); return; }
+    const r1 = c.getBoundingClientRect(), dx = r0.left - r1.left, dy = r0.top - r1.top;
+    if (dx || dy) c.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], { duration: 220, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' });
+  });
+}
 /* A short name for these results: the one thing set (besides Unread), or "these results" */
 function sfNavLabel() { const c = sfChipList().filter(x => x[0] !== 'show'); return c.length === 1 ? c[0][3] : 'these results'; }
 function renderSearch() {
@@ -4647,8 +4677,8 @@ function renderSearch() {
   const c = sfCompute(), lv = sfLevels(), A = sfAuthors();
   // the field's chips
   const chips = sfChipList();
-  document.getElementById('sfChips').innerHTML = chips.map(([f, v, html, text]) =>
-    `<span class="sf-chip" data-f="${f}" data-v="${dataAttr(v)}">${html}<button class="sf-x" onclick="sfRemove(event,'${f}','${escAttr(v)}')" aria-label="Remove ${escAttr(text)}" title="Remove">${SF_X}</button></span>`).join('');
+  sfDrawChips(chips.map(([f, v, html, text]) =>
+    `<span class="sf-chip" data-f="${f}" data-v="${dataAttr(v)}">${html}<button class="sf-x" onclick="sfRemove(event,'${f}','${escAttr(v)}')" aria-label="Remove ${escAttr(text)}" title="Remove">${SF_X}</button></span>`).join(''));
   const inp = document.getElementById('sfInput');
   const narrow = window.matchMedia('(max-width: 600px)').matches;
   inp.placeholder = narrow ? (chips.length ? 'Add words or a name…' : 'Search papers…') : chips.length ? 'Add words, an author, a topic…' : 'Search words, authors, topics, venues…';
@@ -4671,6 +4701,9 @@ function renderSearch() {
   const body = document.getElementById('lpBody');
   body.classList.toggle('ranked', sort === 'best' || sort === 'match');
   sfDrawBody(c, sort);
+  const sig = sort + '|' + (_sfPlan ? _sfPlan.keys.slice(0, 60).join(',') + '|' + _sfPlan.keys.length : 'none');
+  if (_sfFade && sig !== _sfSig && !reduceMotion()) replay(body, 'sf-fade');
+  _sfFade = false; _sfSig = sig;
   requestAnimationFrame(sfFill);
   document.getElementById('lp').style.setProperty('--gbg', SF.topic.length === 1 ? topicGlow(SF.topic) : 'none');   // one topic: its faint colour
   if (document.getElementById('sfBox').classList.contains('sugg-open')) sfSuggest();
