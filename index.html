@@ -133,13 +133,13 @@ html.ro .interest-actions, html.ro .group-drag-handle, html.ro .tt-line,
 html.ro #readerNotesBtn, html.ro #readerPanel, html.ro #rpResize, html.ro #selBar, html.ro .reader-change, html.ro .anno-mark,
 html.ro #vaultOverlay { display: none !important; }
 .nav-refresh.spinning svg { animation: spin 0.7s linear infinite; }
+@media (max-width: 600px) { html.ro #navRefresh { display: none; } }
+@media (max-width: 600px) and (display-mode: standalone) { html.ro #navRefresh { display: inline-flex; } }
 @media (max-width: 600px) {
   .nav-search-toggle { display: inline-flex; align-items: center; justify-content: center; margin-left: auto; width: 40px; height: 40px; border-radius: 50%; border: none; background: none; color: var(--text-secondary); cursor: pointer; transition: background 0.15s, color 0.15s; }
-  .nav-search-toggle:hover, body.search-open .nav-search-toggle { background: rgba(255,255,255,0.08); color: var(--text); }
+  .nav-search-toggle:hover { background: rgba(255,255,255,0.08); color: var(--text); }
   .nav-search-toggle svg { width: 20px; height: 20px; fill: currentColor; }
 
-  body.search-open .nav-search { order: 4; flex-basis: 100%; width: 100%; margin: 0 0 10px; }
-  body.search-open .nav-search input { font-size: 16px; padding: 10px 14px 10px 38px; }   /* 16px stops iOS zooming in */
 }
 .nav-search svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; fill: var(--text-muted); }
 
@@ -843,8 +843,6 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .pd-topics .group-add-dd { max-height: none; overflow: visible; }
 
 /* SEARCH RESULTS (flat list) */
-.search-filters { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
-.search-filters .tl-chips { align-items: center; }
 .chip-select { -webkit-appearance: none; appearance: none; background: rgba(255,255,255,0.055) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24'%3E%3Cpath fill='%239aa0a6' d='M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z'/%3E%3C/svg%3E") no-repeat right 9px center; border: 1px solid transparent; color: var(--text-secondary); font: inherit; font-size: 12px; padding: 3px 26px 3px 10px; border-radius: 999px; cursor: pointer; transition: border-color 0.15s, color 0.15s; max-width: 240px; }
 .chip-select:hover { border-color: rgba(255,255,255,0.2); color: var(--text); }
 .chip-select.active { background-color: var(--accent-dim); border-color: rgba(251,177,60,0.7); color: var(--accent); }
@@ -1446,12 +1444,7 @@ body.rp-splitting, body.rp-splitting * { user-select: none !important; -webkit-u
 .keys-help dt { white-space: nowrap; }
 kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--text); background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.16); border-bottom-width: 2px; border-radius: 5px; padding: 1px 6px; }
 .chip-select option { background: #1b1b1d; color: var(--text); }
-.search-results mark { background: rgba(251,177,60,0.22); color: inherit; border-radius: 3px; padding: 0 1px; }
-.search-empty { line-height: 1.6; max-width: 560px; margin: 48px auto; }
-.search-empty strong { display: block; color: var(--text); margin-bottom: 6px; }
-.search-results-header .v-more { margin: 0 0 0 8px; padding: 0 2px; }
-.search-results { max-width: 1200px; margin: 0 auto; padding: 0 24px 32px; }
-.search-results-header { font-size: 14px; color: var(--text-muted); margin-bottom: 12px; }
+.lp-body mark { background: rgba(251,177,60,0.22); color: inherit; border-radius: 3px; padding: 0 1px; }
 /* [9] Softer card rendering */
 .search-list { background: var(--bg-surface); border: 1px solid rgba(255,255,255,0.18); border-radius: 10px; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.45); }
 .search-list .topic-item { padding: 14px 20px; }
@@ -1463,11 +1456,10 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
 /* the topic's colour, faint, across the top (as on its card and on a paper page) */
 .lp::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 420px; z-index: -1; background: var(--gbg, none); opacity: 0.1; pointer-events: none; -webkit-mask-image: linear-gradient(#000, transparent); mask-image: linear-gradient(#000, transparent); }
 .lp-bar .pd-bar-inner { max-width: none; padding: 8px 32px 8px 24px; }
-/* the bar is clear over the page's glow until the heading scrolls under it */
+/* the bar is clear over the page's glow until the search field scrolls under it */
 .lp-bar { transition: background-color var(--t-slow) var(--ease), border-color 0.2s; }
 .lp-bar:not(.stuck) { background: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; }
 .lp-bar .pd-bar-title { font-size: 18px; top: 2px; }
-.lp-search-btn, .lp-search-cancel { display: none; }
 /* the sidebar sits against the window's left edge and the list takes the rest of the width (up to a readable 1200px):
    no centred column with empty margins beside a sidebar. Sidebar text lines up with the Back arrow above it. */
 .lp-wrap { padding: 0 32px 96px 12px; display: grid; grid-template-columns: 252px minmax(0, 1200px); column-gap: 40px; }
@@ -1482,7 +1474,92 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
 .lp-rail-item .n { margin-left: auto; padding-left: 8px; font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .lp-rail .gdot { width: 7px; height: 7px; background: color-mix(in srgb, var(--gc, var(--g-other)) 70%, #1b1b1d); }
 .lp-rail .gdot.none { background: none; }   /* no colour, same place: every label lines up */
-.lp-chiprow { display: none; }
+/* ===== SEARCH PAGE (renderSearch) ===== */
+/* the field: what's set as chips, then what you're typing; 16px text so iOS doesn't zoom in */
+.sf-box { position: relative; padding-top: 22px; }
+.sf-field { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-height: 48px; padding: 7px 10px 7px 42px; border-radius: 12px; background: rgba(255,255,255,0.045); border: 1px solid rgba(255,255,255,0.16); cursor: text; transition: border-color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease); }
+.sf-field:hover { border-color: rgba(255,255,255,0.24); }
+.sf-field:focus-within { border-color: rgba(255,255,255,0.34); background: rgba(255,255,255,0.06); }
+.sf-field > svg { position: absolute; left: 14px; top: 14px; width: 18px; height: 18px; fill: var(--text-muted); }
+.sf-chips { display: contents; }
+.sf-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-width: 0; height: 30px; padding: 0 2px 0 11px; border-radius: 999px; background: rgba(255,255,255,0.08); font-size: 13px; color: var(--text); white-space: nowrap; cursor: default; transition: box-shadow var(--t-fast) var(--ease); }
+.sf-chip .t { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.sf-chip .k { color: var(--text-muted); }
+.sf-chip .gdot { width: 7px; height: 7px; }
+.sf-star { color: var(--star); }
+.sf-chip.armed { box-shadow: 0 0 0 1.5px rgba(255,255,255,0.45); }   /* Backspace once more removes it */
+.sf-x { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 26px; height: 26px; border: none; border-radius: 50%; background: none; color: var(--text-muted); cursor: pointer; transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
+.sf-x:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+.sf-x svg { width: 9px; height: 9px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; }
+#sfInput { flex: 1 1 15em; min-width: 15em; height: 32px; padding: 0 4px; background: none; border: none; outline: none; color: var(--text); font: inherit; font-size: 16px; }
+#sfInput::placeholder { color: var(--text-muted); }
+#sfInput::-webkit-search-cancel-button { display: none; }
+/* suggestions while typing: the words, then the topics, interests, authors, venues and years they name */
+.sf-sugg { display: none; position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 60; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 12px; padding: 6px; max-height: min(60vh, 460px); overflow-y: auto; overscroll-behavior: contain; background: var(--bg-surface); border: 1px solid rgba(255,255,255,0.18); border-radius: 12px; box-shadow: 0 16px 40px rgba(0,0,0,0.6); }
+.sf-sugg.one { grid-template-columns: minmax(0, 1fr); }
+.sf-box.sugg-open .sf-sugg { display: grid; animation: dropdown-in 0.15s ease forwards; }
+.sf-col { min-width: 0; }
+.sf-sugg h3 { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin: 10px 10px 4px; }
+.sf-opt { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 36px; padding: 7px 10px; border: none; border-radius: 8px; background: none; color: var(--text-secondary); font: inherit; font-size: 13.5px; text-align: left; cursor: pointer; transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
+.sf-opt:hover, .sf-opt.hl { background: rgba(255,255,255,0.07); color: var(--text); }
+.sf-opt .l { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sf-opt b { color: var(--text); font-weight: 600; }
+.sf-opt .k { color: var(--text-muted); }
+.sf-opt .n { margin-left: auto; padding-left: 8px; font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.sf-opt .gdot { width: 7px; height: 7px; }
+.sf-opt-ico { width: 15px; height: 15px; fill: var(--text-muted); flex-shrink: 0; }
+/* above the papers: how many, how the words combine, the filters (narrow screens) and the order */
+.sf-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 12px; margin: 16px 0 4px; min-height: 34px; }
+.sf-count { font-size: 14px; color: var(--text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sf-count b { color: var(--text-secondary); font-weight: 500; }
+.sf-bar .tl-sort { height: 32px; padding: 2px; border-radius: 999px; border-color: rgba(255,255,255,0.2); }
+.sf-bar .tl-sort button { height: 100%; min-height: 0; padding: 0 13px; border-radius: 999px; white-space: nowrap; }
+.sf-sort { margin-left: auto; }
+.sf-sort-btn { position: relative; display: none; align-items: center; gap: 7px; height: 32px; padding: 0 13px; border: 1px solid rgba(255,255,255,0.2); border-radius: 999px; color: var(--text-secondary); font-size: 13px; white-space: nowrap; cursor: pointer; transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
+.sf-sort-btn:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+.sf-sort-btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.sf-sort-btn select { position: absolute; inset: 0; width: 100%; opacity: 0; font-size: 16px; cursor: pointer; -webkit-appearance: none; appearance: none; }   /* the system's own picker; 16px so iOS doesn't zoom */
+.sf-filters-btn { display: none; align-items: center; gap: 7px; height: 32px; padding: 0 13px; border: 1px solid rgba(255,255,255,0.2); border-radius: 999px; background: none; color: var(--text-secondary); font: inherit; font-size: 13px; cursor: pointer; transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
+.sf-filters-btn:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+.sf-filters-btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.sf-filters-btn .b { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: rgba(255,255,255,0.14); color: var(--text); font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; }
+/* the sidebar of filters: each value with how many papers it would show */
+.sf-rail { padding-top: 0; }
+.sf-rail > .sf-sec:first-child > h2 { margin-top: 20px; }   /* its capitals level with the field's top edge */
+.sf-rail .lp-rail-item { width: 100%; border: none; background: none; font: inherit; text-align: left; cursor: pointer; }
+.sf-rail .lp-rail-item.on { background: rgba(255,255,255,0.08); color: var(--text); }
+.sf-rail .lp-rail-item.on .n { color: var(--text-secondary); }
+.sf-sec.fold h2 { margin: 6px 0 0; padding: 0; border-top: 1px solid rgba(255,255,255,0.06); }
+.sf-sec.fold:first-of-type h2, .sf-sec:not(.fold) + .sf-sec.fold h2 { margin-top: 18px; }
+.sf-sec-h { display: flex; align-items: center; width: 100%; padding: 12px 12px 10px; border: none; background: none; font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; cursor: pointer; border-radius: 8px; transition: color var(--t-fast) var(--ease); }
+.sf-sec-h:hover { color: var(--text); }
+.sf-sec-h svg { width: 14px; height: 14px; margin-left: auto; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform var(--t-fast) var(--ease); }
+.sf-sec.open .sf-sec-h svg { transform: rotate(180deg); }
+.sf-sub { display: flex; align-items: center; gap: 8px; padding: 10px 12px 3px; font-size: 11.5px; color: var(--text-muted); }
+.sf-sub i { width: 6px; height: 6px; border-radius: 50%; }
+.sf-rail .sf-sub:first-of-type { padding-top: 0; }
+.sf-more { display: block; margin: 2px 0 0; padding: 6px 12px; border: none; border-radius: 8px; background: none; color: var(--text-muted); font: inherit; font-size: 12.5px; cursor: pointer; transition: color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease); }
+.sf-more:hover { color: var(--text); background: rgba(255,255,255,0.045); }
+/* narrow screens: the filters in a sheet from the bottom */
+.sf-scrim { position: fixed; inset: 0; z-index: 950; background: rgba(0,0,0,0.5); opacity: 0; pointer-events: none; transition: opacity 0.22s var(--ease); }
+.sf-scrim.open { opacity: 1; pointer-events: auto; }
+.sf-sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 951; max-height: 82vh; display: flex; flex-direction: column; background: var(--bg-surface); border-radius: 16px 16px 0 0; border-top: 1px solid rgba(255,255,255,0.14); box-shadow: 0 -20px 50px rgba(0,0,0,0.6); transform: translateY(100%); visibility: hidden; transition: transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1), visibility 0s linear 0.26s; }
+.sf-sheet.open { transform: none; visibility: visible; transition: transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.sf-sheet-head { display: flex; align-items: center; gap: 6px; padding: 12px 12px 10px 18px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+.sf-sheet-head b { margin-right: auto; font-size: 16px; font-weight: 600; color: var(--text); }
+.sf-sheet-head button { min-height: 36px; padding: 0 14px; border: none; border-radius: 999px; background: none; color: var(--text-secondary); font: inherit; font-size: 14px; cursor: pointer; transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
+.sf-sheet-head button:hover { color: var(--text); }
+.sf-sheet-head .sf-done { background: rgba(255,255,255,0.1); color: var(--text); }
+.sf-sheet-body { overflow-y: auto; overscroll-behavior: contain; padding: 2px 18px calc(22px + env(safe-area-inset-bottom)); }
+.sf-sheet-body h2 { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin: 18px 0 8px; }
+.sf-sheet-body .sf-sub { padding: 10px 0 6px; }
+.sf-wrap { display: flex; flex-wrap: wrap; gap: 8px; }
+.sf-sheet-body .tl-chip { display: inline-flex; align-items: center; max-width: 100%; height: 36px; padding: 0 14px; font-size: 13.5px; }
+.sf-sheet-body .tl-chip .l { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.sf-sheet-body .tl-chip .gdot { width: 7px; height: 7px; margin-right: 8px; }
+.sf-sheet-body .sf-more { margin: 0; padding: 0 14px; height: 36px; }
+@media (min-width: 601px) { .sf-sheet { left: 50%; right: auto; width: min(600px, 100%); border-radius: 16px 16px 0 0; transform: translate(-50%, 100%); } .sf-sheet.open { transform: translate(-50%, 0); } }
+body.sf-on .nav-search { visibility: hidden; }   /* the page's own field takes over */
 /* ===== CONTINUE READING: the papers you're partway through, from any of your devices (above Top Papers; a strip
    at the top of the phone feed) ===== */
 .cr-strip { max-width: 1200px; margin: 0 auto; padding: 16px 24px 0; }
@@ -1522,26 +1599,6 @@ body.tok-mode .tok-bar { flex-wrap: wrap; row-gap: 8px; }
 .fade-x.more-right { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 44px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 44px), transparent); }
 .fade-x.more-left { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 44px), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 44px), transparent); }
 .fade-x.more-left.more-right { -webkit-mask-image: linear-gradient(to right, transparent, #000 44px, #000 calc(100% - 44px), transparent); mask-image: linear-gradient(to right, transparent, #000 44px, #000 calc(100% - 44px), transparent); }
-.lp-head { display: flex; align-items: flex-end; gap: 16px 32px; padding: 26px 0 18px; }
-.lp-head-text { flex: 1; min-width: 0; }
-.lp-eyebrow { font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: color-mix(in srgb, var(--gc) 75%, #fff); }
-.lp-title { font-family: var(--serif); font-optical-sizing: auto; font-size: 42px; font-weight: 500; line-height: 1.15; letter-spacing: -0.01em; color: #f2f2f4; margin: 8px 0 0; text-wrap: balance; }
-.lp-sub { font-size: 14px; color: var(--text-secondary); margin: 6px 0 0; }
-.lp-stats { margin: 10px 0 0; font-size: 14px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
-.lp-stats b { color: var(--text-secondary); font-weight: 500; }
-.lp-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 10px; padding-bottom: 6px; }
-.lp-controls { display: flex; align-items: center; gap: 10px; }
-.lp-controls .tl-sort { height: 32px; padding: 2px; margin-right: 4px; border-radius: 999px; border-color: rgba(255,255,255,0.2); }
-.lp-controls .tl-sort button { height: 100%; min-height: 0; padding: 0 13px; border-radius: 999px; white-space: nowrap; }
-.lp-pills { display: flex; gap: 8px; }
-.lp-pills .pill { height: 32px; min-height: 0; padding: 0 13px; font-size: 12.5px; white-space: nowrap; flex-shrink: 0; }
-.lp-filter { flex: 0 0 240px; margin-bottom: 1px; display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 13px; border: 1px solid rgba(255,255,255,0.2); border-radius: 999px; color: var(--text-muted); cursor: text; transition: border-color var(--t-fast) var(--ease); }
-.lp-filter:focus-within { border-color: rgba(255,255,255,0.35); }
-.lp-filter svg { width: 14px; height: 14px; fill: currentColor; flex-shrink: 0; }
-.lp-filter input { flex: 1; min-width: 0; background: none; border: none; outline: none; color: var(--text); font: inherit; font-size: 13px; }
-.lp-filter input::-webkit-search-cancel-button { filter: invert(1) opacity(0.5); }
-.lp-filter input::placeholder { color: var(--text-muted); }
-.lp-years { flex-basis: 100%; }
 .lp-sec-h.stuck::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 14px; background: linear-gradient(var(--bg), transparent); pointer-events: none; }   /* rows fade as they pass under it */
 .lp-sec { margin-top: 22px; }
 .lp-sec-h { position: sticky; top: var(--lp-bar-h); z-index: 2; display: flex; align-items: center; gap: 10px; padding: 8px 18px; margin: 0 -18px; }
@@ -1560,6 +1617,8 @@ body.tok-mode .tok-bar { flex-wrap: wrap; row-gap: 8px; }
 .lp-row .why-line { margin-top: 4px; }
 .lp-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; margin-top: 6px; font-size: 12px; color: var(--text-muted); min-width: 0; }
 .lp-meta .tc-tags { flex-wrap: nowrap; min-width: 0; }
+.lp-meta .tc-tags > * { flex-shrink: 0; white-space: nowrap; }   /* short tags never break inside ("Must / read"); */
+.lp-meta .tc-tags > .f-venue { flex-shrink: 1; }                   /* a long venue gives way, with an ellipsis */
 .lp-star { color: var(--star); }
 .lp-auth { min-width: 0; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lp-also { display: inline-flex; align-items: center; gap: 12px; }
@@ -1579,36 +1638,23 @@ body.tok-mode .tok-bar { flex-wrap: wrap; row-gap: 8px; }
   .lp-bar .pd-bar-inner { padding: 8px 24px; }
   .lp-wrap { display: block; padding: 0 24px 96px; }
   .lp-rail { display: none; }
-  .lp-chiprow { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 -24px; padding: 16px 24px 2px; }
-  .lp-chiprow::-webkit-scrollbar { display: none; }
-  .lp-head { flex-wrap: wrap; }
-  .lp-filter { flex: 1 1 100%; }
+  .sf-filters-btn { display: inline-flex; margin-left: auto; order: 1; }
+  .sf-sort { margin-left: 0; order: 2; }
+  .sf-sort .tl-sort { display: none; }
+  .sf-sort-btn { display: inline-flex; }
+  .sf-mode { order: 3; }
 }
 @media (max-width: 600px) {
   .lp-bar .pd-bar-title { display: block; }   /* (a paper page's phone bar has no room for it; this one does) */
   .lp-bar .pd-bar-inner { padding: 8px 16px; }
-  /* the filter: a search icon in the bar; tapped, the bar becomes the field and Cancel */
-  .lp-search-btn { display: inline-flex; margin-left: auto; flex-shrink: 0; }
-  .lp-search-btn svg { width: 19px; height: 19px; fill: currentColor; }
-  .lp-bar .lp-filter { display: none; flex: 1 1 auto; margin: 0; }
-  .lp.searching .lp-bar .lp-filter { display: flex; animation: ui-fade var(--t-slow) var(--ease); }
-  .lp.searching .lp-bar .pd-back, .lp.searching .lp-bar .pd-bar-title, .lp.searching .lp-search-btn { display: none; }
-  .lp-search-cancel { background: none; border: none; color: var(--text-secondary); font: inherit; font-size: 15px; padding: 8px 2px 8px 6px; cursor: pointer; flex-shrink: 0; }
-  .lp.searching .lp-search-cancel { display: inline-flex; animation: ui-fade var(--t-slow) var(--ease); }
-  .lp.searching .lp-bar { background: rgba(17,17,17,0.84); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+  #sfInput { min-width: 11em; flex-basis: 11em; }
   .lp-wrap { padding: 0 16px 72px; }
-  .lp-chiprow { margin: 0 -16px; padding: 12px 16px 2px; }
-  .lp-head { padding-top: 20px; }
-  .lp-title { font-size: 32px; }
-  .lp-controls { overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 2px 16px; flex: 1 1 100%; min-width: 0; }
-  .lp-controls::-webkit-scrollbar { display: none; }
-  .lp-controls .tl-sort button { white-space: nowrap; }
   .lp-row { padding: 12px 16px; margin: 0 -16px; }
   .lp-body.ranked .lp-row { grid-template-columns: 24px minmax(0, 1fr); column-gap: 10px; }
   .lp-h { font-size: 17.5px; }
   .lp-also { display: none; }
 }
-@media (prefers-reduced-motion: reduce) { .lp-more, .lp-row, .lp-h, .lp-rail-item { transition: none; } .lp-bar .lp-filter, .lp-search-cancel { animation: none !important; } }
+@media (prefers-reduced-motion: reduce) { .lp-more, .lp-row, .lp-h, .lp-rail-item, .sf-field, .sf-chip, .sf-x, .sf-opt, .sf-sheet, .sf-scrim, .sf-filters-btn, .sf-sort-btn { transition: none; } .sf-box.sugg-open .sf-sugg { animation: none; } }
 
 .tl-chips { display: flex; flex-wrap: wrap; gap: 6px 5px; }
 .tl-chip { flex-shrink: 0; background: rgba(255,255,255,0.055); border: 1px solid transparent; color: var(--text-secondary); font: inherit; font-size: 12px; padding: 3px 10px; border-radius: 999px; cursor: pointer; white-space: nowrap; transition: background 0.15s, color 0.15s, border-color 0.15s; }
@@ -1653,10 +1699,10 @@ body.tok-mode .tok-bar { flex-wrap: wrap; row-gap: 8px; }
 .top-row .tr-actions > div { overflow: hidden; min-height: 0; }
 .top-row:hover .tr-actions, .top-row:focus-within .tr-actions, .top-row .tr-actions:has(.p-detail-panel.open) { grid-template-rows: 1fr; opacity: 1; margin-top: 10px; }
 .paper-list.flat .tl-section::before { top: 18px; bottom: 14px; }
-.search-results .paper-list, .interest-group-body .paper-list { padding: 4px 0 8px; }
-.search-results .paper-list .top-row, .interest-group-body .paper-list .top-row { padding-left: 48px; }
-.search-results .tl-section::before, .interest-group-body .tl-section::before { left: 30px; }
-.search-results .top-row::before, .interest-group-body .top-row::before { left: 18px; }
+.interest-group-body .paper-list { padding: 4px 0 8px; }
+.interest-group-body .paper-list .top-row { padding-left: 48px; }
+.interest-group-body .tl-section::before { left: 30px; }
+.interest-group-body .top-row::before { left: 18px; }
 .tl-empty { text-align: center; padding: 64px 24px; color: var(--text-secondary); line-height: 2.4; }
 
 @media (max-width: 700px) {
@@ -1907,7 +1953,7 @@ body.tok-mode .tok-bar { flex-wrap: wrap; row-gap: 8px; }
 
 /* RESPONSIVE */
 @media (max-width: 900px) { .topics-grid { grid-template-columns: repeat(2, 1fr); } .top-grid { grid-template-columns: 1fr; } .skel-top-grid { grid-template-columns: 1fr; } .skel-topics { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 600px) { .topics-grid { grid-template-columns: 1fr; } .top-grid { grid-template-columns: 1fr; } .nav-search { display: none; } body.search-open .nav-search { display: block; } .nav-inner { padding: 0 16px; gap: 12px; } .briefing, .filters, .top-papers, .topics-grid { padding-left: 16px; padding-right: 16px; } .skel-topics { grid-template-columns: 1fr; } .skel-top-grid { grid-template-columns: 1fr; } }
+@media (max-width: 600px) { .topics-grid { grid-template-columns: 1fr; } .top-grid { grid-template-columns: 1fr; } .nav-search { display: none; } .nav-inner { padding: 0 16px; gap: 12px; } .briefing, .filters, .top-papers, .topics-grid { padding-left: 16px; padding-right: 16px; } .skel-topics { grid-template-columns: 1fr; } .skel-top-grid { grid-template-columns: 1fr; } }
 
 /* AUTH */
 .auth-overlay { position: fixed; inset: 0; z-index: 400; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0); visibility: hidden; pointer-events: none; transition: background 0.2s ease; }
@@ -2071,7 +2117,8 @@ html.no-hover .sel-icon:not(.on):active, html.no-hover .ink-bar .ink-size:not(.o
   .pill, .ig-toggle-btn, .tl-chip, .tl-sort button, .lib-hint-btn, .library-actions button, .btn-abs, .btn-link, .p-actions .btn-icon, .btn-quiet-remove, .ui-btn, .rp-chip, .rp-seg button { min-height: 36px; display: inline-flex; align-items: center; justify-content: center; }
   .p-actions .btn-icon:not(.btn-labelled) { min-width: 36px; }
   .lp-rail-item { min-height: 40px; }
-  .lp-controls .tl-sort, .lp-pills .pill, .lp-filter { height: 38px; }
+  .sf-bar .tl-sort, .sf-filters-btn, .sf-sort-btn { height: 38px; }
+  .sf-x { width: 30px; height: 30px; }
   .tok-pill { min-height: 32px; }
   .anno-mark { width: 26px; height: 26px; margin-top: -13px; border-radius: 7px; }
   .anno-mark svg { width: 15px; height: 15px; }
@@ -2116,10 +2163,10 @@ html.no-hover .sel-icon:not(.on):active, html.no-hover .ink-bar .ink-size:not(.o
       <button class="nav-tab" data-tab="library" onclick="switchTab('library')">Library</button>
       <button class="nav-tab" data-tab="interests" onclick="switchTab('interests')">Interests <span class="tab-badge" id="interestsBadge" style="display:none">0</span></button>
     </div>
-    <button class="nav-search-toggle" id="navSearchToggle" onclick="toggleMobileSearch()" aria-label="Search" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg></button>
+    <button class="nav-search-toggle" id="navSearchToggle" onclick="openSearchHere()" aria-label="Search"><svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg></button>
     <div class="nav-search">
       <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-      <input type="text" id="searchInput" placeholder="Search papers and authors..." oninput="debouncedSearch()" onpaste="setTimeout(debouncedSearch,0)" onkeydown="if (event.key === 'Escape') { event.preventDefault(); this.value = ''; clearTimeout(_searchTimer); hideGlobalSearch(); this.blur(); }">
+      <input type="text" id="searchInput" placeholder="Search papers…" aria-label="Search papers" autocomplete="off" onfocus="openSearchHere(this)">
     </div>
     <button class="nav-refresh nav-key" id="navKey" onclick="connectGitHub()" title="Sign in" aria-label="Sign in"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2 20 3M16 7l3 3M18 5l2 2"/></svg></button>
     <button class="nav-refresh" id="navRefresh" onclick="refreshPage()" title="Refresh: the latest papers and the latest version of the site" aria-label="Refresh"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4.5h-4.5"/></svg></button>
@@ -2209,11 +2256,6 @@ html.no-hover .sel-icon:not(.on):active, html.no-hover .ink-bar .ink-size:not(.o
   <div class="library-wrap" id="libraryContent"></div>
 </div>
 
-<!-- GLOBAL SEARCH VIEW (cross-category) -->
-<div class="tab-section" id="sec-search">
-  <div class="search-results" id="globalSearchResults" style="padding-top:24px;"></div>
-</div>
-
 <!-- INTERESTS TAB -->
 <div class="tab-section" id="sec-interests">
   <div class="interests-header">
@@ -2239,24 +2281,25 @@ html.no-hover .sel-icon:not(.on):active, html.no-hover .ink-bar .ink-size:not(.o
   <div class="paper-detail" id="paperDetail"></div>
 </div>
 
-<!-- LIST PAGE: every "View all" list (renderListPage) -->
+<!-- SEARCH PAGE: every list is a search (renderSearch) -->
 <div class="tab-section" id="sec-list">
   <div class="lp" id="lp">
     <div class="pd-bar lp-bar" id="lpBar"><div class="pd-bar-inner">
       <button class="pd-back" onclick="listBack()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg><span id="lpBack">Back</span></button>
       <div class="pd-bar-title" id="lpBarTitle" aria-hidden="true"></div>
-      <button class="pd-act lp-search-btn" id="lpSearchBtn" onclick="openListSearch()" aria-label="Filter this list" title="Filter this list"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg></button>
-      <button class="lp-search-cancel" id="lpSearchCancel" onclick="closeListSearch()">Cancel</button>
     </div></div>
     <div class="lp-wrap">
-      <nav class="lp-rail" id="lpRail" aria-label="Other lists"></nav>
+      <nav class="lp-rail sf-rail" id="lpRail" aria-label="Filters"></nav>
       <div class="lp-main">
-        <nav class="lp-chiprow fade-x" id="lpChips" aria-label="Other lists"></nav>
-        <header class="lp-head">
-          <div class="lp-head-text"><div class="lp-eyebrow" id="lpEyebrow"></div><h1 class="lp-title" id="lpTitle"></h1><p class="lp-sub" id="lpSub" hidden></p><p class="lp-stats" id="lpStats"></p></div>
-          <label class="lp-filter"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg><input type="search" id="lpFilter" aria-label="Filter this list" autocomplete="off" oninput="setListQuery(this.value)" onkeydown="if (event.key === 'Escape' &amp;&amp; (this.value || _listSearching())) { event.stopPropagation(); closeListSearch(); }" onblur="listFilterBlur(this)"></label>
-        </header>
-        <div class="lp-tools" id="lpTools"></div>
+        <div class="sf-box" id="sfBox">
+          <div class="sf-field" onclick="sfFieldClick(event)">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+            <span class="sf-chips" id="sfChips"></span>
+            <input type="search" id="sfInput" enterkeyhint="search" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Search papers" aria-controls="sfSugg" oninput="sfType(this.value)" onkeydown="sfKey(event)" onfocus="sfSuggest()">
+          </div>
+          <div class="sf-sugg" id="sfSugg" role="listbox" aria-label="Suggestions"></div>
+        </div>
+        <div class="sf-bar" id="sfBar"></div>
         <div class="lp-body" id="lpBody"></div>
       </div>
     </div>
@@ -2264,6 +2307,13 @@ html.no-hover .sel-icon:not(.on):active, html.no-hover .ink-bar .ink-size:not(.o
 </div>
 
 </div><!-- /.main-scroll -->
+
+<!-- SEARCH FILTERS SHEET (narrow screens) -->
+<div class="sf-scrim" id="sfScrim" aria-hidden="true"></div>
+<div class="sf-sheet" id="sfSheet" role="dialog" aria-modal="true" aria-label="Filters">
+  <div class="sf-sheet-head"><b>Filters</b><button onclick="sfClearFilters()">Clear</button><button class="sf-done" onclick="sfSheet(false)">Done</button></div>
+  <div class="sf-sheet-body" id="sfSheetBody"></div>
+</div>
 
 <!-- GENERIC PROMPT / CONFIRM MODAL -->
 <!-- PDF READER -->
@@ -2731,7 +2781,7 @@ function applyPapers(rows, text) {
 }
 /* Swapping data under someone mid-scroll or mid-read is jarring; only do it quietly at the top */
 function quietSwapOK() {
-  if (_paperViewActive || _searchActive || _listViewActive) return false;
+  if (_paperViewActive || _listViewActive) return false;
   if (document.getElementById('mainScroll').scrollTop > 40) return false;
   const feed = document.getElementById('tokFeed');
   return !(document.body.classList.contains('tok-mode') && feed && feed.scrollTop > 40);
@@ -2789,7 +2839,7 @@ function rerenderForMetadata() {
     if (p) renderPaperDetail(p);
     return;
   }
-  if (_listViewActive) { renderListPage(); return; }
+  if (_listViewActive) { renderSearch(); return; }
   if (['all','email'].includes(currentTab)) {
     const feed = document.getElementById('tokFeed');
     if (document.body.classList.contains('tok-mode') && feed && feed.scrollTop > 40) return;   // don't move a phone reader
@@ -3107,149 +3157,14 @@ function sortPapers(arr) {
   });
 }
 
-/* ===== DEBOUNCED SEARCH ===== */
-let _searchTimer = null;
-function debouncedSearch() {
-  clearTimeout(_searchTimer);
-  _searchTimer = setTimeout(() => {
-    const q = (document.getElementById('searchInput').value||'').trim();
-    if (q) {
-      showGlobalSearch(q);
-    } else {
-      hideGlobalSearch();
-    }
-  }, 150);
-}
-
-/* ===== GLOBAL SEARCH (cross-category) ===== */
-let _searchActive = false;
-/* Phone: the search box sits behind a button in the nav */
-function toggleMobileSearch(force) {
-  const open = typeof force === 'boolean' ? force : !document.body.classList.contains('search-open');
-  document.body.classList.toggle('search-open', open);
-  document.getElementById('navSearchToggle').setAttribute('aria-expanded', open ? 'true' : 'false');
-  if (open) setTimeout(() => document.getElementById('searchInput').focus(), 0);
-}
-function showGlobalSearch(q, fromHash) {
-  const ms = document.getElementById('mainScroll');
-  if (!_searchActive && !_paperViewActive) { _tabScroll[currentTab] = ms.scrollTop; jumpScroll(ms, 0); }
-  _searchActive = true;
-  // on phones, keep the search row visible with its results (desktop always shows the box)
-  if (window.matchMedia('(max-width: 600px)').matches) document.body.classList.add('search-open');
-  if (!fromHash) location.hash = '#search?q=' + encodeURIComponent(q);
-  // Hide all tab sections, show search section
-  document.getElementById('sec-papers').classList.remove('active');
-  document.getElementById('sec-library').classList.remove('active');
-  document.getElementById('sec-venues').classList.remove('active');
-  document.getElementById('sec-interests').classList.remove('active');
-  document.getElementById('sec-paper').classList.remove('active');
-  document.getElementById('sec-search').classList.add('active');
-  document.body.classList.remove('tok-mode');
-  _paperViewActive = false;
-  // Deactivate tab highlight
-  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-  renderGlobalSearch(q.toLowerCase());
-}
-function hideGlobalSearch() {
-  if (!_searchActive) return;
-  _searchActive = false;
-  document.getElementById('sec-search').classList.remove('active');
-  switchTab(currentTab);
-  jumpScroll(document.getElementById('mainScroll'), _tabScroll[currentTab] || 0);   // back where you were before searching
-}
-/* Search ranks by where the words match (headline/title, then authors, then venue, then summary/abstract/
-   notes), highlights them, and narrows with chips: relevance, unread, topic, year. */
-let _searchFilters = { rel: 'all', unread: false, topic: null, year: null };
-let _lastSearchQ = '';
-function setSearchFilter(key, value) {
-  _searchFilters[key] = _searchFilters[key] === value ? (key === 'rel' ? 'all' : key === 'unread' ? false : null) : value;
-  renderGlobalSearch(_lastSearchQ);
-}
-function setSearchSelect(key, v) { _searchFilters[key] = v === '' ? null : key === 'year' ? parseInt(v) : v; renderGlobalSearch(_lastSearchQ); }
-function clearSearchFilters() { _searchFilters = { rel: 'all', unread: false, topic: null, year: null }; renderGlobalSearch(_lastSearchQ); }
-function searchScore(p, tokens) {
-  const low = v => (v || '').toLowerCase();
-  const head = low(p.headline) + ' ' + low(p.title), auth = low(p.authors), ven = low(p.venue);
-  const body = [p.summary, p.abstract, p.user_notes].map(low).join(' ');
-  let score = 0;
-  for (const t of tokens) {
-    if (head.includes(t)) score += 4;
-    else if (auth.includes(t)) score += 3;
-    else if (ven.includes(t)) score += 2;
-    else if (body.includes(t)) score += 1;
-    else return 0;
-  }
-  return score;
-}
-function highlightTokens(root, tokens) {
-  if (!tokens.length) return;
-  const escRe = t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  // the whole phrase first, so "conformal prediction" lights up as one span where it appears together
-  const alts = (tokens.length > 1 ? [tokens.map(escRe).join('\\s+')] : []).concat(tokens.map(escRe));
-  const re = new RegExp('(' + alts.join('|') + ')', 'gi');
-  root.querySelectorAll('.tr-headline, .tr-title, .tr-authors').forEach(el => {
-    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-    const nodes = [];
-    while (walker.nextNode()) nodes.push(walker.currentNode);
-    nodes.forEach(n => {
-      if (!re.test(n.nodeValue)) return;
-      re.lastIndex = 0;
-      const span = document.createElement('span');
-      span.innerHTML = esc(n.nodeValue).replace(re, '<mark>$1</mark>');
-      n.replaceWith(...span.childNodes);
-    });
-  });
-}
-function renderGlobalSearch(q) {
-  if (q !== _lastSearchQ) { _searchFilters.topic = null; _searchFilters.year = null; }
-  _lastSearchQ = q;
-  const tokens = q.split(/\s+/).filter(Boolean);
-  const scored = allPapers.map(p => ({ p, s: searchScore(p, tokens) })).filter(x => x.s > 0);
-  const el = document.getElementById('globalSearchResults');
-  if (!scored.length) {
-    el.innerHTML = `<div class="tl-empty search-empty"><strong>No papers match "${esc(q)}".</strong>Try fewer words, an author's last name, or a venue like RSS or L4DC. Search looks at titles, headlines, authors, venues, summaries, abstracts and your notes.</div>`;
-    return;
-  }
-  // chips reflect everything the words match; filters then narrow the list
-  const all = scored.map(x => x.p);
-  const f = _searchFilters;
-  const topicCounts = {}, yearCounts = {};
-  all.forEach(p => { groupsOfPaper(p).forEach(g => topicCounts[g] = (topicCounts[g] || 0) + 1); const y = pubKey(p) ? Math.floor(pubKey(p) / 100) : null; if (y) yearCounts[y] = (yearCounts[y] || 0) + 1; });
-  const keep = p => (f.rel === 'all' || dynamicRelevance(p) === f.rel) && (!f.unread || !readSet.has(paperKey(p)))
-    && (!f.topic || groupsOfPaper(p).includes(f.topic)) && (!f.year || Math.floor(pubKey(p) / 100) === f.year);
-  const shown = scored.filter(x => keep(x.p));
-  shown.sort((a, b) => b.s - a.s || (REL_ORDER[dynamicRelevance(a.p)] ?? 9) - (REL_ORDER[dynamicRelevance(b.p)] ?? 9) || pubKey(b.p) - pubKey(a.p));
-  const chip = (key, value, label, n) => `<button class="tl-chip ${f[key] === value ? 'active' : ''}" onclick="setSearchFilter('${key}', ${typeof value === 'string' ? `'${escAttr(value)}'` : value})">${key === 'topic' ? gdot(value) : ''}${esc(label)}${n != null ? `<span class="n">${n}</span>` : ''}</button>`;
-  const rels = [['definitely', 'Must Read'], ['probably', 'Interesting'], ['mildly', 'Tangential']].filter(([r]) => all.some(p => dynamicRelevance(p) === r));
-  const topics = GROUP_ORDER.filter(g => topicCounts[g]);
-  const years = Object.keys(yearCounts).map(Number).sort((a, b) => b - a);
-  const active = f.rel !== 'all' || f.unread || f.topic || f.year;
-  let html = `<div class="search-results-header">${shown.length === all.length ? `${all.length} result${all.length !== 1 ? 's' : ''}` : `${shown.length} of ${all.length} results`} for "${esc(q)}"${active ? ` <button class="v-more" onclick="clearSearchFilters()">Clear filters</button>` : ''}</div>
-    <div class="search-filters">
-      <div class="tl-chips">${rels.map(([r, l]) => chip('rel', r, l, all.filter(p => dynamicRelevance(p) === r).length)).join('')}${chip('unread', true, 'Unread only', null)}
-      ${topics.length > 1 ? `<select class="chip-select ${f.topic ? 'active' : ''}" aria-label="Topic" onchange="setSearchSelect('topic', this.value)"><option value="">All topics</option>${topics.map(g => `<option value="${esc(g)}" ${f.topic === g ? 'selected' : ''}>${esc(g)} (${topicCounts[g]})</option>`).join('')}</select>` : ''}
-      ${years.length > 1 ? `<select class="chip-select ${f.year ? 'active' : ''}" aria-label="Year" onchange="setSearchSelect('year', this.value)"><option value="">Any year</option>${years.map(y => `<option value="${y}" ${f.year === y ? 'selected' : ''}>${y} (${yearCounts[y]})</option>`).join('')}</select>` : ''}</div>
-    </div>`;
-  html += shown.length ? paperListHTML(shown.map(x => x.p)) : `<div class="tl-empty">No results with these filters. <button class="v-more" onclick="clearSearchFilters()">Clear filters</button></div>`;
-  el.innerHTML = html;
-  highlightTokens(el, tokens);
-}
-
 /* [6] TAB SWITCHING — crossfade */
 /* Each tab keeps its own place; a tab you haven't visited opens at the top */
 const _tabScroll = {};
 function switchTab(tab, fromHash) {
   const ms = document.getElementById('mainScroll');
-  const prevTab = currentTab, fromSearch = _searchActive, moved = prevTab !== tab || fromSearch;
-  if (prevTab !== tab && !fromSearch && !_paperViewActive && !_listViewActive) _tabScroll[prevTab] = ms.scrollTop;
+  const prevTab = currentTab, moved = prevTab !== tab;
+  if (prevTab !== tab && !_paperViewActive && !_listViewActive) _tabScroll[prevTab] = ms.scrollTop;
   const fromList = leaveListView();
-  // Clear search when switching tabs
-  if (_searchActive) {
-    _searchActive = false;
-    document.getElementById('searchInput').value = '';
-    document.getElementById('sec-search').classList.remove('active');
-    toggleMobileSearch(false);
-  }
   currentTab = tab;
   if (!fromHash) location.hash = tab === 'interests' ? '#interests/' + currentIGTab : '#' + tab;
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
@@ -3353,7 +3268,7 @@ let _tokTopic = '', _tokNewOnly = false;
 function setTokTopic(v) { _tokTopic = v; applyFilters(); }
 function toggleTokNew() { _tokNewOnly = !_tokNewOnly; applyFilters(); }
 function phoneFeedOn() {
-  const on = window.matchMedia('(max-width: 700px)').matches && ['all','email'].includes(currentTab) && !_paperViewActive && !_searchActive && !_listViewActive;
+  const on = window.matchMedia('(max-width: 700px)').matches && ['all','email'].includes(currentTab) && !_paperViewActive && !_listViewActive;
   document.body.classList.toggle('tok-mode', on);
   if (!on) document.body.classList.remove('tok-immersive');
   return on;
@@ -3620,10 +3535,10 @@ document.addEventListener('scroll', () => closeTokMenu(), true);
    While one is open, a tap anywhere else closes it and does nothing more: it never also opens the paper, presses
    the button or starts the swipe underneath (as on iOS). Scrolling outside still closes it and scrolls. Short-lived
    hints (the venue tooltip) don't count. */
-const POPOVERS = '#tokMenu.open, #readerMenu.open, .save-dd, .copy-dd, .interest-dropdown, .abs-popup, .relevance-popup, #chatHist';
+const POPOVERS = '#tokMenu.open, #readerMenu.open, .save-dd, .copy-dd, .interest-dropdown, .abs-popup, .relevance-popup, #chatHist, .sf-box.sugg-open, #sfSheet.open';
 let _dismissTap = null;
 function closePopovers() {
-  closeTokMenu(); toggleReaderMenu(false); closeSaveDD(); closeCopyDD(); closeInterestDD(); closeAbsPopup(); closeRelevancePopup();
+  closeTokMenu(); toggleReaderMenu(false); closeSaveDD(); closeCopyDD(); closeInterestDD(); closeAbsPopup(); closeRelevancePopup(); sfSuggClose(); sfSheet(false);
   const h = document.getElementById('chatHist'); if (h) h.remove();
 }
 document.addEventListener('pointerdown', e => {
@@ -3739,8 +3654,7 @@ function renderEmailPapers(papers, topPool) {
   document.getElementById('topicsGrid').innerHTML = names.map(name => topicCardHTML(name, byAlert[name], shownAbove, {
     color: 'var(--accent)', label: name === 'Keyword alerts' || name === OTHER ? name : name + ' alert', open: name === OTHER ? '' : `openAlert('${escAttr(name)}')` })).join('');
 }
-const LATEST_KEY = '#latest-digest';
-function openLatestDigest(skipHash) { if (!skipHash) location.hash = '#latest'; else showList(LATEST_KEY); }
+function openLatestDigest() { location.hash = sfAt('src', 'email', { sort: 'added' }); }
 
 /* ----- Email Digest by alert source ("Alert: Bajcsy/Lindemann." in the triage note) ----- */
 const _alertCache = new WeakMap();
@@ -3755,8 +3669,7 @@ function alertSourcesOf(p) {
   _alertCache.set(p, out);
   return out;
 }
-const ALERT_KEY = 'alert:';
-function openAlert(name, skipHash) { if (!skipHash) location.hash = '#alert/' + encodeURIComponent(name); else showList(ALERT_KEY + name); }
+function openAlert(name) { location.hash = sfAt('alert', name); }
 
 /* Scroll a topic card into view below the sticky chip row, and flash its edge so the eye lands on it */
 function jumpToTopic(name) {
@@ -4238,7 +4151,7 @@ function unhidePaper(k) {
 
 function refresh() {
   // A list page stays live (a paper marked read leaves it, stars show); the page underneath redraws on the way back
-  if (_listViewActive) { renderListPage(); return; }
+  if (_listViewActive) { renderSearch(); return; }
   if (_tokLock) return;  // a phone-feed action already updated its own card
   if (['all','email'].includes(currentTab)) applyFilters();
   else if (currentTab === 'library') renderLibrary();
@@ -4260,10 +4173,7 @@ function updateInterestsBadge() {
   if (bg) { if (ng > 0) { bg.textContent = ng; bg.style.display = ''; } else { bg.style.display = 'none'; } }
 }
 
-function openGroup(name, skipHash) {
-  name = norm(name);   // old links may use a legacy spelling
-  if (!skipHash) location.hash = '#group/' + encodeURIComponent(name); else showList(name);
-}
+function openGroup(name) { location.hash = sfAt('topic', norm(name)); }   // (norm: old links may use a legacy spelling)
 /* ----- Venues tab ----- */
 const V_KINDS = [['conference', 'Conferences'], ['journal', 'Journals'], ['workshop', 'Workshops'], ['preprint', 'Preprints'], ['other', 'Theses and other']];
 /* Venues: each section shows venues with 3+ papers and folds the long tail of one-offs behind a
@@ -4319,19 +4229,8 @@ function renderVenues() {
 }
 
 /* ----- Venue page: one venue, all years or a single year ----- */
-const VENUE_KEY = 'venue:';
-let _venueYear = null;
-function openVenue(name, year, skipHash) {
-  if (!skipHash) { location.hash = venueHash(name, year || null); return; }
-  _venueYear = year || null;
-  showList(VENUE_KEY + name);
-}
-function venueHash(name, year) { return '#venue/' + encodeURIComponent(name) + (year ? '/' + year : ''); }
-function setVenueYear(y) {
-  _venueYear = y;
-  history.replaceState(null, '', venueHash(_listKey.slice(VENUE_KEY.length), y));
-  renderListPage();
-}
+function openVenue(name, year) { location.hash = venueHash(name, year); }
+function venueHash(name, year) { return sfAt('venue', name, year ? { year: [String(year)] } : null); }
 
 const _MONTHS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
 /* "Mar 2026" -> 202603, "2026" -> 202600 */
@@ -4367,22 +4266,531 @@ function paperListHTML(papers) {
   return `<div class="paper-list flat"><section class="tl-section">${papers.map(p => topRowHTML(p, groupsOfPaper(p))).join('')}</section></div>`;
 }
 
-/* ===== LIST PAGES =====
-   Every "View all" list is a page of its own: Top Papers (#top), a topic (#group/<name>), an alert (#alert/<name>),
-   the latest digest (#latest), a venue (#venue/<name>[/<year>]) and an interest (#interest/<name>). Back returns to
-   where it was opened from, and a paper opened from it comes back to the same place. A sidebar (a row of chips on
-   narrower screens) lists the sibling lists, so moving between topics needs no trip back. */
-const TOP_LIST_KEY = '#top-list';   // list keys: this, LATEST_KEY, a topic's name, or ALERT_KEY / VENUE_KEY / INTEREST_KEY + a name
-let _listKey = null, _listViewActive = false;
-let _listBackLabel = 'Back';   // where Back goes: the tab (or search) it was opened from, or "Back" to a paper page
-let _paperFromList = null;     // the list a paper page was opened from, so Back to it lands where you were
-let _leftPaper = false;        // set by the router while it handles a route that leaves a paper page
-let _listQuery = '', _listShowLow = false, _listQueryTimer = null;
-let _listOrder = (() => { try { return localStorage.getItem('scholar_list_order') || 'best'; } catch (e) { return 'best'; } })();
-const LIST_ORDERS = [['best', 'Best', 'Must read, then Interesting, then Tangential; the best score first within each'],
-  ['added', 'Recently added', 'Newest to the dashboard first'], ['published', 'Newest published', 'By publication date']];
+/* ===== SEARCH: one page to find and browse papers =====
+   Every list is a search: words you type (keys) and filters (read or unread, starred, relevance, topics, interests,
+   authors, venues, years, source), in any combination, sorted four ways. A topic, interest or venue link and Top
+   Papers' "View all" open it with that filter set, so none of those lists needs a page of its own and each is one
+   click from the sidebar. The state lives in the address (#search?k=…&topic=…), so Back, links and reloads keep it;
+   changes made on the page replace the address rather than adding steps, so Back always leaves the page.
+   Keys match at the start of a word in the headline, title, authors, venue, summary, abstract or your notes; a key
+   with spaces is a phrase. Every key must match, or any of them with the switch. A filter's values are alternatives
+   (this topic or that one) and different filters all apply. Unread is on until you remove it. */
 const TAB_NAMES = { all: 'Recent Works', email: 'Email Digest', venues: 'Venues', library: 'Library', interests: 'Interests' };
-function openTopList(skipHash) { if (!skipHash) location.hash = '#top'; else showList(TOP_LIST_KEY); }
+let _listKey = null, _listViewActive = false;   // the search page: its address (without what's being typed), and whether it's showing
+let _listBackLabel = 'Back';   // where Back goes: the tab it was opened from, or "Back" to a paper page
+let _paperFromList = null;     // the search a paper page was opened from, so Back to it lands where you were
+let _leftPaper = false;        // set by the router while it handles a route that leaves a paper page
+let _listShowLow = false;      // Tangential papers unfolded
+const SF_MULTI = ['rel', 'topic', 'interest', 'author', 'venue', 'year', 'src', 'alert'];
+const SF_SORTS = [['best', 'Best', 'Must read, then Interesting, then Tangential; the best score first within each'],
+  ['match', 'Best match', 'The papers your words match best first'], ['added', 'Recently added', 'Newest to the dashboard first'], ['published', 'Newest published', 'By publication date']];
+const SF_SHORT = { best: 'Best', match: 'Best match', added: 'Added', published: 'Published' };   // the order's name on a narrow screen's button
+const SF_SRC = { email: 'Email alerts', web_survey: 'Web survey', manual: 'Added by you' };
+const SF_REL = [['definitely', 'Must Read'], ['probably', 'Interesting'], ['mildly', 'Tangential']];
+function sfEmpty() { return { keys: [], draft: '', any: false, show: ['unread'], starred: false, rel: [], topic: [], interest: [], author: [], venue: [], year: [], src: [], alert: [], sort: '' }; }
+let SF = sfEmpty();
+let _sfOpen = (() => { try { return new Set(JSON.parse(localStorage.getItem('scholar_sf_open') || '[]')); } catch (e) { return new Set(); } })();   // the folded filter groups you opened
+const _sfMore = new Set();   // groups whose "Show more" was pressed (this visit)
+let _sfTimer = 0;
+
+/* The address: #search?k=conformal&k=reachability&any=1&show=all&starred=1&rel=…&topic=…&interest=…&author=…&venue=…&year=…&src=…&sort=… */
+function sfParse(qs) {
+  const s = sfEmpty(), u = new URLSearchParams(qs || '');
+  const add = k => { k = k.trim(); if (k && !s.keys.includes(k)) s.keys.push(k); };
+  u.getAll('k').forEach(add);
+  (u.get('q') || '').split(/\s+/).forEach(add);   // older #search?q=… links: each word a key
+  s.any = u.get('any') === '1';
+  if (u.has('show')) s.show = u.get('show') === 'all' ? [] : u.get('show').split(',').filter(x => x === 'unread' || x === 'read');
+  s.starred = u.get('starred') === '1';
+  SF_MULTI.forEach(f => { s[f] = [...new Set(u.getAll(f).map(x => x.trim()).filter(Boolean))]; });
+  s.topic = s.topic.map(norm);   // an old link to a renamed topic: its new name
+  s.sort = SF_SORTS.some(([v]) => v === u.get('sort')) ? u.get('sort') : '';
+  return s;
+}
+function sfHash(s) {
+  const u = new URLSearchParams();
+  s.keys.forEach(k => u.append('k', k));
+  if (s.any && s.keys.length > 1) u.set('any', '1');
+  const show = s.show.slice().sort().join(',');
+  if (show !== 'unread') u.set('show', show || 'all');
+  if (s.starred) u.set('starred', '1');
+  SF_MULTI.forEach(f => s[f].forEach(v => u.append(f, v)));
+  if (s.sort) u.set('sort', s.sort);
+  const q = u.toString();
+  return '#search' + (q ? '?' + q : '');
+}
+function sfAt(f, v, extra) { const s = Object.assign(sfEmpty(), extra || {}); if (f) s[f] = [String(v)]; return sfHash(s); }
+/* The addresses lists used to have (#group/…, #interest/…, #venue/…[/year], #alert/…, #latest, #top) as searches */
+function sfLegacy(hash) {
+  const tail = pre => decodeURIComponent(hash.slice(pre.length));
+  if (hash.startsWith('group/') && hash.length > 6) return sfAt('topic', norm(tail('group/')));
+  if (hash.startsWith('interest/') && hash.length > 9) return sfAt('interest', tail('interest/'));
+  if (hash.startsWith('alert/') && hash.length > 6) return sfAt('alert', tail('alert/'));
+  if (hash.startsWith('venue/') && hash.length > 6) {
+    const parts = hash.slice(6).split('/');
+    const year = parts.length > 1 && /^\d{4}$/.test(parts[parts.length - 1]) ? parts.pop() : null;
+    return venueHash(decodeURIComponent(parts.join('/')), year);
+  }
+  if (hash === 'latest') return sfAt('src', 'email', { sort: 'added' });
+  if (hash === 'top') return sfAt('rel', 'definitely');
+  return null;
+}
+function openTopList() { location.hash = sfAt('rel', 'definitely'); }
+
+/* ----- Matching ----- */
+const sfEscRe = t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function sfKeyRe(k) { return new RegExp('(?:^|[^\\p{L}\\p{N}])(' + k.trim().split(/\s+/).map(sfEscRe).join('[\\s\\-–]+') + ')', 'iu'); }
+function sfKeys() { const d = SF.draft.trim(); return d && !SF.keys.some(k => k.toLowerCase() === d.toLowerCase()) ? SF.keys.concat(d) : SF.keys.slice(); }
+const SF_W = [4, 3, 2, 1];   // a match in the headline or title counts most, then authors, venue, and the text
+function sfScore(p, res) {
+  if (!res.length) return [0, 0];
+  const t = [(p.headline || '') + '\n' + (p.title || ''), p.authors || '', p.venue || '', [p.summary, p.abstract, p.user_notes].filter(Boolean).join('\n')];
+  let n = 0, w = 0;
+  for (const re of res) { const i = t.findIndex(s => re.test(s)); if (i >= 0) { n++; w += SF_W[i]; } }
+  return [n, w];
+}
+
+/* Authors, written differently across papers ("Lars Lindemann", "L. Lindemann"), as one person each: a name is its
+   first and last word; one written with initials joins the full name it can only be */
+let _sfAuth = null;
+function sfAuthors() {
+  if (_sfAuth && _sfAuth.src === allPapers && _sfAuth.n === allPapers.length) return _sfAuth;
+  const fold = a => a.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z\s'-]/g, ' ').replace(/\s+/g, ' ').trim();
+  const names = p => (p.authors || '').split(/\s*[,;]\s*|\s+and\s+/).map(a => a.replace(/\s*\bet al\.?$/i, '').trim())
+    .filter(a => a && !/^(et al\.?|not specified|others)$/i.test(a)).map(a => [a, fold(a).split(' ').filter(Boolean)]).filter(x => x[1].length);
+  const short = t => t.length > 1 && t.slice(0, -1).every(x => x.length === 1);
+  const idOf = t => t.length === 1 ? t[0] : t[0] + ' ' + t[t.length - 1];
+  const per = new Map(), byInitial = new Map();
+  allPapers.forEach(p => { const ns = names(p); per.set(p, ns); ns.forEach(([, t]) => { if (short(t)) return; const k = t[0][0] + ' ' + t[t.length - 1]; (byInitial.get(k) || byInitial.set(k, new Set()).get(k)).add(idOf(t)); }); });
+  const ids = new Map(), count = new Map(), spell = new Map();
+  per.forEach((ns, p) => {
+    const mine = [];
+    ns.forEach(([raw, t]) => {
+      let id = idOf(t);
+      if (short(t)) { const c = byInitial.get(t[0] + ' ' + t[t.length - 1]); id = c && c.size === 1 ? [...c][0] : t.join(' '); }
+      if (mine.includes(id)) return;
+      mine.push(id); count.set(id, (count.get(id) || 0) + 1);
+      const m = spell.get(id) || spell.set(id, new Map()).get(id);
+      m.set(raw, (m.get(raw) || 0) + (short(t) ? 0.001 : 1));   // the name as most papers write it, initials only if that's all there is
+    });
+    ids.set(p, mine);
+  });
+  const shown = new Map([...spell].map(([id, m]) => [id, [...m].sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)[0][0]]));
+  _sfAuth = { src: allPapers, n: allPapers.length, of: p => ids.get(p) || [], name: id => shown.get(id) || id, count, all: () => [...count.keys()] };
+  return _sfAuth;
+}
+let _sfTot = null;
+function sfTotal(f, v) {   // papers with this value, of all of them (for suggestions)
+  if (!_sfTot || _sfTot.src !== allPapers || _sfTot.n !== allPapers.length) {
+    const t = { src: allPapers, n: allPapers.length };
+    SF_MULTI.forEach(x => { t[x] = {}; });
+    allPapers.forEach(p => { const vals = sfVals(p); SF_MULTI.forEach(x => vals[x].forEach(y => { t[x][y] = (t[x][y] || 0) + 1; })); });
+    _sfTot = t;
+  }
+  return f ? _sfTot[f][v] || 0 : _sfTot;
+}
+function sfLevels() { const m = {}; allInterests.filter(i => i.status === 'confirmed').forEach(i => { m[i.interest_name] = i.relevance_mapping; }); return m; }
+/* A paper's year: its venue's year when it has one (an "ICLR 2026" paper posted on arXiv in October 2025 is 2026, as
+   on the Venues tab), else when it was published */
+function sfYear(p) { const v = venueOf(p), k = pubKey(p); return v.year ? String(v.year) : k ? String(Math.floor(k / 100)) : ''; }
+function sfVals(p) {
+  const y = sfYear(p);
+  return { rel: [dynamicRelevance(p)], topic: groupsOfPaper(p), interest: matchesOf(p), author: sfAuthors().of(p), venue: [venueOf(p).name],
+    year: y ? [y] : [], src: (p.source_mode || '').split(',').map(x => x.trim()).filter(Boolean), alert: alertSourcesOf(p) };
+}
+/* The papers the keys match, those every filter lets through, and each filter value's count: the papers it would
+   show with the other filters as they are */
+function sfCompute(s) {
+  s = s || SF;
+  const keys = s === SF ? sfKeys() : s.keys, res = keys.map(sfKeyRe), rows = [];
+  for (const p of allPapers) {
+    const [n, w] = sfScore(p, res);
+    if (keys.length && (s.any ? !n : n < keys.length)) continue;
+    const k = paperKey(p);
+    rows.push({ p, n, w, v: sfVals(p), read: readSet.has(k), star: starSet.has(k) });
+  }
+  const pass = (r, skip) => {
+    if (skip !== 'show' && s.show.length && !s.show.includes(r.read ? 'read' : 'unread')) return false;
+    if (skip !== 'starred' && s.starred && !r.star) return false;
+    for (const f of SF_MULTI) if (f !== skip && s[f].length && !s[f].some(x => r.v[f].includes(x))) return false;
+    return true;
+  };
+  const counts = {}, tally = (f, get) => { const c = counts[f] = {}; rows.forEach(r => { if (pass(r, f)) get(r).forEach(x => { c[x] = (c[x] || 0) + 1; }); }); };
+  tally('show', r => [r.read ? 'read' : 'unread']);
+  tally('starred', r => r.star ? ['1'] : []);
+  SF_MULTI.forEach(f => tally(f, r => r.v[f]));
+  return { keys, res, rows, results: rows.filter(r => pass(r)), counts, pass };
+}
+function sfSortNow() { const has = sfKeys().length; return SF.sort === 'match' && !has ? 'best' : SF.sort || (has ? 'match' : 'best'); }
+function sfFilterCount() { return (SF.show.length === 1 ? 1 : 0) + (SF.starred ? 1 : 0) + SF_MULTI.reduce((n, f) => n + SF[f].length, 0); }
+
+/* ----- Opening it ----- */
+function showSearch(s, o) {
+  const ms = document.getElementById('mainScroll'), h = sfHash(s);
+  const entering = !_listViewActive, returning = entering && _leftPaper && _paperFromList === h;
+  if (entering && !returning) {
+    if (!_leftPaper) {   // from a tab: remember its place for Back
+      _tabScroll[currentTab] = ms.scrollTop;
+      if (document.body.classList.contains('tok-mode')) _tokScrollTop = document.getElementById('tokFeed').scrollTop;
+    }
+    _listBackLabel = _leftPaper || _paperViewActive ? 'Back' : (TAB_NAMES[currentTab] || 'Back');
+  }
+  if (returning) s.draft = SF.draft;   // what you were typing, as you left it
+  if (_listKey !== h && !returning) _listShowLow = false;
+  SF = s; _listKey = h; _listViewActive = true;
+  if (_paperViewActive) { _paperViewActive = false; document.getElementById('sec-paper').classList.remove('active'); }
+  ['sec-papers', 'sec-library', 'sec-venues', 'sec-interests', 'sec-paper'].forEach(id => document.getElementById(id).classList.remove('active'));
+  document.getElementById('sec-list').classList.add('active');
+  document.body.classList.remove('tok-mode', 'tok-immersive');
+  document.body.classList.add('sf-on');
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  const inp = document.getElementById('sfInput');
+  if (inp.value !== SF.draft) inp.value = SF.draft;
+  renderSearch();
+  if (returning) { const body = document.getElementById('lpBody'); while (_sfPlan && _sfPlan.si < _sfPlan.secs.length && body.offsetTop + body.offsetHeight < _savedScrollTop + 2 * window.innerHeight) sfMoreRows(100); }   // the rows down to where you were
+  else { jumpScroll(ms, 0); requestAnimationFrame(() => jumpScroll(ms, 0)); }   // after the router's restore for the paper page it left
+  if (entering && !_leftPaper) pageIn(document.getElementById('sec-list'));   // (leaving a paper page, the router fades it in)
+  if (o && o.focus) inp.focus();
+}
+/* The nav's box, its phone button and "/": the page opens at once, in the same tap, with its field focused (so a
+   phone's keyboard comes up); what was typed in the nav's box carries over */
+function openSearchHere(from) {
+  const typed = from && from.value ? from.value : '';
+  if (from) { from.value = ''; from.blur(); }
+  if (!_listViewActive) {
+    const s = sfEmpty(), wasPaper = _paperViewActive;
+    history.pushState(null, '', location.pathname + location.search + sfHash(s));
+    _leftPaper = wasPaper; showSearch(s); _leftPaper = false;
+  }
+  const inp = document.getElementById('sfInput');
+  inp.focus();
+  if (typed) { inp.value = SF.draft + typed; sfType(inp.value); }
+}
+function leaveListView() {
+  if (!_listViewActive) return false;
+  _listViewActive = false;
+  sfSuggClose(); sfSheet(false);
+  document.body.classList.remove('sf-on');
+  document.getElementById('sec-list').classList.remove('active');
+  return true;
+}
+function listBack() { if (history.length > 1) history.back(); else location.hash = '#' + currentTab; }
+
+/* ----- Changing it ----- */
+function sfCommit() {
+  _listKey = sfHash(SF);
+  if (location.hash !== _listKey) history.replaceState(null, '', location.pathname + location.search + _listKey);
+  renderSearch();
+  sfToResults();
+}
+/* a change made down the page brings the results' start back under the bar */
+function sfToResults() {
+  const ms = document.getElementById('mainScroll'), bar = document.getElementById('sfBar'), top = document.getElementById('lpBar');
+  const over = bar.getBoundingClientRect().top - top.getBoundingClientRect().bottom;
+  if (over < 0) jumpScroll(ms, ms.scrollTop + over - 8);
+}
+function sfToggle(f, v) {
+  if (f === 'starred') SF.starred = !SF.starred;
+  else if (f === 'show') SF.show = SF.show.includes(v) ? SF.show.filter(x => x !== v) : SF.show.concat(v);
+  else SF[f] = SF[f].includes(v) ? SF[f].filter(x => x !== v) : SF[f].concat(v);
+  sfCommit();
+}
+function sfRemove(e, f, v) {
+  if (e) e.stopPropagation();
+  if (f === 'key') SF.keys = SF.keys.filter(k => k !== v);
+  else if (f === 'show') SF.show = [];
+  else if (f === 'starred') SF.starred = false;
+  else SF[f] = SF[f].filter(x => x !== v);
+  sfCommit();
+}
+function sfSetShow(v) { SF.show = v; sfCommit(); }
+function sfSetSort(v) { SF.sort = v; sfCommit(); }
+function sfSetAny(v) { SF.any = v; sfCommit(); }
+function sfClearFilters() { const keys = SF.keys, any = SF.any, sort = SF.sort, draft = SF.draft; SF = Object.assign(sfEmpty(), { keys, any, sort, draft }); sfCommit(); }
+function sfSec(id) {
+  if (_sfOpen.has(id)) _sfOpen.delete(id); else _sfOpen.add(id);
+  try { localStorage.setItem('scholar_sf_open', JSON.stringify([..._sfOpen])); } catch (e) {}
+  renderSearch();
+}
+function sfMore(id) { _sfMore.add(id); renderSearch(); }
+
+/* ----- The field: chips for what's set, and what you're typing ----- */
+function sfType(v) {
+  SF.draft = v;
+  document.querySelectorAll('#sfChips .armed').forEach(c => c.classList.remove('armed'));
+  sfSuggest();
+  clearTimeout(_sfTimer);
+  _sfTimer = setTimeout(renderSearch, 120);
+}
+function sfAddKey(k) {
+  k = (k || '').trim();
+  if (k && !SF.keys.some(x => x.toLowerCase() === k.toLowerCase())) SF.keys.push(k);
+  sfClearDraft();
+  sfCommit();
+}
+function sfClearDraft() { SF.draft = ''; const inp = document.getElementById('sfInput'); inp.value = ''; sfSuggClose(); }
+function sfKey(e) {
+  const box = document.getElementById('sfBox'), opts = [...document.querySelectorAll('#sfSugg .sf-opt')];
+  const at = opts.findIndex(o => o.classList.contains('hl'));
+  if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && box.classList.contains('sugg-open') && opts.length) {
+    e.preventDefault();
+    const next = opts[(at + (e.key === 'ArrowDown' ? 1 : -1) + opts.length) % opts.length];
+    opts.forEach(o => o.classList.toggle('hl', o === next));
+    next.scrollIntoView({ block: 'nearest' });
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (box.classList.contains('sugg-open') && at >= 0) opts[at].click();
+    else if (SF.draft.trim()) sfAddKey(SF.draft);
+    else e.target.blur();   // a phone's Search key: put the keyboard away
+  } else if (e.key === 'Escape') {
+    e.preventDefault(); e.stopPropagation();
+    if (box.classList.contains('sugg-open')) sfSuggClose();
+    else if (SF.draft) { sfClearDraft(); renderSearch(); }
+    else e.target.blur();
+  } else if (e.key === 'Backspace' && !e.target.value) {
+    const chips = document.querySelectorAll('#sfChips .sf-chip'), last = chips[chips.length - 1];
+    if (!last) return;
+    e.preventDefault();
+    if (last.classList.contains('armed')) sfRemove(null, last.dataset.f, last.dataset.v);   // the second press removes it
+    else last.classList.add('armed');                                                        // the first marks it
+  }
+}
+function sfFieldClick(e) { if (!e.target.closest('.sf-x')) document.getElementById('sfInput').focus(); }
+
+/* Suggestions while typing: the words themselves, then the topics, interests, authors, venues and years they name */
+let _sfOpts = [];
+function sfSuggest() {
+  const q = SF.draft.trim(), box = document.getElementById('sfBox'), el = document.getElementById('sfSugg');
+  if (!q || document.activeElement !== document.getElementById('sfInput')) { sfSuggClose(); return; }
+  const re = sfKeyRe(q), A = sfAuthors(), lv = sfLevels();
+  const hit = s => { const m = re.exec(s); if (!m) return esc(s); const i = m.index + m[0].length - m[1].length; return esc(s.slice(0, i)) + '<b>' + esc(s.slice(i, i + m[1].length)) + '</b>' + esc(s.slice(i + m[1].length)); };
+  const count = sfTotal;
+  const groups = [];
+  _sfOpts = [{ f: 'key', v: q }];
+  const opt = (o, inner, n) => { _sfOpts.push(o); return `<button class="sf-opt" role="option" onmousedown="event.preventDefault()" onclick="sfPick(${_sfOpts.length - 1})">${inner}${n != null ? `<span class="n">${n}</span>` : ''}</button>`; };
+  const words = `<button class="sf-opt hl" role="option" onmousedown="event.preventDefault()" onclick="sfPick(0)"><svg class="sf-opt-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg><span class="l">Search for “<b>${esc(q)}</b>”</span></button>`;
+  const topics = GROUP_ORDER.filter(g => re.test(g) && !SF.topic.includes(g)).slice(0, 4).map(g => opt({ f: 'topic', v: g }, `${gdot(g)}<span class="l">${hit(g)}</span>`, count('topic', g)));
+  const ints = Object.keys(lv).filter(n => re.test(n) && !SF.interest.includes(n)).map(n => [n, count('interest', n)]).sort((a, b) => b[1] - a[1]).slice(0, 4)
+    .map(([n, c]) => opt({ f: 'interest', v: n }, `<span class="l"><span class="k">about</span> ${hit(n)}</span>`, c));
+  const auths = A.all().filter(id => !SF.author.includes(id) && (re.test(A.name(id)) || re.test(id))).sort((a, b) => A.count.get(b) - A.count.get(a)).slice(0, 5)
+    .map(id => opt({ f: 'author', v: id }, `<span class="l"><span class="k">by</span> ${hit(A.name(id))}</span>`, A.count.get(id)));
+  const vc = sfTotal().venue;
+  const vens = Object.keys(vc).filter(v => re.test(v) && !SF.venue.includes(v)).sort((a, b) => vc[b] - vc[a]).slice(0, 4).map(v => opt({ f: 'venue', v }, `<span class="l"><span class="k">in</span> ${hit(v)}</span>`, vc[v]));
+  const years = /^(19|20)\d{2}$/.test(q) && !SF.year.includes(q) ? [opt({ f: 'year', v: q }, `<span class="l"><span class="k">published in</span> <b>${q}</b></span>`, count('year', q))] : [];
+  const col = list => list.filter(x => x[1].length).map(([t, items]) => `<h3>${t}</h3>${items.join('')}`).join('');
+  const left = `<h3>Words</h3>${words}` + col([['Authors', auths], ['Years', years]]), right = col([['Topics', topics], ['Interests', ints], ['Venues', vens]]);
+  el.innerHTML = `<div class="sf-col">${left}</div>${right ? `<div class="sf-col">${right}</div>` : ''}`;
+  el.classList.toggle('one', !right);
+  box.classList.add('sugg-open');
+}
+function sfPick(i) {
+  const o = _sfOpts[i];
+  if (!o) return;
+  if (o.f === 'key') { sfAddKey(o.v); return; }
+  if (!SF[o.f].includes(o.v)) SF[o.f].push(o.v);
+  sfClearDraft();
+  sfCommit();
+  document.getElementById('sfInput').focus();   // ready for the next one
+}
+function sfSuggClose() { const b = document.getElementById('sfBox'); if (b) b.classList.remove('sugg-open'); }
+
+/* ----- Drawing it ----- */
+const SF_X = '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 2l6 6M8 2 2 8"/></svg>';
+function sfChipList() {   // [filter, value, label as HTML, label as text], in the field's order
+  const A = sfAuthors(), out = [];
+  SF.keys.forEach(k => out.push(['key', k, `<span class="t">${esc(k)}</span>`, k]));
+  if (SF.show.length === 1) { const l = SF.show[0] === 'unread' ? 'Unread' : 'Read'; out.push(['show', SF.show[0], `<span class="t">${l}</span>`, l]); }
+  if (SF.starred) out.push(['starred', '1', '<span class="sf-star" aria-hidden="true">&#9733;</span><span class="t">Starred</span>', 'Starred']);
+  SF.rel.forEach(r => out.push(['rel', r, `<i class="gdot" style="--gc:var(--lv-${r})"></i><span class="t">${relLabel(r)}</span>`, relLabel(r)]));
+  SF.topic.forEach(g => out.push(['topic', g, `${gdot(g)}<span class="t">${esc(g)}</span>`, g]));
+  SF.interest.forEach(n => out.push(['interest', n, `<span class="k">about</span><span class="t">${esc(n)}</span>`, n]));
+  SF.author.forEach(a => out.push(['author', a, `<span class="k">by</span><span class="t">${esc(A.name(a))}</span>`, A.name(a)]));
+  SF.venue.forEach(v => out.push(['venue', v, `<span class="k">in</span><span class="t">${esc(v)}</span>`, v]));
+  SF.year.forEach(y => out.push(['year', y, `<span class="t">${esc(y)}</span>`, y]));
+  SF.src.forEach(x => out.push(['src', x, `<span class="t">${esc(SF_SRC[x] || x)}</span>`, SF_SRC[x] || x]));
+  SF.alert.forEach(a => out.push(['alert', a, `<span class="k">alert</span><span class="t">${esc(a)}</span>`, a]));
+  return out;
+}
+/* A short name for these results: the one thing set (besides Unread), or "these results" */
+function sfNavLabel() { const c = sfChipList().filter(x => x[0] !== 'show'); return c.length === 1 ? c[0][3] : 'these results'; }
+function renderSearch() {
+  if (!_listViewActive) return;
+  const c = sfCompute(), lv = sfLevels(), A = sfAuthors();
+  // the field's chips
+  const chips = sfChipList();
+  document.getElementById('sfChips').innerHTML = chips.map(([f, v, html, text]) =>
+    `<span class="sf-chip" data-f="${f}" data-v="${dataAttr(v)}">${html}<button class="sf-x" onclick="sfRemove(event,'${f}','${escAttr(v)}')" aria-label="Remove ${escAttr(text)}" title="Remove">${SF_X}</button></span>`).join('');
+  const inp = document.getElementById('sfInput');
+  const narrow = window.matchMedia('(max-width: 600px)').matches;
+  inp.placeholder = narrow ? (chips.length ? 'Add words or a name…' : 'Search papers…') : chips.length ? 'Add words, an author, a topic…' : 'Search words, authors, topics, venues…';
+  document.getElementById('lpBarTitle').textContent = chips.map(x => x[3]).join(' · ') || 'All papers';
+  document.getElementById('lpBack').textContent = _listBackLabel;
+  // the bar: how many, how keys combine, filters (narrow screens), order
+  const n = c.results.length, sort = sfSortNow();
+  const sorts = SF_SORTS.filter(([v]) => v !== 'match' || c.keys.length);
+  const mode = c.keys.length > 1 ? `<div class="tl-sort sf-mode" role="group" aria-label="How your words combine">${[[false, 'Match all'], [true, 'Match any']].map(([v, l]) =>
+    `<button class="${SF.any === v ? 'active' : ''}" aria-pressed="${SF.any === v}" onclick="sfSetAny(${v})">${l}</button>`).join('')}</div>` : '';
+  const fc = sfFilterCount();
+  document.getElementById('sfBar').innerHTML = `<span class="sf-count"><b>${n}</b> ${n === 1 ? 'paper' : 'papers'}</span>${mode}
+    <button class="sf-filters-btn" onclick="sfSheet(true)" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M6 12h12M10 18h4"/></svg>Filters${fc ? `<span class="b">${fc}</span>` : ''}</button>
+    <div class="sf-sort"><div class="tl-sort" role="group" aria-label="Order">${sorts.map(([v, l, tip]) => `<button class="${sort === v ? 'active' : ''}" aria-pressed="${sort === v}" title="${escAttr(tip)}" onclick="sfSetSort('${v}')">${l}</button>`).join('')}</div>
+    <label class="sf-sort-btn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16M3.5 16.5 7 20l3.5-3.5M17 20V4m-3.5 3.5L17 4l3.5 3.5"/></svg><span>${SF_SHORT[sort]}</span><select aria-label="Order" onchange="sfSetSort(this.value)">${sorts.map(([v, l]) => `<option value="${v}"${sort === v ? ' selected' : ''}>${l}</option>`).join('')}</select></label></div>`;
+  // the filters: the sidebar, and the sheet on narrow screens
+  document.getElementById('lpRail').innerHTML = sfFiltersHTML(c, lv, A, 'rail');
+  if (document.getElementById('sfSheet').classList.contains('open')) document.getElementById('sfSheetBody').innerHTML = sfFiltersHTML(c, lv, A, 'sheet');
+  // the papers
+  const body = document.getElementById('lpBody');
+  body.classList.toggle('ranked', sort === 'best' || sort === 'match');
+  sfDrawBody(c, sort);
+  requestAnimationFrame(sfFill);
+  document.getElementById('lp').style.setProperty('--gbg', SF.topic.length === 1 ? topicGlow(SF.topic) : 'none');   // one topic: its faint colour
+  if (document.getElementById('sfBox').classList.contains('sugg-open')) sfSuggest();
+  updateListBar();
+}
+/* Every filter with its counts; a value with none shows only while it's set (no "0" to press) */
+function sfFiltersHTML(c, lv, A, where) {
+  const rail = where === 'rail';
+  const on = (f, v) => f === 'starred' ? SF.starred : f === 'show' ? SF.show.includes(v) : SF[f].includes(v);
+  const item = (f, v, label, dot) => {
+    const n = (c.counts[f] || {})[v] || 0, sel = on(f, v);
+    if (!n && !sel) return '';
+    const d = dot ? `<i class="gdot" style="--gc:${dot}" aria-hidden="true"></i>` : rail ? '<i class="gdot none" aria-hidden="true"></i>' : '';
+    return rail ? `<button class="lp-rail-item${sel ? ' on' : ''}" aria-pressed="${sel}" onclick="sfToggle('${f}','${escAttr(v)}')">${d}<span class="l">${esc(label)}</span><span class="n">${n}</span></button>`
+      : `<button class="tl-chip${sel ? ' active' : ''}" aria-pressed="${sel}" onclick="sfToggle('${f}','${escAttr(v)}')">${d}<span class="l">${esc(label)}</span><span class="n">${n}</span></button>`;
+  };
+  const list = (id, f, vals, label, k, max) => {   // the first k, more behind "Show N more" (up to max); one that's set always shows
+    const open = _sfMore.has(id), cap = open ? (max || vals.length) : k;
+    const shown = vals.length <= k + 1 && !open ? vals : vals.filter((v, i) => i < cap || on(f, v));
+    const rest = Math.min(vals.length, max || vals.length) - shown.length;
+    return shown.map(v => item(f, v, label(v))).join('') + (rest > 0 && !open ? `<button class="sf-more" onclick="sfMore('${id}')">Show ${rest} more</button>` : '');
+  };
+  const wrap = h => h ? (rail ? h : `<div class="sf-wrap">${h}</div>`) : '';
+  const sec = (id, title, body, fold) => {
+    if (!body) return '';
+    const open = !fold || !rail || _sfOpen.has(id) || body.includes(' on"') || body.includes(' active"');
+    const head = fold && rail ? `<h2><button class="sf-sec-h" onclick="sfSec('${id}')" aria-expanded="${open}">${title}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg></button></h2>` : `<h2>${title}</h2>`;
+    return `<section class="sf-sec${fold && rail ? ' fold' : ''}${open ? ' open' : ''}">${head}${open ? body : ''}</section>`;
+  };
+  const byCount = f => Object.keys(c.counts[f] || {}).concat(SF[f]).filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => ((c.counts[f] || {})[b] || 0) - ((c.counts[f] || {})[a] || 0) || String(a).localeCompare(String(b)));
+  const show = wrap(item('show', 'unread', 'Unread') + item('show', 'read', 'Read') + item('starred', '1', 'Starred'));
+  const rel = wrap(SF_REL.map(([r, l]) => item('rel', r, l, `var(--lv-${r})`)).join(''));
+  const topics = wrap(GROUP_ORDER.concat(SF.topic.filter(g => !GROUP_ORDER.includes(g))).map(g => item('topic', g, g, groupColor(g))).join(''));
+  const ints = ['definitely', 'probably', 'mildly'].map(l => {
+    const body = list('i-' + l, 'interest', byCount('interest').filter(n => (lv[n] || 'mildly') === l), n => n, l === 'definitely' ? 8 : 4);
+    return body ? `<div class="sf-sub"><i style="background:var(--lv-${l})"></i>${LEVEL_NAME[l]}</div>${wrap(body)}` : '';
+  }).join('');
+  const authors = wrap(list('authors', 'author', byCount('author'), a => A.name(a), rail ? 8 : 10, 40));   // more than that: type the name
+  const venues = wrap(list('venues', 'venue', byCount('venue'), v => v, rail ? 8 : 10));
+  const years = wrap(Object.keys(c.counts.year || {}).concat(SF.year).filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => b - a).map(y => item('year', y, y)).join(''));
+  const src = wrap(Object.keys(SF_SRC).map(x => item('src', x, SF_SRC[x])).join(''));
+  const alerts = SHOW_EMAIL_TAB || SF.alert.length ? wrap(byCount('alert').map(a => item('alert', a, a)).join('')) : '';
+  return sec('show', 'Show', show) + sec('rel', 'Relevance', rel) + sec('topics', 'Topics', topics) + sec('interests', 'Interests', ints)
+    + sec('authors', 'Authors', authors, true) + sec('venues', 'Venues', venues, true) + sec('years', 'Year', years, true) + sec('src', 'Source', src, true) + sec('alerts', 'Alerts', alerts, true);
+}
+/* The papers, in sections (tiers, weeks or months), drawn 60 at a time and more as you scroll: a thousand rows at
+   once would hold the page up for half a second */
+let _sfPlan = null;
+function sfPlan(c, sort) {
+  const papers = c.results.map(r => r.p), secs = [];
+  const head = (label, n) => `<div class="lp-sec-h"><h2>${esc(label)}</h2><span class="n">${n}</span><span class="rule"></span></div>`;
+  if (sort === 'match') {
+    const order = new Map(byBest(papers).map((p, i) => [p, i]));
+    secs.push({ head: '', rows: c.results.slice().sort((a, b) => b.n - a.n || b.w - a.w || order.get(a.p) - order.get(b.p)).map(r => r.p), num: 1 });
+  } else if (sort === 'best') {
+    const ranked = byBest(papers);
+    const tiers = SF_REL.map(([r, label]) => ({ r, label: r === 'definitely' ? 'Must read' : label, items: ranked.filter(p => dynamicRelevance(p) === r) })).filter(t => t.items.length);
+    let n = 1;
+    tiers.forEach(t => {
+      const fold = t.r === 'mildly' && tiers.length > 1 && !_listShowLow && !c.keys.length && !SF.rel.length;
+      secs.push({ head: tiers.length > 1 ? head(t.label, t.items.length) : '', rows: fold ? [] : t.items, num: n,
+        fold: fold ? `<button class="lp-fold" onclick="_listShowLow = true; renderSearch()">Show ${t.items.length} tangential ${t.items.length === 1 ? 'paper' : 'papers'}</button>` : '' });
+      if (!fold) n += t.items.length;
+    });
+  } else {
+    sortForList(papers.slice(), sort).forEach(p => {
+      const b = sort === 'added' ? addedBucket(p.date_found) : publishedBucket(p), last = secs[secs.length - 1];
+      if (last && last.key === b.key) last.rows.push(p); else secs.push({ key: b.key, label: b.label, rows: [p], num: 0 });
+    });
+    secs.forEach(x => { x.head = head(x.label, x.rows.length); });
+  }
+  return { secs, keys: secs.flatMap(x => x.rows.map(paperKey)), m: { kind: SF.venue.length === 1 ? 'venue' : 'search', topic: SF.topic.length === 1 ? SF.topic[0] : null }, res: c.res, si: 0, ri: 0 };
+}
+function sfDrawBody(c, sort) {
+  const body = document.getElementById('lpBody');
+  _sfPlan = c.results.length ? sfPlan(c, sort) : null;
+  body.innerHTML = _sfPlan ? '' : sfEmptyHTML(c);
+  if (_sfPlan) sfMoreRows(60);
+}
+function sfMoreRows(n) {
+  const P = _sfPlan, body = document.getElementById('lpBody');
+  if (!P) return;
+  let added = 0;
+  while (added < n && P.si < P.secs.length) {
+    const sec = P.secs[P.si];
+    let el = body.lastElementChild && body.lastElementChild.dataset.si === String(P.si) ? body.lastElementChild : null;
+    if (!el) { body.insertAdjacentHTML('beforeend', `<section class="lp-sec" data-si="${P.si}">${sec.head}${sec.fold || ''}</section>`); el = body.lastElementChild; }
+    const take = sec.rows.slice(P.ri, P.ri + n - added);
+    if (take.length) {
+      const tmp = document.createElement('div');
+      tmp.innerHTML = take.map((p, i) => listRowHTML(p, sec.num ? sec.num + P.ri + i : 0, P.m)).join('');
+      sfHighlight(tmp, P.res);
+      el.append(...tmp.childNodes);
+    }
+    P.ri += take.length; added += take.length;
+    if (P.ri >= sec.rows.length) { P.si++; P.ri = 0; }
+  }
+}
+/* more rows once the end is within a screen and a half */
+function sfFill() {
+  const P = _sfPlan;
+  if (!_listViewActive || !P || P.si >= P.secs.length) return;
+  const body = document.getElementById('lpBody');
+  if (body.getBoundingClientRect().bottom < window.innerHeight * 2.5) { sfMoreRows(100); requestAnimationFrame(sfFill); }
+}
+document.addEventListener('DOMContentLoaded', () => document.getElementById('mainScroll').addEventListener('scroll', sfFill, { passive: true }));
+/* Nothing matches: say why, and offer the way out that would find something */
+function sfEmptyHTML(c) {
+  const ways = [];
+  const readN = SF.show.length === 1 && SF.show[0] === 'unread' ? c.rows.filter(r => r.read && c.pass(r, 'show')).length : 0;
+  if (readN) ways.push(`<button class="lp-fold" onclick="sfSetShow([])">Include ${readN} read ${readN === 1 ? 'paper' : 'papers'}</button>`);
+  if (!SF.any && c.keys.length > 1) { const anyN = sfCompute(Object.assign({}, SF, { keys: c.keys, any: true })).results.length; if (anyN) ways.push(`<button class="lp-fold" onclick="sfSetAny(true)">Match any word: ${anyN} ${anyN === 1 ? 'paper' : 'papers'}</button>`); }
+  if (SF_MULTI.some(f => SF[f].length) || SF.starred) ways.push(`<button class="lp-fold" onclick="sfClearFilters()">Clear the filters</button>`);
+  const what = !c.keys.length && !sfFilterCount() ? 'No papers yet.'
+    : !c.keys.length && SF.show.length === 1 && SF.show[0] === 'unread' && sfFilterCount() === 1 ? 'You’ve read everything.'
+    : c.keys.length ? `No papers match ${c.keys.map(k => '“' + esc(k) + '”').join(SF.any ? ' or ' : ' and ')}${sfFilterCount() ? ' with these filters' : ''}.` : 'No papers match these filters.';
+  return `<div class="lp-empty">${what}${ways.length ? '<br>' + ways.join(' ') : ''}</div>`;
+}
+/* The words you searched for, marked where they appear in each row */
+function sfHighlight(root, res) {
+  if (!res.length) return;
+  const re = new RegExp(res.map(r => r.source).join('|'), 'giu');
+  root.querySelectorAll('.lp-h, .lp-orig, .lp-auth, .why-line span').forEach(el => {
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT), nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(t => {
+      const s = t.nodeValue; let out = '', last = 0, m;
+      re.lastIndex = 0;
+      while ((m = re.exec(s))) {
+        const w = m.slice(1).find(Boolean); if (!w) { re.lastIndex++; continue; }
+        const i = m.index + m[0].length - w.length;
+        out += esc(s.slice(last, i)) + '<mark>' + esc(w) + '</mark>'; last = i + w.length;
+      }
+      if (!last) return;
+      const span = document.createElement('span'); span.innerHTML = out + esc(s.slice(last));
+      t.replaceWith(...span.childNodes);
+    });
+  });
+}
+/* Narrow screens: the filters in a sheet from the bottom, behind the Filters button */
+function sfSheet(open) {
+  const sh = document.getElementById('sfSheet'), sc = document.getElementById('sfScrim');
+  if (!sh) return;
+  if (open) { sfSuggClose(); document.getElementById('sfSheetBody').innerHTML = sfFiltersHTML(sfCompute(), sfLevels(), sfAuthors(), 'sheet'); }
+  if (sh.classList.contains('open') === !!open) return;
+  sh.classList.toggle('open', !!open); sc.classList.toggle('open', !!open);
+  if (open) setTimeout(() => sh.querySelector('.sf-done').focus({ preventScroll: true }), 50);
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.getElementById('sfSheet')?.classList.contains('open')) { e.preventDefault(); sfSheet(false); } });
 
 /* Best: Must read, then Interesting, then Tangential; within each, the Top Papers score (relevance, fading by
    half every 90 days since added). Topic cards rank the same way (skipping papers already shown higher on the page). */
@@ -4402,204 +4810,6 @@ function shortAuthors(p) {
 }
 const isEmailPaper = p => (p.source_mode || '').includes('email');
 
-/* What a list holds and how its page introduces it. `all` is every member (read ones too; the page leaves them out) */
-function listModel(key) {
-  const inTab = arr => currentTab === 'email' ? arr.filter(isEmailPaper) : arr;
-  const quiet = '#8a8f98';
-  if (key === TOP_LIST_KEY) return { kind: 'top', eyebrow: TAB_NAMES[currentTab === 'email' ? 'email' : 'all'], title: 'Top Papers', color: 'var(--accent)', noRel: true,
-    all: inTab(allPapers).filter(p => dynamicRelevance(p) === 'definitely') };
-  if (key === LATEST_KEY) {
-    const dig = latestDigestOf(allPapers.filter(isEmailPaper));
-    const from = dig.date ? shortDate(new Date(new Date(dig.date + 'T00:00:00') - 6 * 86400000).toISOString().slice(0, 10)) : '';
-    return { kind: 'latest', eyebrow: 'Email Digest', title: 'Latest digest', sub: dig.date ? `Papers added ${from} – ${shortDate(dig.date)}` : '', color: 'var(--accent)', all: dig.papers };
-  }
-  if (key.startsWith(ALERT_KEY)) {
-    const name = key.slice(ALERT_KEY.length);
-    return { kind: 'alert', eyebrow: name === 'Keyword alerts' ? 'Email Digest' : 'Alert', title: name, color: 'var(--accent)',
-      all: allPapers.filter(p => isEmailPaper(p) && alertSourcesOf(p).includes(name)) };
-  }
-  if (key.startsWith(VENUE_KEY)) {
-    const name = key.slice(VENUE_KEY.length), every = allPapers.filter(p => venueOf(p).name === name);
-    const years = {};
-    every.filter(p => !readSet.has(paperKey(p))).forEach(p => { const y = venueOf(p).year; if (y) years[y] = (years[y] || 0) + 1; });
-    if (_venueYear && !years[_venueYear]) _venueYear = null;
-    return { kind: 'venue', eyebrow: 'Venue', title: name + (_venueYear ? ' ' + _venueYear : ''), sub: every.length ? venueOf(every[0]).full : '', color: quiet, venue: name, years,
-      all: _venueYear ? every.filter(p => venueOf(p).year === _venueYear) : every, everyN: every.filter(p => !readSet.has(paperKey(p))).length };
-  }
-  if (key.startsWith(INTEREST_KEY)) {
-    const name = key.slice(INTEREST_KEY.length), i = allInterests.find(x => x.interest_name === name);
-    return { kind: 'interest', eyebrow: 'Interest', title: name, sub: i ? `A ${LEVEL_NAME[i.relevance_mapping] || LEVEL_NAME.mildly} interest` : '', color: quiet,
-      all: inTab(allPapers).filter(p => matchesOf(p).includes(name)) };
-  }
-  return { kind: 'topic', eyebrow: currentTab === 'email' ? 'Topic in your email alerts' : 'Topic', title: key, topic: key, color: groupColor(key), glow: topicGlow([key]),
-    all: inTab(allPapers).filter(p => (p.theme_groups || '').split('|').map(norm).includes(key)) };
-}
-
-/* The lists beside this one: Top Papers and the topics (Recent Works); the latest digest, alerts and topics (Email
-   Digest); the bigger venues; or the interests */
-function listFamily(key) {
-  const unread = p => !readSet.has(paperKey(p));
-  const item = (k, hash, label, n, color) => ({ k, hash, label, n, color });
-  if (key.startsWith(VENUE_KEY)) {
-    const by = {};
-    allPapers.forEach(p => { const v = venueOf(p); const e = by[v.name] || (by[v.name] = { name: v.name, kind: v.kind, n: 0 }); if (unread(p)) e.n++; });
-    const cur = key.slice(VENUE_KEY.length);
-    return V_KINDS.map(([kind, label]) => ({ title: label, items: Object.values(by).filter(v => v.kind === kind && (v.n >= V_MIN_SHOWN || v.name === cur))
-      .sort((a, b) => b.n - a.n || a.name.localeCompare(b.name)).map(v => item(VENUE_KEY + v.name, venueHash(v.name), v.name, v.n)) })).filter(s => s.items.length);
-  }
-  if (key.startsWith(INTEREST_KEY)) {
-    const conf = allInterests.filter(i => i.status === 'confirmed');
-    const n = name => allPapers.filter(p => unread(p) && matchesOf(p).includes(name)).length;
-    return [['application', 'Application areas'], ['method', 'Methods']].map(([cat, title]) => ({ title,
-      items: conf.filter(i => (i.category || '').toLowerCase() === cat).map(i => item(INTEREST_KEY + i.interest_name, '#interest/' + encodeURIComponent(i.interest_name), i.interest_name, n(i.interest_name))) })).filter(s => s.items.length);
-  }
-  const email = currentTab === 'email' || key === LATEST_KEY || key.startsWith(ALERT_KEY);
-  const pool = allPapers.filter(p => unread(p) && (!email || isEmailPaper(p)));
-  const topics = { title: 'Topics', items: GROUP_ORDER.map(g => item(g, '#group/' + encodeURIComponent(g), g, pool.filter(p => (p.theme_groups || '').split('|').map(norm).includes(g)).length, groupColor(g))).filter(x => x.n || x.k === key) };
-  if (!email) return [{ title: '', items: [item(TOP_LIST_KEY, '#top', 'Top Papers', pool.filter(p => dynamicRelevance(p) === 'definitely').length)] }, topics];
-  const byAlert = {};
-  pool.forEach(p => alertSourcesOf(p).forEach(a => byAlert[a] = (byAlert[a] || 0) + 1));
-  const tail = a => a === 'Keyword alerts' ? 1 : 0;
-  const alerts = Object.keys(byAlert).filter(a => byAlert[a] >= 3 || ALERT_KEY + a === key).sort((a, b) => tail(a) - tail(b) || byAlert[b] - byAlert[a] || a.localeCompare(b));
-  const dig = latestDigestOf(allPapers.filter(isEmailPaper));
-  return [{ title: '', items: [item(LATEST_KEY, '#latest', 'Latest digest', dig.papers.filter(unread).length)] },
-    { title: 'Alerts', items: alerts.map(a => item(ALERT_KEY + a, '#alert/' + encodeURIComponent(a), a, byAlert[a])) }, topics];
-}
-
-/* A list opened from a tab, search, a paper page, or another list's sidebar */
-function showList(key) {
-  const ms = document.getElementById('mainScroll');
-  const entering = !_listViewActive, returning = entering && _leftPaper && _paperFromList === key;
-  if (entering && !returning) {
-    if (!_leftPaper) {   // from a tab or search: remember its place for Back
-      if (!_searchActive) _tabScroll[currentTab] = ms.scrollTop;
-      if (document.body.classList.contains('tok-mode')) _tokScrollTop = document.getElementById('tokFeed').scrollTop;
-    }
-    _listBackLabel = _leftPaper ? 'Back' : _searchActive ? 'Search results' : (TAB_NAMES[currentTab] || 'Back');
-  }
-  const changed = _listKey !== key;
-  if (changed && !returning) { _listQuery = ''; _listShowLow = false; document.getElementById('lp').classList.remove('searching'); }
-  _listKey = key;
-  _listViewActive = true;
-  ['sec-papers', 'sec-library', 'sec-venues', 'sec-interests', 'sec-search', 'sec-paper'].forEach(id => document.getElementById(id).classList.remove('active'));
-  document.getElementById('sec-list').classList.add('active');
-  document.body.classList.remove('tok-mode', 'tok-immersive');
-  renderListPage(changed || entering);
-  if (!returning) { jumpScroll(ms, 0); requestAnimationFrame(() => jumpScroll(ms, 0)); }   // after the router's restore for the paper page it left
-  if (!_leftPaper && (entering || changed)) pageIn(document.getElementById('sec-list'));   // (leaving a paper page, the router fades it in)
-  updateListBar();
-}
-function leaveListView() {
-  if (!_listViewActive) return false;
-  _listViewActive = false;
-  document.getElementById('sec-list').classList.remove('active');
-  return true;
-}
-function listBack() { if (history.length > 1) history.back(); else location.hash = '#' + currentTab; }
-/* A sidebar link swaps the list in place: Back still returns to where the first one was opened from */
-function goList(e, hash) {
-  if (e && (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1)) return true;   // a new tab or window: let the link open it
-  if (e) e.preventDefault();
-  if (location.hash !== hash) location.replace(location.pathname + location.search + hash);
-  return false;
-}
-
-function renderListPage(newList) {
-  if (!_listKey) return;
-  const m = listModel(_listKey), lp = document.getElementById('lp');
-  lp.style.setProperty('--gc', m.color);
-  lp.style.setProperty('--gbg', m.glow || 'none');
-  document.getElementById('lpEyebrow').textContent = m.eyebrow;
-  document.getElementById('lpTitle').textContent = m.title;
-  document.getElementById('lpBarTitle').textContent = m.title;
-  const sub = document.getElementById('lpSub');
-  sub.textContent = m.sub || ''; sub.hidden = !m.sub;
-  document.getElementById('lpBack').textContent = _listBackLabel;
-  renderListRail(newList);
-  renderListTools(m);
-  renderListBody(m);
-}
-function renderListRail(newList) {
-  const key = _listKey, fam = listFamily(key);
-  const link = (it, cls) => `<a href="${escAttr(it.hash)}" class="${cls}${it.k === key ? ' on active' : ''}"${it.k === key ? ' aria-current="page"' : ''} onclick="return goList(event, '${escAttr(it.hash)}')">`;
-  const rail = document.getElementById('lpRail'), chips = document.getElementById('lpChips');
-  rail.innerHTML = fam.map(s => `${s.title ? `<h2>${esc(s.title)}</h2>` : ''}${s.items.map(it =>
-    `${link(it, 'lp-rail-item')}${it.color ? `<i class="gdot" style="--gc:${it.color}" aria-hidden="true"></i>` : '<i class="gdot none" aria-hidden="true"></i>'}<span class="l">${esc(it.label)}</span><span class="n">${it.n}</span></a>`).join('')}`).join('');
-  chips.innerHTML = fam.flatMap(s => s.items).map(it => `${link(it, 'tl-chip')}${esc(it.label)}<span class="n">${it.n}</span></a>`).join('');
-  if (!newList) return;
-  requestAnimationFrame(() => {   // the current list in view, without moving the page
-    const c = chips.querySelector('.active'), r = rail.querySelector('.on');
-    if (c) {   // the current list's chip clear of the edge fades (the browser stops at either end of the row)
-      const edge = 48, cr = c.getBoundingClientRect(), rr = chips.getBoundingClientRect();
-      if (cr.left < rr.left + edge) chips.scrollLeft += cr.left - rr.left - edge;
-      else if (cr.right > rr.right - edge) chips.scrollLeft += cr.right - rr.right + edge;
-    }
-    edgeFade(chips);
-    if (r && (r.offsetTop < rail.scrollTop || r.offsetTop + r.offsetHeight > rail.scrollTop + rail.clientHeight)) rail.scrollTop = r.offsetTop - rail.clientHeight / 3;
-  });
-}
-function listUnread(m) { return m.all.filter(p => !readSet.has(paperKey(p))); }
-function renderListTools(m) {
-  m = m || listModel(_listKey);
-  const unread = listUnread(m), n = r => unread.filter(p => dynamicRelevance(p) === r).length;
-  const must = n('definitely'), week = unread.filter(p => addedBucket(p.date_found).key === 'w0').length;
-  document.getElementById('lpStats').innerHTML = [`<b>${unread.length}</b> to read`, m.noRel || !must ? '' : `<b>${must}</b> must read`, week && week < unread.length ? `<b>${week}</b> new this week` : '']
-    .filter(Boolean).join(' &middot; ');
-  const order = `<div class="tl-sort" role="group" aria-label="Order">${LIST_ORDERS.map(([v, label, tip]) =>
-    `<button class="${_listOrder === v ? 'active' : ''}" aria-pressed="${_listOrder === v}" onclick="setListOrder('${v}')" title="${escAttr(tip)}">${label}</button>`).join('')}</div>`;
-  const pill = (r, label, c) => !c && r !== 'all' && currentRel !== r ? ''   // only kinds this list has
-    : `<button class="pill${currentRel === r ? ' active' : ''}" aria-pressed="${currentRel === r}" onclick="setListRel('${r}')">${label} <span class="pill-count">${c}</span></button>`;
-  const pills = m.noRel ? '' : `<div class="lp-pills" role="group" aria-label="Relevance">${pill('all', 'All', unread.length)}${pill('definitely', 'Must read', must)}${pill('probably', 'Interesting', n('probably'))}${pill('mildly', 'Tangential', n('mildly'))}</div>`;
-  const years = m.years ? Object.keys(m.years).sort((a, b) => b - a).map(Number) : [];
-  const ychip = (y, label, c) => `<button class="tl-chip${_venueYear === y ? ' active' : ''}" onclick="setVenueYear(${y === null ? 'null' : y})">${label}<span class="n">${c}</span></button>`;
-  const yearRow = years.length > 1 ? `<div class="tl-chips lp-years" role="group" aria-label="Year">${ychip(null, 'All years', m.everyN)}${years.map(y => ychip(y, y, m.years[y])).join('')}</div>` : '';
-  const f = document.getElementById('lpFilter');
-  f.placeholder = `Filter ${unread.length} ${unread.length === 1 ? 'paper' : 'papers'}`;
-  if (f.value !== _listQuery) f.value = _listQuery;
-  document.getElementById('lpTools').innerHTML = `<div class="lp-controls fade-x">${order}${pills}</div>${yearRow}`;
-  requestAnimationFrame(() => document.querySelectorAll('#sec-list .fade-x').forEach(edgeFade));
-}
-function renderListBody(m) {
-  m = m || listModel(_listKey);
-  const body = document.getElementById('lpBody');
-  const unread = listUnread(m);
-  let papers = m.noRel || currentRel === 'all' ? unread : unread.filter(p => dynamicRelevance(p) === currentRel);
-  const q = _listQuery.trim().toLowerCase();
-  if (q) {
-    const words = q.split(/\s+/);
-    papers = papers.filter(p => { const hay = [p.headline, p.title, p.authors, p.venue].join(' ').toLowerCase(); return words.every(w => hay.includes(w)); });
-  }
-  body.classList.toggle('ranked', _listOrder === 'best');
-  if (!papers.length) {
-    body.innerHTML = `<div class="lp-empty">${q ? `No papers here match “${esc(_listQuery.trim())}”.<br><button class="lp-fold" onclick="setListQuery('', true)">Clear the filter</button>`
-      : unread.length ? `No ${relLabel(currentRel)} papers here.<br><button class="lp-fold" onclick="setListRel('all')">Show all ${unread.length}</button>`
-      : 'You’ve read everything here. Read papers are in Library.'}</div>`;
-    return;
-  }
-  const head = (label, n) => `<div class="lp-sec-h"><h2>${esc(label)}</h2><span class="n">${n}</span><span class="rule"></span></div>`;
-  let html = '';
-  if (_listOrder === 'best') {
-    const ranked = byBest(papers);
-    const tiers = [['definitely', 'Must read'], ['probably', 'Interesting'], ['mildly', 'Tangential']]
-      .map(([r, label]) => ({ r, label, items: ranked.filter(p => dynamicRelevance(p) === r) })).filter(t => t.items.length);
-    let n = 0;
-    html = tiers.map(t => {
-      const fold = t.r === 'mildly' && tiers.length > 1 && !_listShowLow && !q;
-      return `<section class="lp-sec">${tiers.length > 1 ? head(t.label, t.items.length) : ''}${fold
-        ? `<button class="lp-fold" onclick="_listShowLow = true; renderListBody()">Show ${t.items.length} tangential ${t.items.length === 1 ? 'paper' : 'papers'}</button>`
-        : t.items.map(p => listRowHTML(p, ++n, m)).join('')}</section>`;
-    }).join('');
-  } else {
-    const sections = [];
-    sortForList(papers.slice(), _listOrder).forEach(p => {
-      const b = _listOrder === 'added' ? addedBucket(p.date_found) : publishedBucket(p), last = sections[sections.length - 1];
-      if (last && last.key === b.key) last.items.push(p); else sections.push({ ...b, items: [p] });
-    });
-    html = sections.map(sec => `<section class="lp-sec">${head(sec.label, sec.items.length)}${sec.items.map(p => listRowHTML(p, 0, m)).join('')}</section>`).join('');
-  }
-  body.innerHTML = html;
-  updateListBar();
-}
 function listRowHTML(p, n, m) {
   const k = paperKey(p), ka = escAttr(k), w = parseWhy(p);
   const why = w && w.reason ? w.reason.replace(/\s*\(abstract:[^)]*\)/i, '') : '';
@@ -4620,57 +4830,6 @@ function listRowHTML(p, n, m) {
     </div>
   </article>`;
 }
-/* Changing the order or the relevance keeps the controls in view: the list restarts just below them */
-function listToTools() {
-  const ms = document.getElementById('mainScroll'), tools = document.getElementById('lpTools'), bar = document.getElementById('lpBar');
-  const over = tools.getBoundingClientRect().top - bar.getBoundingClientRect().bottom;
-  if (over < 0) jumpScroll(ms, ms.scrollTop + over - 8);
-}
-function setListOrder(v) {
-  _listOrder = v;
-  try { localStorage.setItem('scholar_list_order', v); } catch (e) {}
-  renderListTools(); renderListBody(); listToTools();
-}
-/* One relevance choice for the whole app: the list's pills and the home page's show the same one */
-function setListRel(r) {
-  currentRel = r;
-  document.querySelectorAll('#filtersBar .pill[data-rel]').forEach(x => x.classList.toggle('active', x.dataset.rel === r));
-  renderListTools(); renderListBody(); listToTools();
-}
-function setListQuery(v, now) {
-  _listQuery = v;
-  clearTimeout(_listQueryTimer);
-  if (now) { const f = document.getElementById('lpFilter'); if (f && f.value !== v) f.value = v; renderListBody(); return; }
-  _listQueryTimer = setTimeout(renderListBody, 120);
-}
-/* On a phone the filter lives in the bar behind a search icon (the page's header stays short, and the bar is
-   always at hand); on wider screens it sits beside the heading. One field either way, moved between the two. */
-const LP_PHONE = matchMedia('(max-width: 600px)');
-function placeListFilter() {
-  const f = document.querySelector('#lp .lp-filter'), bar = document.querySelector('#lpBar .pd-bar-inner'), head = document.querySelector('#lp .lp-head');
-  if (!f) return;
-  if (LP_PHONE.matches) { if (f.parentElement !== bar) bar.insertBefore(f, document.getElementById('lpSearchCancel')); }
-  else { if (f.parentElement !== head) head.appendChild(f); document.getElementById('lp').classList.remove('searching'); }
-  if (LP_PHONE.matches && _listQuery) document.getElementById('lp').classList.add('searching');
-}
-LP_PHONE.addEventListener('change', placeListFilter);
-document.addEventListener('DOMContentLoaded', placeListFilter);
-function _listSearching() { return document.getElementById('lp').classList.contains('searching'); }
-function openListSearch() {
-  document.getElementById('lp').classList.add('searching');
-  document.getElementById('lpFilter').focus();   // inside the tap, so the phone's keyboard comes up
-}
-/* Cancel (or Esc) clears the filter and gives the bar back its Back and title */
-function closeListSearch() {
-  document.getElementById('lp').classList.remove('searching');
-  if (_listQuery) setListQuery('', true);
-  document.getElementById('lpFilter').blur();
-}
-/* Leaving an empty field closes it; with a filter typed it stays, showing what the list is filtered by */
-function listFilterBlur(el) {
-  if (!LP_PHONE.matches) return;
-  setTimeout(() => { if (!el.value && document.activeElement !== el) document.getElementById('lp').classList.remove('searching'); }, 0);
-}
 function edgeFade(el) {
   const over = el.scrollWidth > el.clientWidth + 2;
   el.classList.toggle('more-left', over && el.scrollLeft > 2);
@@ -4678,12 +4837,12 @@ function edgeFade(el) {
 }
 document.addEventListener('scroll', e => { if (e.target.classList && e.target.classList.contains('fade-x')) edgeFade(e.target); }, { capture: true, passive: true });
 window.addEventListener('resize', () => document.querySelectorAll('.fade-x').forEach(edgeFade), { passive: true });
-/* The list's title slides into the bar once the heading has scrolled under it */
+/* Once the field has scrolled under the bar, the bar names what's showing */
 function updateListBar() {
   if (!_listViewActive) return;
-  const bar = document.getElementById('lpBar'), h = document.getElementById('lpTitle');
+  const bar = document.getElementById('lpBar'), box = document.getElementById('sfBox');
   const edge = bar.getBoundingClientRect().bottom;
-  bar.classList.toggle('stuck', h.getBoundingClientRect().bottom < edge);
+  bar.classList.toggle('stuck', box.getBoundingClientRect().bottom < edge);
   document.getElementById('lp').style.setProperty('--lp-bar-h', bar.offsetHeight + 'px');
   document.querySelectorAll('#lpBody .lp-sec-h').forEach(x => x.classList.toggle('stuck', x.getBoundingClientRect().top <= edge + 1));
 }
@@ -4722,7 +4881,6 @@ let _kbKey = null, _kbHinted = false;
 function kbRows() {
   let scope = null;
   if (_listViewActive) scope = document.getElementById('lpBody');
-  else if (_searchActive) scope = document.getElementById('sec-search');
   else if (currentTab === 'library') scope = document.getElementById('sec-library');
   else if (['all', 'email'].includes(currentTab) && !document.body.classList.contains('tok-mode')) scope = document.getElementById('papersContent');
   if (!scope) return [];
@@ -4778,8 +4936,7 @@ document.addEventListener('keydown', e => {
   if (e.key === '/') {
     if (document.querySelector('.reader.open')) return;   // the search box is behind the reader
     e.preventDefault();
-    if (window.matchMedia('(max-width: 600px)').matches) toggleMobileSearch(true);
-    const inp = document.getElementById('searchInput'); inp.focus(); inp.select();
+    openSearchHere();
   } else if (e.key === '?') {
     e.preventDefault(); toggleKeysHelp();
   } else if (e.key === 'Escape' && document.getElementById('keysHelp').classList.contains('open')) {
@@ -5322,8 +5479,7 @@ function interestPaperCount(name) {
   return _interestCounts[name] || 0;
 }
 /* Papers matching one interest, as a list page (from Interests and the paper page) */
-const INTEREST_KEY = 'interest:';
-function openInterest(name, skipHash) { if (!skipHash) location.hash = '#interest/' + encodeURIComponent(name); else showList(INTEREST_KEY + name); }
+function openInterest(name) { location.hash = sfAt('interest', name); }
 function updateI(name, status) {
   const i = allInterests.find(x=>x.interest_name===name);
   if (!i) return;
@@ -6522,7 +6678,7 @@ function dismissReading(id) {
 let _crShown = null;   // the papers the row and strip showed last, so a newcomer can fade in
 /* Wherever Continue reading shows, draw it again (a paper closed, removed, or read on another device) */
 function refreshContinueReading() {
-  if (currentTab === 'all' && !_paperViewActive && !_listViewActive && !_searchActive) {
+  if (currentTab === 'all' && !_paperViewActive && !_listViewActive) {
     if (document.body.classList.contains('tok-mode')) {
       const old = document.getElementById('crPhone'), html = crPhoneHTML(), bar = document.getElementById('tokBar');
       if (old) old.outerHTML = html; else if (html && bar) bar.insertAdjacentHTML('beforeend', html);
@@ -6530,7 +6686,7 @@ function refreshContinueReading() {
       tokMeasureBars();
     } else { renderContinueReading(); fitTopPapers(); }
   }
-  if (currentTab === 'library' && !_paperViewActive && !_listViewActive && !_searchActive) renderLibrary();
+  if (currentTab === 'library' && !_paperViewActive && !_listViewActive) renderLibrary();
 }
 function showInProgress() {
   _openLibGroups.add('progress');
@@ -9754,10 +9910,9 @@ let _navList = null;   // { keys: [...], label }
 function captureNavList(fromEl) {
   const scope = fromEl && fromEl.closest && fromEl.closest('.paper-list, #papersContent, .pd-rel-grid, .tok, #lpBody');
   if (!scope) return;
-  const keys = [...new Set([...scope.querySelectorAll('[data-key]')].map(e => e.dataset.key))];
+  const keys = scope.id === 'lpBody' && _sfPlan ? _sfPlan.keys : [...new Set([...scope.querySelectorAll('[data-key]')].map(e => e.dataset.key))];
   let label;
-  if (fromEl.closest('#sec-list')) label = document.getElementById('lpTitle').textContent;
-  else if (fromEl.closest('#sec-search')) label = 'search results';
+  if (fromEl.closest('#sec-list')) label = sfNavLabel();
   else if (fromEl.closest('#sec-library')) label = 'your Library';
   else if (fromEl.closest('.pd-rel-grid')) label = 'related papers';
   else label = currentTab === 'email' ? 'Email Digest' : 'Recent Works';
@@ -9792,7 +9947,6 @@ function showPaperDetail(id) {
   document.getElementById('sec-library').classList.remove('active');
   document.getElementById('sec-venues').classList.remove('active');
   document.getElementById('sec-interests').classList.remove('active');
-  document.getElementById('sec-search').classList.remove('active');
   document.getElementById('sec-paper').classList.add('active');
   document.body.classList.remove('tok-mode');
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
@@ -10138,74 +10292,18 @@ function applyHash() {
     });
   }
 
-  // List pages: #group/<topic>, #alert/<name>, #venue/<name>[/<year>], #interest/<name>, #latest, #top.
-  // The tab they belong to stays marked in the nav.
-  const markTab = () => document.querySelectorAll('.nav-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === currentTab));
-  if (hash.startsWith('group/')) {
-    const groupName = decodeURIComponent(hash.slice(6));
-    if (groupName) {
-      markTab();
-      if (norm(groupName) !== groupName) history.replaceState(null, '', '#group/' + encodeURIComponent(norm(groupName)));   // an old link to a renamed topic: its new name
-      openGroup(norm(groupName), true);
-      return;
-    }
-  }
-
-  if (hash.startsWith('alert/')) {
-    const name = decodeURIComponent(hash.slice(6));
-    if (name) {
-      if (!_listViewActive && !_leftPaper) currentTab = 'email';   // an alert belongs to the Email Digest
-      markTab();
-      openAlert(name, true);
-      return;
-    }
-  }
-
-  if (hash.startsWith('venue/')) {
-    const parts = hash.slice(6).split('/');
-    const year = /^\d{4}$/.test(parts[parts.length - 1]) && parts.length > 1 ? parseInt(parts.pop()) : null;
-    const name = decodeURIComponent(parts.join('/'));
-    if (name) {
-      markTab();
-      openVenue(name, year, true);
-      return;
-    }
-  }
-
-  if (hash.startsWith('interest/')) {
-    const name = decodeURIComponent(hash.slice(9));
-    if (name) {
-      markTab();
-      openInterest(name, true);
-      return;
-    }
-  }
-
-  if (hash === 'latest') {
-    currentTab = 'email';
-    markTab();
-    openLatestDigest(true);
+  // The search page, #search?…; the addresses lists used to have (#group/…, #interest/…, #venue/…, #top, …) are searches
+  const legacy = sfLegacy(hash);
+  if (legacy) history.replaceState(null, '', location.pathname + location.search + legacy);
+  const sq = legacy ? legacy.slice(1) : hash;
+  if (sq === 'search' || sq.startsWith('search?')) {
+    showSearch(sfParse(sq.slice(7)));
     return;
   }
 
-  if (hash === 'top') {
-    markTab();
-    openTopList(true);
-    return;
-  }
-
-  // Leaving a list page: the view it was opened from comes back where it was
+  // Leaving the search page: the view it was opened from comes back where it was
   const wasInList = leaveListView();
 
-  if (hash.startsWith('search?q=')) {
-    const q = decodeURIComponent(hash.slice(9));
-    if (q) {
-      const si = document.getElementById('searchInput');
-      if (document.activeElement !== si) si.value = q;
-      showGlobalSearch(q, true);
-      return;
-    }
-  }
   if (hash.startsWith('interests/')) {
     const sub = hash.slice(10);
     switchTab('interests', true);
