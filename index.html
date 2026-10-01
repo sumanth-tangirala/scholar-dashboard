@@ -185,7 +185,7 @@ html.ro #vaultOverlay { display: none !important; }
 .top-card .p-authors { font-size: 13px; margin-top: 12px; }
 .top-card .p-meta { margin-top: auto; padding-top: 12px; }
 .top-card .p-actions { opacity: 0; transition: opacity 0.15s ease; }
-.top-card:hover .p-actions { opacity: 1; }
+.top-card:hover .p-actions, .top-card:focus-within .p-actions { opacity: 1; }
 .top-card .p-actions.has-active { opacity: 1; }
 
 /* PAPER ELEMENTS (shared) */
@@ -269,7 +269,7 @@ html.ro #vaultOverlay { display: none !important; }
 .t-sub { font-size: 12px; color: var(--text-muted); display: flex; flex-direction: column; gap: 0; margin-top: 8px; }
 /* [4] Action button reveal on topic items */
 .topic-item .p-actions { opacity: 0; transition: opacity 0.15s ease; }
-.topic-item:hover .p-actions { opacity: 1; }
+.topic-item:hover .p-actions, .topic-item:focus-within .p-actions { opacity: 1; }
 .topic-item .p-actions.has-active { opacity: 1; }
 
 /* MAIN PAGE FEED — left-aligned briefing, lead story + side list, compact topic items */
@@ -1872,8 +1872,8 @@ body.tok-mode .tok-bar { flex-wrap: wrap; row-gap: 8px; }
 .interest-group-count { font-size: 12px; color: var(--text-muted); background: var(--bg); padding: 2px 8px; border-radius: 10px; }
 .interest-card { padding: 12px 20px; border-top: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; gap: 12px; transition: background 0.15s; }
 .interest-group-inner > .interest-card:first-child { border-top: none; }
-.group-drag-handle { cursor: grab; color: var(--text-muted); padding: 4px 2px; margin-right: 4px; display: flex; align-items: center; flex-shrink: 0; opacity: 0.5; transition: opacity 0.15s; }
-.group-drag-handle:hover { opacity: 1; }
+.group-drag-handle { cursor: grab; color: var(--text-muted); padding: 4px 2px; margin-right: 4px; display: flex; align-items: center; flex-shrink: 0; opacity: 0.5; transition: opacity 0.15s; background: none; border: none; border-radius: 6px; font: inherit; }
+.group-drag-handle:hover, .group-drag-handle:focus-visible { opacity: 1; }
 .interest-card.dragging { opacity: 0.4; background: var(--bg-surface); }
 .interest-card.drag-over { border-top: 2px solid var(--accent); }
 .interest-card:hover { background: rgba(255,255,255,0.035); }
@@ -1930,7 +1930,8 @@ body.tok-mode .tok-bar { flex-wrap: wrap; row-gap: 8px; }
 .badge-editable { cursor: pointer; position: relative; user-select: none; }
 .badge-editable:hover { filter: brightness(1.3); }
 .interest-dropdown { position: absolute; z-index: 200; background: #000000ee; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.55); overflow: hidden; min-width: 110px; padding: 5px 0; animation: dropdown-in 0.15s ease forwards; }
-.interest-dropdown-item { padding: 7px 14px; font-size: 12px; cursor: pointer; white-space: nowrap; transition: background 0.15s, color 0.15s; color: var(--text-secondary); }
+.interest-dropdown-item { display: block; width: 100%; border: none; background: none; font: inherit; text-align: left; padding: 7px 14px; font-size: 12px; cursor: pointer; white-space: nowrap; transition: background 0.15s, color 0.15s; color: var(--text-secondary); }
+.interest-dropdown-item:focus-visible { background: rgba(255,255,255,0.1); color: var(--text); outline: none; }
 .interest-dropdown-item.rel-item { text-align: center; }
 .interest-dropdown-item:hover { background: rgba(255,255,255,0.1); color: var(--text); }
 .interest-dropdown-item.selected { color: var(--accent); font-weight: 600; }
@@ -2022,8 +2023,8 @@ body.tok-mode .tok-bar { flex-wrap: wrap; row-gap: 8px; }
 /* [12] COPY-TO DROPDOWN (library) — animated entrance */
 @keyframes dropdown-in { 0% { opacity: 0; transform: translateY(-4px); } 100% { opacity: 1; transform: translateY(0); } }
 .copy-dd { position: absolute; z-index: 150; background: #000000ee; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.55); overflow: hidden; min-width: 180px; animation: dropdown-in 0.15s ease forwards; }
-.copy-dd-item { padding: 8px 14px; font-size: 13px; cursor: pointer; color: var(--text-secondary); transition: background 0.1s; }
-.copy-dd-item:hover { background: var(--bg-hover); color: var(--text); }
+.copy-dd-item { display: block; width: 100%; border: none; background: none; font: inherit; text-align: left; padding: 8px 14px; font-size: 13px; cursor: pointer; color: var(--text-secondary); transition: background 0.1s; }
+.copy-dd-item:hover, .copy-dd-item:focus-visible { background: var(--bg-hover); color: var(--text); outline: none; }
 
 /* [12] SAVE DROPDOWN — animated entrance */
 .save-anchor { position: relative; display: inline-flex; }
@@ -2032,8 +2033,8 @@ body.tok-mode .tok-bar { flex-wrap: wrap; row-gap: 8px; }
 .save-dd-input { width: 100%; padding: 8px 12px; background: transparent; border: none; border-bottom: 1px solid var(--border); color: var(--text); font-size: 13px; outline: none; }
 .save-dd-input::placeholder { color: var(--text-muted); }
 .save-dd-list { max-height: 180px; overflow-y: auto; }
-.save-dd-item { padding: 7px 12px; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: var(--text-secondary); transition: background 0.1s; }
-.save-dd-item:hover { background: var(--bg-hover); }
+.save-dd-item { width: 100%; border: none; background: none; font: inherit; text-align: left; padding: 7px 12px; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: var(--text-secondary); transition: background 0.1s; }
+.save-dd-item:hover, .save-dd-item:focus-visible { background: var(--bg-hover); outline: none; }
 .save-dd-item .dd-check { width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid var(--text-muted); display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; transition: all 0.15s; }
 .save-dd-item .dd-check.on { background: var(--list); border-color: var(--list); color: var(--bg); }
 .save-dd-empty { padding: 10px 12px; font-size: 12px; color: var(--text-muted); text-align: center; }
@@ -2094,19 +2095,19 @@ body.tok-mode .tok-bar { flex-wrap: wrap; row-gap: 8px; }
 .badge-group { background: #1e1a2e; color: #b8aed8; font-size: 11px; border: 1px solid #2e2845; }
 .badge-group-edit { display: inline-flex; align-items: center; gap: 3px; transition: padding 0.2s ease, background 0.2s ease; }
 .badge-group-edit:hover { background: #252040; }
-.badge-group-edit .group-remove { display: inline-flex; align-items: center; justify-content: center; cursor: pointer; max-width: 0; opacity: 0; overflow: hidden; transition: max-width 0.2s ease, opacity 0.15s ease, margin 0.2s ease; margin-left: 0; }
-.badge-group-edit:hover .group-remove { max-width: 16px; opacity: 0.6; margin-left: 2px; }
-.badge-group-edit .group-remove:hover { opacity: 1; }
+.badge-group-edit .group-remove { border: none; background: none; padding: 0; font: inherit; color: inherit; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; max-width: 0; opacity: 0; overflow: hidden; transition: max-width 0.2s ease, opacity 0.15s ease, margin 0.2s ease; margin-left: 0; }
+.badge-group-edit:hover .group-remove, .badge-group-edit:focus-within .group-remove { max-width: 16px; opacity: 0.6; margin-left: 2px; }
+.badge-group-edit .group-remove:hover, .badge-group-edit .group-remove:focus-visible { opacity: 1; }
 .group-add-wrap { position: relative; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
-.paper-detail-tags:hover .group-add-wrap { opacity: 1; pointer-events: auto; }
+.paper-detail-tags:hover .group-add-wrap, .paper-detail-tags:focus-within .group-add-wrap { opacity: 1; pointer-events: auto; }
 .group-add-btn { background: transparent; border: 1px dashed #2e2845; color: #9b8ec4; font-size: 11px; font-weight: 500; padding: 0 10px; line-height: 1; border-radius: 6px; cursor: pointer; opacity: 0.6; white-space: nowrap; box-sizing: border-box; transition: opacity 0.15s ease, border-style 0.15s ease; }
 .group-add-btn:hover { opacity: 1; border-style: solid; }
 .badge-group, .group-add-btn { height: 24px; }
 .group-add-dd { position: absolute; top: 100%; left: 0; margin-top: 4px; background: var(--bg-surface); border: 1px solid rgba(255,255,255,0.18); border-radius: 8px; padding: 4px 0; z-index: 100; min-width: 200px; max-height: 240px; overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,.5); opacity: 0; transform: translateY(-4px); pointer-events: none; transition: opacity 0.15s ease, transform 0.15s ease; }
 .group-add-dd:not(.open) { min-width: 0; width: 0; padding: 0; border-width: 0; overflow: hidden; }   /* closed: takes no room, so it never widens the page */
 .group-add-dd.open { opacity: 1; transform: translateY(0); pointer-events: auto; }
-.group-add-dd .group-opt { padding: 6px 12px; font-size: 12px; cursor: pointer; white-space: nowrap; color: var(--text-secondary); transition: background 0.12s ease, color 0.12s ease; }
-.group-add-dd .group-opt:hover { background: var(--hover-bg); color: var(--text-primary); }
+.group-add-dd .group-opt { display: block; width: 100%; border: none; background: none; font: inherit; text-align: left; padding: 6px 12px; font-size: 12px; cursor: pointer; white-space: nowrap; color: var(--text-secondary); transition: background 0.12s ease, color 0.12s ease; }
+.group-add-dd .group-opt:hover, .group-add-dd .group-opt:focus-visible { background: var(--hover-bg); color: var(--text-primary); outline: none; }
 .group-add-dd .group-opt.disabled { opacity: 0.35; pointer-events: none; }
 .badge-interest { background: #1a1a2e; color: #8b8bef; font-size: 11px; border: 1px solid #2a2a4a; }
 .btn-icon.has-notes { color: var(--accent); }
@@ -2512,7 +2513,10 @@ html.no-hover .sel-icon:not(.on):active, html.no-hover .ink-bar .ink-size:not(.o
         <dt><kbd>g</kbd> <kbd>v</kbd></dt><dd>Venues</dd>
         <dt><kbd>g</kbd> <kbd>l</kbd></dt><dd>Library</dd>
         <dt><kbd>g</kbd> <kbd>i</kbd></dt><dd>Interests</dd>
-        <dt><kbd>Esc</kbd></dt><dd>Close what&rsquo;s open: a menu, a paper&rsquo;s page, the search page</dd>
+        <dt><kbd>Tab</kbd></dt><dd>The next control; in an open menu or dialog, Tab stays inside it</dd>
+        <dt><kbd>&uarr;</kbd> <kbd>&darr;</kbd></dt><dd>In a menu: move between its choices (<kbd>Enter</kbd> picks)</dd>
+        <dt><kbd>Esc</kbd></dt><dd>Close what&rsquo;s open (focus goes back to what opened it), then leave a paper&rsquo;s page or the search page</dd>
+        <dt class="owner-only"><kbd>&uarr;</kbd> <kbd>&darr;</kbd></dt><dd class="owner-only">On a topic&rsquo;s handle (Interests): move the topic</dd>
         <dt><kbd>?</kbd></dt><dd>These shortcuts</dd>
       </dl></section>
       <section class="kh-sec" data-ctx="list"><h4>Lists <span class="kh-sub">Recent Works, Search, Library, Venues</span></h4><dl>
@@ -2534,6 +2538,8 @@ html.no-hover .sel-icon:not(.on):active, html.no-hover .ink-bar .ink-size:not(.o
         <dt><kbd>/</kbd></dt><dd>Into the search box</dd>
         <dt><kbd>&darr;</kbd></dt><dd>From the box to the results</dd>
         <dt><kbd>&uarr;</kbd> <kbd>&darr;</kbd> <kbd>&larr;</kbd> <kbd>&rarr;</kbd></dt><dd>Choose a suggestion; <kbd>Enter</kbd> picks it</dd>
+        <dt><kbd>&larr;</kbd></dt><dd>From the start of the box to the filter pills; <kbd>&larr;</kbd> <kbd>&rarr;</kbd> move between them</dd>
+        <dt><kbd>&#9003;</kbd></dt><dd>Remove the pill you&rsquo;re on, or (in an empty box) the last one</dd>
         <dt><kbd>f</kbd></dt><dd>Show or hide the filters</dd>
         <dt><kbd>u</kbd> <kbd>Esc</kbd></dt><dd>Back (in the box, Esc first closes the suggestions, then clears it)</dd>
       </dl></section>
@@ -3863,7 +3869,7 @@ function renderWeekPulse(weekPapers) {
   if (!items.length) { el.innerHTML = ''; return; }
   const tagTotal = items.reduce((n, it) => n + it.n, 0);
   const go = currentTab === 'email' ? 'openGroup' : 'jumpToTopic';
-  const seg = it => `<div class="pulse-seg" style="flex-grow:${it.n};--gc:${it.g ? groupColor(it.g) : 'var(--g-other)'}" data-g="${escAttr(it.g || '')}" data-tip="${escAttr((it.g || 'Other topics') + ': ' + it.n)}" ${it.g ? `onclick="${go}('${escAttr(it.g)}')"` : ''}></div>`;
+  const seg = it => `<div class="pulse-seg" aria-hidden="true" style="flex-grow:${it.n};--gc:${it.g ? groupColor(it.g) : 'var(--g-other)'}" data-g="${escAttr(it.g || '')}" data-tip="${escAttr((it.g || 'Other topics') + ': ' + it.n)}" ${it.g ? `onclick="${go}('${escAttr(it.g)}')"` : ''}></div>`;
   const key = it => it.g
     ? `<button class="pulse-key" onclick="${go}('${escAttr(it.g)}')" onmouseenter="pulseHL('${escAttr(it.g)}')" onmouseleave="pulseHL(null)">${gdot(it.g)}${esc(it.g)} <span class="n">${it.n}</span></button>`
     : `<span class="pulse-key static">${gdot('')}Other <span class="n">${it.n}</span></span>`;
@@ -4222,6 +4228,7 @@ function markTruncatedVenues() {
 let _activeSaveDD = null;
 function openSaveDD(btn, key) {
   closeSaveDD();
+  if (btn && btn.tabIndex >= 0) _kbBack = btn;
   const rect = btn.getBoundingClientRect();
   const dd = document.createElement('div');
   dd.className = 'save-dd';
@@ -4243,7 +4250,7 @@ function buildDDItems(key) {
   if (!names.length) return '<div class="save-dd-empty">No lists yet</div>';
   return names.map(n => {
     const inList = libraryLists[n].includes(key);
-    return `<div class="save-dd-item" onclick="event.stopPropagation();toggleListItem('${escAttr(n)}','${escAttr(key)}')"><span class="dd-check ${inList?'on':''}">${inList?'&#10003;':''}</span>${esc(n)}</div>`;
+    return `<button type="button" class="save-dd-item" role="menuitemcheckbox" aria-checked="${inList}" onclick="event.stopPropagation();toggleListItem('${escAttr(n)}','${escAttr(key)}')"><span class="dd-check ${inList?'on':''}">${inList?'&#10003;':''}</span>${esc(n)}</button>`;
   }).join('');
 }
 function createListFromDD(input, key) {
@@ -4265,8 +4272,10 @@ function toggleListItem(listName, key) {
   const idx = arr.indexOf(key);
   if (idx >= 0) arr.splice(idx, 1); else arr.push(key);
   persistLists(); updateLibraryBadge();
-  if (_activeSaveDD) {
-    _activeSaveDD.el.querySelector('.save-dd-list').innerHTML = buildDDItems(key);
+  if (_activeSaveDD) {   // redrawn ticks; the list that had focus keeps it (the keyboard carries on in the menu)
+    const box = _activeSaveDD.el.querySelector('.save-dd-list'), was = [...box.children].indexOf(document.activeElement);
+    box.innerHTML = buildDDItems(key);
+    if (was >= 0 && box.children[was]) box.children[was].focus({ preventScroll: true });
   }
   refresh();
   updateListIcon(key);
@@ -4790,13 +4799,32 @@ function sfToggle(f, v) {
   else SF[f] = SF[f].includes(v) ? SF[f].filter(x => x !== v) : SF[f].concat(v);
   sfCommit();
 }
-function sfRemove(e, f, v) {
+function sfRemove(e, f, v, dir) {
   if (e) e.stopPropagation();
-  const chip = (e && e.target.closest && e.target.closest('.sf-chip')) || [...document.querySelectorAll('#sfChips .sf-chip')].find(c => c.dataset.f === f && c.dataset.v === v);
+  const chips = [...document.querySelectorAll('#sfChips .sf-chip')];
+  const chip = (e && e.target.closest && e.target.closest('.sf-chip')) || chips.find(c => c.dataset.f === f && c.dataset.v === v);
   if (chip && chip.classList.contains('sf-out')) return;   // already going
-  if (chip && !reduceMotion()) { chip.classList.add('sf-out'); setTimeout(() => sfDrop(f, v), 130); return; }
-  sfDrop(f, v);
+  // the pill had focus (its x pressed with Enter, Backspace or Delete on it): focus moves to the pill before it (after
+  // it, for Delete), or the box when none is left, so the next key keeps working
+  const had = chip && chip.contains(document.activeElement), i = chip ? chips.indexOf(chip) : -1;
+  const done = () => { sfDrop(f, v); if (had) sfFocusPill(dir === 'next' ? i : i - 1); };
+  if (chip && !reduceMotion()) { chip.classList.add('sf-out'); setTimeout(done, 130); return; }
+  done();
 }
+/* The pills from the keyboard: their x buttons, in order; i past either end is the box */
+function sfFocusPill(i) {
+  const xs = [...document.querySelectorAll('#sfChips .sf-chip .sf-x')];
+  if (!xs.length || i >= xs.length) { const inp = document.getElementById('sfInput'); inp.focus(); inp.setSelectionRange(0, 0); return; }
+  xs[Math.max(0, i)].focus();
+}
+document.addEventListener('DOMContentLoaded', () => document.getElementById('sfChips').addEventListener('keydown', e => {
+  const x = e.target.closest && e.target.closest('.sf-x');
+  if (!x || e.metaKey || e.ctrlKey || e.altKey) return;
+  const xs = [...document.querySelectorAll('#sfChips .sf-chip .sf-x')], i = xs.indexOf(x), chip = x.closest('.sf-chip');
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); sfFocusPill(i + (e.key === 'ArrowLeft' ? -1 : 1)); }
+  else if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); sfRemove(null, chip.dataset.f, chip.dataset.v, e.key === 'Delete' ? 'next' : 'prev'); }
+  else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); sfFocusPill(xs.length); }
+}));
 function sfDrop(f, v) {
   if (f === 'show') SF.show = 'all';
   else if (f === 'starred') SF.starred = false;
@@ -4879,6 +4907,11 @@ function sfKey(e) {
     e.preventDefault();
     const to = cols[(ci + (e.key === 'ArrowRight' ? 1 : -1) + cols.length) % cols.length], y = cur.getBoundingClientRect().top;
     go(to.reduce((a, b) => Math.abs(b.getBoundingClientRect().top - y) < Math.abs(a.getBoundingClientRect().top - y) ? b : a));
+  } else if ((e.key === 'Backspace' || e.key === 'ArrowLeft') && e.target.selectionStart === 0 && e.target.selectionEnd === 0 && !e.metaKey && !e.ctrlKey && !e.altKey && document.querySelector('#sfChips .sf-chip')) {
+    // the pills sit just before the words: Backspace in an empty box takes the last; Left from the start steps onto them
+    const chips = [...document.querySelectorAll('#sfChips .sf-chip')], last = chips[chips.length - 1];
+    if (e.key === 'ArrowLeft') { e.preventDefault(); sfSuggClose(); sfFocusPill(chips.length - 1); }
+    else if (!e.target.value) { e.preventDefault(); sfRemove(null, last.dataset.f, last.dataset.v); }
   } else if (e.key === 'ArrowDown' && !box.classList.contains('sugg-open')) {   // to the results (then j / k)
     const first = kbRows()[0];
     if (first) { e.preventDefault(); kbSelect(first); }
@@ -5416,7 +5449,7 @@ function kbSelect(el) {
 }
 const kbTyping = t => !!t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable);
 /* something Esc should close first (or whose own keys come first) */
-function kbOverlayOpen() { return !!(_chipPop || document.querySelector(POPOVERS + ', .auth-overlay.open, .keys-help.open, .reader.open, #vaultOverlay.open')); }
+function kbOverlayOpen() { return !!(_chipPop || document.querySelector(POPOVERS + ', ' + KB_OPEN + ', .auth-overlay.open, .reader.open')); }   // (every menu and dialog: KB_OPEN)
 function kbGoTab(tab) { const b = document.querySelector(`.nav-tab[data-tab="${tab}"]`); if (b && !b.hidden) b.click(); }
 function kbHint() {
   if (_kbHinted) return;
@@ -5478,6 +5511,53 @@ document.addEventListener('keydown', e => {
     kbSelect(land || fresh[Math.min(i, fresh.length - 1)]);
   }
 });
+/* Overlays keep Tab inside them (the top one: a dialog over the reader keeps it in the dialog), so focus never wanders
+   into the page underneath; a menu or card that opens on top of one (a highlight's card, the save menu) keeps its own */
+const KB_MODALS = ['#genericOverlay.open', '#vaultOverlay.open', '.keys-help.open', '#pdfModal.open', '#sfSheet.open', '.reader.open'];
+const KB_FLOATING = '.save-dd, .copy-dd, .interest-dropdown, .group-add-dd, .abs-popup, .relevance-popup, #chatHist, .anno-card, .cite-dd, #selBar, #tokMenu, #readerMenu';
+const kbFocusables = root => [...root.querySelectorAll('button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"]), [contenteditable="true"]')]
+  .filter(x => !x.disabled && x.offsetParent !== null && getComputedStyle(x).visibility !== 'hidden');
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Tab' || e.metaKey || e.ctrlKey || e.altKey) return;
+  const a = document.activeElement;
+  const menu = a && a.closest && a.closest('.save-dd, .copy-dd, .interest-dropdown, .group-add-dd.open');
+  const m = menu || KB_MODALS.map(sel => document.querySelector(sel)).find(Boolean);
+  if (!m || (!menu && a && a.closest && a.closest(KB_FLOATING) && !m.contains(a))) return;
+  const f = kbFocusables(m);
+  if (!f.length) return;
+  const i = f.indexOf(a);
+  if (i < 0) { e.preventDefault(); f[e.shiftKey ? f.length - 1 : 0].focus(); }
+  else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); }
+  else if (e.shiftKey && i === 0) { e.preventDefault(); f[f.length - 1].focus(); }
+}, true);
+/* Where focus was before a menu, pop-up or dialog opened: when one closes (Esc, a choice in it, Done) and focus would
+   be left nowhere, or on something now hidden, it goes back there, so the keyboard carries on from where you were */
+const KB_LAYERS = KB_FLOATING + ', .sf-sugg, .sf-guide, #sfSheet, .keys-help, #genericOverlay, #vaultOverlay, #pdfModal, .chip-pop';
+let _kbBack = null;
+document.addEventListener('focusin', e => { if (e.target && e.target.closest && !e.target.closest(KB_LAYERS) && e.target !== document.body) _kbBack = e.target; }, true);
+const KB_OPEN = '.save-dd, .copy-dd, .interest-dropdown, .group-add-dd.open, .abs-popup, .relevance-popup, #chatHist, #tokMenu.open, #readerMenu.open, #sfSheet.open, .sf-box.sugg-open, .sf-box.guide-open, .keys-help.open, #genericOverlay.open, #vaultOverlay.open, #pdfModal.open';
+function kbRefocus(fromClick) {
+  setTimeout(() => {
+    if (fromClick && document.querySelector(KB_OPEN)) return;   // still open (a list ticked in the save menu): focus stays in it
+    const a = document.activeElement;
+    const lost = !a || a === document.body || !a.isConnected || a.offsetParent === null || getComputedStyle(a).visibility === 'hidden'
+      || (a.closest && a.closest('#sfSheet:not(.open), .keys-help:not(.open), #genericOverlay:not(.open), #vaultOverlay:not(.open), #pdfModal:not(.open), .group-add-dd:not(.open)'));
+    if (lost && _kbBack && _kbBack.isConnected && _kbBack.offsetParent !== null) _kbBack.focus({ preventScroll: true });
+  }, 0);
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') kbRefocus(); }, true);
+document.addEventListener('click', e => { if (e.target && e.target.closest && e.target.closest(KB_LAYERS)) kbRefocus(true); }, true);
+/* In a menu, Down and Up move through its choices (from the save menu's box into its lists, and back) */
+document.addEventListener('keydown', e => {
+  if ((e.key !== 'ArrowDown' && e.key !== 'ArrowUp') || e.metaKey || e.ctrlKey || e.altKey) return;
+  const menu = e.target && e.target.closest && e.target.closest('.save-dd, .copy-dd, .interest-dropdown, .group-add-dd, #readerMenu, #tokMenu');
+  if (!menu) return;
+  const items = kbFocusables(menu), i = items.indexOf(e.target);
+  if (!items.length) return;
+  e.preventDefault();
+  items[(i + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length].focus();
+});
+
 /* Reading with the keyboard: every page scrolls inside #mainScroll, not the window, so with focus nowhere (on <body>,
    as after opening a paper) or up in the nav, the arrow keys, Space and PageDown went to the window, which doesn't
    move. They're handed to #mainScroll, which then keeps focus, so the keys that follow scroll it natively. */
@@ -5496,6 +5576,7 @@ document.addEventListener('keydown', e => {
 /* Esc with nothing open: leave a paper's page or the search page (seen before anything closes, so it never does both) */
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape' || e.metaKey || e.ctrlKey || e.altKey || kbTyping(e.target) || kbOverlayOpen()) return;
+  if (e.target && e.target.closest && e.target.closest('#sfChips, .sf-box')) return;   // (a pill's Esc goes back to the box)
   if (_paperViewActive) { e.preventDefault(); paperBack(); }
   else if (_listViewActive) { e.preventDefault(); listBack(); }
 }, true);
@@ -5523,7 +5604,7 @@ document.addEventListener('keydown', e => {
   t.click();
 });
 
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeRelevancePopup(); closeAbsPopup(); closeSaveDD(); _resolveGeneric(null); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeRelevancePopup(); closeAbsPopup(); closeSaveDD(); closeInterestDD(); closeCopyDD(); document.querySelectorAll('.group-add-dd.open').forEach(d => d.classList.remove('open')); _resolveGeneric(null); } });
 
 /* ===== LIBRARY ===== */
 let _openLibGroups = new Set(['progress']);   // every group starts collapsed except In progress; opening one is remembered for the visit
@@ -5532,6 +5613,7 @@ function toggleLibGroup(headerEl, key) {
   const body = group.querySelector('.interest-group-body');
   if (group.classList.contains('collapsed') && !body.innerHTML) body.innerHTML = libBodyHTML(_libPapers[key] || [], key);
   group.classList.toggle('collapsed');
+  headerEl.setAttribute('aria-expanded', !group.classList.contains('collapsed'));
   if (group.classList.contains('collapsed')) _openLibGroups.delete(key);
   else _openLibGroups.add(key);
 }
@@ -5561,7 +5643,7 @@ function libGroupHTML(key, icon, label, papers, extra) {
   _libPapers[key] = papers;
   const collapsed = _openLibGroups.has(key) ? '' : ' collapsed';
   const body = collapsed ? '' : libBodyHTML(papers, key);
-  return `<div class="interest-group${collapsed}" data-lib="${escAttr(key)}"><div class="interest-group-inner"><div class="interest-group-header" onclick="toggleLibGroup(this,'${escAttr(key)}')"><span class="lib-icon" aria-hidden="true">${icon}</span>${esc(label)} <span class="interest-group-count">${papers.length}</span>${extra||''}<svg class="chevron" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg></div><div class="interest-group-body">${body}</div></div></div>`;
+  return `<div class="interest-group${collapsed}" data-lib="${escAttr(key)}"><div class="interest-group-inner"><div class="interest-group-header" role="button" tabindex="0" aria-expanded="${!collapsed}" onclick="toggleLibGroup(this,'${escAttr(key)}')"><span class="lib-icon" aria-hidden="true">${icon}</span>${esc(label)} <span class="interest-group-count">${papers.length}</span>${extra||''}<svg class="chevron" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg></div><div class="interest-group-body">${body}</div></div></div>`;
 }
 /* ===== ADD A PAPER =====
    Library → + Add paper: a link, DOI, arXiv id or title goes to the bridge on the laptop, where Claude Code finds the
@@ -5766,9 +5848,9 @@ function showCopyDD(btn, srcName) {
   dd.onclick = e => e.stopPropagation();
   let items = '';
   if (otherLists.length) {
-    items = otherLists.map(n => `<div class="copy-dd-item" onclick="event.stopPropagation();doCopyList('${escAttr(srcName)}','${escAttr(n)}')">${esc(n)}</div>`).join('');
+    items = otherLists.map(n => `<button type="button" class="copy-dd-item" onclick="event.stopPropagation();doCopyList('${escAttr(srcName)}','${escAttr(n)}')">${esc(n)}</button>`).join('');
   }
-  items += `<div class="copy-dd-item" style="border-top:1px solid var(--border);color:var(--accent)" onclick="event.stopPropagation();doCopyNew('${escAttr(srcName)}')">+ New list...</div>`;
+  items += `<button type="button" class="copy-dd-item" style="border-top:1px solid var(--border);color:var(--accent)" onclick="event.stopPropagation();doCopyNew('${escAttr(srcName)}')">+ New list...</button>`;
   dd.innerHTML = items;
   const rect = btn.getBoundingClientRect();
   dd.style.position = 'fixed';
@@ -5776,6 +5858,8 @@ function showCopyDD(btn, srcName) {
   dd.style.left = rect.left + 'px';
   document.body.appendChild(dd);
   _copyDD = dd;
+  _kbBack = btn;
+  dd.firstElementChild.focus({ preventScroll: true });
 }
 function doCopyList(srcName, targetName) {
   const added = libraryLists[srcName].filter(k => !libraryLists[targetName].includes(k));
@@ -5867,7 +5951,7 @@ function renderInterests() {
   ['Application Areas','Methods'].forEach(cat => {
     if (!grouped[cat]) return;
     const collapsed = _collapsedGroups.has(cat) ? ' collapsed' : '';
-    html += `<div class="interest-group${collapsed}"><div class="interest-group-inner"><div class="interest-group-header" onclick="toggleInterestGroup(this,'${escAttr(cat)}')">${cat} <span class="interest-group-count">${grouped[cat].length}</span><svg class="chevron" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg></div><div class="interest-group-body">${grouped[cat].map(interestCardHTML).join('')}</div></div></div>`;
+    html += `<div class="interest-group${collapsed}"><div class="interest-group-inner"><div class="interest-group-header" role="button" tabindex="0" onclick="toggleInterestGroup(this,'${escAttr(cat)}')">${cat} <span class="interest-group-count">${grouped[cat].length}</span><svg class="chevron" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg></div><div class="interest-group-body">${grouped[cat].map(interestCardHTML).join('')}</div></div></div>`;
   });
   main.innerHTML = html;
 }
@@ -5903,7 +5987,7 @@ function groupCardHTML(g) {
   if (g.status === 'suggested') actions = `<div class="interest-actions"><button class="btn-approve" onclick="event.stopPropagation();updateG('${escAttr(g.group_name)}','confirmed')">Approve</button><button class="btn-reject" onclick="event.stopPropagation();updateG('${escAttr(g.group_name)}','rejected')">Dismiss</button></div>`;
   else if (g.status === 'confirmed') actions = `<div class="interest-actions"><button class="btn-quiet-remove" onclick="event.stopPropagation();updateG('${escAttr(g.group_name)}','rejected')" title="Remove this topic (you can restore it from Rejected)" aria-label="Remove ${escAttr(g.group_name)}">${ICON_TRASH}</button></div>`;
   else if (g.status === 'rejected') actions = `<div class="interest-actions"><button class="btn-approve" onclick="event.stopPropagation();updateG('${escAttr(g.group_name)}','confirmed')">Restore</button></div>`;
-  const handle = `<div class="group-drag-handle" title="Drag to reorder"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg></div>`;
+  const handle = `<button class="group-drag-handle" title="Drag to reorder, or ↑ ↓" aria-label="Move ${escAttr(g.group_name)} (up and down arrows)" onkeydown="gHandleKey(event,'${escAttr(g.group_name)}')" onclick="event.stopPropagation()"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg></button>`;
   const drag = isOwner() ? ' draggable="true" ondragstart="gDragStart(event)" ondragover="gDragOver(event)" ondragenter="gDragEnter(event)" ondragleave="gDragLeave(event)" ondrop="gDrop(event)" ondragend="gDragEnd(event)"' : '';   // reordering is yours
   return `<div class="interest-card"${drag} data-group="${dataAttr(g.group_name)}">${isOwner() ? handle : ''}<div class="interest-info"><div class="interest-name">${g.status === 'confirmed' ? gdot(norm(g.group_name)) : ''}${esc(g.group_name)}</div><div class="interest-detail">${esc(g.description||'')}</div>${notes}<div class="interest-meta">${statusBadge}<span class="badge badge-venue">${paperCount} paper${paperCount!==1?'s':''}${readCount ? `, ${readCount} read` : ''}</span></div>${topicTagLineHTML(g, paperCount)}</div>${actions}</div>`;
 }
@@ -5986,12 +6070,15 @@ function gDrop(e) {
   _dragCounters.delete(e.currentTarget);
   const target = e.currentTarget.dataset.group;
   if (!_draggedGroup || _draggedGroup === target) return;
-  /* Reorder: move dragged group to target's position */
+  moveGroup(_draggedGroup, target);
+}
+/* Reorder: one topic to another's place (dragged there, or one step with the arrow keys on its handle) */
+function moveGroup(name, target) {
   const so = {suggested:0,confirmed:1,rejected:2};
   const ordered = [...allGroups].sort((a,b) => (so[a.status] ?? 9) - (so[b.status] ?? 9) || (parseInt(a.display_order)||999) - (parseInt(b.display_order)||999));
-  const fromIdx = ordered.findIndex(g => g.group_name === _draggedGroup);
+  const fromIdx = ordered.findIndex(g => g.group_name === name);
   const toIdx = ordered.findIndex(g => g.group_name === target);
-  if (fromIdx < 0 || toIdx < 0) return;
+  if (fromIdx < 0 || toIdx < 0) return false;
   const prevOrder = {};
   allGroups.forEach(g => { prevOrder[g.group_name] = g.display_order; });
   const [moved] = ordered.splice(fromIdx, 1);
@@ -6007,6 +6094,20 @@ function gDrop(e) {
     _groupsDirty = true;
     renderInterests();
   });
+  return true;
+}
+/* The handle with the keyboard: up and down move the topic one place among its own kind (confirmed, suggested...) */
+function gHandleKey(e, name) {
+  if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+  e.preventDefault();
+  const cards = [...document.querySelectorAll('.interest-card[data-group]')].filter(c => c.offsetParent !== null);
+  const i = cards.findIndex(c => c.dataset.group === name), j = i + (e.key === 'ArrowUp' ? -1 : 1);
+  const me = allGroups.find(g => g.group_name === name), other = cards[j] && allGroups.find(g => g.group_name === cards[j].dataset.group);
+  if (!me || !other || other.status !== me.status) return;
+  if (moveGroup(name, other.group_name)) {
+    const h = [...document.querySelectorAll('.interest-card[data-group]')].find(c => c.dataset.group === name);
+    if (h) h.querySelector('.group-drag-handle').focus();
+  }
 }
 function gDragEnd(e) {
   e.currentTarget.classList.remove('dragging');
@@ -6016,7 +6117,7 @@ function gDragEnd(e) {
 
 function interestCardHTML(i) {
   const own = isOwner(), lv = LEVEL_NAME[i.relevance_mapping] ? i.relevance_mapping : 'mildly';   // a visitor sees the level, not a way to change it
-  const relBadge = own ? `<span class="badge badge-${lv} badge-editable" title="${escAttr(LEVEL_HELP[lv])} ${TOUCH ? 'Tap' : 'Click'} to change." onclick="event.stopPropagation();toggleInterestDropdown(event,'${escAttr(i.interest_name)}','relevance')">${LEVEL_NAME[lv]}</span>`
+  const relBadge = own ? `<span class="badge badge-${lv} badge-editable" role="button" tabindex="0" aria-haspopup="menu" title="${escAttr(LEVEL_HELP[lv])} ${TOUCH ? 'Tap' : 'Click'} to change." onclick="event.stopPropagation();toggleInterestDropdown(event,'${escAttr(i.interest_name)}','relevance')">${LEVEL_NAME[lv]}</span>`
     : `<span class="badge badge-${lv}" title="${escAttr(LEVEL_HELP[lv])}">${LEVEL_NAME[lv]}</span>`;
   const related = i.related_to ? `<div class="interest-detail">See also: ${esc(i.related_to)}</div>` : '';
   const notes = i.notes ? `<div class="interest-detail interest-notes" title="${escAttr(i.notes)}">${esc(i.notes)}</div>` : '';
@@ -6084,11 +6185,12 @@ function closeInterestDD() { if (_openInterestDD) { _openInterestDD.remove(); _o
 function _onInterestDDOutside(e) { if (_openInterestDD && !_openInterestDD.contains(e.target)) closeInterestDD(); }
 function toggleInterestDropdown(e, name, field) {
   closeInterestDD();
+  if (e && e.currentTarget && e.currentTarget.tabIndex >= 0) _kbBack = e.currentTarget; else if (e && e.target && e.target.tabIndex >= 0) _kbBack = e.target;
   const i = allInterests.find(x=>x.interest_name===name); if (!i) return;
   const current = i.relevance_mapping || 'mildly';
-  const dd = document.createElement('div'); dd.className = 'interest-dropdown level-dd';
+  const dd = document.createElement('div'); dd.className = 'interest-dropdown level-dd'; dd.setAttribute('role', 'menu');
   REL_OPTIONS.forEach(o => {
-    const item = document.createElement('div');
+    const item = document.createElement('button'); item.type = 'button'; item.setAttribute('role', 'menuitem');
     item.className = 'interest-dropdown-item rel-item' + (o===current?' selected':'');
     item.innerHTML = `<span class="badge badge-${o}" style="pointer-events:none;font-size:11px;">${LEVEL_NAME[o]}</span><span class="level-dd-help">${esc(LEVEL_HELP[o].replace(/^[A-Za-z]+: /, ''))}</span>`;
     item.onclick = (ev) => { ev.stopPropagation(); updateInterestField(name, 'relevance', o); closeInterestDD(); };
@@ -6102,6 +6204,7 @@ function toggleInterestDropdown(e, name, field) {
   const h = dd.offsetHeight;
   if (rect.bottom + 4 + h > window.innerHeight - 8 && rect.top - 4 - h > 8) dd.style.top = (rect.top - 4 - h) + 'px';   // no room below: open upwards
   _openInterestDD = dd;
+  (dd.querySelector('.selected') || dd.firstElementChild).focus({ preventScroll: true });   // the arrows go on from here
   setTimeout(() => document.addEventListener('click', _onInterestDDOutside, true), 0);
 }
 function updateInterestField(name, field, value) {
@@ -6164,11 +6267,12 @@ function relevanceCardHTML(p) {
    and saves like your other edits (match_strengths). */
 function openStrengthDD(e, key, name) {
   closeInterestDD();
+  if (e && e.currentTarget && e.currentTarget.tabIndex >= 0) _kbBack = e.currentTarget;
   const p = findPaper(key); if (!p) return;
   const cur = matchStrengths(p)[name] || STRENGTH_DEFAULT;
   const dd = document.createElement('div'); dd.className = 'interest-dropdown level-dd'; dd.setAttribute('role', 'menu');
   [['about', 'It\u2019s what the paper is about'], ['partly', 'A substantial part of it'], ['touches', 'Appears, but not substantially']].forEach(([v, help]) => {
-    const item = document.createElement('div');
+    const item = document.createElement('button'); item.type = 'button';
     item.className = 'interest-dropdown-item' + (v === cur ? ' selected' : ''); item.setAttribute('role', 'menuitem');
     item.innerHTML = `<strong style="font-weight:500;min-width:84px">${STRENGTH_NAME[v]}</strong><span class="level-dd-help">${help}</span>`;
     item.onclick = ev => { ev.stopPropagation(); closeInterestDD(); setMatchStrength(key, name, v); };
@@ -6181,6 +6285,7 @@ function openStrengthDD(e, key, name) {
   dd.style.top = (rect.bottom + 4) + 'px';
   if (rect.bottom + 4 + dd.offsetHeight > window.innerHeight - 8) dd.style.top = Math.max(8, rect.top - 4 - dd.offsetHeight) + 'px';
   _openInterestDD = dd;
+  (dd.querySelector('.selected') || dd.firstElementChild).focus({ preventScroll: true });   // the arrows go on from here
   setTimeout(() => document.addEventListener('click', _onInterestDDOutside, true), 0);
 }
 function setMatchStrength(key, name, value) {
@@ -10606,7 +10711,7 @@ function renderPaperDetail(p) {
   if (via) facts.push(['Found via', `${via}${why && why.source ? `<span class="pd-sub">${esc(why.source)} alert</span>` : ''}`]);
   const groups = (p.theme_groups||'').split('|').map(x => x.trim()).filter(Boolean);
   const x = `<svg width="10" height="10" viewBox="0 0 10 10"><line x1="2" y1="2" x2="8" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="8" y1="2" x2="2" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
-  const topics = groups.map(g => `<span class="badge badge-group badge-group-edit"><button class="pd-topic-go" onclick="openGroup('${escAttr(g)}')" title="Papers in ${escAttr(g)}">${gdot(norm(g))}${esc(g)}</button><span class="group-remove" title="Remove topic" onclick="event.stopPropagation();removeGroupFromPaper('${ka}','${escAttr(g)}')">${x}</span></span>`).join('');
+  const topics = groups.map(g => `<span class="badge badge-group badge-group-edit"><button class="pd-topic-go" onclick="openGroup('${escAttr(g)}')" title="Papers in ${escAttr(g)}">${gdot(norm(g))}${esc(g)}</button><button type="button" class="group-remove" title="Remove topic" aria-label="Remove ${escAttr(g)}" onclick="event.stopPropagation();removeGroupFromPaper('${ka}','${escAttr(g)}')">${x}</button></span>`).join('');
   const addBtn = `<span class="group-add-wrap"><button class="group-add-btn" onclick="event.stopPropagation();toggleGroupAddDD(this,'${ka}')">+ Add</button><div class="group-add-dd"></div></span>`;
 
   const aside = `<aside class="pd-aside">
@@ -10753,11 +10858,13 @@ function toggleGroupAddDD(btn, key) {
   const confirmed = allGroups.filter(g => g.status === 'confirmed').sort((a,b) => (parseInt(a.display_order)||999) - (parseInt(b.display_order)||999));
   dd.innerHTML = confirmed.map(g => {
     const has = current.has(g.group_name);
-    return `<div class="group-opt ${has?'disabled':''}" onclick="event.stopPropagation();addGroupToPaper('${escAttr(key)}','${escAttr(g.group_name)}')">${esc(g.group_name)}</div>`;
+    return `<button type="button" class="group-opt ${has?'disabled':''}" ${has ? 'disabled' : ''} onclick="event.stopPropagation();addGroupToPaper('${escAttr(key)}','${escAttr(g.group_name)}')">${esc(g.group_name)}</button>`;
   }).join('');
   Object.assign(dd.style, { left: '', top: '', bottom: '', marginBottom: '', maxHeight: '', overflowY: '' });
   dd.classList.add('open');
   placeDropdown(dd, btn);
+  _kbBack = btn;
+  const first = dd.querySelector('.group-opt:not([disabled])'); if (first) first.focus({ preventScroll: true });
   const close = (e) => { if (!dd.contains(e.target) && e.target !== btn) { dd.classList.remove('open'); document.removeEventListener('click', close); } };
   setTimeout(() => document.addEventListener('click', close), 0);
 }
