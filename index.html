@@ -372,7 +372,7 @@ html.no-hover .f-topic.more:hover:not(.open) { background: rgba(255,255,255,0.07
 .top-side .f-rel { display: none; }
 .f-actions { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 0.2s ease, opacity 0.15s ease, margin-top 0.2s ease; }
 .f-actions > div { overflow: hidden; min-height: 0; }
-.feed-item:hover .f-actions, .feed-item:focus-within .f-actions, .f-actions:has(.p-detail-panel.open) { grid-template-rows: 1fr; opacity: 1; margin-top: 12px; }
+#mainScroll:not(.scrolling) .feed-item:hover .f-actions, .feed-item:focus-within .f-actions, .f-actions:has(.p-detail-panel.open) { grid-template-rows: 1fr; opacity: 1; margin-top: 12px; }
 .topic-item.feed-item.is-read, .top-lead.is-read { opacity: 0.55; }
 
 /* topic cards: quieter frame, header count on the right */
@@ -458,7 +458,7 @@ html.no-hover .f-topic.more:hover:not(.open) { background: rgba(255,255,255,0.07
 .tc-more > div { overflow: hidden; }
 .tc-more p { margin: 8px 0 0; font-size: 13.5px; line-height: 1.55; color: var(--text-secondary); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .tc-more .tc-acts { display: inline-flex; margin-top: 8px; }
-.tc-row:hover .tc-more, .tc-row:focus-within .tc-more { grid-template-rows: 1fr; opacity: 1; }
+#mainScroll:not(.scrolling) .tc-row:hover .tc-more, .tc-row:focus-within .tc-more { grid-template-rows: 1fr; opacity: 1; }
 @media (prefers-reduced-motion: reduce) { .tc-more, .tc-acts, .tc-go { transition: none; } }
 .topics-grid .topic-title svg { color: var(--text-muted); transition: transform 0.2s, color 0.2s; }
 .topics-grid .topic-title:hover svg { color: var(--text); transform: translateX(2px); }
@@ -1694,13 +1694,13 @@ body.tok-mode .tok-bar { flex-wrap: wrap; row-gap: 8px; }
 /* a row: the headline, why it's here, then its tags; hovering opens the paper's own title and actions */
 .lp-row { display: grid; grid-template-columns: minmax(0, 1fr); padding: 12px 18px; margin: 0 -18px; border-radius: 12px; cursor: pointer; transition: background-color var(--t-fast) var(--ease); }
 .lp-body.ranked .lp-row { grid-template-columns: 30px minmax(0, 1fr); column-gap: 14px; }
-.lp-row:hover { background: rgba(255,255,255,0.035); }
+#mainScroll:not(.scrolling) .lp-row:hover { background: rgba(255,255,255,0.035); }   /* (not while the page moves: rows passing under a still cursor don't light up or open) */
 #lpBody .lp-row { content-visibility: auto; contain-intrinsic-size: auto 96px; }   /* the measured height of a row here, so rows not yet drawn hold their place */
 @media (max-width: 1000px) { #lpBody .lp-row { contain-intrinsic-size: auto 104px; } }
 .lp-num { font-family: var(--serif); font-size: 15px; padding-top: 3px; color: color-mix(in srgb, var(--gc) 65%, #888); font-variant-numeric: tabular-nums; }
 .lp-row-main { min-width: 0; }
 .lp-h { font-family: var(--serif); font-optical-sizing: auto; font-size: 19px; font-weight: 500; line-height: 1.3; color: #ececef; text-wrap: pretty; transition: color var(--t-fast) var(--ease); }
-.lp-row:hover .lp-h { color: #fff; }
+#mainScroll:not(.scrolling) .lp-row:hover .lp-h { color: #fff; }
 .lp-row .why-line { margin-top: 4px; }
 .lp-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; margin-top: 6px; font-size: 12px; color: var(--text-muted); min-width: 0; }
 .lp-meta .tc-tags { flex-wrap: nowrap; min-width: 0; }
@@ -1713,7 +1713,7 @@ body.tok-mode .tok-bar { flex-wrap: wrap; row-gap: 8px; }
 .lp-also .gdot { width: 6px; height: 6px; background: color-mix(in srgb, var(--gc) 70%, #1b1b1d); }
 .lp-more { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows var(--t-slow) var(--ease), opacity var(--t-slow) var(--ease); }
 .lp-more > div { overflow: hidden; min-height: 0; }
-.lp-row:hover .lp-more, .lp-row:focus-within .lp-more, .lp-more:has(.p-detail-panel.open) { grid-template-rows: 1fr; opacity: 1; }
+#mainScroll:not(.scrolling) .lp-row:hover .lp-more, .lp-row:focus-within .lp-more, .lp-more:has(.p-detail-panel.open) { grid-template-rows: 1fr; opacity: 1; }
 .lp-orig { margin: 10px 0 0; font-size: 13.5px; color: var(--text-secondary); }
 .lp-orig i { font-style: normal; margin-right: 6px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
 .lp-more .p-action-row { margin-top: 10px; }
@@ -4721,7 +4721,7 @@ function leaveListView() {
   if (!_listViewActive) return false;
   _listViewActive = false;
   sfSuggClose(); sfSheet(false); _sfChipsLive = false; _sfSig = ''; _sfGen++; _sfMemo = null; _sfBase = null;
-  document.getElementById('lpBody').innerHTML = '';   // a thousand rows needn't sit in memory behind a paper or a tab; Back draws them again
+  document.getElementById('lpBody').innerHTML = ''; _sfBodyKey = '';   // a thousand rows needn't sit in memory behind a paper or a tab; Back draws them again
   document.body.classList.remove('sf-on');
   document.getElementById('sec-list').classList.remove('active');
   return true;
@@ -5019,7 +5019,7 @@ function renderSearch() {
   // the papers
   const body = document.getElementById('lpBody');
   body.classList.toggle('ranked', sort === 'best' || sort === 'match');
-  const fade = _sfFade; _sfFade = false;
+  const fade = _sfFade; _sfFade = false; _sfFadeNow = fade;
   sfDrawBody(c, sort, () => {
     const sig = sort + '|' + (_sfPlan ? _sfPlan.keys.slice(0, 60).join(',') + '|' + _sfPlan.keys.length : 'none');
     if (fade && sig !== _sfSig && !reduceMotion()) replay(body, 'sf-fade');
@@ -5128,19 +5128,29 @@ function sfPlan(c, sort) {
   }
   return { secs, keys: secs.flatMap(x => x.rows.map(paperKey)), m: { kind: SF.venue.length === 1 ? 'venue' : 'search', topic: SF.topic.length === 1 ? SF.topic[0] : null }, res: c.res, si: 0, ri: 0 };
 }
+/* The list as it's drawn now (its HTML and the words marked in it): a redraw that would draw the same (interests or
+   topics arriving from GitHub, a passing refresh) leaves the rows, and where you are, alone. One that changes them
+   while you're down the list keeps the row at the top where it was. */
+let _sfBodyKey = '', _sfFadeNow = false;   // _sfFadeNow: this draw follows a change you made (no anchoring)
 function sfDrawBody(c, sort, done) {
   const body = document.getElementById('lpBody'), gen = ++_sfGen;
   _sfPlan = c.results.length ? sfPlan(c, sort) : null;
+  const P = _sfPlan;
+  const html = P ? P.secs.map(sec => `<section class="lp-sec">${sec.head}${sec.fold || ''}${sec.rows.map((p, i) => listRowHTML(p, sec.num ? sec.num + i : 0, P.m)).join('')}</section>`).join('') : sfEmptyHTML(c);
+  const key = html + '\u0001' + (P ? P.res.map(r => r.source).join('|') : '');
+  if (key === _sfBodyKey && body.firstElementChild && !body.querySelector('.sf-skel')) { done(); return; }
   const draw = () => {
     if (gen !== _sfGen || !_listViewActive) return;   // a newer search took its place
-    const P = _sfPlan, t = performance.now();
-    body.innerHTML = P ? P.secs.map(sec => `<section class="lp-sec">${sec.head}${sec.fold || ''}${sec.rows.map((p, i) => listRowHTML(p, sec.num ? sec.num + i : 0, P.m)).join('')}</section>`).join('') : sfEmptyHTML(c);
+    const t = performance.now(), bar = document.getElementById('lpBar').getBoundingClientRect().bottom;
+    const keep = !_sfFadeNow && body.getBoundingClientRect().top < bar ? sfAnchorNow() : null;
+    body.innerHTML = html; _sfBodyKey = key;
     if (P) sfHighlight(body, P.res);
+    if (keep) sfToAnchor(keep);
     done();
     if (P && P.keys.length >= 100) _sfRowMs = 0.5 * _sfRowMs + 0.5 * (performance.now() - t) / P.keys.length;
   };
-  if (!_sfPlan || _sfSync || _sfPlan.keys.length * _sfRowMs <= 80) { draw(); return; }
-  body.innerHTML = SF_SKEL;
+  if (!P || _sfSync || P.keys.length * _sfRowMs <= 80) { draw(); return; }
+  _sfBodyKey = ''; body.innerHTML = SF_SKEL;
   requestAnimationFrame(() => setTimeout(draw, 0));   // once the loader has painted
 }
 /* Nothing matches: say why, and offer the way out that would find something */
@@ -5236,10 +5246,11 @@ function listRowMoreHTML(p) {
         <div class="p-action-row">${summaryBtn(p)} ${absBtn(p)} ${linkBtn(p)} <span class="p-actions has-active">${starBtn(p)} ${readBtn(p)} ${saveBtn(p)} ${deleteBtn(p)}</span></div>
         <div class="p-detail-panel" data-summary="${hasText(p.summary) ? dataAttr(p.summary) : ''}" data-abstract="${hasText(p.abstract) ? dataAttr(p.abstract) : ''}"></div>`;
 }
-function fillRowMore(e) {
-  const row = e.target.closest && e.target.closest('.lp-row');
+function fillRowMore(e) {   // (an event, or the row itself)
+  const row = e && e.target ? e.target.closest && e.target.closest('.lp-row') : e;
   if (!row || row.dataset.more) return;
-  const p = allPapers.find(x => paperKey(x) === row.dataset.key) || _hiddenPapers.find(x => paperKey(x) === row.dataset.key);
+  if (e && e.type === 'pointerover' && document.getElementById('mainScroll').classList.contains('scrolling')) return;   // a row passing under the cursor: filled if it's still there when scrolling stops
+  const k = row.dataset.key, p = allPapers.find(x => paperKey(x) === k) || _hiddenPapers.find(x => paperKey(x) === k);
   if (!p) return;
   row.dataset.more = '1';
   const box = row.querySelector('.lp-more > div');
@@ -5291,7 +5302,19 @@ function updateListBar() {
   document.getElementById('lp').style.setProperty('--lp-bar-h', bar.offsetHeight + 'px');
   document.querySelectorAll('#lpBody .lp-sec-h').forEach(x => x.classList.toggle('stuck', x.getBoundingClientRect().top <= edge + 1));
 }
-document.addEventListener('DOMContentLoaded', () => document.getElementById('mainScroll').addEventListener('scroll', updateListBar, { passive: true }));
+/* While the page moves, rows that slide under a still cursor don't open (each one opening pushed the rest down and
+   re-laid the whole list every frame, so the browser fell behind and showed blank rows); the one under the cursor
+   opens once scrolling stops. The bar is checked once a frame. */
+document.addEventListener('DOMContentLoaded', () => {
+  const ms = document.getElementById('mainScroll');
+  let still = 0, frame = 0;
+  ms.addEventListener('scroll', () => {
+    if (!ms.classList.contains('scrolling')) ms.classList.add('scrolling');
+    clearTimeout(still);
+    still = setTimeout(() => { ms.classList.remove('scrolling'); fillRowMore(document.querySelector('#lpBody .lp-row:hover')); }, 160);
+    if (!frame) frame = requestAnimationFrame(() => { frame = 0; updateListBar(); });
+  }, { passive: true });
+});
 
 function topRowHTML(p, groups, o) {
   o = o || {};
