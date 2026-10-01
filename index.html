@@ -1566,6 +1566,8 @@ html.no-hover .sf-tip:hover::after { opacity: 0; }
 .sf-opt .n { margin-left: auto; padding-left: 8px; font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .sf-opt .gdot { width: 7px; height: 7px; }
 .sf-opt-ico { width: 15px; height: 15px; fill: var(--text-muted); flex-shrink: 0; }
+.sf-opt-show { display: inline-flex; width: 17px; justify-content: center; color: var(--text-muted); }
+.sf-opt-show .sf-eye { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 /* above the papers: how many, how the words combine, the filters (narrow screens) and the order */
 .sf-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 12px; margin: 16px 0 4px; min-height: 34px; }
 .sf-count { font-size: 14px; color: var(--text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -3714,7 +3716,7 @@ function renderPapers(papers, topPool) {   // topPool: the tab's unread papers, 
   });
 
   document.getElementById('topicJump').innerHTML = '';   // the "This week" legend above jumps to the cards
-  document.getElementById('topicsGrid').innerHTML = sorted.map(name => topicCardHTML(name, grouped[name], shownAbove, { color: groupColor(name), open: `openGroup('${escAttr(name)}')` })).join('');
+  document.getElementById('topicsGrid').innerHTML = sorted.map(name => topicCardHTML(name, grouped[name], shownAbove, { color: groupColor(name), open: `openGroup('${escAttr(name)}')`, total: sfTotal('topic', name) })).join('');
 }
 
 /* A topic (or alert) card, like an article page: the topic as a small coloured label, its best paper as a short
@@ -3747,7 +3749,8 @@ function topicCardHTML(name, items, shownAbove, o) {
       <div class="tc-row-main"><h4 class="tc-rh">${esc(p.headline || p.title)}</h4>${cardTagsHTML(p)}
         <div class="tc-more"><div>${hasText(p.summary) ? `<p>${esc(p.summary)}</p>` : ''}${acts(p)}</div></div></div>
     </article>`).join('');
-  const count = `${newN ? `${newN} new \u00b7 ` : ''}${items.length > shown.length ? `View all ${items.length}` : `${items.length} ${items.length === 1 ? 'paper' : 'papers'}`}`;
+  const total = o.total ?? items.length;   // what the card's list opens: read papers too
+  const count = `${newN ? `${newN} new \u00b7 ` : ''}${total > shown.length ? `View all ${total}` : `${total} ${total === 1 ? 'paper' : 'papers'}`}`;
   return `<div class="topic-card" data-topic="${escAttr(name)}" style="--gc:${o.color}">
     <div class="topic-title" ${o.open ? `role="button" tabindex="0" onclick="${o.open}"` : ''}><span class="topic-label">${esc(o.label || name)}</span><span class="topic-extra">${count}</span></div>
     <div class="topic-body">${feat}${rows ? `<div class="tc-list">${rows}</div>` : ''}</div>
@@ -3779,7 +3782,7 @@ function renderEmailPapers(papers, topPool) {
   document.getElementById('topicJump').innerHTML = names.map(name =>
     `<button class="tl-chip" onclick="jumpToTopic('${escAttr(name)}')">${esc(name)}<span class="n">${byAlert[name].length}</span></button>`).join('');
   document.getElementById('topicsGrid').innerHTML = names.map(name => topicCardHTML(name, byAlert[name], shownAbove, {
-    color: 'var(--accent)', label: name === 'Keyword alerts' || name === OTHER ? name : name + ' alert', open: name === OTHER ? '' : `openAlert('${escAttr(name)}')` })).join('');
+    color: 'var(--accent)', label: name === 'Keyword alerts' || name === OTHER ? name : name + ' alert', open: name === OTHER ? '' : `openAlert('${escAttr(name)}')`, total: name === OTHER ? undefined : sfTotal('alert', name) })).join('');
 }
 function openLatestDigest() { location.hash = sfAt('src', 'email', { sort: 'added' }); }
 
@@ -3853,13 +3856,13 @@ function selectTopPapers(sortedPapers) {
   return top.length >= 2 ? byTopScore(top) : sortedPapers;
 }
 function renderTopPapers(top, opts) {
-  const o = opts || { title: 'Top Papers', open: 'openTopList()', tip: 'View all top papers as a list' };
+  const o = opts || { title: 'Top Papers', open: 'openTopList()', tip: 'View all top papers as a list', total: sfTotal('rel', 'definitely') };
   if (!top.length) { document.getElementById('topStories').innerHTML=''; return; }
-  const extra = top.length - MAX_TOP_CARDS;
+  const total = o.total ?? top.length, extra = total - MAX_TOP_CARDS;   // what the list opens: read papers too
   document.getElementById('topStories').innerHTML = `
     <div class="section-header clickable" role="button" tabindex="0" onclick="${o.open}" title="${escAttr(o.tip)}"><span class="topic-label">${esc(o.title)}</span>${o.sub ? `<span class="section-sub">${esc(o.sub)}</span>` : ''}
       <svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
-      <span class="topic-extra">${extra > 0 ? `View all ${top.length}${hideRead ? ' unread' : ''}` : 'View as list'}</span>
+      <span class="topic-extra">${extra > 0 ? `View all ${total}` : 'View as list'}</span>
     </div>
     <div class="top-feature ${top.length === 1 ? 'solo' : ''}">
       ${topLeadHTML(top[0])}
@@ -4428,7 +4431,7 @@ const SF_COLL = new Intl.Collator();
 const SF_EYE = '<svg class="sf-eye" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
 const SF_EYE_OFF = '<svg class="sf-eye" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.9 4.24A9.6 9.6 0 0 1 12 4c6.4 0 10 8 10 8a17.7 17.7 0 0 1-2.2 3.2M6.6 6.6C3.8 8.4 2 12 2 12s3.6 8 10 8a9.7 9.7 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2"/><path d="M3 3l18 18"/></svg>';
 const SF_SHOW = [['all', 'All', ''], ['unread', 'Unread', SF_EYE_OFF], ['read', 'Read', SF_EYE]];   // one of the three; Starred narrows any of them
-function sfEmpty() { return { text: '', any: false, show: 'unread', starred: false, rel: [], topic: [], interest: [], author: [], venue: [], year: [], src: [], alert: [], sort: '' }; }
+function sfEmpty() { return { text: '', any: false, show: 'all', starred: false, rel: [], topic: [], interest: [], author: [], venue: [], year: [], src: [], alert: [], sort: '' }; }
 let SF = sfEmpty();
 /* Every group in the sidebar folds; the first four start open, the rest closed, and each stays as you leave it */
 const SF_OPEN_FIRST = ['show', 'rel', 'topics', 'interests'];
@@ -4463,7 +4466,7 @@ function sfHash(s) {
   const u = new URLSearchParams();
   if (s.text.trim()) u.set('q', s.text.trim());
   if (s.any && sfCombinable(s)) u.set('any', '1');
-  if (s.show !== 'unread') u.set('show', s.show);
+  if (s.show !== 'all') u.set('show', s.show);
   if (s.starred) u.set('starred', '1');
   SF_MULTI.forEach(f => s[f].forEach(v => u.append(f, v)));
   if (s.sort) u.set('sort', s.sort);
@@ -4505,11 +4508,11 @@ const SF_FIELDS = {
   why: { w: 1, of: p => { const y = parseWhy(p); return y ? y.reason + '\n' + y.source : ''; }, ex: 'core', d: 'why it’s here' },
   relevance: { w: 1, of: p => relLabel(dynamicRelevance(p)), facet: 'rel', ex: 'must', d: 'Must Read, Interesting or Tangential' },
   source: { w: 1, of: p => (p.source_mode || '').split(',').map(x => x.trim() + ' ' + (SF_SRC[x.trim()] || '')).join('\n'), facet: 'src', ex: 'email', d: 'email alerts, web survey or added by you' },
-  is: { w: 1, ex: 'unread', d: 'read, unread or starred' }
+  is: { w: 1, facet: 'show', ex: 'unread', d: 'read, unread, starred or all', also: 'show' }
 };
-const SF_ALIAS = { by: 'author', authors: 'author', in: 'venue', topics: 'topic', interests: 'interest', rel: 'relevance', headline: 'title' };
+const SF_ALIAS = { by: 'author', authors: 'author', in: 'venue', topics: 'topic', interests: 'interest', rel: 'relevance', headline: 'title', show: 'is' };
 const sfFieldOf = name => { const f = (name || '').toLowerCase(); return SF_FIELDS[f] ? f : SF_ALIAS[f] || null; };
-const SF_IS = ['read', 'unread', 'starred'];
+const SF_IS = ['read', 'unread', 'starred', 'all'];
 /* The keys in the box ({ raw: as typed, f: its field or null, t: what to find, id: for keeping its matches }): each
    word or "phrase" is one; a field takes every word after it, up to the next field (interest:data driven verification
    author:ames), unless its value is quoted (interest:"data driven" safety: the words after the quote are plain words) */
@@ -4568,8 +4571,8 @@ function sfAuthors() {
 }
 let _sfTot = null;
 function sfTotal(f, v) {   // papers with this value, of all of them (for suggestions)
-  if (!_sfTot || _sfTot.src !== allPapers || _sfTot.n !== allPapers.length) {
-    const t = { src: allPapers, n: allPapers.length };
+  if (!_sfTot || _sfTot.src !== allPapers || _sfTot.n !== allPapers.length || _sfTot.iv !== interestsVersion()) {
+    const t = { src: allPapers, n: allPapers.length, iv: interestsVersion() };
     SF_MULTI.forEach(x => { t[x] = {}; });
     const M = sfMemo();
     allPapers.forEach(p => { let vals = M.vals.get(p); if (!vals) M.vals.set(p, vals = sfVals(p)); SF_MULTI.forEach(x => vals[x].forEach(y => { t[x][y] = (t[x][y] || 0) + 1; })); });
@@ -4617,7 +4620,7 @@ function sfCompute(s) {
     for (let j = 0; j < res.length; j++) {
       const key = keys[j], H = hits[j];
       let i;
-      if (!H) { const v = SF_IS.find(x => x.startsWith(key.t.toLowerCase())); i = (v === 'read' ? read : v === 'unread' ? !read : v === 'starred' ? star : false) ? 0 : -1; }
+      if (!H) { const v = SF_IS.find(x => x.startsWith(key.t.toLowerCase())); i = (v === 'read' ? read : v === 'unread' ? !read : v === 'starred' ? star : v === 'all') ? 0 : -1; }
       else {
         i = H.get(p);
         if (i === undefined) {   // a word anywhere: the first field it's in (SF_W); one aimed at a field: there or not
@@ -4867,7 +4870,7 @@ function sfSuggest() {
     if (!marks.length) qs.push([t.replace(/"/g, ''), t, null]);
     if (tail && tail[1] !== t) qs.push([tail[1].replace(/"/g, ''), tail[1], null]);
   }
-  const A = sfAuthors(), lv = sfLevels(), vc = sfTotal().venue, seen = new Set(), groups = { topic: [], interest: [], author: [], venue: [], year: [], rel: [], src: [] };
+  const A = sfAuthors(), lv = sfLevels(), vc = sfTotal().venue, seen = new Set(), groups = { show: [], topic: [], interest: [], author: [], venue: [], year: [], rel: [], src: [] };
   _sfOpts = [];
   qs.forEach(([q, drop, only]) => {
     if (!q && !only) return;
@@ -4883,11 +4886,12 @@ function sfSuggest() {
     if (only === 'year') Object.keys(sfTotal().year).filter(y => y.startsWith(q) && !SF.year.includes(y)).sort((a, b) => b - a).forEach(y => add('year', y, `<span class="l"><span class="k">from</span> ${hit(y)}</span>`, sfTotal('year', y)));
     else if (!only && /^(19|20)\d{2}$/.test(q) && !SF.year.includes(q)) add('year', q, `<span class="l"><span class="k">from</span> <b>${q}</b></span>`, sfTotal('year', q));
     if (only === 'rel') SF_REL.filter(([r, l]) => has(l) && !SF.rel.includes(r)).forEach(([r, l]) => add('rel', r, `<i class="gdot" style="--gc:var(--lv-${r})"></i><span class="l">${hit(l)}</span>`, sfTotal('rel', r)));
+    if (only === 'show') [['unread', 'Unread', SF_EYE_OFF], ['read', 'Read', SF_EYE], ['all', 'All', ''], ['starred', 'Starred', '<span class="sf-star" aria-hidden="true">&#9733;</span>']].filter(([v, l]) => has(l) && (v === 'starred' ? !SF.starred : SF.show !== v)).forEach(([v, l, ic]) => add('show', v, `${ic ? `<span class="sf-opt-show">${ic}</span>` : ''}<span class="l">${hit(l)}</span>`));
     if (only === 'src') Object.keys(SF_SRC).filter(x => (has(SF_SRC[x]) || has(x)) && !SF.src.includes(x)).forEach(x => add('src', x, `<span class="l">${hit(SF_SRC[x])}</span>`, sfTotal('src', x)));
   });
   if (!_sfOpts.length) { sfSuggClose(); return; }
   const col = list => list.filter(x => x[1].length).map(([h, items]) => `<h3>${h}</h3>${items.join('')}`).join('');
-  const left = col([['Authors', groups.author], ['Years', groups.year]]), right = col([['Topics', groups.topic], ['Interests', groups.interest], ['Venues', groups.venue], ['Relevance', groups.rel], ['Source', groups.src]]);
+  const left = col([['Authors', groups.author], ['Years', groups.year]]), right = col([['Show', groups.show], ['Topics', groups.topic], ['Interests', groups.interest], ['Venues', groups.venue], ['Relevance', groups.rel], ['Source', groups.src]]);
   el.innerHTML = (left ? `<div class="sf-col">${left}</div>` : '') + (right ? `<div class="sf-col">${right}</div>` : '');
   el.classList.toggle('one', !left || !right);
   sfGuide(false);
@@ -4896,7 +4900,8 @@ function sfSuggest() {
 function sfPick(i) {
   const o = _sfOpts[i];
   if (!o) return;
-  if (!SF[o.f].includes(o.v)) SF[o.f].push(o.v);
+  if (o.f === 'show') { if (o.v === 'starred') SF.starred = true; else SF.show = o.v; }   // the Show control itself
+  else if (!SF[o.f].includes(o.v)) SF[o.f].push(o.v);
   const t = SF.text.replace(/\s+$/, '');   // the words it came from leave the box
   SF.text = o.drop && t.endsWith(o.drop) ? t.slice(0, t.length - o.drop.length).trimEnd() : t;
   const inp = document.getElementById('sfInput'); inp.value = SF.text;
