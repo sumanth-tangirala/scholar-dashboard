@@ -1498,6 +1498,12 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
   .sf-pills .sf-chip { flex-shrink: 0; max-width: calc(100vw - 32px); }
 }
 .sf-chip.icon { padding-left: 9px; }
+/* the eyes say what they mean as soon as you point at one (a title's tooltip comes late); not after a tap on touch */
+.sf-tip { position: relative; }
+.sf-tip::after { content: attr(data-tip); position: absolute; top: calc(100% + 6px); left: 50%; z-index: 30; padding: 4px 9px; border-radius: 6px; background: var(--bg-card); border: 1px solid var(--border); color: var(--text); font-size: 12px; font-weight: 400; letter-spacing: 0; text-transform: none; white-space: nowrap; pointer-events: none; opacity: 0; transform: translate(-50%, -3px); transition: opacity 0.12s var(--ease), transform 0.12s var(--ease); }
+.sf-tip:hover::after { opacity: 1; transform: translate(-50%, 0); transition-delay: 0.15s; }
+html.no-hover .sf-tip:hover::after { opacity: 0; }
+@media (prefers-reduced-motion: reduce) { .sf-tip::after { transform: translate(-50%, 0); transition: opacity 0.12s; } }
 .sf-chip .sf-eye, .sf-show .sf-eye { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; display: block; }
 .sf-clear { display: none; align-items: center; justify-content: center; flex-shrink: 0; width: 32px; height: 32px; border: none; border-radius: 50%; background: none; color: var(--text-muted); cursor: pointer; transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
 .sf-clear:hover { background: rgba(255,255,255,0.1); color: var(--text); }
@@ -4559,7 +4565,6 @@ function sfCompute(s) {
     return true;
   };
   const counts = {}, tally = (f, get) => { const c = counts[f] = {}; rows.forEach(r => { if (pass(r, f)) get(r).forEach(x => { c[x] = (c[x] || 0) + 1; }); }); };
-  tally('show', r => [r.read ? 'read' : 'unread']);
   tally('starred', r => r.star ? ['1'] : []);
   SF_MULTI.forEach(f => tally(f, r => r.v[f]));
   // what the words alone find, with no filter: the values the sidebar lists and their order, which therefore stay
@@ -4853,7 +4858,7 @@ function renderSearch() {
   // the pills under the box
   const chips = sfChipList();
   sfDrawChips(chips.map(([f, v, html, text]) =>
-    `<span class="sf-chip${f === 'show' ? ' icon' : ''}" data-f="${f}" data-v="${dataAttr(v)}" title="${escAttr(text)}">${html}<button class="sf-x" onclick="sfRemove(event,'${f}','${escAttr(v)}')" aria-label="Remove ${escAttr(text)}" title="Remove">${SF_X}</button></span>`).join(''));
+    `<span class="sf-chip${f === 'show' ? ' icon sf-tip' : ''}" data-f="${f}" data-v="${dataAttr(v)}" ${f === 'show' ? 'data-tip' : 'title'}="${escAttr(text)}">${html}<button class="sf-x" onclick="sfRemove(event,'${f}','${escAttr(v)}')" aria-label="Remove ${escAttr(text)}" title="Remove">${SF_X}</button></span>`).join(''));
   document.getElementById('sfInput').placeholder = window.matchMedia('(max-width: 600px)').matches ? 'Search papers…' : 'Search titles, authors, abstracts and notes…';
   document.getElementById('lpBarTitle').textContent = [SF.text.trim() ? '“' + SF.text.trim() + '”' : ''].concat(chips.map(x => x[3])).filter(Boolean).join(' · ') || 'All papers';
   document.getElementById('lpBack').textContent = _listBackLabel;
@@ -4925,9 +4930,8 @@ function sfFiltersHTML(c, lv, A, where) {
     return `<section class="sf-sec${open ? ' open' : ''}" data-s="${id}"><h2><button class="sf-sec-h" data-k="sec:${id}" onclick="sfSec('${id}', this)" aria-expanded="${open}"><span class="t">${title}</span>${named}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg></button></h2>${open ? body : ''}</section>`;
   };
   const byCount = f => { const b = c.base[f] || {}; return Object.keys(b).concat(SF[f].filter(v => !(v in b))).sort((x, y) => (b[y] || 0) - (b[x] || 0) || SF_COLL.compare(x, y)); };
-  const sc = c.counts.show || {}, scN = { unread: sc.unread || 0, read: sc.read || 0, all: (sc.unread || 0) + (sc.read || 0) };
   const seg = `<div class="tl-sort sf-show" role="radiogroup" aria-label="Show">${SF_SHOW.map(([v, l, ic]) =>
-    `<button role="radio" data-k="show:${v}" aria-checked="${SF.show === v}" aria-label="${l}" class="${SF.show === v ? 'active' : ''}" title="${l}: ${scN[v]} ${scN[v] === 1 ? 'paper' : 'papers'}" onclick="sfSetShow('${v}')">${ic || l}</button>`).join('')}</div>`;
+    `<button role="radio" data-k="show:${v}" aria-checked="${SF.show === v}" aria-label="${l}" class="${SF.show === v ? 'active' : ''}${ic ? ' sf-tip' : ''}"${ic ? ` data-tip="${l}"` : ''} onclick="sfSetShow('${v}')">${ic || l}</button>`).join('')}</div>`;
   const show = seg + wrap(item('starred', '1', 'Starred'));
   const rel = wrap(SF_REL.map(([r, l]) => item('rel', r, l, `var(--lv-${r})`)).join(''));
   const topics = wrap(GROUP_ORDER.concat(SF.topic.filter(g => !GROUP_ORDER.includes(g))).map(g => item('topic', g, g, groupColor(g))).join(''));
