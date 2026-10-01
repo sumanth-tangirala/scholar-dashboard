@@ -386,8 +386,7 @@ html.ro #vaultOverlay { display: none !important; }
 #sec-papers .briefing h2, #sec-venues .briefing h2 { font-size: 36px; font-weight: 500; letter-spacing: -0.01em; line-height: 1.15; }
 
 .gdot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--gc, var(--g-other)); flex-shrink: 0; }
-.tr-group { display: inline-flex; align-items: center; gap: 6px; }
-.tr-group .gdot { width: 6px; height: 6px; }
+.tr-line .f-topic .gdot { width: 6px; height: 6px; }
 .tl-chip .gdot { width: 7px; height: 7px; margin-right: 7px; vertical-align: 1px; }
 /* a topic card: a faint glow in its topic's colour across the top (as on the papers above it), instead of a coloured
    top edge; the colour names the topic, so the title needs no dot */
@@ -1638,8 +1637,8 @@ body.tok-mode .tok-bar { flex-wrap: wrap; row-gap: 8px; }
 .tr-title { font-size: 13px; color: var(--text-muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tr-line { display: flex; align-items: center; gap: 12px; margin-top: 7px; font-size: 12.5px; color: var(--text-secondary); min-width: 0; }
 .tr-authors { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.tr-groups { display: flex; gap: 5px; flex-shrink: 0; }
-.tr-group { font-size: 11px; color: var(--text-muted); background: rgba(255,255,255,0.06); padding: 0 8px; border-radius: 999px; line-height: 19px; white-space: nowrap; }
+.tr-line .f-topics { flex-shrink: 0; max-width: 65%; gap: 5px; }   /* the topics keep their room up to here; the authors shorten first */
+.tr-line .f-topic { font-size: 11px; color: var(--text-muted); background: rgba(255,255,255,0.06); padding: 0 8px; line-height: 19px; }
 .tr-side { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; padding-top: 2px; font-size: 12px; color: var(--text-muted); white-space: nowrap; font-variant-numeric: tabular-nums; min-width: 0; text-align: right; }
 .tr-venue { color: var(--text-secondary); max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .tr-star { color: var(--star); font-size: 13px; line-height: 1; }
@@ -1661,7 +1660,7 @@ body.tok-mode .tok-bar { flex-wrap: wrap; row-gap: 8px; }
   .paper-list .top-row { grid-template-columns: 1fr; padding: 12px 12px 12px 36px; margin: 0 4px; }
   .top-row::before { left: 16px; }
   .tr-side { flex-direction: row; align-items: center; gap: 10px; margin-top: 6px; }
-  .tr-groups { display: none; }
+  .tr-line .f-topics { display: none; }
   .tr-venue-line:empty { display: none; }   /* inside a venue's own list there's no venue to show: no stray gap */
 }
 @media (prefers-reduced-motion: reduce) {
@@ -3874,9 +3873,9 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => fitT
 
 /* Shared bits for the main-page feed */
 function hasText(v) { return v && v.trim() && v !== 'not specified'; }
-/* A paper's topics as small chips: the first two, then "…" (its tooltip names the rest) */
-function topicChipsHTML(p) {
-  const gs = groupsOfPaper(p);
+/* A paper's topics as small chips, all of them: fitChips folds the ones a row has no room for into "+N" */
+function topicChipsHTML(p, gs) {
+  gs = gs || groupsOfPaper(p);
   if (!gs.length) return '';
   return `<span class="f-topics">${gs.map(g => `<span class="f-topic" data-g="${escAttr(g)}">${gdot(g)}<span class="f-tn">${esc(g)}</span></span>`).join('')}<span class="f-topic more" hidden></span></span>`;
 }
@@ -4660,7 +4659,7 @@ function topRowHTML(p, groups, o) {
       ${showTitle ? `<div class="tr-title" title="${escAttr(p.title)}">${esc(p.title)}</div>` : ''}
       <div class="tr-line">
         ${p.authors && p.authors!=='not specified' ? `<span class="tr-authors">${esc(p.authors)}</span>` : ''}
-        ${groups.length && groups.length < 4 ? `<span class="tr-groups">${groups.map(g => `<span class="tr-group">${gdot(g)}${esc(g)}</span>`).join('')}</span>` : ''}
+        ${topicChipsHTML(p, groups)}
       </div>
     </div>
     <div class="tr-side">
