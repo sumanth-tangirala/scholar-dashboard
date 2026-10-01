@@ -137,6 +137,8 @@ body.sf-on .nav-search-toggle { color: var(--accent); }
    The key to sign in shows only then; every control that changes something is gone. The functions behind them
    are guarded as well, so this list is about what shows, not what's safe. */
 .nav-key { display: none; }
+.nav-keys { display: none; }
+@media (hover: hover) and (pointer: fine) { .nav-keys { display: inline-flex; } }   /* where there's likely a keyboard: a mouse or trackpad */
 html.ro .nav-key { display: inline-flex; }
 html.ro .owner-only,
 html.ro .p-actions, html.ro .save-anchor, html.ro .pd-act:not(.pd-nav-prev):not(.pd-nav-next), html.ro .group-remove, html.ro .group-add-wrap, html.ro .pd-edit, html.ro .pd-notes,
@@ -819,7 +821,7 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .v-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
 
 /* keyboard triage selection */
-.top-row.kb-sel, .feed-item.kb-sel, .top-lead.kb-sel, .lp-row.kb-sel { outline: 2px solid var(--accent); outline-offset: -2px; }
+.top-row.kb-sel, .feed-item.kb-sel, .top-lead.kb-sel, .lp-row.kb-sel, .tc-feat.kb-sel, .tc-row.kb-sel, .v-row.kb-sel, .interest-group-header.kb-sel { outline: 2px solid var(--accent); outline-offset: -2px; }
 .top-row.kb-sel { border-radius: 10px; }
 
 /* paper page: previous / next within the list it was opened from */
@@ -1438,17 +1440,27 @@ body.rp-splitting, body.rp-splitting * { user-select: none !important; -webkit-u
   .anno-card { left: 12px !important; right: 12px; width: auto; }
   .cite-dd { left: 12px !important; right: 12px; width: auto; }
 }
-.keys-help .keys-reader, .keys-help.in-reader .keys-site { display: none; }
-.keys-help.in-reader .keys-reader { display: grid; }
+/* the shortcuts: every place's keys, the place you're in first (marked "Here") */
 .keys-help { position: fixed; inset: 0; z-index: 400; background: rgba(0,0,0,0.55); display: none; align-items: center; justify-content: center; padding: 16px; }
-.keys-help.open { display: flex; }
-.keys-help-box { background: var(--bg-surface); border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; padding: 20px 24px 22px; width: min(440px, 100%); box-shadow: 0 16px 48px rgba(0,0,0,0.6); }
-.keys-help-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.keys-help.open { display: flex; animation: ui-fade 0.16s var(--ease); }
+.keys-help.open .keys-help-box { animation: ui-rise 0.2s var(--ease); }
+@media (prefers-reduced-motion: reduce) { .keys-help.open, .keys-help.open .keys-help-box { animation: none; } }
+.keys-help-box { background: var(--bg-surface); border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; padding: 18px 24px 22px; width: min(860px, 100%); max-height: calc(100vh - 32px); overflow-y: auto; overscroll-behavior: contain; box-shadow: 0 16px 48px rgba(0,0,0,0.6); }
+.keys-help-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
 .keys-help-head h3 { font-size: 16px; font-weight: 500; }
 .keys-help-close { background: none; border: none; color: var(--text-muted); font-size: 22px; cursor: pointer; line-height: 1; padding: 2px 6px; border-radius: 6px; transition: color 0.15s, background 0.15s; }
 .keys-help-close:hover { color: var(--text); background: rgba(255,255,255,0.06); }
-.keys-help dl { display: grid; grid-template-columns: auto 1fr; gap: 10px 16px; font-size: 13.5px; color: var(--text-secondary); }
-.keys-help dt { white-space: nowrap; }
+.kh-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 36px; }
+.kh-sec { padding-top: 14px; }
+.kh-sec h4 { display: flex; align-items: baseline; gap: 8px; margin: 0 0 10px; font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
+.kh-sec h4 .kh-sub { font-size: 11.5px; font-weight: 400; letter-spacing: 0; text-transform: none; }
+.kh-sec h4::after { content: 'Here'; display: none; margin-left: auto; padding: 1px 8px; border-radius: 999px; background: rgba(251,177,60,0.14); color: var(--accent); font-size: 10.5px; letter-spacing: 0.06em; }
+.keys-help[data-ctx="list"] .kh-sec[data-ctx="list"], .keys-help[data-ctx="paper"] .kh-sec[data-ctx="paper"], .keys-help[data-ctx="search"] .kh-sec[data-ctx="search"], .keys-help[data-ctx="reader"] .kh-sec[data-ctx="reader"] { order: -1; }
+.keys-help[data-ctx="list"] .kh-sec[data-ctx="list"] h4::after, .keys-help[data-ctx="paper"] .kh-sec[data-ctx="paper"] h4::after, .keys-help[data-ctx="search"] .kh-sec[data-ctx="search"] h4::after, .keys-help[data-ctx="reader"] .kh-sec[data-ctx="reader"] h4::after { display: inline-block; }
+.keys-help dl { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 9px 14px; font-size: 13.5px; color: var(--text-secondary); }   /* one key column for every section, so descriptions line up */
+.keys-help-box:focus { outline: none; }
+.keys-help dt { white-space: nowrap; color: var(--text-muted); font-size: 12.5px; }
+@media (max-width: 700px) { .kh-grid { grid-template-columns: minmax(0, 1fr); } }
 kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--text); background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.16); border-bottom-width: 2px; border-radius: 5px; padding: 1px 6px; }
 .chip-select option { background: #1b1b1d; color: var(--text); }
 .lp-body mark { background: rgba(251,177,60,0.22); color: inherit; border-radius: 3px; padding: 0 1px; }
@@ -2260,6 +2272,7 @@ html.no-hover .sel-icon:not(.on):active, html.no-hover .ink-bar .ink-size:not(.o
       <button class="nav-tab" data-tab="interests" onclick="switchTab('interests')">Interests <span class="tab-badge" id="interestsBadge" style="display:none">0</span></button>
     </div>
     <button class="nav-search-toggle" id="navSearchToggle" onclick="openSearchHere()" aria-label="Search" title="Search (/)"><svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg></button>
+    <button class="nav-refresh nav-keys" id="navKeys" onclick="toggleKeysHelp(true)" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2.5"/><path d="M6.5 10h.01M10 10h.01M14 10h.01M17.5 10h.01M8 14h8"/></svg></button>
     <button class="nav-refresh nav-key" id="navKey" onclick="connectGitHub()" title="Sign in" aria-label="Sign in"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2 20 3M16 7l3 3M18 5l2 2"/></svg></button>
     <button class="nav-refresh" id="navRefresh" onclick="refreshPage()" title="Refresh: the latest papers and the latest version of the site" aria-label="Refresh"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4.5h-4.5"/></svg></button>
   </div>
@@ -2427,15 +2440,15 @@ html.no-hover .sel-icon:not(.on):active, html.no-hover .ink-bar .ink-size:not(.o
       <span class="rt-group rt-view">
         <span class="reader-pageno" id="readerPageNo"></span>
         <span class="reader-zoom">
-          <button class="reader-btn" onclick="readerZoom(-1)" title="Zoom out" aria-label="Zoom out">&minus;</button>
+          <button class="reader-btn" onclick="readerZoom(-1)" title="Zoom out (−)" aria-label="Zoom out">&minus;</button>
           <button class="reader-btn reader-zoom-label" id="readerZoomLabel" onclick="readerZoom(0)" title="Fit to width">Fit</button>
-          <button class="reader-btn" onclick="readerZoom(1)" title="Zoom in" aria-label="Zoom in">+</button>
+          <button class="reader-btn" onclick="readerZoom(1)" title="Zoom in (+)" aria-label="Zoom in">+</button>
         </span>
-        <button class="reader-btn" id="readerDarkBtn" onclick="toggleReaderDark()" title="Dark pages" aria-label="Dark pages" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.2" style="fill:none;stroke:currentColor;stroke-width:1.8"/><path d="M12 3.8a8.2 8.2 0 0 1 0 16.4z"/></svg></button>
-        <button class="reader-btn reader-zen-btn" id="readerZenBtn" onclick="enterZen()" title="Full screen: just the paper and one toolbar" aria-label="Full screen"><svg viewBox="0 0 24 24" aria-hidden="true" style="fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+        <button class="reader-btn" id="readerDarkBtn" onclick="toggleReaderDark()" title="Dark pages (d)" aria-label="Dark pages" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.2" style="fill:none;stroke:currentColor;stroke-width:1.8"/><path d="M12 3.8a8.2 8.2 0 0 1 0 16.4z"/></svg></button>
+        <button class="reader-btn reader-zen-btn" id="readerZenBtn" onclick="enterZen()" title="Full screen: just the paper and one toolbar (f)" aria-label="Full screen"><svg viewBox="0 0 24 24" aria-hidden="true" style="fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
       </span>
       <span class="rt-group rt-work">
-        <button class="reader-btn rt-panel-btn" id="readerNotesBtn" onclick="toggleReaderPanel()" title="Notes and chat" aria-label="Notes and chat" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M14.5 4v16M17 8.5h1.5M17 11.5h1.5"/></svg></button>
+        <button class="reader-btn rt-panel-btn" id="readerNotesBtn" onclick="toggleReaderPanel()" title="Notes and chat (n)" aria-label="Notes and chat" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M14.5 4v16M17 8.5h1.5M17 11.5h1.5"/></svg></button>
       </span>
       <span class="rt-more-wrap">
         <button class="reader-btn rt-more" id="readerMore" onclick="toggleReaderMenu()" title="More" aria-label="More" aria-haspopup="menu" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
@@ -2488,25 +2501,51 @@ html.no-hover .sel-icon:not(.on):active, html.no-hover .ink-bar .ink-size:not(.o
 </div>
 
 <div class="keys-help" id="keysHelp" role="dialog" aria-modal="true" aria-labelledby="keysHelpTitle" onclick="if (event.target === this) toggleKeysHelp(false)">
-  <div class="keys-help-box">
+  <div class="keys-help-box" tabindex="-1">
     <div class="keys-help-head"><h3 id="keysHelpTitle">Keyboard shortcuts</h3><button class="keys-help-close" onclick="toggleKeysHelp(false)" aria-label="Close">&times;</button></div>
-    <dl class="keys-reader">
-      <dt><kbd>&darr;</kbd> <kbd>&uarr;</kbd> <kbd>Space</kbd></dt><dd>Scroll the paper (PageUp / PageDown, Home / End too)</dd>
-      <dt><kbd>+</kbd> <kbd>&minus;</kbd></dt><dd>Zoom in / out</dd>
-      <dt class="owner-only"><kbd>&#8984;</kbd> <kbd>Enter</kbd></dt><dd class="owner-only">Save the note or comment you&rsquo;re writing</dd>
-      <dt class="owner-only"><kbd>[[</kbd></dt><dd class="owner-only">In a note: cite one of your highlights</dd>
-      <dt><kbd>Esc</kbd></dt><dd>Close a comment, clear the selection, or close the reader</dd>
-      <dt><kbd>?</kbd></dt><dd>Show this list</dd>
-    </dl>
-    <dl class="keys-site">
-      <dt><kbd>/</kbd></dt><dd>Search</dd>
-      <dt><kbd>j</kbd> <kbd>k</kbd></dt><dd>Next / previous paper in a list, or on a paper's page</dd>
-      <dt><kbd>o</kbd> <kbd>Enter</kbd></dt><dd>Open the selected paper</dd>
-      <dt class="owner-only"><kbd>x</kbd></dt><dd class="owner-only">Mark the selected paper read (and move on)</dd>
-      <dt class="owner-only"><kbd>s</kbd></dt><dd class="owner-only">Star the selected paper</dd>
-      <dt><kbd>Esc</kbd></dt><dd>Close a pop-up or this panel</dd>
-      <dt><kbd>?</kbd></dt><dd>Show this list</dd>
-    </dl>
+    <div class="kh-grid">
+      <section class="kh-sec" data-ctx="all"><h4>Everywhere <span class="kh-sub">g, then a letter: go to a page</span></h4><dl>
+        <dt><kbd>/</kbd></dt><dd>Search</dd>
+        <dt><kbd>g</kbd> <kbd>h</kbd></dt><dd>Recent Works</dd>
+        <dt><kbd>g</kbd> <kbd>v</kbd></dt><dd>Venues</dd>
+        <dt><kbd>g</kbd> <kbd>l</kbd></dt><dd>Library</dd>
+        <dt><kbd>g</kbd> <kbd>i</kbd></dt><dd>Interests</dd>
+        <dt><kbd>Esc</kbd></dt><dd>Close what&rsquo;s open: a menu, a paper&rsquo;s page, the search page</dd>
+        <dt><kbd>?</kbd></dt><dd>These shortcuts</dd>
+      </dl></section>
+      <section class="kh-sec" data-ctx="list"><h4>Lists <span class="kh-sub">Recent Works, Search, Library, Venues</span></h4><dl>
+        <dt><kbd>j</kbd> <kbd>k</kbd></dt><dd>Next / previous</dd>
+        <dt><kbd>o</kbd> <kbd>Enter</kbd></dt><dd>Open</dd>
+        <dt class="owner-only"><kbd>x</kbd></dt><dd class="owner-only">Mark read or unread, and move on</dd>
+        <dt class="owner-only"><kbd>s</kbd></dt><dd class="owner-only">Star</dd>
+        <dt class="owner-only"><kbd>l</kbd></dt><dd class="owner-only">Save to a list</dd>
+        <dt><kbd>r</kbd></dt><dd>Read the PDF</dd>
+      </dl></section>
+      <section class="kh-sec" data-ctx="paper"><h4>A paper&rsquo;s page</h4><dl>
+        <dt><kbd>j</kbd> <kbd>k</kbd></dt><dd>Next / previous in the list you came from</dd>
+        <dt><kbd>o</kbd></dt><dd>Open the paper (its own page)</dd>
+        <dt><kbd>r</kbd></dt><dd>Read the PDF</dd>
+        <dt class="owner-only"><kbd>x</kbd> <kbd>s</kbd> <kbd>l</kbd></dt><dd class="owner-only">Mark read, star, save to a list</dd>
+        <dt><kbd>u</kbd> <kbd>Esc</kbd></dt><dd>Back</dd>
+      </dl></section>
+      <section class="kh-sec" data-ctx="search"><h4>Search</h4><dl>
+        <dt><kbd>/</kbd></dt><dd>Into the search box</dd>
+        <dt><kbd>&darr;</kbd></dt><dd>From the box to the results</dd>
+        <dt><kbd>&uarr;</kbd> <kbd>&darr;</kbd> <kbd>&larr;</kbd> <kbd>&rarr;</kbd></dt><dd>Choose a suggestion; <kbd>Enter</kbd> picks it</dd>
+        <dt><kbd>f</kbd></dt><dd>Show or hide the filters</dd>
+        <dt><kbd>u</kbd> <kbd>Esc</kbd></dt><dd>Back (in the box, Esc first closes the suggestions, then clears it)</dd>
+      </dl></section>
+      <section class="kh-sec" data-ctx="reader"><h4>Reader</h4><dl>
+        <dt><kbd>&darr;</kbd> <kbd>&uarr;</kbd> <kbd>Space</kbd></dt><dd>Scroll (PageUp / PageDown, Home / End too)</dd>
+        <dt><kbd>+</kbd> <kbd>&minus;</kbd></dt><dd>Zoom</dd>
+        <dt class="owner-only"><kbd>n</kbd></dt><dd class="owner-only">Notes and chat</dd>
+        <dt><kbd>d</kbd></dt><dd>Dark pages</dd>
+        <dt><kbd>f</kbd></dt><dd>Full screen</dd>
+        <dt class="owner-only"><kbd>&#8984;</kbd> <kbd>Enter</kbd></dt><dd class="owner-only">Save the note or comment you&rsquo;re writing</dd>
+        <dt class="owner-only"><kbd>[[</kbd></dt><dd class="owner-only">In a note: cite one of your highlights</dd>
+        <dt><kbd>Esc</kbd></dt><dd>Close a comment, clear the selection, leave full screen, close the reader</dd>
+      </dl></section>
+    </div>
   </div>
 </div>
 
@@ -4053,16 +4092,16 @@ function feedItemHTML(p, opts) {
 const btnLabel = (on, a, b) => `<span class="btn-label">${on ? a : b}</span>`;
 function starBtn(p, labelled) {
   const k = paperKey(p), on = starSet.has(k);
-  return `<button class="btn-icon ${labelled?'btn-labelled':''} ${on?'starred':''}" onclick="event.preventDefault();event.stopPropagation();toggleStar('${escAttr(k)}',this)" title="${on?'Unstar':'Star'}">&#9733;${labelled ? btnLabel(on, 'Starred', 'Star') : ''}</button>`;
+  return `<button class="btn-icon ${labelled?'btn-labelled':''} ${on?'starred':''}" onclick="event.preventDefault();event.stopPropagation();toggleStar('${escAttr(k)}',this)" title="${on?'Unstar':'Star'} (s)">&#9733;${labelled ? btnLabel(on, 'Starred', 'Star') : ''}</button>`;
 }
 function readBtn(p, labelled) {
   const k = paperKey(p), on = readSet.has(k);
-  return `<button class="btn-icon ${labelled?'btn-labelled':''} is-read-btn ${on?'done':''}" onclick="event.preventDefault();event.stopPropagation();toggleRead('${escAttr(k)}',this)" title="${on?'Mark unread':'Mark as read'}">&#10003;${labelled ? btnLabel(on, 'Read', 'Mark read') : ''}</button>`;
+  return `<button class="btn-icon ${labelled?'btn-labelled':''} is-read-btn ${on?'done':''}" onclick="event.preventDefault();event.stopPropagation();toggleRead('${escAttr(k)}',this)" title="${on?'Mark unread':'Mark as read'} (x)">&#10003;${labelled ? btnLabel(on, 'Read', 'Mark read') : ''}</button>`;
 }
 function saveBtn(p, labelled) {
   const k = paperKey(p), inAny = paperInAnyList(k);
   return `<span class="save-anchor">
-    <button class="btn-icon ${labelled?'btn-labelled':''} ${inAny?'done':''}" onclick="event.preventDefault();event.stopPropagation();openSaveDD(this,'${escAttr(k)}')" title="Add to list" style="${inAny?'color:var(--list)':''}">&#9776;${labelled ? btnLabel(inAny, 'In a list', 'Save to list') : ''}</button>
+    <button class="btn-icon ${labelled?'btn-labelled':''} ${inAny?'done':''}" onclick="event.preventDefault();event.stopPropagation();openSaveDD(this,'${escAttr(k)}')" title="Add to list (l)" style="${inAny?'color:var(--list)':''}">&#9776;${labelled ? btnLabel(inAny, 'In a list', 'Save to list') : ''}</button>
   </span>`;
 }
 function deleteBtn(p) {
@@ -4838,6 +4877,9 @@ function sfKey(e) {
     e.preventDefault();
     const to = cols[(ci + (e.key === 'ArrowRight' ? 1 : -1) + cols.length) % cols.length], y = cur.getBoundingClientRect().top;
     go(to.reduce((a, b) => Math.abs(b.getBoundingClientRect().top - y) < Math.abs(a.getBoundingClientRect().top - y) ? b : a));
+  } else if (e.key === 'ArrowDown' && !box.classList.contains('sugg-open')) {   // to the results (then j / k)
+    const first = kbRows()[0];
+    if (first) { e.preventDefault(); kbSelect(first); }
   } else if (e.key === 'Enter') {
     e.preventDefault();
     if (box.classList.contains('sugg-open') && at >= 0) { opts[at].click(); return; }
@@ -5012,7 +5054,7 @@ function renderSearch() {
   const sorts = SF_SORTS.filter(([v]) => v !== 'match' || c.keys.length);
   const fc = sfFilterCount(), wide = !window.matchMedia('(max-width: 1000px)').matches;
   sfPatch(document.getElementById('sfModeSlot'), sfModeHTML(c, 'field'));
-  sfPatch(document.getElementById('sfBar'), `<button class="sf-filters-btn${wide && !_sfRailOff ? ' on' : ''}" data-k="filters" onclick="sfFilters()" ${wide ? `aria-expanded="${!_sfRailOff}" aria-controls="lpRail" title="${_sfRailOff ? 'Show the filters' : 'Hide the filters'}"` : 'aria-haspopup="dialog"'}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M6 12h12M10 18h4"/></svg>Filters${fc ? `<span class="b">${fc}</span>` : ''}</button>
+  sfPatch(document.getElementById('sfBar'), `<button class="sf-filters-btn${wide && !_sfRailOff ? ' on' : ''}" data-k="filters" onclick="sfFilters()" ${wide ? `aria-expanded="${!_sfRailOff}" aria-controls="lpRail" title="${_sfRailOff ? 'Show the filters (f)' : 'Hide the filters (f)'}"` : 'aria-haspopup="dialog"'}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M6 12h12M10 18h4"/></svg>Filters${fc ? `<span class="b">${fc}</span>` : ''}</button>
     <span class="sf-count" data-k="count"><b>${n}</b> ${n === 1 ? 'paper' : 'papers'}</span>
     <div class="sf-sort"><div class="tl-sort" role="group" aria-label="Order">${sorts.map(([v, l, tip]) => `<button data-k="sort:${v}" class="${sort === v ? 'active' : ''}" aria-pressed="${sort === v}" title="${escAttr(tip)}" onclick="sfSetSort('${v}')">${l}</button>`).join('')}</div>
     <label class="sf-sort-btn" data-k="sortbtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16M3.5 16.5 7 20l3.5-3.5M17 20V4m-3.5 3.5L17 4l3.5 3.5"/></svg><span>${SF_SHORT[sort]}</span><select aria-label="Order" onchange="sfSetSort(this.value)">${sorts.map(([v, l]) => `<option value="${v}"${sort === v ? ' selected' : ''}>${l}</option>`).join('')}</select></label></div>`);
@@ -5345,52 +5387,88 @@ function topRowHTML(p, groups, o) {
     </div></div>
   </article>`;
 }
-/* ===== KEYBOARD TRIAGE: j/k move, o or Enter open, x mark read and move on, s star =====
-   Works on a list page, search results, Library and the desktop home page; on a paper
-   page j/k step to the next/previous paper of the list it was opened from. */
-let _kbKey = null, _kbHinted = false;
+/* ===== KEYBOARD: one set of keys across the app; ? (or the nav's keyboard icon) shows them all =====
+   Everywhere: / search, g then h v l i (or s) goes to a page, Esc closes what's open (a menu, then a paper's page or the
+   search page), ? the shortcuts. Lists (Recent Works with its topic cards, Search, Library, Venues): j/k move, o or Enter
+   open, and on a paper x read, s star, l save to a list, r read its PDF. A paper's page: the same letters act on it, j/k
+   step through the list it came from, o opens the paper's own page, u goes back. Search: f the filters, ↓ from the box
+   to the results. The reader has its own (see its handler). The sheet (#keysHelp) is the one place they're written. */
+const KB_ROWS = '.top-lead[data-key], .top-row[data-key], .feed-item[data-key], .tc-feat[data-key], .tc-row[data-key], .lp-row[data-key], .v-row, #sec-library .interest-group-header';   // (Library's groups: Enter opens one, j goes on into it)
+let _kbKey = null, _kbEl = null, _kbHinted = false, _kbG = 0;
 function kbRows() {
   let scope = null;
   if (_listViewActive) scope = document.getElementById('lpBody');
   else if (currentTab === 'library') scope = document.getElementById('sec-library');
+  else if (currentTab === 'venues') scope = document.getElementById('sec-venues');
   else if (['all', 'email'].includes(currentTab) && !document.body.classList.contains('tok-mode')) scope = document.getElementById('papersContent');
   if (!scope) return [];
-  return [...scope.querySelectorAll('.top-row[data-key], .feed-item[data-key], .top-lead[data-key], .lp-row[data-key]')].filter(e => e.offsetParent !== null);
+  return [...scope.querySelectorAll(KB_ROWS)].filter(e => e.offsetParent !== null);
 }
 function kbSelect(el) {
   document.querySelectorAll('.kb-sel').forEach(e => e.classList.remove('kb-sel'));
-  if (!el) { _kbKey = null; return; }
-  _kbKey = el.dataset.key;
+  _kbEl = el || null; _kbKey = el ? el.dataset.key || null : null;
+  if (!el) return;
   el.classList.add('kb-sel');
-  el.setAttribute('tabindex', '-1');
+  if (el.tabIndex < 0) el.setAttribute('tabindex', '-1');
   el.focus({ preventScroll: true });
-  el.scrollIntoView({ block: 'nearest', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  el.scrollIntoView({ block: 'nearest', behavior: reduceMotion() ? 'auto' : 'smooth' });
+}
+const kbTyping = t => !!t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable);
+/* something Esc should close first (or whose own keys come first) */
+function kbOverlayOpen() { return !!(_chipPop || document.querySelector(POPOVERS + ', .auth-overlay.open, .keys-help.open, .reader.open, #vaultOverlay.open')); }
+function kbGoTab(tab) { const b = document.querySelector(`.nav-tab[data-tab="${tab}"]`); if (b && !b.hidden) b.click(); }
+function kbHint() {
+  if (_kbHinted) return;
+  _kbHinted = true;
+  toast(isOwner() ? 'Keys: j k move, o open, x read, s star, l save. ? shows them all.' : 'Keys: j k move, o open, r read. ? shows them all.', null, { duration: 5000 });
 }
 document.addEventListener('keydown', e => {
-  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.metaKey || e.ctrlKey || e.altKey || e.defaultPrevented) return;
   const t = e.target;
-  if (t && (/^(INPUT|TEXTAREA|SELECT|BUTTON|A)$/.test(t.tagName) || t.isContentEditable)) return;
-  if (document.querySelector('.auth-overlay.open, .reader.open')) return;
+  if (kbTyping(t)) return;   // (the search box has its own: arrows, Enter, Esc)
+  if (e.key === '?') { e.preventDefault(); toggleKeysHelp(); return; }
+  if (document.querySelector('.reader.open, .auth-overlay.open, #vaultOverlay.open, .keys-help.open')) return;   // the reader and dialogs have their own keys
+  // g then a letter: a page
+  if (_kbG) {
+    clearTimeout(_kbG); _kbG = 0;
+    const to = { h: 'all', v: 'venues', l: 'library', i: 'interests' }[e.key];
+    if (to) { e.preventDefault(); kbGoTab(to); return; }
+    if (e.key === 's') { e.preventDefault(); openSearchHere(); return; }
+  }
+  if (e.key === 'g') { _kbG = setTimeout(() => { _kbG = 0; }, 1200); return; }
+  if (e.key === '/') { e.preventDefault(); openSearchHere(); return; }
+  // a paper's page: its buttons, by their letters (those hidden here, like a visitor's, do nothing)
   if (_paperViewActive) {
-    if (e.key === 'j' || e.key === 'k') {
-      const b = document.querySelector(e.key === 'j' ? '.pd-nav-next' : '.pd-nav-prev');
-      if (b && !b.disabled) { e.preventDefault(); b.click(); }
-    }
+    const sel = { j: '.pd-nav-next', k: '.pd-nav-prev', x: '.pd-act[onclick^="toggleRead"]', s: '.pd-act[onclick^="toggleStar"]', l: '.save-anchor .pd-act', r: '.pd-read', o: '.pd-open' }[e.key];
+    const b = sel && [...document.querySelectorAll('#paperDetail ' + sel)].find(x => x.offsetParent !== null);
+    if (b && !b.disabled) { e.preventDefault(); b.click(); }
+    else if (e.key === 'u') { e.preventDefault(); paperBack(); }
     return;
   }
-  if (!['j', 'k', 'o', 'Enter', 'x', 's'].includes(e.key)) return;
+  if (_listViewActive && e.key === 'f') { e.preventDefault(); sfFilters(); return; }
+  if (_listViewActive && e.key === 'u') { e.preventDefault(); listBack(); return; }
+  // a list
+  if (!['j', 'k', 'o', 'Enter', 'x', 's', 'l', 'r'].includes(e.key)) return;
+  if (e.key === 'Enter' && t && /^(BUTTON|A)$/.test(t.tagName)) return;   // a focused button keeps its own Enter
   const rows = kbRows();
   if (!rows.length) return;
-  let i = rows.indexOf(document.activeElement);
-  if (i < 0) i = rows.findIndex(r => r.dataset.key === _kbKey);
-  if ((e.key === 'Enter' || e.key === 'o' || e.key === 'x' || e.key === 's') && i < 0) return;
+  let i = rows.indexOf(t && t.closest ? t.closest(KB_ROWS) : null);
+  if (i < 0) i = rows.findIndex(r => r === _kbEl || (_kbKey && r.dataset.key === _kbKey));
+  if (e.key !== 'j' && e.key !== 'k' && i < 0) return;   // nothing chosen yet
+  const row = rows[i], key = row ? row.dataset.key : null;
+  if (['x', 's', 'l', 'r'].includes(e.key) && !key) return;   // (a venue or a Library group isn't a paper)
+  if (['x', 's', 'l'].includes(e.key) && !isOwner()) return;
   e.preventDefault();
-  if (!_kbHinted) { _kbHinted = true; toast(isOwner() ? 'Keys: j / k move, o open, x mark read, s star. Press ? for all.' : 'Keys: j / k move, o open. Press ? for all.', null, { duration: 5000 }); }
-  const key = i >= 0 ? rows[i].dataset.key : null;
+  kbHint();
   if (e.key === 'j') kbSelect(rows[i < 0 ? 0 : Math.min(i + 1, rows.length - 1)]);
   else if (e.key === 'k') kbSelect(rows[i < 0 ? 0 : Math.max(i - 1, 0)]);
-  else if (e.key === 'o' || e.key === 'Enter') openPaper(key, { target: rows[i] });
-  else if (e.key === 'x' || e.key === 's') {
+  else if (e.key === 'o' || e.key === 'Enter') { if (key) openPaper(key, { target: row }); else row.click(); }
+  else if (e.key === 'r') openReader(key);
+  else if (e.key === 'l') {
+    if (row.classList.contains('lp-row')) fillRowMore(row);
+    const b = [...row.querySelectorAll('[onclick*="openSaveDD"]')].find(x => x.offsetParent !== null);
+    openSaveDD(b || row, key);
+  } else {   // x, s
     const nextKey = rows[i + 1] ? rows[i + 1].dataset.key : null;
     if (e.key === 'x') toggleRead(key, null); else toggleStar(key, null);
     const fresh = kbRows();
@@ -5398,29 +5476,25 @@ document.addEventListener('keydown', e => {
     kbSelect(land || fresh[Math.min(i, fresh.length - 1)]);
   }
 });
-
-/* "/" jumps to search, "?" lists the keys */
+/* Esc with nothing open: leave a paper's page or the search page (seen before anything closes, so it never does both) */
 document.addEventListener('keydown', e => {
-  if (e.metaKey || e.ctrlKey || e.altKey) return;
-  const t = e.target;
-  if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
-  if (e.key === '/') {
-    if (document.querySelector('.reader.open')) return;   // the search box is behind the reader
-    e.preventDefault();
-    openSearchHere();
-  } else if (e.key === '?') {
-    e.preventDefault(); toggleKeysHelp();
-  } else if (e.key === 'Escape' && document.getElementById('keysHelp').classList.contains('open')) {
-    e.preventDefault(); e.stopImmediatePropagation();   // this Esc was for the list only (not the reader or a pop-up under it)
+  if (e.key !== 'Escape' || e.metaKey || e.ctrlKey || e.altKey || kbTyping(e.target) || kbOverlayOpen()) return;
+  if (_paperViewActive) { e.preventDefault(); paperBack(); }
+  else if (_listViewActive) { e.preventDefault(); listBack(); }
+}, true);
+/* the shortcuts sheet closes with Esc (and only that: not a pop-up under it) */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('keysHelp').classList.contains('open')) {
+    e.preventDefault(); e.stopImmediatePropagation();
     toggleKeysHelp(false);
   }
 });
 function toggleKeysHelp(force) {
   const el = document.getElementById('keysHelp');
   const open = typeof force === 'boolean' ? force : !el.classList.contains('open');
-  el.classList.toggle('in-reader', !!document.querySelector('.reader.open'));   // the keys that work where you are
+  el.dataset.ctx = document.querySelector('.reader.open') ? 'reader' : _paperViewActive ? 'paper' : _listViewActive ? 'search' : kbRows().length ? 'list' : '';   // where you are: its keys first
   el.classList.toggle('open', open);
-  if (open) el.querySelector('button').focus();
+  if (open) el.querySelector('.keys-help-box').focus({ preventScroll: true });   // (Tab reaches the close button)
 }
 
 /* Enter (or Space) on a focusable block with a click handler, e.g. a paper row, acts like a click */
@@ -7334,6 +7408,10 @@ document.addEventListener('keydown', e => {
   }
   else if ((e.key === '+' || e.key === '=') && !e.metaKey && !e.ctrlKey) { e.preventDefault(); readerZoom(1); }
   else if (e.key === '-' && !e.metaKey && !e.ctrlKey) { e.preventDefault(); readerZoom(-1); }
+  else if (e.metaKey || e.ctrlKey || e.altKey) return;
+  else if (e.key === 'n' && isOwner() && !document.getElementById('reader').classList.contains('no-doc')) { e.preventDefault(); toggleReaderPanel(); }
+  else if (e.key === 'd' && !document.getElementById('reader').classList.contains('no-doc')) { e.preventDefault(); toggleReaderDark(); }
+  else if (e.key === 'f') { e.preventDefault(); if (document.getElementById('reader').classList.contains('zen')) exitZen(); else enterZen(); }
 });
 
 /* No PDF yet, or the one we have fails: paste an open link (checked before it's saved) or drop a file */
@@ -10464,16 +10542,16 @@ function renderPaperDetail(p) {
 
   // Sticky bar: back, title (appears once the heading scrolls away), actions
   const bar = `<div class="pd-bar"><div class="pd-bar-inner">
-    ${showBack ? `<button class="pd-back" onclick="paperBack()"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg><span class="pd-back-label">Back</span></button>` : ''}
+    ${showBack ? `<button class="pd-back" onclick="paperBack()" title="Back (u)"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg><span class="pd-back-label">Back</span></button>` : ''}
     <div class="pd-bar-title" aria-hidden="true">${esc(p.title)}</div>
     <div class="pd-actions">
       ${navHTML}
-      <button class="pd-act ${isStar?'on-star':''}" onclick="toggleStar('${ka}',this);${again}" title="${isStar?'Unstar':'Star'}" aria-label="${isStar?'Unstar':'Star'}">&#9733;<span class="pd-act-label"><span>${isStar?'Starred':'Star'}</span></span></button>
-      <button class="pd-act ${ir?'on-read':''}" onclick="toggleRead('${ka}',this);${again}" title="${ir?'Mark unread':'Mark as read'}" aria-label="${ir?'Mark unread':'Mark as read'}">&#10003;<span class="pd-act-label"><span>${ir?'Read':'Mark read'}</span></span></button>
-      <span class="save-anchor"><button class="pd-act ${inAny?'on-list':''}" onclick="event.stopPropagation();openSaveDD(this,'${ka}')" title="Add to list" aria-label="Add to list">&#9776;<span class="pd-act-label"><span>${inAny?'In a list':'Save'}</span></span></button></span>
+      <button class="pd-act ${isStar?'on-star':''}" onclick="toggleStar('${ka}',this);${again}" title="${isStar?'Unstar':'Star'} (s)" aria-label="${isStar?'Unstar':'Star'}">&#9733;<span class="pd-act-label"><span>${isStar?'Starred':'Star'}</span></span></button>
+      <button class="pd-act ${ir?'on-read':''}" onclick="toggleRead('${ka}',this);${again}" title="${ir?'Mark unread':'Mark as read'} (x)" aria-label="${ir?'Mark unread':'Mark as read'}">&#10003;<span class="pd-act-label"><span>${ir?'Read':'Mark read'}</span></span></button>
+      <span class="save-anchor"><button class="pd-act ${inAny?'on-list':''}" onclick="event.stopPropagation();openSaveDD(this,'${ka}')" title="Add to list (l)" aria-label="Add to list">&#9776;<span class="pd-act-label"><span>${inAny?'In a list':'Save'}</span></span></button></span>
       <button class="pd-act" onclick="${isHiddenRow(p) ? 'unhidePaper' : 'hidePaper'}('${ka}');${again}" title="${isHiddenRow(p) ? 'Restore paper' : 'Hide paper (restore it from Library)'}" aria-label="${isHiddenRow(p) ? 'Restore paper' : 'Hide paper'}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${isHiddenRow(p) ? '<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>' : '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>'}</svg><span class="pd-act-label"><span>${isHiddenRow(p) ? 'Restore' : 'Hide'}</span></span></button>
-      ${isOwner() || pdfSourceOf(p) ? `<button class="pd-read" onclick="openReader('${ka}')" title="${pdfSourceOf(p) ? 'Read the PDF here' : 'Add a PDF to read it here'}"><svg viewBox="0 0 24 24"><path d="M2 4h7a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H2z"/><path d="M22 4h-7a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h8z"/></svg>${readLabelHTML(p)}</button>` : ''}
-      ${p.url ? `<a class="pd-open" href="${esc(p.url)}" target="_blank" rel="noopener" title="Open the paper's page" aria-label="Open paper"><span class="pd-open-full">Open paper</span><span class="pd-open-short">Open</span><svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>` : ''}
+      ${isOwner() || pdfSourceOf(p) ? `<button class="pd-read" onclick="openReader('${ka}')" title="${pdfSourceOf(p) ? 'Read the PDF here (r)' : 'Add a PDF to read it here (r)'}"><svg viewBox="0 0 24 24"><path d="M2 4h7a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H2z"/><path d="M22 4h-7a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h8z"/></svg>${readLabelHTML(p)}</button>` : ''}
+      ${p.url ? `<a class="pd-open" href="${esc(p.url)}" target="_blank" rel="noopener" title="Open the paper's page (o)" aria-label="Open paper"><span class="pd-open-full">Open paper</span><span class="pd-open-short">Open</span><svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>` : ''}
     </div>
   </div></div>`;
 
