@@ -1464,7 +1464,7 @@ kbd { display: inline-block; min-width: 22px; text-align: center; font: 12px ui-
    no centred column with empty margins beside a sidebar. Sidebar text lines up with the Back arrow above it. */
 .lp-wrap { padding: 0 32px 96px 12px; display: grid; grid-template-columns: 252px minmax(0, 1200px); column-gap: 40px; }
 .lp-main { min-width: 0; }
-.lp-rail { position: sticky; top: var(--lp-bar-h); align-self: start; max-height: calc(100vh - 150px); overflow-y: auto; padding: 18px 0 24px; scrollbar-width: none; }
+.lp-rail { position: sticky; top: var(--lp-bar-h); align-self: start; max-height: calc(100vh - 150px); overflow-y: auto; overscroll-behavior: contain; padding: 18px 0 24px; scrollbar-width: none; }   /* its scroll stays its own: reaching the end doesn't carry on into the page */
 .lp-rail::-webkit-scrollbar { display: none; }
 .lp-rail h2 { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin: 22px 0 6px; padding: 0 12px; }   /* on the line of the Back arrow and the dots */
 .lp-rail-item { display: flex; align-items: center; gap: 10px; padding: 7px 12px; margin: 1px 0; border-radius: 8px; font-size: 13.5px; line-height: 1.35; color: var(--text-secondary); transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
@@ -1628,6 +1628,8 @@ body.tok-mode .tok-bar { flex-wrap: wrap; row-gap: 8px; }
 .lp-row { display: grid; grid-template-columns: minmax(0, 1fr); padding: 12px 18px; margin: 0 -18px; border-radius: 12px; cursor: pointer; transition: background-color var(--t-fast) var(--ease); }
 .lp-body.ranked .lp-row { grid-template-columns: 30px minmax(0, 1fr); column-gap: 14px; }
 .lp-row:hover { background: rgba(255,255,255,0.035); }
+#lpBody .lp-row { content-visibility: auto; contain-intrinsic-size: auto 96px; }   /* the measured height of a row here, so rows not yet drawn hold their place */
+@media (max-width: 1000px) { #lpBody .lp-row { contain-intrinsic-size: auto 112px; } }
 .lp-num { font-family: var(--serif); font-size: 15px; padding-top: 3px; color: color-mix(in srgb, var(--gc) 65%, #888); font-variant-numeric: tabular-nums; }
 .lp-row-main { min-width: 0; }
 .lp-h { font-family: var(--serif); font-optical-sizing: auto; font-size: 19px; font-weight: 500; line-height: 1.3; color: #ececef; text-wrap: pretty; transition: color var(--t-fast) var(--ease); }
@@ -1651,6 +1653,14 @@ body.tok-mode .tok-bar { flex-wrap: wrap; row-gap: 8px; }
 .lp-fold { display: inline-flex; margin: 6px 0 0 -12px; padding: 8px 12px; background: none; border: none; border-radius: 8px; color: var(--text-muted); font: inherit; font-size: 13px; cursor: pointer; transition: color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease); }
 .lp-fold:hover { color: var(--text); background: rgba(255,255,255,0.05); }
 .lp-empty { padding: 56px 0; text-align: center; color: var(--text-secondary); line-height: 2.2; }
+.sf-skel { padding-top: 18px; }
+.sf-skel-row { padding: 14px 0 18px 44px; }
+.sf-skel-row i { display: block; height: 17px; width: 72%; border-radius: 6px; background: rgba(255,255,255,0.045); animation: skel 1.3s ease-in-out infinite; }
+.sf-skel-row i + i { height: 10px; width: 48%; margin-top: 12px; }
+.sf-skel-row i + i + i { width: 34%; margin-top: 10px; }
+.sf-skel-row:nth-child(2) i { animation-delay: 0.12s; } .sf-skel-row:nth-child(3) i { animation-delay: 0.24s; } .sf-skel-row:nth-child(4) i { animation-delay: 0.36s; } .sf-skel-row:nth-child(5) i { animation-delay: 0.48s; }
+@media (max-width: 600px) { .sf-skel-row { padding-left: 34px; } .sf-skel-row i { width: 92%; } }
+@media (prefers-reduced-motion: reduce) { .sf-skel-row i { animation: none; } }
 .lp-empty .lp-fold { margin: 0; }
 @media (max-width: 1000px) {
   .lp-bar .pd-bar-inner { padding: 8px 24px; }
@@ -1671,6 +1681,7 @@ body.tok-mode .tok-bar { flex-wrap: wrap; row-gap: 8px; }
   .lp-body.ranked .lp-row { grid-template-columns: 24px minmax(0, 1fr); column-gap: 10px; }
   .lp-h { font-size: 17.5px; }
   .lp-also { display: none; }
+  #lpBody .lp-row { contain-intrinsic-size: auto 136px; }
 }
 @media (prefers-reduced-motion: reduce) { .lp-more, .lp-row, .lp-h, .lp-rail-item, .sf-field, .sf-chip, .sf-x, .sf-opt, .sf-sheet, .sf-scrim, .sf-filters-btn, .sf-sort-btn, .sf-rail .lp-rail-item .l, .sf-rail .lp-rail-item .gdot, .sf-rail .lp-rail-item .sf-star-i, .sf-sheet-body .tl-chip { transition: none; } .sf-box.sugg-open .sf-sugg, .sf-chip.sf-in, .lp-body.sf-fade { animation: none; } .sf-chip.sf-out { transition: none; } }
 
@@ -4481,9 +4492,13 @@ function showSearch(s, o) {
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   const inp = document.getElementById('sfInput');
   if (inp.value !== SF.draft) inp.value = SF.draft;
-  renderSearch();
-  if (returning) { const body = document.getElementById('lpBody'); while (_sfPlan && _sfPlan.si < _sfPlan.secs.length && body.offsetTop + body.offsetHeight < _savedScrollTop + 2 * window.innerHeight) sfMoreRows(100); }   // the rows down to where you were
-  else { jumpScroll(ms, 0); requestAnimationFrame(() => jumpScroll(ms, 0)); }   // after the router's restore for the paper page it left
+  _sfSync = returning; renderSearch(); _sfSync = false;   // coming back: the whole list now, for the router to scroll to where you were
+  if (returning && _sfAnchor) {   // rows near it are drawn at their real height over the next frames: keep it in place until it holds still
+    const a = _sfAnchor; let still = 0, n = 0;
+    const hold = () => { const ms = document.getElementById('mainScroll'), before = ms.scrollTop; if (!sfToAnchor(a)) return; still = ms.scrollTop === before ? still + 1 : 0; if (still < 3 && ++n < 20) requestAnimationFrame(hold); };
+    requestAnimationFrame(hold);
+  }
+  if (!returning) { jumpScroll(ms, 0); requestAnimationFrame(() => jumpScroll(ms, 0)); }   // after the router's restore for the paper page it left
   if (entering && !_leftPaper) pageIn(document.getElementById('sec-list'));   // (leaving a paper page, the router fades it in)
   if (o && o.focus) inp.focus();
 }
@@ -4500,6 +4515,22 @@ function openSearchHere(from) {
   const inp = document.getElementById('sfInput');
   inp.focus();
   if (typed) { inp.value = SF.draft + typed; sfType(inp.value); }
+}
+/* Where you were in the results: the first row under the bar and how far down it sat. Rows off screen are drawn at
+   an estimated height, so a pixel offset alone would land on a different paper after a redraw; the row puts you back. */
+let _sfAnchor = null;
+function sfAnchorNow() {
+  const edge = document.getElementById('lpBar').getBoundingClientRect().bottom;
+  const row = [...document.querySelectorAll('#lpBody .lp-row')].find(r => r.getBoundingClientRect().bottom > edge + 1);
+  return row ? { key: row.dataset.key, offset: row.getBoundingClientRect().top - edge } : null;
+}
+function sfToAnchor(a) {   // move the page so that row sits where it was
+  const row = a && document.querySelector(`#lpBody .lp-row[data-key="${CSS.escape(a.key)}"]`);
+  if (!row) return false;
+  const ms = document.getElementById('mainScroll'), edge = document.getElementById('lpBar').getBoundingClientRect().bottom;
+  const d = row.getBoundingClientRect().top - edge - a.offset;
+  if (Math.abs(d) > 0.5) jumpScroll(ms, ms.scrollTop + d);
+  return true;
 }
 function leaveListView() {
   if (!_listViewActive) return false;
@@ -4700,11 +4731,13 @@ function renderSearch() {
   // the papers
   const body = document.getElementById('lpBody');
   body.classList.toggle('ranked', sort === 'best' || sort === 'match');
-  sfDrawBody(c, sort);
-  const sig = sort + '|' + (_sfPlan ? _sfPlan.keys.slice(0, 60).join(',') + '|' + _sfPlan.keys.length : 'none');
-  if (_sfFade && sig !== _sfSig && !reduceMotion()) replay(body, 'sf-fade');
-  _sfFade = false; _sfSig = sig;
-  requestAnimationFrame(sfFill);
+  const fade = _sfFade; _sfFade = false;
+  sfDrawBody(c, sort, () => {
+    const sig = sort + '|' + (_sfPlan ? _sfPlan.keys.slice(0, 60).join(',') + '|' + _sfPlan.keys.length : 'none');
+    if (fade && sig !== _sfSig && !reduceMotion()) replay(body, 'sf-fade');
+    _sfSig = sig;
+    updateListBar();
+  });
   document.getElementById('lp').style.setProperty('--gbg', SF.topic.length === 1 ? topicGlow(SF.topic) : 'none');   // one topic: its faint colour
   if (document.getElementById('sfBox').classList.contains('sugg-open')) sfSuggest();
   updateListBar();
@@ -4758,9 +4791,12 @@ function sfFiltersHTML(c, lv, A, where) {
     + sec('authors', 'Authors', authors, SF.author.map(a => A.name(a))) + sec('venues', 'Venues', venues, SF.venue) + sec('years', 'Year', years, SF.year)
     + sec('src', 'Source', src, SF.src.map(x => SF_SRC[x] || x)) + sec('alerts', 'Alerts', alerts, SF.alert);
 }
-/* The papers, in sections (tiers, weeks or months), drawn 60 at a time and more as you scroll: a thousand rows at
-   once would hold the page up for half a second */
-let _sfPlan = null;
+/* The papers, in sections (tiers, weeks or months), all drawn at once: rows off screen skip layout (content-visibility),
+   so the scrollbar is true from the start and nothing arrives late. A long list shows skeleton rows while it's drawn,
+   rather than holding the old results frozen. */
+let _sfPlan = null, _sfGen = 0, _sfSync = false;
+const SF_BIG = 300;   // more rows than this take long enough (~30 ms and up, more on a phone) to show the loader first
+const SF_SKEL = '<div class="sf-skel" aria-label="Loading papers">' + '<div class="sf-skel-row"><i></i><i></i><i></i></div>'.repeat(5) + '</div>';
 function sfPlan(c, sort) {
   const papers = c.results.map(r => r.p), secs = [];
   const head = (label, n) => `<div class="lp-sec-h"><h2>${esc(label)}</h2><span class="n">${n}</span><span class="rule"></span></div>`;
@@ -4786,39 +4822,20 @@ function sfPlan(c, sort) {
   }
   return { secs, keys: secs.flatMap(x => x.rows.map(paperKey)), m: { kind: SF.venue.length === 1 ? 'venue' : 'search', topic: SF.topic.length === 1 ? SF.topic[0] : null }, res: c.res, si: 0, ri: 0 };
 }
-function sfDrawBody(c, sort) {
-  const body = document.getElementById('lpBody');
+function sfDrawBody(c, sort, done) {
+  const body = document.getElementById('lpBody'), gen = ++_sfGen;
   _sfPlan = c.results.length ? sfPlan(c, sort) : null;
-  body.innerHTML = _sfPlan ? '' : sfEmptyHTML(c);
-  if (_sfPlan) sfMoreRows(60);
+  const draw = () => {
+    if (gen !== _sfGen || !_listViewActive) return;   // a newer search took its place
+    const P = _sfPlan;
+    body.innerHTML = P ? P.secs.map(sec => `<section class="lp-sec">${sec.head}${sec.fold || ''}${sec.rows.map((p, i) => listRowHTML(p, sec.num ? sec.num + i : 0, P.m)).join('')}</section>`).join('') : sfEmptyHTML(c);
+    if (P) sfHighlight(body, P.res);
+    done();
+  };
+  if (!_sfPlan || _sfSync || _sfPlan.keys.length <= SF_BIG) { draw(); return; }
+  body.innerHTML = SF_SKEL;
+  requestAnimationFrame(() => setTimeout(draw, 0));   // once the loader has painted
 }
-function sfMoreRows(n) {
-  const P = _sfPlan, body = document.getElementById('lpBody');
-  if (!P) return;
-  let added = 0;
-  while (added < n && P.si < P.secs.length) {
-    const sec = P.secs[P.si];
-    let el = body.lastElementChild && body.lastElementChild.dataset.si === String(P.si) ? body.lastElementChild : null;
-    if (!el) { body.insertAdjacentHTML('beforeend', `<section class="lp-sec" data-si="${P.si}">${sec.head}${sec.fold || ''}</section>`); el = body.lastElementChild; }
-    const take = sec.rows.slice(P.ri, P.ri + n - added);
-    if (take.length) {
-      const tmp = document.createElement('div');
-      tmp.innerHTML = take.map((p, i) => listRowHTML(p, sec.num ? sec.num + P.ri + i : 0, P.m)).join('');
-      sfHighlight(tmp, P.res);
-      el.append(...tmp.childNodes);
-    }
-    P.ri += take.length; added += take.length;
-    if (P.ri >= sec.rows.length) { P.si++; P.ri = 0; }
-  }
-}
-/* more rows once the end is within a screen and a half */
-function sfFill() {
-  const P = _sfPlan;
-  if (!_listViewActive || !P || P.si >= P.secs.length) return;
-  const body = document.getElementById('lpBody');
-  if (body.getBoundingClientRect().bottom < window.innerHeight * 2.5) { sfMoreRows(100); requestAnimationFrame(sfFill); }
-}
-document.addEventListener('DOMContentLoaded', () => document.getElementById('mainScroll').addEventListener('scroll', sfFill, { passive: true }));
 /* Nothing matches: say why, and offer the way out that would find something */
 function sfEmptyHTML(c) {
   const ways = [];
@@ -10026,7 +10043,7 @@ function showPaperDetail(id) {
   if (!p) { applyHash(); return; }
   // Save the list's scroll position, but not when stepping from one paper to the next; opened from a list page,
   // Back returns to that page at the same place
-  if (!_paperViewActive) { _savedScrollTop = document.getElementById('mainScroll').scrollTop; _paperFromList = _listViewActive ? _listKey : null; }
+  if (!_paperViewActive) { _savedScrollTop = document.getElementById('mainScroll').scrollTop; _paperFromList = _listViewActive ? _listKey : null; _sfAnchor = _listViewActive ? sfAnchorNow() : null; }
   _paperViewActive = true;
   if (document.body.classList.contains('tok-mode')) _tokScrollTop = document.getElementById('tokFeed').scrollTop;
   leaveListView();
