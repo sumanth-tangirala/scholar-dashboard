@@ -411,7 +411,7 @@ html.no-hover .f-topic.more:hover:not(.open) { background: rgba(255,255,255,0.07
 .topics-grid .topic-title { color: var(--text); gap: 8px; }
 /* the article-style cards (topicCardHTML) */
 .topics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; }
-/* The cards in a row share their row tracks (subgrid: label, featured paper, numbered list), so the lists start on
+/* The cards in a row share their row tracks (subgrid: label, featured paper, list), so the lists start on
    one line and both cards end together. The featured paper's text flows as written and its tags + Read sit at the
    bottom of its part, so any spare room goes just above them. A paper opening on hover grows its row's list track:
    the neighbour gains room at its bottom and nothing in it moves. */
@@ -421,7 +421,7 @@ html.no-hover .f-topic.more:hover:not(.open) { background: rgba(255,255,255,0.07
 .topics-grid .tc-foot { margin-top: auto; padding-top: 16px; }
 /* the last row fills the rest of the card, so its hover shade reaches the bottom edge */
 .topics-grid .tc-list { display: flex; flex-direction: column; }
-.topics-grid .tc-row:last-child { flex-grow: 1; align-content: start; padding-bottom: 20px; }
+.topics-grid .tc-list > .feed-item:last-child { flex-grow: 1; padding-bottom: 20px; }
 .topics-grid .topic-card { border-radius: 16px; border-color: rgba(255,255,255,0.09); }
 .topics-grid .topic-title { border-bottom: none; padding: 20px 26px 4px; }
 .topics-grid .topic-title .topic-label { font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: color-mix(in srgb, var(--gc) 75%, #fff); }
@@ -443,26 +443,18 @@ html.no-hover .f-topic.more:hover:not(.open) { background: rgba(255,255,255,0.07
 .tc-must { color: var(--green); display: inline-flex; align-items: center; gap: 6px; }
 .tc-must::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 .tc-acts { opacity: 0; transition: opacity 0.2s; }
-.tc-feat:hover .tc-acts, .tc-feat:focus-within .tc-acts, .tc-row:hover .tc-acts, .tc-row:focus-within .tc-acts { opacity: 1; }
+.tc-feat:hover .tc-acts, .tc-feat:focus-within .tc-acts { opacity: 1; }
 @media (hover: none) { .tc-acts { opacity: 1; } }
 .tc-go { margin-left: 8px; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-muted); white-space: nowrap; transition: color 0.2s, gap 0.2s; }
 .tc-end .tc-go { margin-left: 0; }
 .tc-go::after { content: '\2192'; }
 .tc-feat:hover .tc-go { color: var(--accent); gap: 10px; }
 .tc-list { border-top: 1px solid rgba(255,255,255,0.07); }
-.tc-row { display: grid; grid-template-columns: 28px minmax(0, 1fr); column-gap: 12px; padding: 16px 26px; cursor: pointer; transition: background 0.2s; }
-.tc-row:hover { background: rgba(255,255,255,0.035); }
-.tc-num { font-family: var(--serif); font-size: 15px; padding-top: 2px; color: color-mix(in srgb, var(--gc) 65%, #888); font-variant-numeric: tabular-nums; }
-.tc-rh { font-family: var(--serif); font-optical-sizing: auto; font-size: 16.5px; font-weight: 500; line-height: 1.35; color: var(--text); margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; transition: color 0.2s; }
-.tc-row:hover .tc-rh { color: #fff; }
-.tc-row .tc-tags { margin-top: 7px; }
-/* hovering (or focusing) a listed paper slides its takeaway open */
-.tc-more { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows var(--t-slow) var(--ease), opacity var(--t-slow) var(--ease); }
-.tc-more > div { overflow: hidden; }
-.tc-more p { margin: 8px 0 0; font-size: 13.5px; line-height: 1.55; color: var(--text-secondary); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.tc-more .tc-acts { display: inline-flex; margin-top: 8px; }
-#mainScroll:not(.scrolling) .tc-row:hover .tc-more, .tc-row:focus-within .tc-more { grid-template-rows: 1fr; opacity: 1; }
-@media (prefers-reduced-motion: reduce) { .tc-more, .tc-acts, .tc-go { transition: none; } }
+/* the papers under the featured one: Top Papers' side-list papers (feedItemHTML), on the card's 26px edge. Their
+   Why takes the card's colour, and their topic chips leave out the card's own topic. */
+.tc-list .topic-item.feed-item { padding: 16px 26px 15px; }
+.tc-list .feed-item::before { display: none; }
+@media (prefers-reduced-motion: reduce) { .tc-acts, .tc-go { transition: none; } }
 .topics-grid .topic-title svg { color: var(--text-muted); transition: transform 0.2s, color 0.2s; }
 .topics-grid .topic-title:hover svg { color: var(--text); transform: translateX(2px); }
 
@@ -821,7 +813,7 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
    The j/k selection is this same ring on the focused row, and only while it has focus (kbSelect), so the list keys
    and Tab can never light two things at once. Boxes that clip leave rings room: rounded cards round their corner
    rows, row drawers stop clipping once open, sideways-scrolling chip rows and the filters sidebar are padded. */
-:is(.top-row, .feed-item, .top-lead, .lp-row, .tc-feat, .tc-row, .v-row, .cr-card, .interest-group-header, .topic-title, .section-header.clickable):is(:focus-visible, .kb-sel:focus) { outline: 2px solid var(--accent); outline-offset: -2px; }
+:is(.top-row, .feed-item, .top-lead, .lp-row, .tc-feat, .v-row, .cr-card, .interest-group-header, .topic-title, .section-header.clickable):is(:focus-visible, .kb-sel:focus) { outline: 2px solid var(--accent); outline-offset: -2px; }
 .top-row:is(:focus-visible, .kb-sel:focus) { border-radius: 10px; }
 .v-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
 /* rows at a rounded card's corners take its curve (its radius less its border) */
@@ -838,7 +830,7 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
   .pd-rel-grid .feed-item:last-child { border-bottom-left-radius: 11px; border-bottom-right-radius: 11px; }
 }
 .topics-grid .topic-title { border-radius: 15px 15px 0 0; }
-.topics-grid .tc-row:last-child, .topics-grid .topic-body > .tc-feat:last-child { border-radius: 0 0 15px 15px; }
+.topics-grid .tc-list > .feed-item:last-child, .topics-grid .topic-body > .tc-feat:last-child { border-radius: 0 0 15px 15px; }
 .ig-toggle-btn:first-child { border-radius: 7px 0 0 7px; }
 .ig-toggle-btn:last-child { border-radius: 0 7px 7px 0; }
 /* a nav tab is as tall as the bar (its underline sits on the bar's edge): ring the label, the size of the bar's buttons */
@@ -849,10 +841,9 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .lp-rail, .sf-sheet-body, .keys-help-box, .topic-body, .v-jump, .sf-pills, .tl-chips, .tok-pills, .topic-jump { scroll-padding: 8px; }
 /* A row's drawer clips only while it slides: open with focus inside, the clip lifts as the slide ends, so a focused
    button's ring isn't cut, and it's back at once when focus leaves. (Not where drawers stay shut on touch.) */
-.f-actions > div, .tr-actions > div, .lp-more > div, .tc-more > div { transition: overflow 0s; }
-.tc-more > div { min-height: 0; }
+.f-actions > div, .tr-actions > div, .lp-more > div { transition: overflow 0s; }
 @media (hover: hover) {
-  html:not(.no-hover) :is(.feed-item:focus-within .f-actions, .top-row:focus-within .tr-actions, .lp-row:focus-within .lp-more, .tc-row:focus-within .tc-more) > div { overflow: visible; transition: overflow 0s var(--t-slow) allow-discrete; }
+  html:not(.no-hover) :is(.feed-item:focus-within .f-actions, .top-row:focus-within .tr-actions, .lp-row:focus-within .lp-more) > div { overflow: visible; transition: overflow 0s var(--t-slow) allow-discrete; }
 }
 
 /* paper page: previous / next within the list it was opened from */
@@ -3821,11 +3812,7 @@ function topicCardHTML(name, items, shownAbove, o) {
       ${whyLineHTML(f)}
       <div class="tc-foot">${cardTagsHTML(f)}<span class="tc-end">${acts(f)}<span class="tc-go">Read</span></span></div>
     </article>` : '';
-  const rows = rest.map((p, i) => `<article class="tc-row" tabindex="0" data-key="${k(p)}" onclick="openPaper('${k(p)}', event)">
-      <span class="tc-num">0${i + 2}</span>
-      <div class="tc-row-main"><h4 class="tc-rh">${esc(p.headline || p.title)}</h4>${cardTagsHTML(p)}
-        <div class="tc-more"><div>${hasText(p.summary) ? `<p>${esc(p.summary)}</p>` : ''}${acts(p)}</div></div></div>
-    </article>`).join('');
+  const rows = rest.map(p => feedItemHTML(p, { topics: true, except: name })).join('');   // (as in Top Papers' side list)
   const total = o.total ?? items.length;   // what the card's list opens: read papers too
   const count = `${newN ? `${newN} new \u00b7 ` : ''}${total > shown.length ? `View all ${total}` : `${total} ${total === 1 ? 'paper' : 'papers'}`}`;
   return `<div class="topic-card" data-topic="${escAttr(name)}" style="--gc:${o.color}">
@@ -4074,7 +4061,7 @@ function watchChips(root) {
 }
 new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => { if (n.nodeType === 1) watchChips(n); }))).observe(document.documentElement, { childList: true, subtree: true });
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => document.querySelectorAll('.f-topics').forEach(fitChips));
-function feedMetaHTML(p, showRel, withTopics) {
+function feedMetaHTML(p, showRel, withTopics) {   // withTopics: true, or the topics to show
   const rel = dynamicRelevance(p), k = paperKey(p);
   const venue = hasText(p.venue) ? p.venue : '';
   return `<div class="f-meta">
@@ -4083,7 +4070,7 @@ function feedMetaHTML(p, showRel, withTopics) {
     ${venue ? venueLinkHTML(p, 'f-venue') : ''}
     ${displayDate(p) ? `<span class="f-date">${esc(displayDate(p))}</span>` : ''}
     ${starSet.has(k) ? '<span class="f-star" title="Starred">&#9733;</span>' : ''}
-    ${withTopics ? topicChipsHTML(p) : ''}
+    ${withTopics ? topicChipsHTML(p, Array.isArray(withTopics) ? withTopics : null) : ''}
   </div>`;
 }
 function feedActionsHTML(p, withSummaryBtn, labelled) {
@@ -4120,7 +4107,7 @@ function feedItemHTML(p, opts) {
     <div class="f-headline">${esc(p.headline||p.title)}</div>
     ${showTitle ? `<div class="f-title" title="${escAttr(p.title)}">${esc(p.title)}</div>` : ''}
     ${opts && opts.topics ? whyLineHTML(p, 'one') : ''}
-    ${feedMetaHTML(p, true, !!(opts && opts.topics))}
+    ${feedMetaHTML(p, true, opts && opts.topics ? gs.filter(g => g !== opts.except) : false)}
     <div class="f-actions"><div>${feedActionsHTML(p, true)}</div></div>
   </article>`;
 }
@@ -5458,7 +5445,7 @@ function topRowHTML(p, groups, o) {
    open, and on a paper x read, s star, l save to a list, r read its PDF. A paper's page: the same letters act on it, j/k
    step through the list it came from, o opens the paper's own page, u goes back. Search: f the filters, ↓ from the box
    to the results. The reader has its own (see its handler). The sheet (#keysHelp) is the one place they're written. */
-const KB_ROWS = '.cr-card[data-key], .top-lead[data-key], .top-row[data-key], .feed-item[data-key], .tc-feat[data-key], .tc-row[data-key], .lp-row[data-key], .v-row, #sec-library .interest-group-header';   // (Library's groups: Enter opens one, j goes on into it)
+const KB_ROWS = '.cr-card[data-key], .top-lead[data-key], .top-row[data-key], .feed-item[data-key], .tc-feat[data-key], .lp-row[data-key], .v-row, #sec-library .interest-group-header';   // (Library's groups: Enter opens one, j goes on into it)
 let _kbKey = null, _kbEl = null, _kbHinted = false, _kbG = 0;
 function kbRows() {
   let scopes = [];
@@ -5468,14 +5455,14 @@ function kbRows() {
   else if (['all', 'email'].includes(currentTab) && !document.body.classList.contains('tok-mode')) scopes = ['crStrip', 'papersContent'];   // Continue reading first, then the papers
   return scopes.flatMap(id => { const el = document.getElementById(id); return el ? [...el.querySelectorAll(KB_ROWS)] : []; }).filter(e => e.offsetParent !== null);
 }
-function kbSelect(el) {
+function kbSelect(el, instant) {
   document.querySelectorAll('.kb-sel').forEach(e => e.classList.remove('kb-sel'));
   _kbEl = el || null; _kbKey = el ? el.dataset.key || null : null;
   if (!el) return;
   if (el.tabIndex < 0) el.setAttribute('tabindex', '-1');
   el.classList.add('kb-sel');   // (its ring in any browser, whatever it makes of a scripted focus; it goes when focus does)
   el.focus({ preventScroll: true });
-  kbReveal(el);
+  kbReveal(el, instant);
 }
 /* the selection is the focused row: when focus moves on (Tab, a click), its ring goes with it */
 document.addEventListener('focusout', e => { if (e.target.classList && e.target.classList.contains('kb-sel')) e.target.classList.remove('kb-sel'); }, true);
@@ -5483,7 +5470,7 @@ document.addEventListener('focusout', e => { if (e.target.classList && e.target.
    section's) and of the screen's bottom edge, which the browser's own scrolling leaves it flush against. A row
    opens as it takes focus, so it's checked again once it has. */
 const KB_STICKY = '.pd-bar, .topic-jump, .v-toolbar, .lp-sec-h, .tl-section-head, .interest-group-header';
-function kbReveal(el) {
+function kbReveal(el, instant) {
   const ms = document.getElementById('mainScroll');
   const go = () => {
     if (!el.isConnected || !ms.contains(el) || (document.activeElement !== el && !el.contains(document.activeElement))) return;
@@ -5495,7 +5482,7 @@ function kbReveal(el) {
     });
     const bottom = box.bottom - 16;
     const dy = r.top < top ? r.top - top : r.bottom > bottom ? Math.min(r.bottom - bottom, r.top - top) : 0;
-    if (Math.abs(dy) > 1) ms.scrollBy({ top: dy, behavior: reduceMotion() ? 'auto' : 'smooth' });
+    if (Math.abs(dy) > 1) ms.scrollBy({ top: dy, behavior: instant || reduceMotion() ? 'auto' : 'smooth' });
   };
   requestAnimationFrame(go);
   setTimeout(go, 320);   // (after a row's drawer has opened: --t-slow)
@@ -5504,6 +5491,38 @@ function kbReveal(el) {
 let _kbTabAt = 0;
 document.addEventListener('keydown', e => { if (e.key === 'Tab') _kbTabAt = Date.now(); }, true);
 document.addEventListener('focusin', e => { if (Date.now() - _kbTabAt < 200 && e.target && e.target.closest && e.target.closest('#mainScroll')) kbReveal(e.target); });
+/* Back and Forward keep your place. Each view (by its address) remembers the row the keyboard is on, as focus moves:
+   a row reached by j/k or Tab is remembered, anything else (a click, the search box, the nav) forgets it. Coming back
+   to that address through history selects the row again, ring and all. Menus and dialogs over a view don't count.
+   Stepping papers with j/k on a paper's page moves the place in the list it came from (history.state.kbFrom), so
+   Back lands on the paper you were last reading. */
+const _kbSpot = new Map();
+let _kbTraversed = 0, _kbStepKey = false;
+const kbSpotId = r => r.dataset.key || r.getAttribute('title') || r.textContent.trim().slice(0, 80);
+document.addEventListener('focusin', e => {
+  const t = e.target;
+  if (!t || !t.closest || t === document.body || t.closest(KB_LAYERS + ', .reader')) return;
+  const row = t.closest(KB_ROWS);
+  if (row && (row.classList.contains('kb-sel') || t.matches(':focus-visible'))) {
+    const id = kbSpotId(row), same = [...document.querySelectorAll(KB_ROWS)].filter(r => r.offsetParent !== null && kbSpotId(r) === id);
+    _kbSpot.set(location.hash, { id, nth: Math.max(0, same.indexOf(row)) });
+  } else _kbSpot.delete(location.hash);
+});
+window.addEventListener('popstate', () => { _kbTraversed = Date.now(); });
+/* after a Back or Forward has drawn the view (and put its scroll back): the row, once it's there */
+function kbRestoreSoon(hash) {
+  const spot = _kbSpot.get(hash);
+  if (!spot) return;
+  let tries = 0;
+  const attempt = () => {
+    if (_appliedHash !== hash || document.querySelector('.reader.open') || kbTyping(document.activeElement)) return;   // (moved on since)
+    const same = [...document.querySelectorAll(KB_ROWS)].filter(r => r.offsetParent !== null && kbSpotId(r) === spot.id);
+    const row = same[spot.nth] || same[0];
+    if (row) kbSelect(row, true);
+    else if (++tries < 15) setTimeout(attempt, 80);   // (search results draw in steps)
+  };
+  requestAnimationFrame(() => setTimeout(attempt, 0));
+}
 const kbTyping = t => !!t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable);
 /* something Esc should close first (or whose own keys come first) */
 function kbOverlayOpen() { return !!(_chipPop || document.querySelector(POPOVERS + ', ' + KB_OPEN + ', .auth-overlay.open, .reader.open')); }   // (every menu and dialog: KB_OPEN)
@@ -5532,7 +5551,7 @@ document.addEventListener('keydown', e => {
   if (_paperViewActive) {
     const sel = { j: '.pd-nav-next', k: '.pd-nav-prev', x: '.pd-act[onclick^="toggleRead"]', s: '.pd-act[onclick^="toggleStar"]', l: '.save-anchor .pd-act', r: '.pd-read', o: '.pd-open' }[e.key];
     const b = sel && [...document.querySelectorAll('#paperDetail ' + sel)].find(x => x.offsetParent !== null);
-    if (b && !b.disabled) { e.preventDefault(); b.click(); }
+    if (b && !b.disabled) { e.preventDefault(); _kbStepKey = e.key === 'j' || e.key === 'k'; b.click(); _kbStepKey = false; }
     else if (e.key === 'u') { e.preventDefault(); paperBack(); }
     return;
   }
@@ -5602,7 +5621,7 @@ function kbRefocus(fromClick) {
     if (lost && _kbBack && _kbBack.isConnected && _kbBack.offsetParent !== null) _kbBack.focus({ preventScroll: true });
   }, 0);
 }
-document.addEventListener('keydown', e => { if (e.key === 'Escape') kbRefocus(); }, true);
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !(kbTyping(e.target) && !e.target.closest(KB_LAYERS))) kbRefocus(); }, true);   // (Esc leaving a text box on the page is meant: focus isn't put back in it)
 document.addEventListener('click', e => { if (e.target && e.target.closest && e.target.closest(KB_LAYERS)) kbRefocus(true); }, true);
 /* In a menu, Down and Up move through its choices (from the save menu's box into its lists, and back) */
 document.addEventListener('keydown', e => {
@@ -10651,7 +10670,13 @@ function captureNavList(fromEl) {
   _navList = keys.length > 1 ? { keys, label } : null;
 }
 /* Step to another paper without adding history, so Back still returns to the list */
-function goPaper(key) { if (key) location.replace(location.pathname + location.search + '#paper/' + encodeURIComponent(key)); }   // same document: a bare '#...' would resolve against <base>
+function goPaper(key) {
+  if (!key) return;
+  const st = history.state, from = st && st.kbFrom;
+  location.replace(location.pathname + location.search + '#paper/' + encodeURIComponent(key));   // same document: a bare '#...' would resolve against <base>
+  history.replaceState(st, '');   // (replace drops the entry's state: keep where it was opened from)
+  if (from != null && (_kbStepKey || _kbSpot.has(from))) _kbSpot.set(from, { id: key, nth: 0 });   // Back selects this paper in that list
+}
 function openPaper(id, event) {
   if (event && event.target) captureNavList(event.target);
   const paperId = encodeURIComponent(id);
@@ -10659,7 +10684,9 @@ function openPaper(id, event) {
     window.open(APP_ROOT + 'p/' + paperId + '/#paper/' + paperId, '_blank');
     return;
   }
+  const from = location.hash;
   location.hash = '#paper/' + paperId;
+  history.replaceState({ ...(history.state || {}), kbFrom: from }, '');   // (where it was opened from: see _kbSpot)
 }
 
 let _savedScrollTop = 0;
@@ -10974,6 +11001,7 @@ function applyHash() {
   if (!SHOW_EMAIL_TAB && (/^#(email|latest)$/.test(location.hash) || location.hash.startsWith('#alert/'))) history.replaceState(null, '', location.pathname + location.search + '#all');
   syncAddress();
   _appliedHash = location.hash;
+  if (Date.now() - _kbTraversed < 500) kbRestoreSoon(location.hash);   // Back/Forward: the keyboard's place there (KEYBOARD)
   const hash = location.hash.slice(1); // remove '#'
 
   // PDF reader sits over whatever was on screen
