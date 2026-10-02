@@ -2220,6 +2220,14 @@ body.tok-mode .tok-bar { flex-wrap: wrap; row-gap: 8px; }
   body:has(.save-bar.visible) .toast:not(.show) { transform: translateX(-50%) translateY(calc(100% + 80px + env(safe-area-inset-bottom, 0px))); }
 }
 
+/* a row whose save menu is open stays open under it: focus moving into the menu would otherwise close its drawer, and
+   the page shifting under it closed the menu */
+@media (hover: hover) {
+  .feed-item.menu-open .f-actions { grid-template-rows: 1fr; opacity: 1; margin-top: 12px; }
+  .top-row.menu-open .tr-actions { grid-template-rows: 1fr; opacity: 1; margin-top: 10px; }
+  .lp-row.menu-open .lp-more { grid-template-rows: 1fr; opacity: 1; }
+}
+
 /* ===== HOVER SHOWS EVERYTHING (the script: fullOpen) =====
    .opened-all on a paper: text it cut short (an ellipsis, a line limit) shows whole; .shows-all: the parts the Top Papers lead
    dropped to fit the window come back. The script grows each part from its cut height to its full one and back. */
@@ -4279,7 +4287,9 @@ function openSaveDD(btn, key) {
   dd.style.top = (rect.bottom + 4) + 'px';
   dd.style.left = (rect.right - 210) + 'px';
   document.body.appendChild(dd);
-  _activeSaveDD = { el: dd, key };
+  const row = btn && btn.closest ? btn.closest(KB_ROWS) : null;
+  if (row) row.classList.add('menu-open');   // its drawer stays open under its menu (see .menu-open)
+  _activeSaveDD = { el: dd, key, row };
   const input = dd.querySelector('.save-dd-input');
   input.focus();
   input.addEventListener('keydown', e => {
@@ -4328,7 +4338,7 @@ function updateListIcon(key) {
   if (btn) { btn.style.color = inAny ? 'var(--list)' : ''; btn.classList.toggle('done', inAny); }
 }
 function closeSaveDD() {
-  if (_activeSaveDD) { _activeSaveDD.el.remove(); _activeSaveDD = null; }
+  if (_activeSaveDD) { _activeSaveDD.el.remove(); if (_activeSaveDD.row) _activeSaveDD.row.classList.remove('menu-open'); _activeSaveDD = null; }
 }
 document.addEventListener('click', () => { closeSaveDD(); closeAbsPopup(); closeVenueTooltip(); closeRelevancePopup(); });
 document.getElementById('mainScroll').addEventListener('scroll', () => { closeSaveDD(); closeAbsPopup(); closeVenueTooltip(); closeRelevancePopup(); }, { passive: true });
@@ -5549,6 +5559,8 @@ function kbRestoreSoon(hash) {
   requestAnimationFrame(() => setTimeout(attempt, 0));
 }
 const kbTyping = t => !!t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable);
+/* something that opens a view (a link, a venue, a topic's title, a section's header), for o: never a toggle or an action */
+const kbOpener = t => !!t && t.matches && (t.matches('a[href], [role="link"]') || /\b(open(Paper|Reader|Group|Venue|Interest|TopList|LatestDigest|SearchHere)|switchTab|switchIGTab|goPaper|showInProgress)\(/.test(t.getAttribute('onclick') || ''));
 /* something Esc should close first (or whose own keys come first) */
 function kbOverlayOpen() { return !!(_chipPop || document.querySelector(POPOVERS + ', ' + KB_OPEN + ', .auth-overlay.open, .reader.open')); }   // (every menu and dialog: KB_OPEN)
 function kbGoTab(tab) { const b = document.querySelector(`.nav-tab[data-tab="${tab}"]`); if (b && !b.hidden) b.click(); }
@@ -5574,6 +5586,19 @@ document.addEventListener('keydown', e => {
   if (e.key === '/') { e.preventDefault(); openSearchHere(); return; }
   // a paper's page: its buttons, by their letters (those hidden here, like a visitor's, do nothing)
   if (_paperViewActive) {
+    const rel = t && t.closest ? t.closest('#paperDetail ' + KB_ROWS.split(', ').join(', #paperDetail ')) : null;   // a related paper with focus (or something in it)
+    if (rel && rel.dataset.key && ['o', 'x', 's', 'l', 'r'].includes(e.key)) {
+      const k = rel.dataset.key;
+      if (['x', 's', 'l'].includes(e.key) && !isOwner()) return;
+      e.preventDefault();
+      if (e.key === 'o') openPaper(k, { target: rel });
+      else if (e.key === 'r') openReader(k);
+      else if (e.key === 'x') toggleRead(k, null);
+      else if (e.key === 's') toggleStar(k, null);
+      else openSaveDD([...rel.querySelectorAll('[onclick*="openSaveDD"]')].find(x => x.offsetParent !== null) || rel, k);
+      return;
+    }
+    if (e.key === 'o' && !rel && kbOpener(t) && !t.matches('.pd-open')) { e.preventDefault(); t.click(); return; }   // a topic, a venue, an interest: what it opens
     const sel = { j: '.pd-nav-next', k: '.pd-nav-prev', x: '.pd-act[onclick^="toggleRead"]', s: '.pd-act[onclick^="toggleStar"]', l: '.save-anchor .pd-act', r: '.pd-read', o: '.pd-open' }[e.key];
     const b = sel && [...document.querySelectorAll('#paperDetail ' + sel)].find(x => x.offsetParent !== null);
     if (b && !b.disabled) { e.preventDefault(); _kbStepKey = e.key === 'j' || e.key === 'k'; b.click(); _kbStepKey = false; }
@@ -5599,7 +5624,7 @@ document.addEventListener('keydown', e => {
     return;
   }
   if (!focusRow) {   // o on something that opens a view (a topic's title, a section's header, a link): as a click
-    if (e.key === 'o' && t && t.matches && t.matches('[onclick], a[href]') && !kbTyping(t)) { e.preventDefault(); t.click(); }
+    if (e.key === 'o' && kbOpener(t)) { e.preventDefault(); t.click(); }
     return;
   }
   const row = focusRow, key = row.dataset.key || null, i = rows.indexOf(row);
@@ -10843,7 +10868,7 @@ function renderPaperDetail(p) {
   const rel = dynamicRelevance(p);
   const v = venueOf(p);
   const why = parseWhy(p);
-  const again = `renderPaperDetail(allPapers.find(pp=>paperKey(pp)==='${ka}'))`;
+  const again = `renderPaperDetail(allPapers.find(pp=>paperKey(pp)==='${ka}')||_hiddenPapers.find(pp=>paperKey(pp)==='${ka}'))`;   // (hidden, it's in _hiddenPapers)
   const showBack = history.length > 1;
   // previous / next within the list this paper was opened from
   const nav = _navList && _navList.keys.includes(k) ? _navList : null;
