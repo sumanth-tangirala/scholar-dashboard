@@ -1,1 +1,14 @@
 .github_token
+
+# Scratch from digest and survey runs (they recreate it; the results live in the CSVs)
+.digest_tmp/
+*.bak
+*.remote
+*.predupe
+
+# Other tools' folders and local test output (.playwright-mcp also holds unrelated personal files)
+.agents/
+.codex/
+AGENTS.md
+.playwright-mcp/
+toast-error.png
