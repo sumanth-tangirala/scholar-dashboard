@@ -2140,8 +2140,15 @@ body.tok-mode .tok-bar { flex-wrap: wrap; row-gap: 8px; }
 .btn-icon.has-notes { color: var(--accent); }
 .btn-triage-info { color: var(--text-muted); }
 .triage-anchor { display: inline-flex; }
-.relevance-popup { position: fixed; z-index: 200; width: 360px; max-height: 70vh; overflow-y: auto; animation: dropdown-in 0.15s ease forwards; pointer-events: auto; }
-.relevance-breakdown { background: var(--bg-surface); border: 1px solid rgba(255,255,255,0.18); border-radius: 10px; padding: 16px 18px; box-shadow: 0 12px 36px rgba(0,0,0,0.6); }
+/* The score breakdown is one framed panel. Where there's no room for all of it (showRelevancePopup) the panel is made
+   shorter and its content scrolls inside the frame, which stays whole; a fade at an edge says there's more that way,
+   and reaching the end doesn't carry on into the page (scrolling the page closes it). */
+.relevance-popup { position: fixed; z-index: 200; width: 360px; max-height: calc(100vh - 16px); display: flex; flex-direction: column; overflow: hidden; background: var(--bg-surface); border: 1px solid rgba(255,255,255,0.18); border-radius: 10px; box-shadow: 0 12px 36px rgba(0,0,0,0.6); animation: dropdown-in 0.15s ease forwards; pointer-events: auto; }
+.relevance-breakdown { flex: 1 1 auto; min-height: 0; padding: 16px 18px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 var(--rail-up), #000 calc(100% - var(--rail-down)), transparent); mask-image: linear-gradient(to bottom, transparent, #000 var(--rail-up), #000 calc(100% - var(--rail-down)), transparent); transition: --rail-up 0.2s var(--ease), --rail-down 0.2s var(--ease); }
+.relevance-breakdown.more-up { --rail-up: 28px; }
+.relevance-breakdown.more-down { --rail-down: 36px; }
+@media (prefers-reduced-motion: reduce) { .relevance-breakdown { transition: none; } }
 .relevance-score-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
 .relevance-score-val { font-size: 28px; font-weight: 700; line-height: 1; }
 .relevance-score-val.sc-3 { color: var(--green); }
@@ -3762,8 +3769,9 @@ document.addEventListener('scroll', () => closeTokMenu(), true);
 /* ===== MENUS AND PICKERS: a tap outside only closes them =====
    While one is open, a tap anywhere else closes it and does nothing more: it never also opens the paper, presses
    the button or starts the swipe underneath (as on iOS). Scrolling outside still closes it and scrolls. Short-lived
-   hints (the venue tooltip) don't count. */
-const POPOVERS = '#tokMenu.open, #readerMenu.open, .save-dd, .copy-dd, .interest-dropdown, .abs-popup, .relevance-popup, #chatHist, .sf-box.sugg-open, .sf-box.guide-open, #sfSheet.open';
+   hints don't count: the venue tooltip, and the score breakdown while it's only hovered (counted, a click on its (i)
+   closed it instead of keeping it open). */
+const POPOVERS = '#tokMenu.open, #readerMenu.open, .save-dd, .copy-dd, .interest-dropdown, .abs-popup, .relevance-popup[data-pinned], #chatHist, .sf-box.sugg-open, .sf-box.guide-open, #sfSheet.open';
 let _dismissTap = null;
 function closePopovers() {
   closeTokMenu(); toggleReaderMenu(false); closeSaveDD(); closeCopyDD(); closeInterestDD(); closeAbsPopup(); closeRelevancePopup(); sfSuggClose(); sfGuide(false); sfSheet(false);
@@ -11002,6 +11010,7 @@ let _relPopupTimer = null;
 function showRelevancePopup(anchor, key, pinned) {
   // touch screens fire a fake hover on tap; there the tap (toggleRelevancePopup) is the only way in
   if (!pinned && !window.matchMedia('(hover: hover)').matches) return;
+  if (!pinned && document.querySelector('.relevance-popup[data-pinned]')) return;   // one kept open by a click stays as it is (a hover replacing it made the next click open it again, not close it)
   clearTimeout(_relPopupTimer);
   closeRelevancePopup();
   const p = allPapers.find(pp => paperKey(pp) === key);
@@ -11022,19 +11031,29 @@ function showRelevancePopup(anchor, key, pinned) {
   popup.addEventListener('mouseleave', () => { if (!popup.dataset.pinned) _relPopupTimer = setTimeout(() => popup.remove(), 150); });
   popup.addEventListener('click', e => e.stopPropagation());
   document.body.appendChild(popup);
-  // Below if it fits, else above if it fits, else the roomier side, shortened to fit (it scrolls inside).
-  // Never over the (i) button itself, or the next click would land on the pop-up instead.
-  const h = popup.getBoundingClientRect().height;
-  const below = window.innerHeight - rect.bottom - 16, above = rect.top - 16;
-  if (h > below) {
-    if (h <= above || above > below) {
-      const fit = Math.min(h, above);
-      popup.style.maxHeight = fit + 'px';
-      popup.style.top = (rect.top - 8 - fit) + 'px';
-    } else {
-      popup.style.maxHeight = below + 'px';
-    }
+  // All of it, wherever that fits: below the (i), else above it, else beside it (on a wide screen there's room at its
+  // side even when neither above nor below is tall enough): to its right, so the rating it explains stays in view,
+  // else to its left. Only when none has room is it shortened, on the roomier of below and above, its content
+  // scrolling inside the frame. Never over the (i) itself, or the next click would land on the pop-up instead.
+  const M = 8, G = 8;   // (kept from the window's edges; the gap to the button)
+  const vw = window.innerWidth, vh = window.innerHeight;
+  popup.style.maxHeight = (vh - 2 * M) + 'px';   // never taller than the window as it is now (100vh can be more, with Safari's bars showing)
+  const h = popup.offsetHeight;
+  const below = vh - rect.bottom - G - M, above = rect.top - G - M;
+  const sideLeft = rect.left - G - w >= M, sideRight = rect.right + G + w <= vw - M;
+  if (h <= below) { /* as placed */ }
+  else if (h <= above) popup.style.top = (rect.top - G - h) + 'px';
+  else if (sideLeft || sideRight) {
+    popup.style.left = (sideRight ? rect.right + G : rect.left - G - w) + 'px';
+    popup.style.top = Math.max(M, Math.min(rect.top - 12, vh - M - h)) + 'px';   // level with the (i) where it fits, else moved up into the window
+  } else {
+    const up = above > below, fit = Math.max(120, up ? above : below);
+    popup.style.maxHeight = fit + 'px';
+    popup.style.top = (up ? rect.top - G - fit : rect.bottom + G) + 'px';
   }
+  const body = popup.firstElementChild;   // more above or below what shows: a fade at that edge
+  const fade = () => { body.classList.toggle('more-up', body.scrollTop > 2); body.classList.toggle('more-down', body.scrollTop + body.clientHeight < body.scrollHeight - 2); };
+  body.addEventListener('scroll', fade, { passive: true }); fade();
   const btn = anchor.querySelector('button');
   if (btn) btn.setAttribute('aria-expanded', 'true');
 }
