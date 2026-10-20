@@ -155,6 +155,21 @@ html.ro .interest-actions, html.ro .group-drag-handle, html.ro .tt-line,
 html.ro #readerNotesBtn, html.ro #readerPanel, html.ro #rpResize, html.ro #selBar, html.ro .reader-change, html.ro .anno-mark,
 html.ro #vaultOverlay { display: none !important; }
 .nav-refresh.spinning svg { animation: spin 0.7s linear infinite; }
+/* OFFLINE: the nav says so (tap it for what still works); rows mark the papers whose PDF is on this device */
+.nav-offline { display: none; align-items: center; gap: 6px; flex-shrink: 0; height: 28px; padding: 0 11px 0 9px; border-radius: 14px; border: 1px solid var(--border); background: none; color: var(--text-muted); font: inherit; font-size: 12.5px; cursor: pointer; transition: background var(--t-fast), color var(--t-fast); }
+.nav-offline:hover { background: rgba(255,255,255,0.08); color: var(--text); }
+.nav-offline svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+html.offline .nav-offline { display: inline-flex; margin-left: auto; }
+html.offline .nav-search-toggle { margin-left: 6px; }
+@media (max-width: 600px) {   /* a phone's bar has no room for one more: the status takes Refresh's place (there's nothing to fetch offline) */
+  .nav-offline { width: 36px; height: 36px; padding: 0; justify-content: center; border: none; } .nav-offline span { display: none; }
+  html.offline #navRefresh, html.offline .nav-key { display: none; }   /* (signing in needs a connection too) */
+  html.offline .nav-search-toggle { margin-left: auto; }
+  html.offline .nav-offline { order: 1; margin-left: -8px; }
+}
+.off-mark { display: none; color: var(--text-secondary); }
+html.offline .off-mark { display: inline-flex; }
+.off-mark svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 @media (max-width: 600px) { html.ro #navRefresh { display: none; } }
 @media (max-width: 600px) and (display-mode: standalone) { html.ro #navRefresh { display: inline-flex; } }
 
@@ -600,6 +615,12 @@ html.no-hover .pd-topic-chip:hover:not(:active) { background: rgba(255,255,255,0
 .pd-act.on-star { color: var(--star); }
 .pd-act.on-read { color: var(--green); }
 .pd-act.on-list { color: var(--list); }
+.pd-act.on-dl { color: var(--text); }   /* device state, not the paper's: brighter, no colour of its own */
+.pd-dl svg, .btn-dl svg, .dl-all svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+.dl-ring .dl-ring-bg { opacity: 0.22; }
+.dl-ring .dl-ring-fg { transform: rotate(-90deg); transform-origin: 50% 50%; transition: stroke-dashoffset 0.12s linear; }
+.dl-ring.spin { animation: spin 1s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .dl-ring.spin { animation: none; } .dl-ring .dl-ring-fg { transition: none; } }
 .pd-open { display: inline-flex; align-items: center; gap: 7px; margin-left: 8px; padding: 8px 15px; border-radius: 999px; background: var(--accent); color: #1a1406; font-size: 13.5px; font-weight: 600; text-decoration: none; white-space: nowrap; transition: background 0.15s, transform 0.15s; }
 .pd-open:hover { background: #ffc261; transform: translateY(-1px); }
 .pd-open svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
@@ -918,6 +939,8 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .reader-menu > * { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 12px; border: none; border-radius: 7px; background: none; color: var(--text); font: inherit; font-size: 13.5px; text-align: left; text-decoration: none; white-space: nowrap; cursor: pointer; transition: background var(--t-fast); }
 .reader-menu > *:hover { background: rgba(255,255,255,0.07); }
 .reader-menu span { color: var(--text-muted); }
+.reader-menu > [hidden] { display: none; }
+.off-view .ui-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
 #readerNotesBtn { border-color: transparent; }
 #readerNotesBtn[aria-pressed="true"] { background: rgba(251,177,60,0.14); border-color: transparent; }
 .reader-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 32px; height: 32px; padding: 0 8px; background: none; border: 1px solid transparent; border-radius: 8px; color: var(--text-secondary); font: inherit; font-size: 15px; cursor: pointer; text-decoration: none; transition: background 0.15s, color 0.15s, border-color 0.15s; }
@@ -2046,6 +2069,20 @@ body.tok-mode .tok-bar { flex-wrap: wrap; row-gap: 8px; }
 @media (max-width: 600px) { .la-row { flex-wrap: wrap; } .la-input { flex-basis: 100%; } }
 @media (prefers-reduced-motion: reduce) { .lib-add { animation: none; } .la-spin { animation: none; } }
 .library-list-empty { padding: 20px; text-align: center; color: var(--text-muted); font-size: 13px; font-style: italic; }
+/* Library → Downloaded */
+.lib-icon svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.lib-meta { margin-left: auto; font-size: 13px; font-weight: 400; color: var(--text-muted); white-space: nowrap; }
+.interest-group-header .lib-meta ~ .chevron { margin-left: 8px; }
+.library-actions button.dl-all[hidden] { display: none; }
+.library-actions button.dl-all:disabled { cursor: default; opacity: 1; }
+.off-sets { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; padding: 14px 20px 12px; font-size: 13px; color: var(--text-secondary); border-bottom: 1px solid var(--border); }
+.off-sets-lead { color: var(--text-muted); }
+@media (max-width: 600px) { .off-sets { padding: 12px 16px; } .off-sets-lead { flex-basis: 100%; } }
+.off-set { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; }
+.off-set input { width: 15px; height: 15px; margin: 0; accent-color: var(--accent); cursor: pointer; }
+.off-clear { margin-left: auto; background: none; border: none; padding: 0 2px; border-radius: 4px; line-height: inherit; color: var(--text-muted); font: inherit; cursor: pointer; transition: color var(--t-fast); }
+.off-clear:hover { color: #f28b82; }
+.tr-dl-line { white-space: nowrap; }
 
 /* [12] COPY-TO DROPDOWN (library) — animated entrance */
 @keyframes dropdown-in { 0% { opacity: 0; transform: translateY(-4px); } 100% { opacity: 1; transform: translateY(0); } }
@@ -2324,6 +2361,7 @@ html.no-hover .sel-icon:not(.on):active, html.no-hover .ink-bar .ink-size:not(.o
       <button class="nav-tab" data-tab="library" onclick="switchTab('library')">Library</button>
       <button class="nav-tab" data-tab="interests" onclick="switchTab('interests')">Interests <span class="tab-badge" id="interestsBadge" style="display:none">0</span></button>
     </div>
+    <button class="nav-offline" onclick="offExplain()" title="You’re offline: what still works" aria-label="Offline: what still works"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18h10.5a4 4 0 0 0 .9-7.9A6 6 0 0 0 7.1 8.6 4.8 4.8 0 0 0 7 18z"/><path d="M4 4l16 16"/></svg><span>Offline</span></button>
     <button class="nav-search-toggle" id="navSearchToggle" onclick="openSearchHere()" aria-label="Search" title="Search (/)"><svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg></button>
     <button class="nav-refresh nav-keys" id="navKeys" onclick="toggleKeysHelp(true)" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2.5"/><path d="M6.5 10h.01M10 10h.01M14 10h.01M17.5 10h.01M8 14h8"/></svg></button>
     <button class="nav-refresh nav-key" id="navKey" onclick="connectGitHub()" title="Sign in" aria-label="Sign in"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2 20 3M16 7l3 3M18 5l2 2"/></svg></button>
@@ -2514,6 +2552,7 @@ html.no-hover .sel-icon:not(.on):active, html.no-hover .ink-bar .ink-size:not(.o
       <span class="rt-more-wrap">
         <button class="reader-btn rt-more" id="readerMore" onclick="toggleReaderMenu()" title="More" aria-label="More" aria-haspopup="menu" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
         <span class="reader-menu" id="readerMenu" role="menu">
+          <button class="reader-dl" id="readerDl" role="menuitem" data-off="" hidden onclick="toggleReaderMenu(false); offToggle(this.dataset.off)"></button>
           <button class="reader-change" role="menuitem" onclick="toggleReaderMenu(false); openPdfChange()">Use a different PDF…</button>
           <a id="readerExternal" role="menuitem" target="_blank" rel="noopener" onclick="toggleReaderMenu(false)">Open the PDF in a new tab <span aria-hidden="true">&#8599;</span></a>
         </span>
@@ -3012,6 +3051,7 @@ function applyPapers(rows, text) {
   splitHidden();
   bootstrapStateFromCSV();
   updateLibraryBadge();
+  offSchedule();
 }
 /* Swapping data under someone mid-scroll or mid-read is jarring; only do it quietly at the top */
 function quietSwapOK() {
@@ -4394,6 +4434,7 @@ function unhidePaper(k) {
 }
 
 function refresh() {
+  offSchedule();   // a star, a list or a hidden paper may change what this device keeps offline
   // A list page stays live (a paper marked read leaves it, stars show); the page underneath redraws on the way back
   if (_listViewActive) { renderSearch(); return; }
   if (_tokLock) return;  // a phone-feed action already updated its own card
@@ -4507,8 +4548,8 @@ function groupsOfPaper(p) {
 }
 
 /* Rows with the reading rail, used by Library and search */
-function paperListHTML(papers) {
-  return `<div class="paper-list flat"><section class="tl-section">${papers.map(p => topRowHTML(p, groupsOfPaper(p))).join('')}</section></div>`;
+function paperListHTML(papers, o) {
+  return `<div class="paper-list flat"><section class="tl-section">${papers.map(p => topRowHTML(p, groupsOfPaper(p), o)).join('')}</section></div>`;
 }
 
 /* ===== SEARCH: one page to find and browse papers =====
@@ -5407,7 +5448,7 @@ function listRowHTML(p, n, m) {
     <div class="lp-row-main">
       <h3 class="lp-h">${esc(p.title || p.headline)}</h3>
       ${why ? `<div class="why-line one"><b>Why</b><span title="${escAttr(why)}">${esc(why)}</span></div>` : ''}
-      <div class="lp-meta">${starSet.has(k) ? '<span class="lp-star" title="Starred">&#9733;</span>' : ''}${cardTagsHTML(p, m.kind === 'venue')}${authors ? `<span class="lp-auth" title="${escAttr(p.authors)}">${esc(authors)}</span>` : ''}${others.length ? `<span class="lp-also">${others.map(g => `<span>${gdot(g)}${esc(g)}</span>`).join('')}</span>` : ''}</div>
+      <div class="lp-meta">${offMarkHTML(p, 'lp-dl')}${starSet.has(k) ? '<span class="lp-star" title="Starred">&#9733;</span>' : ''}${cardTagsHTML(p, m.kind === 'venue')}${authors ? `<span class="lp-auth" title="${escAttr(p.authors)}">${esc(authors)}</span>` : ''}${others.length ? `<span class="lp-also">${others.map(g => `<span>${gdot(g)}${esc(g)}</span>`).join('')}</span>` : ''}</div>
       <div class="lp-more"><div></div></div>
     </div>
   </article>`;
@@ -5473,11 +5514,12 @@ function topRowHTML(p, groups, o) {
       </div>
     </div>
     <div class="tr-side">
-      <span class="tr-venue-line">${starSet.has(k) ? '<span class="tr-star" title="Starred">&#9733;</span>' : ''}${venue && !o.hideVenue ? venueLinkHTML(p, 'tr-venue') : ''}</span>
-      <span>${isNewSinceVisit(p) ? '<span class="f-new">New</span> ' : ''}${esc(o.hideVenue ? (paperDate(p) || venueOf(p).year || '') : displayDate(p))}</span>
+      <span class="tr-venue-line">${o.offline ? '' : offMarkHTML(p, 'tr-dl')}${starSet.has(k) ? '<span class="tr-star" title="Starred">&#9733;</span>' : ''}${venue && !o.hideVenue ? venueLinkHTML(p, 'tr-venue') : ''}</span>
+      ${o.offline ? `<span class="tr-dl-line">${esc([fmtBytes((Off.meta.get(p.id) || {}).size || 0), OFF_WHY_SHORT[offReason(p)] || ''].filter(Boolean).join(' \u00b7 '))}</span>`
+        : `<span>${isNewSinceVisit(p) ? '<span class="f-new">New</span> ' : ''}${esc(o.hideVenue ? (paperDate(p) || venueOf(p).year || '') : displayDate(p))}</span>`}
     </div>
     <div class="tr-actions"><div>
-      <div class="p-action-row">${summaryBtn(p)} ${absBtn(p)} ${linkBtn(p)} ${whyBtn(p)} <span class="p-actions has-active">${starBtn(p)} ${readBtn(p)} ${saveBtn(p)} ${deleteBtn(p)}</span></div>
+      <div class="p-action-row">${summaryBtn(p)} ${absBtn(p)} ${linkBtn(p)} ${whyBtn(p)} <span class="p-actions has-active">${starBtn(p)} ${readBtn(p)} ${saveBtn(p)} ${o.offline ? `<button class="btn-icon btn-dl" data-off="${escAttr(p.id)}" onclick="event.preventDefault();event.stopPropagation();offForget('${escAttr(p.id)}')"></button>` : ''} ${deleteBtn(p)}</span></div>
       <div class="p-detail-panel" data-summary="${hasSummary?dataAttr(p.summary):''}" data-abstract="${hasAbstract?dataAttr(p.abstract):''}"></div>
     </div></div>
   </article>`;
@@ -5765,6 +5807,7 @@ function toggleLibGroup(headerEl, key) {
 /* Collapsed lists ("All" has ~1,000 papers) render their rows only when opened */
 let _libPapers = {};
 function libBodyHTML(papers, key) {
+  if (key === 'offline') return offBodyHTML(papers);
   if (key === 'review') return `<div class="paper-list flat"><section class="tl-section">${papers.map(uploadRowHTML).join('')}</section></div>`;
   return papers.length ? paperListHTML(papers) : '<div class="library-list-empty">No papers in this list</div>';
 }
@@ -5913,20 +5956,22 @@ function renderLibrary() {
         <button class="lib-sort-dir" onclick="setListSort(null, '${dir === 'asc' ? 'desc' : 'asc'}')" title="Reverse the order" aria-label="Order: ${dirLabel}. Reverse it">${dirLabel}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16M3 16l4 4 4-4M17 20V4M13 8l4-4 4 4"/></svg></button></div>`;
       mine.forEach(name => {
         const papers = allPapers.filter(p => libraryLists[name].includes(paperKey(p)));
-        const actions = `<span class="library-actions" onclick="event.stopPropagation()"><button class="lib-ico" onclick="renameList('${escAttr(name)}')" title="Rename" aria-label="Rename ${escAttr(name)}">${ICON_EDIT}</button><button class="lib-ico" onclick="showCopyDD(this,'${escAttr(name)}')" title="Copy its papers to another list" aria-label="Copy ${escAttr(name)} to another list">${ICON_COPY}</button><button class="lib-ico danger" onclick="deleteList('${escAttr(name)}')" title="Delete list (the papers stay)" aria-label="Delete ${escAttr(name)}">${ICON_TRASH}</button></span>`;
+        const actions = `<span class="library-actions" onclick="event.stopPropagation()">${offGroupBtnHTML('list-' + name)}<button class="lib-ico" onclick="renameList('${escAttr(name)}')" title="Rename" aria-label="Rename ${escAttr(name)}">${ICON_EDIT}</button><button class="lib-ico" onclick="showCopyDD(this,'${escAttr(name)}')" title="Copy its papers to another list" aria-label="Copy ${escAttr(name)} to another list">${ICON_COPY}</button><button class="lib-ico danger" onclick="deleteList('${escAttr(name)}')" title="Delete list (the papers stay)" aria-label="Delete ${escAttr(name)}">${ICON_TRASH}</button></span>`;
         own += libGroupHTML('list-' + name, '&#9776;', name, papers, actions);
       });
       own += '<hr class="lib-divider">';
     }
     html = own + html;
+    const dlAll = key => offSupported() ? `<span class="library-actions" onclick="event.stopPropagation()">${offGroupBtnHTML(key)}</span>` : '';
+    if (offSupported()) html += offGroupHTML();
     const reading = continueReadingList(true, true).map(x => x.p);
-    if (reading.length) html += libGroupHTML('progress', '&#9656;', 'In progress', reading);
+    if (reading.length) html += libGroupHTML('progress', '&#9656;', 'In progress', reading, dlAll('progress'));
     const mineAdded = allPapers.filter(p => /\bmanual\b/.test(p.source_mode || '')).sort((x, y) => (y.date_found || '').localeCompare(x.date_found || ''));   // + Add paper / /add-paper, newest first
-    if (mineAdded.length) html += libGroupHTML('manual', '&#43;', 'Added by you', mineAdded);
-    if (starred.length) html += libGroupHTML('starred', '&#9733;', 'Starred', starred);
-    if (noted.length) html += libGroupHTML('noted', '&#9998;', 'Notes & highlights', noted);
+    if (mineAdded.length) html += libGroupHTML('manual', '&#43;', 'Added by you', mineAdded, dlAll('manual'));
+    if (starred.length) html += libGroupHTML('starred', '&#9733;', 'Starred', starred, dlAll('starred'));
+    if (noted.length) html += libGroupHTML('noted', '&#9998;', 'Notes & highlights', noted, dlAll('noted'));
     else if (isOwner() && !Vault.key && vaultSupported() && Vault.meta) html += `<div class="lib-hint"><strong>Notes &amp; highlights</strong> are encrypted. <button class="lib-hint-btn" onclick="vaultReady().then(ok => ok && renderLibrary())">Unlock notes</button> to list the papers you annotated.</div>`;
-    if (read.length) html += libGroupHTML('read', '&#10003;', 'Read', read);
+    if (read.length) html += libGroupHTML('read', '&#10003;', 'Read', read, dlAll('read'));
     if (isOwner() && _hiddenPapers.length) html += libGroupHTML('hidden', '&#8856;', 'Hidden', sortPapers(_hiddenPapers.slice()));
     const MON = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
     function pubDateVal(p) {
@@ -5945,6 +5990,7 @@ function renderLibrary() {
     html += libGroupHTML('all', '&#9636;', 'All papers', allSorted);
   }
   document.getElementById('libraryContent').innerHTML = html;
+  offPaint();
 }
 
 /* Library list management */
@@ -6659,6 +6705,8 @@ function updateSyncStatus() {
   let last = null; try { last = parseInt(localStorage.getItem(LAST_SAVED_KEY)) || null; } catch (e) {}
   if (!hasPAT()) {
     el.innerHTML = `<span class="sync-dot off"></span>Changes stay in this browser until you push <button class="sync-btn" onclick="connectGitHub()">Connect GitHub</button>`;
+  } else if (!navigator.onLine) {
+    el.innerHTML = `<span class="sync-dot off"></span>Offline \u00b7 changes are kept here and saved when you\u2019re back`;
   } else if (_pushing || (anyDirty() && _autoPushTimer)) {
     el.innerHTML = `<span class="sync-dot busy"></span>Saving to GitHub\u2026`;
   } else if (anyDirty()) {
@@ -6842,12 +6890,12 @@ async function pushToGitHub(auto) {
    PDF.js (loaded on first use from jsDelivr) draws each page on a canvas, with a transparent text
    layer so text can be selected and found. Where the PDF comes from, in order: a file you dropped
    in on this device (IndexedDB), the paper's pdf_url, or its arXiv PDF. */
-const PDFJS_VER = '4.10.38';
+const PDFJS_VER = '4.10.38', PDFJS_BASE = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${PDFJS_VER}/build/`;
 const READER_POS_KEY = 'scholar_reader_pos_v1', READER_DARK_KEY = 'scholar_reader_dark';
 let _pdfjs = null;
 async function loadPdfJs() {
   if (_pdfjs) return _pdfjs;
-  const base = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${PDFJS_VER}/build/`;
+  const base = PDFJS_BASE;
   const lib = await import(base + 'pdf.min.mjs');
   // a worker can't be started from another origin, so start it from a same-origin blob of the script
   const src = await (await fetch(base + 'pdf.worker.min.mjs')).text();
@@ -6884,8 +6932,401 @@ function pdfStore(mode, fn) {
   });
 }
 const localPdfGet = id => pdfStore('readonly', st => st.get(id)).catch(() => null);
-const localPdfPut = (id, blob) => pdfStore('readwrite', st => st.put(blob, id));
-const localPdfDel = id => pdfStore('readwrite', st => st.delete(id));
+const localPdfPut = (id, blob) => pdfStore('readwrite', st => st.put(blob, id)).then(r => { Off.own.add(id); return r; });
+const localPdfDel = id => pdfStore('readwrite', st => st.delete(id)).then(r => { Off.own.delete(id); return r; });
+
+/* ===== OFFLINE =====
+   The app opens without a connection: sw.js keeps the page, the data and the libraries it uses (registered below).
+   PDFs are kept per device, in IndexedDB 'scholar_offline' ('pdfs' the files, 'meta' each one's link, size and date),
+   for one of two reasons:
+   - you downloaded it: Download on its page, in the reader's menu, or a Library group's Download all;
+   - it's in a set this device keeps by itself: Starred, your lists, In progress (Library → Downloaded turns each off).
+   A copy a set keeps follows the set: unstar a paper and its copy goes, unless you downloaded it yourself. Removing a
+   copy a set keeps makes this device skip that paper until it leaves the set. Copies come and go only while online,
+   one at a time; offline nothing goes by itself. A PDF you dropped in for a paper (scholar_pdfs) is yours and
+   separate: that paper needs no download. The choices live in this browser (OFF_KEY): each device keeps its own. */
+const OFF_KEY = 'scholar_offline_v1';
+const Off = {
+  meta: new Map(),         // id → { id, src, size, at, why }: the copies on this device
+  own: new Set(),          // papers read from a file you dropped in
+  progress: new Set(),     // In progress, as of the last check
+  queue: [], busy: null,   // waiting to download; the one downloading { id, got, total, ctrl }
+  failed: new Map(),       // id → { why, at }: couldn't be downloaded (tried again after a while)
+  batch: null,             // a Download all under way: { ids, ok, bad, why }
+  ready: null,
+  prefs: (() => { try { return JSON.parse(localStorage.getItem(OFF_KEY) || '{}') || {}; } catch (e) { return {}; } })(),
+};
+const OFF_RETRY_MS = 30 * 60 * 1000;
+const OFF_SETS = [['starred', 'Starred'], ['lists', 'Lists'], ['progress', 'In progress']];
+function offSupported() { return !!window.indexedDB && isOwner(); }
+function offPrefs() {
+  const p = Off.prefs;
+  if (!Array.isArray(p.pins)) p.pins = [];
+  if (!Array.isArray(p.skip)) p.skip = [];
+  p.sets = Object.assign({ starred: true, lists: true, progress: true }, p.sets);
+  return p;
+}
+function offSavePrefs() { try { localStorage.setItem(OFF_KEY, JSON.stringify(Off.prefs)); } catch (e) {} }
+function offDB(stores, mode, fn) {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('scholar_offline', 1);
+    req.onupgradeneeded = () => { req.result.createObjectStore('pdfs'); req.result.createObjectStore('meta'); };
+    req.onerror = () => reject(req.error);
+    req.onsuccess = () => {
+      const db = req.result, tx = db.transaction(stores, mode);
+      const r = fn(...[].concat(stores).map(s => tx.objectStore(s)));
+      tx.oncomplete = () => { db.close(); resolve(r && r.result); };
+      tx.onerror = tx.onabort = () => { db.close(); reject(tx.error); };
+    };
+  });
+}
+function offLoad() {
+  if (!Off.ready) Off.ready = Promise.all([
+    offDB('meta', 'readonly', st => st.getAll()).then(list => (list || []).forEach(m => m && m.id && Off.meta.set(m.id, m))).catch(() => {}),
+    pdfStore('readonly', st => st.getAllKeys()).then(keys => (keys || []).forEach(k => Off.own.add(k))).catch(() => {}),
+  ]).then(() => { if (_papersText) { offChanged(); if (!navigator.onLine) rerenderForMetadata(); } });
+  return Off.ready;
+}
+/* The downloaded copy to read, if there is one (online, a copy of an older link gives way to the paper's current one) */
+async function offGet(p) {
+  await offLoad();
+  const m = Off.meta.get(p.id);
+  if (!m || (navigator.onLine && m.src !== pdfSourceOf(p))) return null;
+  return offDB('pdfs', 'readonly', st => st.get(p.id)).catch(() => null);
+}
+/* Which set keeps a paper on this device ('' if none), leaving out what you chose for it yourself */
+function offSetOf(p) {
+  if (!p || p.uploaded || isHiddenRow(p)) return '';
+  const s = offPrefs().sets, k = paperKey(p);
+  if (s.starred && starSet.has(k)) return 'starred';
+  if (s.lists && paperInAnyList(k)) return 'list';
+  if (s.progress && Off.progress.has(p.id)) return 'progress';
+  return '';
+}
+/* Why this device keeps it: 'you', a set, or '' */
+function offReason(p) {
+  if (!p || p.uploaded || isHiddenRow(p)) return '';
+  const pr = offPrefs();
+  if (pr.pins.includes(p.id)) return 'you';
+  return pr.skip.includes(p.id) ? '' : offSetOf(p);
+}
+function offCanHave(p) { return !!(p && !p.uploaded && pdfSourceOf(p) && !Off.own.has(p.id)); }
+function offNeeds(p) {
+  if (!offCanHave(p)) return false;
+  const m = Off.meta.get(p.id), f = Off.failed.get(p.id);
+  return (!m || m.src !== pdfSourceOf(p)) && !(f && Date.now() - f.at < OFF_RETRY_MS);
+}
+function offState(id) {
+  if (Off.busy && Off.busy.id === id) return 'busy';
+  if (Off.queue.includes(id)) return 'queued';
+  if (Off.meta.has(id)) return 'have';
+  return Off.failed.has(id) ? 'failed' : 'none';
+}
+/* Bring this device in line with what it should keep: called (debounced) whenever stars, lists, reading places or
+   the data change, and on reconnecting */
+let _offT = 0;
+function offSchedule(delay) {
+  if (!offSupported()) return;
+  clearTimeout(_offT);
+  _offT = setTimeout(() => offReconcile().catch(e => console.warn('offline', e)), delay == null ? 1500 : delay);
+}
+async function offReconcile() {
+  if (!offSupported() || !_papersText) return;
+  await offLoad();
+  Off.progress = new Set(continueReadingList(true, true).map(x => x.p.id));
+  const pr = offPrefs(), skips = pr.skip.length;
+  pr.skip = pr.skip.filter(id => offSetOf(findPaper(id)));   // a skip lasts while the paper stays in its set
+  if (pr.skip.length !== skips) offSavePrefs();
+  if (!navigator.onLine) { offChanged(); return; }
+  const progressKnown = !vaultSupported() || !!Vault.key;   // reading places from other devices come with the notes
+  for (const [id, m] of [...Off.meta]) {
+    const p = findPaper(id), why = offReason(p);
+    if (why) { if (why !== m.why) { m.why = why; offDB('meta', 'readwrite', st => st.put(m, id)).catch(() => {}); } continue; }
+    if (m.why === 'progress' && !progressKnown && p) continue;   // may still be in progress on another device
+    await offRemove(id, true);
+  }
+  if (Off.busy && !offReason(findPaper(Off.busy.id)) && Off.busy.ctrl) Off.busy.ctrl.abort();
+  Off.queue = Off.queue.filter(id => offReason(findPaper(id)));
+  allPapers.forEach(p => { if (offReason(p) && offNeeds(p) && !Off.queue.includes(p.id) && !(Off.busy && Off.busy.id === p.id)) Off.queue.push(p.id); });
+  offChanged();
+  offPump();
+  offWarmNotes();
+}
+/* A downloaded paper's notes come along (read only: fetched when GitHub has a newer copy than this device), so the
+   highlights made on another device are there offline too */
+const _offNotesWarm = new Set();
+async function offWarmNotes() {
+  if (!Vault.key || !Vault.index || !navigator.onLine) return;
+  for (const id of [...Off.meta.keys()]) {
+    const ix = Vault.index.papers[id];
+    if (!ix || _offNotesWarm.has(id)) continue;
+    _offNotesWarm.add(id);
+    const local = await nfGet(id + '.json').catch(() => null);
+    if (local && (local.dirty || (local.env.updated || '') >= (ix.updated || ''))) continue;
+    await nfLoad(id + '.json').catch(() => {});
+  }
+}
+/* One download at a time, with a short pause between them (arXiv asks for gentle use) */
+async function offPump() {
+  if (Off.busy || !navigator.onLine) return;
+  const id = Off.queue.shift();
+  if (!id) return;
+  const p = findPaper(id);
+  if (!p || !offReason(p) || !offNeeds(p)) { offBatchNote(id, null); offPump(); return; }
+  Off.busy = { id, got: 0, total: 0, ctrl: window.AbortController ? new AbortController() : null };
+  offPaint(id);
+  let err = null;
+  try { await offFetch(p); Off.failed.delete(id); }
+  catch (e) { err = e; }
+  Off.busy = null;
+  if (err && err.name === 'AbortError') err = null;   // cancelled
+  else if (err && !navigator.onLine) { Off.queue.unshift(id); offChanged(); return; }   // the connection went: again when it's back
+  else if (err) { Off.failed.set(id, { why: offFailText(err), at: Date.now() }); if (err.quota) Off.queue.length = 0; }
+  offBatchNote(id, err);
+  offChanged();
+  if (err && err.quota) { toastError('This device is out of storage for downloads. Remove some in Library → Downloaded.'); return; }
+  setTimeout(offPump, 400);
+}
+async function offFetch(p) {
+  const src = pdfSourceOf(p), b = Off.busy;
+  let blob;
+  if (_reader.doc && _reader.paper === p && !_reader.local && _reader.url === src) {
+    blob = new Blob([await _reader.doc.getData()], { type: 'application/pdf' });   // open in the reader: it has the file already
+  } else {
+    const r = await fetch(src, { credentials: 'omit', signal: b.ctrl ? b.ctrl.signal : undefined });
+    if (!r.ok) throw Object.assign(new Error('HTTP ' + r.status), { status: r.status });
+    b.total = +r.headers.get('Content-Length') || 0;
+    if (r.body && r.body.getReader && b.total) {
+      const rd = r.body.getReader(), parts = [];
+      let last = 0;
+      for (;;) {
+        const { done, value } = await rd.read();
+        if (done) break;
+        parts.push(value); b.got += value.length;
+        if (Date.now() - last > 120) { last = Date.now(); offPaint(p.id); }
+      }
+      blob = new Blob(parts, { type: 'application/pdf' });
+    } else blob = await r.blob();
+  }
+  const head = new Uint8Array(await blob.slice(0, 1024).arrayBuffer());
+  if (!String.fromCharCode.apply(null, head).includes('%PDF')) throw Object.assign(new Error('not a PDF'), { notPdf: true });   // e.g. a "too many requests" page
+  const m = { id: p.id, src, size: blob.size, at: new Date().toISOString(), why: offReason(p) };
+  try { await offDB(['pdfs', 'meta'], 'readwrite', (pdfs, meta) => { pdfs.put(blob, p.id); meta.put(m, p.id); }); }
+  catch (e) { if (e && e.name === 'QuotaExceededError') e.quota = true; throw e; }
+  Off.meta.set(p.id, m);
+}
+function offFailText(e) {
+  if (e.quota) return 'this device is out of storage';
+  if (e.notPdf) return 'the link didn’t give a PDF';
+  if (e.status === 404) return 'the link returned “not found”';
+  if (e.status) return `the site answered with an error (${e.status})`;
+  return 'its site doesn’t let other sites download it';
+}
+async function offRemove(id, quiet) {
+  if (!Off.meta.has(id)) return;
+  await offDB(['pdfs', 'meta'], 'readwrite', (pdfs, meta) => { pdfs.delete(id); meta.delete(id); }).catch(() => {});
+  Off.meta.delete(id);
+  if (!quiet) offChanged();
+}
+/* You: download these (they stay until you remove them), ahead of what the sets fetch by themselves */
+function offDownload(ids) {
+  const pr = offPrefs();
+  ids.forEach(id => {
+    if (!pr.pins.includes(id)) pr.pins.push(id);
+    pr.skip = pr.skip.filter(x => x !== id);
+    Off.failed.delete(id);
+  });
+  const mine = ids.filter(id => !(Off.busy && Off.busy.id === id));
+  Off.queue = [...mine, ...Off.queue.filter(id => !mine.includes(id))];
+  offSavePrefs();
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});   // ask the browser not to clear them
+  offChanged();
+  offPump();
+}
+/* You: not on this device (cancels a download under way) */
+async function offForget(id, quiet) {
+  const pr = offPrefs(), p = findPaper(id);
+  pr.pins = pr.pins.filter(x => x !== id);
+  if (offSetOf(p) && !pr.skip.includes(id)) pr.skip.push(id);
+  offSavePrefs();
+  Off.queue = Off.queue.filter(x => x !== id);
+  if (Off.busy && Off.busy.id === id && Off.busy.ctrl) Off.busy.ctrl.abort();
+  const had = Off.meta.has(id);
+  await offRemove(id, true);
+  offChanged();
+  if (had && !quiet) toast('Removed from this device', () => offDownload([id]));
+}
+function offToggle(id) {
+  const st = offState(id);
+  if (st === 'none' || st === 'failed') offDownload([id]);
+  else offForget(id);
+}
+/* A Library group's Download all */
+function offDownloadGroup(key) {
+  const ids = (_libPapers[key] || []).filter(p => offCanHave(p) && (offState(p.id) === 'none' || (offState(p.id) === 'failed' && offNeeds(p)))).map(p => p.id);
+  if (!ids.length) return;
+  Off.batch = { ids: new Set(ids), n: ids.length, ok: 0, bad: 0, why: '' };
+  offDownload(ids);
+  const n = ids.length === 1 ? '1 paper' : ids.length + ' papers';
+  toast(navigator.onLine ? `Downloading ${n} for reading offline` : `${n[0].toUpperCase() + n.slice(1)} will download when you’re back online`);
+}
+function offBatchNote(id, err) {
+  const b = Off.batch;
+  if (!b || !b.ids.has(id)) return;
+  b.ids.delete(id);
+  if (err) { b.bad++; b.why = b.why || offFailText(err); } else if (Off.meta.has(id)) b.ok++;
+  if (b.ids.size) return;
+  Off.batch = null;
+  if (!b.bad) toast(b.ok === 1 ? 'Downloaded: 1 paper' : `Downloaded: ${b.ok} papers`);
+  else toast(`Downloaded ${b.ok} of ${b.n}. ${b.bad === 1 ? 'One' : b.bad} couldn’t be: ${b.why}.`, null, { duration: 7000 });
+}
+function offSetPref(set, on) {
+  offPrefs().sets[set] = !!on;
+  offSavePrefs();
+  offReconcile().catch(() => {});
+}
+async function offRemoveAll() {
+  const ids = [...new Set([...Off.meta.keys(), ...Off.queue, ...(Off.busy ? [Off.busy.id] : [])])];
+  if (!ids.length) return;
+  const auto = OFF_SETS.filter(([k]) => offPrefs().sets[k]).map(([, l]) => l);
+  const n = Off.meta.size;
+  const ok = await showConfirm(n > 1 ? `Remove all ${n} downloads from this device?` : 'Remove the download from this device?',
+    auto.length ? `Papers that join ${auto.join(auto.length > 2 ? ', ' : ' or ').replace(/, ([^,]*)$/, ' or $1')} from now on still download by themselves (unless you turn that off).` : 'You can download any of them again when you\u2019re online.',
+    'Remove all', true);
+  if (!ok) return;
+  for (const id of ids) await offForget(id, true);
+}
+function offTotal() { let t = 0; Off.meta.forEach(m => { t += m.size || 0; }); return t; }
+function fmtBytes(b) {
+  if (b >= 1e9) return (b / 1e9).toFixed(1) + ' GB';
+  if (b >= 1e7) return Math.round(b / 1e6) + ' MB';
+  if (b >= 1e6) return (b / 1e6).toFixed(1) + ' MB';
+  return Math.max(1, Math.round(b / 1e3)) + ' KB';
+}
+const OFF_WHY = { you: 'you downloaded it', starred: 'it’s starred', list: 'it’s in a list', progress: 'you’re reading it' };
+const OFF_WHY_SHORT = { starred: 'Starred', list: 'In a list', progress: 'In progress' };
+const ICON_DL = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19.5h14"/></svg>';
+const ICON_DL_DONE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 9.5 10.5 12.5 16.5 6.5M5 18.5h14"/></svg>';
+function offRingSVG(frac) {   // progress around the download icon; a quarter arc that turns while the size isn't known
+  const c = 2 * Math.PI * 9, known = frac > 0;
+  return `<svg class="dl-ring${known ? '' : ' spin'}" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" class="dl-ring-bg"/><circle cx="12" cy="12" r="9" class="dl-ring-fg" stroke-dasharray="${c.toFixed(2)}" stroke-dashoffset="${(c * (1 - (known ? Math.min(1, frac) : 0.25))).toFixed(2)}"/></svg>`;
+}
+/* Every Download control carries data-off="<paper id>"; this redraws them (in place, so focus stays) */
+function offPaint(id) {
+  document.querySelectorAll(id ? `[data-off="${CSS.escape(id)}"]` : '[data-off]').forEach(offPaintEl);
+  if (!id) document.querySelectorAll('[data-off-group]').forEach(offPaintGroupBtn);
+}
+function offPaintEl(el) {
+  if (!el.dataset.off) return;
+  const id = el.dataset.off, p = findPaper(id), st = offState(id), m = Off.meta.get(id), why = offReason(p);
+  const b = Off.busy && Off.busy.id === id ? Off.busy : null, frac = b && b.total ? b.got / b.total : 0;
+  const pct = Math.round(frac * 100), waiting = st === 'queued' || st === 'busy';
+  const sig = [st, pct, why, navigator.onLine].join('|');
+  if (el.dataset.offSig === sig) return;
+  el.dataset.offSig = sig;
+  let label, title;
+  if (st === 'have') { label = 'Downloaded'; title = `On this device for reading offline (${fmtBytes(m.size)})${why ? ', because ' + OFF_WHY[why] : ''}. Click to remove it.`; }
+  else if (waiting) { label = navigator.onLine ? (pct ? pct + '%' : 'Downloading') : 'Waiting'; title = navigator.onLine ? 'Downloading for reading offline. Click to cancel.' : 'Downloads when you’re back online. Click to cancel.'; }
+  else if (st === 'failed') { label = 'Download'; title = `Couldn’t download it: ${Off.failed.get(id).why}. Click to try again.`; }
+  else { label = 'Download'; title = 'Download the PDF to read it offline on this device'; }
+  el.classList.toggle('on-dl', st === 'have');
+  el.classList.toggle('dl-busy', waiting);
+  el.title = title;
+  if (el.classList.contains('reader-dl')) {   // the reader's menu: words
+    el.textContent = st === 'have' ? `Remove the offline copy (${fmtBytes(m.size)})` : waiting ? (navigator.onLine ? `Cancel the download${pct ? ` (${pct}%)` : ''}` : 'Cancel the download (waits for a connection)') : 'Download for reading offline';
+    el.removeAttribute('title');
+    return;
+  }
+  el.setAttribute('aria-label', st === 'have' ? `Downloaded (${fmtBytes(m.size)}). Remove from this device` : waiting ? `Downloading${pct ? ' ' + pct + '%' : ''}. Cancel` : 'Download for reading offline');
+  const icon = waiting ? offRingSVG(frac) : st === 'have' ? ICON_DL_DONE : ICON_DL;
+  el.innerHTML = el.classList.contains('pd-act') ? `${icon}<span class="pd-act-label"><span>${label}</span></span>` : icon;
+}
+/* A paper page's Download button (owner, a paper with an open PDF that isn't one you dropped in) */
+function offBtnHTML(p) {
+  if (!offSupported() || !offCanHave(p)) return '';
+  return `<button class="pd-act pd-dl" data-off="${escAttr(p.id)}" onclick="offToggle('${escAttr(p.id)}')"></button>`;
+}
+/* Download all on a Library group: shown while some of its papers aren't on this device; turns while they come */
+function offGroupBtnHTML(key) { return offSupported() ? `<button class="lib-ico dl-all" data-off-group="${escAttr(key)}" onclick="offDownloadGroup('${escAttr(key)}')" hidden></button>` : ''; }
+function offPaintGroupBtn(el) {
+  const papers = (_libPapers[el.dataset.offGroup] || []).filter(offCanHave);
+  const coming = papers.filter(p => ['busy', 'queued'].includes(offState(p.id))).length;
+  const need = papers.filter(p => offState(p.id) === 'none' || (offState(p.id) === 'failed' && offNeeds(p))).length;
+  el.hidden = !coming && !need;
+  const sig = coming + '|' + need;
+  if (el.dataset.offSig === sig) return;
+  el.dataset.offSig = sig;
+  el.disabled = !!coming && !need;
+  el.classList.toggle('dl-busy', !!coming);
+  el.innerHTML = coming ? offRingSVG(0) : ICON_DL;
+  const t = coming ? `Downloading ${coming} for reading offline` : `Download ${need === papers.length ? (need === 1 ? 'it' : 'all ' + need) : `the ${need} not on this device`} for reading offline`;
+  el.title = t; el.setAttribute('aria-label', t);
+}
+/* The mark on a paper's row while offline: its PDF is on this device */
+function offMarkHTML(p, cls) {
+  return offSupported() && (Off.meta.has(p.id) || Off.own.has(p.id)) ? `<span class="${cls} off-mark" title="Downloaded: readable offline" aria-label="Downloaded">${ICON_DL_DONE}</span>` : '';
+}
+/* Library → Downloaded: the copies on this device, newest first, with the sets this device keeps by itself */
+function offGroupHTML() {
+  _offLibSig = offLibSig();
+  const rows = [...Off.meta.values()].sort((a, b) => (b.at || '').localeCompare(a.at || '')).map(m => findPaper(m.id)).filter(Boolean);
+  const coming = Off.queue.length + (Off.busy ? 1 : 0);
+  const size = [rows.length ? fmtBytes(offTotal()) : '', coming ? `${coming} downloading` : ''].filter(Boolean).join(' · ');
+  return libGroupHTML('offline', ICON_DL_DONE, 'Downloaded', rows, size ? `<span class="lib-meta">${size}</span>` : '');
+}
+function offBodyHTML(papers) {
+  const s = offPrefs().sets;
+  const sets = `<div class="off-sets"><span class="off-sets-lead">Keep on this device automatically</span>${OFF_SETS.map(([k, l]) =>
+    `<label class="off-set"><input type="checkbox" ${s[k] ? 'checked' : ''} onchange="offSetPref('${k}', this.checked)">${l}</label>`).join('')}
+    ${papers.length ? '<button class="off-clear" onclick="offRemoveAll()">Remove all</button>' : ''}</div>`;
+  return sets + (papers.length ? paperListHTML(papers, { offline: true })
+    : '<div class="library-list-empty">Papers you download, and the ones kept automatically, open here without a connection.</div>');
+}
+let _offLibT = 0, _offLibSig = '';
+function offLibSig() { return [...Off.meta.keys()].join() + '|' + Off.queue.length + '|' + (Off.busy ? Off.busy.id : '') + '|' + JSON.stringify(offPrefs().sets); }
+function offChanged() {
+  offPaint();
+  if (currentTab !== 'library' || _paperViewActive || _listViewActive || offLibSig() === _offLibSig) return;
+  clearTimeout(_offLibT);
+  _offLibT = setTimeout(() => {   // redraw Library (at most every half second while downloads land), keeping keyboard focus where it was
+    const box = document.getElementById('libraryContent'), a = document.activeElement;
+    let sel = null;
+    if (a && box.contains(a)) {
+      const g = a.closest('[data-lib]'), row = a.closest('[data-key]');
+      if (g && row) sel = `[data-lib="${CSS.escape(g.dataset.lib)}"] [data-key="${CSS.escape(row.dataset.key)}"]`;
+      else if (g && a.classList.contains('interest-group-header')) sel = `[data-lib="${CSS.escape(g.dataset.lib)}"] .interest-group-header`;
+    }
+    renderLibrary();
+    const el = sel && box.querySelector(sel);
+    if (el) el.focus({ preventScroll: true });
+  }, 500);
+}
+/* Online or not: the nav says so, rows mark what's downloaded, and reconnecting picks downloads (and the reader) up */
+function offSetOnline() {
+  document.documentElement.classList.toggle('offline', !navigator.onLine);
+  offPaint();
+  updateSyncStatus();
+}
+window.addEventListener('online', () => {
+  offSetOnline();
+  offSchedule(800);
+  const p = _reader.paper, rd = document.getElementById('reader');
+  if (p && !_reader.doc && rd.classList.contains('open') && rd.querySelector('.pdf-picker.off-view')) showReader(p.id);   // was waiting for a connection
+});
+window.addEventListener('offline', offSetOnline);
+function offExplain() {
+  toast(isOwner() ? 'You\u2019re offline. Every paper\u2019s details and your downloaded PDFs open as usual; changes and notes are kept here and saved when you\u2019re back. Chat and Add paper need a connection.'
+    : 'You\u2019re offline. Every paper\u2019s details still open; PDFs need a connection.', null, { duration: 7000 });
+}
+document.documentElement.classList.toggle('offline', !navigator.onLine);
+/* The service worker (sw.js): register it, and hand it the library files the page loads later, so they're kept too */
+if ('serviceWorker' in navigator && window.isSecureContext) window.addEventListener('load', () => {
+  navigator.serviceWorker.register(APP_ROOT + 'sw.js', { scope: APP_ROOT }).catch(e => console.warn('service worker', e));
+  navigator.serviceWorker.ready.then(reg => setTimeout(() => {
+    const seen = performance.getEntriesByType('resource').map(r => r.name).filter(u => /^https:\/\/(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|fonts\.g)/.test(u));
+    if (reg.active) reg.active.postMessage({ type: 'sw-warm', urls: [...new Set([...seen, PDFJS_BASE + 'pdf.min.mjs', PDFJS_BASE + 'pdf.worker.min.mjs', MD_LIBS.css, ...MD_LIBS.js])] });
+  }, 4000)).catch(() => {});
+});
 
 /* ===== UPLOADED PAPERS (usually papers to review) =====
    They never enter the public database. Each record (a random id, title) lives in this browser and, once notes
@@ -7091,10 +7532,16 @@ async function showReader(id) {
   document.getElementById('readerTitle').textContent = p.title || '';
   if (!_rn || _rn.id !== p.id) { _rn = null; _rnLoadP = null; setRnState(vaultSupported() ? 'loading' : 'ready'); }   // loader now; loading starts after the PDF
   else _rnLoadP = Promise.resolve();   // same paper: notes already here
+  const dl = document.getElementById('readerDl');
+  dl.dataset.off = p.id; dl.hidden = !offSupported() || !offCanHave(p);
   const local = await localPdfGet(p.id);
   const src = pdfSourceOf(p);
   if (!local && !src) { showPdfPicker(p, 'none'); ensureReaderNotes().then(runPendingNotes); return; }
-  await loadIntoReader(p, local ? { data: await local.arrayBuffer() } : { url: src }, !!local);
+  if (local) { await loadIntoReader(p, { data: await local.arrayBuffer() }, true); return; }
+  const kept = await offGet(p);   // downloaded for offline reading
+  if (kept) await loadIntoReader(p, { data: await kept.arrayBuffer() }, false, src);
+  else if (!navigator.onLine) { showPdfPicker(p, 'offline'); ensureReaderNotes().then(runPendingNotes); }
+  else await loadIntoReader(p, { url: src }, false);
 }
 /* While the reader is open, a swipe only ever scrolls something inside it. iOS hands a swipe that nothing under the
    finger can scroll (a short chat, the notes header, the toolbar, a list already at its end) to the page behind,
@@ -7127,7 +7574,7 @@ async function showReader(id) {
   }, { passive: false, capture: true });
 })();
 function readerStatus(html) { document.getElementById('readerBody').innerHTML = `<div class="reader-status">${html}</div>`; }
-async function loadIntoReader(p, source, isLocal) {
+async function loadIntoReader(p, source, isLocal, srcUrl) {   // srcUrl: where a downloaded copy came from
   const token = ++_reader.token;
   document.getElementById('reader').classList.add('no-doc');
   document.getElementById('readerBody').innerHTML = '<div class="reader-skel" role="status" aria-label="Loading the PDF"><div></div><p>Loading the PDF…</p></div>';   // a page-shaped placeholder where the paper will be
@@ -7136,9 +7583,9 @@ async function loadIntoReader(p, source, isLocal) {
     const doc = await lib.getDocument({ ...source, isEvalSupported: false, verbosity: 0 }).promise;
     if (token !== _reader.token) { doc.destroy(); return; }
     if (_reader.doc) _reader.doc.destroy();
-    _reader.doc = doc; _reader.local = isLocal;
+    _reader.doc = doc; _reader.local = isLocal; _reader.url = source.url || srcUrl || null;
     const ext = document.getElementById('readerExternal');
-    if (source.url) { ext.href = source.url; ext.style.display = ''; } else ext.style.display = 'none';
+    if (_reader.url) { ext.href = _reader.url; ext.style.display = ''; } else ext.style.display = 'none';
     document.getElementById('reader').classList.remove('no-doc');
     await layoutReader(true);            // the paper first...
     await ensureReaderNotes();           // ...then the notes
@@ -7382,6 +7829,7 @@ function noteReading(id, entry) {
   all[id] = { ...entry, at: new Date().toISOString(), dev: deviceName() };
   try { localStorage.setItem(READING_KEY, JSON.stringify(all)); } catch (e) {}
   _readingDirty = true;
+  offSchedule();
 }
 /* What this device read since the last sync goes into the notes index (one commit with any notes). now = the app
    is going away: anything still waiting for its quiet spell (a place, a removal, a note) is sent at once */
@@ -7494,6 +7942,7 @@ function dismissReading(id) {
 let _crShown = null;   // the papers the row and strip showed last, so a newcomer can fade in
 /* Wherever Continue reading shows, draw it again (a paper closed, removed, or read on another device) */
 function refreshContinueReading() {
+  offSchedule();
   if (currentTab === 'all' && !_paperViewActive && !_listViewActive) {
     if (document.body.classList.contains('tok-mode')) {
       const old = document.getElementById('crPhone'), html = crPhoneHTML(), bar = document.getElementById('tokBar');
@@ -7638,7 +8087,7 @@ async function readerZoom(dir) {
 function toggleReaderMenu(force) {
   const m = document.getElementById('readerMenu'), b = document.getElementById('readerMore');
   const open = typeof force === 'boolean' ? force : !m.classList.contains('open');
-  if (open) popIn(m); else fadeAway(m);
+  if (open) { offPaint(document.getElementById('readerDl').dataset.off); popIn(m); } else fadeAway(m);
   b.setAttribute('aria-expanded', open ? 'true' : 'false');
 }
 async function toggleReaderDark() {
@@ -7684,6 +8133,17 @@ document.addEventListener('keydown', e => {
 /* No PDF yet, or the one we have fails: paste an open link (checked before it's saved) or drop a file */
 async function showPdfPicker(p, why, detail) {
   if (!p) return;
+  if ((why === 'offline' || (why === 'failed' && !navigator.onLine)) && !p.uploaded && pdfSourceOf(p)) {   // no connection, and no copy here
+    if (_reader.obs) _reader.obs.disconnect();
+    if (_reader.far) _reader.far.disconnect();
+    if (_reader.doc) { _reader.doc.destroy(); _reader.doc = null; }
+    document.getElementById('reader').classList.add('no-doc');
+    const coming = ['queued', 'busy'].includes(offState(p.id));
+    document.getElementById('readerBody').innerHTML = `<div class="pdf-picker off-view"><h3>You\u2019re offline</h3>
+      <p class="pp-why">This paper isn\u2019t downloaded on this device. ${coming ? 'It downloads when you\u2019re back online, and opens here.' : 'It opens here once you\u2019re back online.'}</p>
+      ${offSupported() && !coming ? `<button class="ui-btn ui-btn-secondary" onclick="offDownload(['${escAttr(p.id)}']); showPdfPicker(_reader.paper, 'offline')">${ICON_DL}Download it when I\u2019m back online</button>` : ''}</div>`;
+    return;
+  }
   if (!isOwner()) {
     if (_reader.doc) { _reader.doc.destroy(); _reader.doc = null; }
     document.getElementById('reader').classList.add('no-doc');
@@ -10706,15 +11166,12 @@ function closeCiteDD() { const dd = document.getElementById('citeDD'); if (dd) d
 
 /* --- Markdown + LaTeX, loaded on first use --- */
 let _mdLibs = null;
+const MD_LIBS = { css: 'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css', js: ['https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js', 'https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js', 'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js'] };
 function loadScript(src) { return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('could not load ' + src)); document.head.appendChild(s); }); }
 function loadMdLibs() {
   if (_mdLibs) return _mdLibs;
-  const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css'; document.head.appendChild(css);
-  _mdLibs = Promise.all([
-    loadScript('https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js'),
-    loadScript('https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js'),
-    loadScript('https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js'),
-  ]);
+  const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = MD_LIBS.css; document.head.appendChild(css);
+  _mdLibs = Promise.all(MD_LIBS.js.map(loadScript));
   return _mdLibs;
 }
 async function renderNotesMarkdown(el, text, notesObj) {
@@ -10904,6 +11361,7 @@ function renderPaperDetail(p) {
       <button class="pd-act ${isStar?'on-star':''}" onclick="toggleStar('${ka}',this);${again}" title="${isStar?'Unstar':'Star'} (s)" aria-label="${isStar?'Unstar':'Star'}">&#9733;<span class="pd-act-label"><span>${isStar?'Starred':'Star'}</span></span></button>
       <button class="pd-act ${ir?'on-read':''}" onclick="toggleRead('${ka}',this);${again}" title="${ir?'Mark unread':'Mark as read'} (x)" aria-label="${ir?'Mark unread':'Mark as read'}">&#10003;<span class="pd-act-label"><span>${ir?'Read':'Mark read'}</span></span></button>
       <span class="save-anchor"><button class="pd-act ${inAny?'on-list':''}" onclick="event.stopPropagation();openSaveDD(this,'${ka}')" title="Add to list (l)" aria-label="Add to list">&#9776;<span class="pd-act-label"><span>${inAny?'In a list':'Save'}</span></span></button></span>
+      ${offBtnHTML(p)}
       <button class="pd-act" onclick="${isHiddenRow(p) ? 'unhidePaper' : 'hidePaper'}('${ka}');${again}" title="${isHiddenRow(p) ? 'Restore paper' : 'Hide paper (restore it from Library)'}" aria-label="${isHiddenRow(p) ? 'Restore paper' : 'Hide paper'}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${isHiddenRow(p) ? '<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>' : '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>'}</svg><span class="pd-act-label"><span>${isHiddenRow(p) ? 'Restore' : 'Hide'}</span></span></button>
       ${isOwner() || pdfSourceOf(p) ? `<button class="pd-read" onclick="openReader('${ka}')" title="${pdfSourceOf(p) ? 'Read the PDF here (r)' : 'Add a PDF to read it here (r)'}"><svg viewBox="0 0 24 24"><path d="M2 4h7a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H2z"/><path d="M22 4h-7a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h8z"/></svg>${readLabelHTML(p)}</button>` : ''}
       ${p.url ? `<a class="pd-open" href="${esc(p.url)}" target="_blank" rel="noopener" title="Open the paper's page (o)" aria-label="Open paper"><span class="pd-open-full">Open paper</span><span class="pd-open-short">Open</span><svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>` : ''}
@@ -10973,6 +11431,7 @@ function renderPaperDetail(p) {
   </div>`;
 
   if (hasNotes) document.querySelectorAll('[data-pdnote]').forEach(el => { const e = vn.entries.find(x => x.id === el.dataset.pdnote); if (e) renderNotesMarkdown(el, e.text, vn); });
+  offPaint(p.id);
   if (!renderPaperDetail._scrollHooked) {
     document.getElementById('mainScroll').addEventListener('scroll', updatePaperBar, { passive: true });
     renderPaperDetail._scrollHooked = true;
@@ -11278,7 +11737,9 @@ document.addEventListener('DOMContentLoaded', () => { loadPapers(); loadInterest
     // private papers and PDFs
     'pickUploadPdf', 'uploadPdf', 'usePdfFile', 'openPdfChange', 'removeLocalPdf', 'removeUpload', 'renameUpload', 'startReview', 'saveUploads',
     // reading places and list times
-    'noteReading', 'dismissReading', 'flushReading', 'showInProgress', 'saveListMeta'];
+    'noteReading', 'dismissReading', 'flushReading', 'showInProgress', 'saveListMeta',
+    // PDFs kept on this device
+    'offDownload', 'offForget', 'offToggle', 'offDownloadGroup', 'offSetPref', 'offRemoveAll', 'offReconcile', 'offPump'];
   const WHEN = {   // allowed only when undoing: closing the panel, putting the Pencil back to reading
     setReaderPanel: a => a[0] === false,
     setPencilMode: a => a[0] === 'read'

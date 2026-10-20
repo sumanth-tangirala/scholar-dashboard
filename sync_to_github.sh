@@ -23,7 +23,7 @@ echo "==> Updating link-preview pages (p/<id>/)..."
 python3 "$DIR/make_share_pages.py"
 
 echo "==> Staging changes..."
-git add papers_database.csv interests_database.csv groups_database.csv index.html CLAUDE.md
+git add papers_database.csv interests_database.csv groups_database.csv index.html sw.js CLAUDE.md
 git add -A p
 
 # Only commit if there are staged changes.
