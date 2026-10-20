@@ -12,3 +12,6 @@
 AGENTS.md
 .playwright-mcp/
 toast-error.png
+
+# Audits from verify_papers.py --all (yours to read; never published)
+audit_*.csv
