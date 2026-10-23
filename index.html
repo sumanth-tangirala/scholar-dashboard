@@ -7564,6 +7564,8 @@ async function showReader(id) {
     if (!reader || !reader.classList.contains('open') || e.touches.length > 1 || !e.cancelable) return;
     const t = e.touches[0], dx = t.clientX - x0, dy = t.clientY - y0;
     if (!dx && !dy) return;
+    // a Pencil tap wobbles a pixel or two; cancelling that move would cancel the tap (Safari then sends no click)
+    if (t.touchType === 'stylus' && Math.hypot(dx, dy) < 5) return;
     const tgt = e.target;
     if (tgt === document.activeElement && (tgt.tagName === 'TEXTAREA' || tgt.tagName === 'INPUT' || tgt.isContentEditable)) return;   // moving the caret or a selection
     for (let el = tgt; el && el !== document.body; el = el.parentElement) {
