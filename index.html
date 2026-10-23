@@ -940,6 +940,17 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .reader-menu > *:hover { background: rgba(255,255,255,0.07); }
 .reader-menu span { color: var(--text-muted); }
 .reader-menu > [hidden] { display: none; }
+/* WRITTEN NOTES: ink shown as on dark pages (the same filter), so the pens look the same on the page and here */
+.hw-view, .hw-pad { position: relative; width: 100%; border-radius: 8px; overflow: hidden; }
+.hw-view { margin-top: 2px; }
+.pd-note .hw-view { background: rgba(255,255,255,0.03); margin-top: 8px; }
+.hw-pad { border: 1px solid var(--border); background: rgba(255,255,255,0.025); touch-action: pan-y; cursor: crosshair; -webkit-user-select: none; user-select: none; }
+.hw-svg { display: block; width: 100%; height: 100%; filter: invert(0.9) hue-rotate(180deg); }
+.hw-svg path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.hw-tools { display: flex; align-items: center; gap: 4px; margin-bottom: 8px; flex-wrap: wrap; }
+.hw-tools .sel-dot { width: 22px; height: 22px; margin: 0 2px; }
+.hw-tools .sel-dot.on.resting { border-color: rgba(255,255,255,0.35); }
+.hw-tools .sel-icon[aria-disabled="true"] { opacity: 0.35; pointer-events: none; }
 .off-view .ui-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
 #readerNotesBtn { border-color: transparent; }
 #readerNotesBtn[aria-pressed="true"] { background: rgba(251,177,60,0.14); border-color: transparent; }
@@ -1001,6 +1012,11 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .ink-bar .ink-size.on i { background: var(--text); }
 .sel-dot { flex-shrink: 0; }   /* colour dots stay round however tight their row is */
 .ink-bar .sel-dot.on { border-color: #fff; }
+/* a pen's colour is drawn inside its ring, so on dark pages (and in written notes) it can be shown as the ink will
+   look, through the same filter as the ink, without the filter touching the white ring that marks the chosen one */
+.sel-dot.pen-dot { position: relative; background: none; }
+.sel-dot.pen-dot::before { content: ''; position: absolute; inset: 0; border-radius: 50%; background: var(--hc); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.3); }
+.reader.dark .ink-bar .pen-dot::before, .hw-tools .pen-dot::before { filter: invert(0.9) hue-rotate(180deg); }
 .ink-bar .sel-icon.on { background: rgba(255,255,255,0.12); color: var(--text); }
 .ink-bar .sel-icon.ink-eraser.on { background: rgba(251,177,60,0.16); color: var(--accent); }
 .ink-bar .sel-dot.on.resting { border-color: rgba(255,255,255,0.35); }
@@ -1090,13 +1106,16 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 #readerNotesBtn[aria-pressed="true"] { color: var(--accent); border-color: transparent; }
 /* Notes and chat: the panel's icon, which shows or hides the panel (no count: a number means nothing on a panel) */
 .rt-panel-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-.annoLayer { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.annoLayer { position: absolute; inset: 0; z-index: 0; pointer-events: none; mix-blend-mode: screen; }
+/* Highlights sit under the words. The layer (not each highlight: a layer is its own group, so a highlight inside
+   it would only blend with the layer's empty ground and lie over the text) blends with the page: on light pages
+   multiply keeps black words black and tints the paper; on dark pages screen keeps light words light (measured) */
+.reader:not(.dark) .annoLayer { mix-blend-mode: multiply; }
 /* comments and citations are lines in navy, apart from the highlight colours and the site's amber */
 .annoLayer, .annoMarks { --note-line: #8aa4f0; --note-ink: #0f1b3d; --ref-tint: rgba(138,164,240,0.16); }
 .anno-rect { position: absolute; border-radius: 2px; background: var(--hc); opacity: 0.38; transition: opacity 0.15s, box-shadow 0.15s; }
 .anno-rect:not(.note) { box-sizing: content-box; padding: 0 3px; margin-left: -3px; border-radius: 3px; }   /* a little room either side of the words */
-.reader:not(.dark) .anno-rect { mix-blend-mode: multiply; }   /* opacity from .anno-rect, so .hover/.flash still apply */
-.anno-rect.note { background: none; opacity: 1; border-bottom: 2px dashed var(--note-line, var(--accent)); border-radius: 0; mix-blend-mode: normal !important; }
+.anno-rect.note { background: none; opacity: 1; border-bottom: 2px dashed var(--note-line, var(--accent)); border-radius: 0; }
 .anno-rect.flash { animation: hl-pulse 0.8s cubic-bezier(0.2, 0.7, 0.3, 1); }   /* jumped to: one soft pulse (quick rise, slow ease back), ending exactly as it was */
 .anno-rect.note.flash { animation-name: note-pulse; }
 .anno-rect.ref.flash { animation-name: ref-pulse; }
@@ -1104,6 +1123,23 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 @keyframes note-pulse { 0% { background-color: transparent; } 18% { background-color: color-mix(in srgb, var(--note-line, #8aa4f0) 28%, transparent); } 100% { background-color: transparent; } }
 @keyframes ref-pulse { 0% { background-color: var(--ref-tint); } 18% { background-color: color-mix(in srgb, var(--note-line, #8aa4f0) 36%, transparent); } 100% { background-color: var(--ref-tint); } }
 .anno-rect.hover { opacity: 0.6; }
+.anno-live { position: absolute; inset: 0; }
+.anno-rect.adj { --hc: #2f7cf6; opacity: 0.34; padding: 0; margin-left: 0; border-radius: 1px; }   /* Adjust: the highlight as a selection, edge to edge so the handles stand at its ends */
+/* Adjust's handles: a line at each end with a knob (above the start, below the end), the knob inside the button so
+   it can be taken hold of; wider for a finger */
+.adj-handle { position: absolute; width: 28px; margin-left: -14px; margin-top: -14px; padding: 0; border: none; background: none; pointer-events: auto; touch-action: none; -webkit-user-select: none; user-select: none; cursor: ew-resize; box-sizing: content-box; padding-top: 14px; }
+.adj-handle.end { margin-top: 0; padding-top: 0; padding-bottom: 14px; }
+.adj-handle::before { content: ''; position: absolute; left: 13px; top: 14px; bottom: 0; width: 2px; border-radius: 1px; background: #2f7cf6; }
+.adj-handle.end::before { top: 0; bottom: 14px; }
+.adj-handle::after { content: ''; position: absolute; left: 8px; top: 1px; width: 12px; height: 12px; border-radius: 50%; background: #2f7cf6; box-shadow: 0 1px 3px rgba(0,0,0,0.35); transition: transform var(--t-fast); }
+.adj-handle.end::after { top: auto; bottom: 1px; }
+.adj-handle:hover::after, .adj-handle.dragging::after { transform: scale(1.2); }
+.adj-handle:focus-visible { outline: none; }
+.adj-handle:focus-visible::after { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--accent); }
+@media (pointer: coarse) { .adj-handle { width: 40px; margin-left: -20px; } .adj-handle::before { left: 19px; } .adj-handle::after { left: 13px; width: 14px; height: 14px; } }
+.ac-adjust { gap: 8px; }
+.ac-hint { font-size: 12.5px; color: var(--text-muted); padding-left: 4px; }   /* Adjust: the highlight shown as a selection while its ends move */
+.reader.dark .anno-rect.adj { --hc: #5b9bf5; opacity: 0.5; }
 .anno-rect.note.hover { opacity: 1; border-bottom-style: solid; }
 .anno-rect.ref.hover { opacity: 1; box-shadow: inset 0 -1px 0 var(--note-line, var(--accent)); }
 .reader-page.over-anno .textLayer, .reader-page.over-anno .textLayer span { cursor: pointer; }
@@ -1163,7 +1199,8 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .rp-skel:nth-child(3) { animation-delay: 0.15s; } .rp-skel:nth-child(4) { animation-delay: 0.3s; }
 @keyframes skel { 50% { background: rgba(255,255,255,0.08); } }
 @media (prefers-reduced-motion: reduce) { .rp-skel, .rp-skel-bar { animation: none; } }
-.rp-toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.rp-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; }
+.rp-toolbar .rp-seg { margin-left: auto; }   /* a narrow panel: the order switch goes to its own line, on the right */
 .rp-toolbar .grow { flex: 1; }
 .rp-count-l { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); }
 .rp-seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
@@ -1190,7 +1227,7 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .sel-act.primary { color: var(--accent); background: rgba(251,177,60,0.12); }
 .sel-act.primary:hover { background: rgba(251,177,60,0.2); color: var(--accent); }
 .rp-icon-btn svg path[d^="M9.5"] { fill: currentColor; stroke: none; }
-.anno-rect.ref { background: var(--ref-tint, rgba(251,177,60,0.2)); border-bottom: 1.5px solid var(--note-line, var(--accent)); border-radius: 2px 2px 0 0; mix-blend-mode: normal !important; }
+.anno-rect.ref { background: var(--ref-tint, rgba(251,177,60,0.2)); border-bottom: 1.5px solid var(--note-line, var(--accent)); border-radius: 2px 2px 0 0; }
 /* lines (comments, citations) are not translucent fills: the highlight opacity rules must not fade them */
 .reader .anno-rect.note, .reader .anno-rect.ref, .reader:not(.dark) .anno-rect.note, .reader:not(.dark) .anno-rect.ref { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { .rp-card.fresh { animation: none; } }
@@ -2649,6 +2686,7 @@ html.no-hover .sel-icon:not(.on):active, html.no-hover .ink-bar .ink-size:not(.o
         <dt><kbd>f</kbd></dt><dd>Full screen</dd>
         <dt class="owner-only"><kbd>&#8984;</kbd> <kbd>Enter</kbd></dt><dd class="owner-only">Save the note or comment you&rsquo;re writing</dd>
         <dt class="owner-only"><kbd>[[</kbd></dt><dd class="owner-only">In a note: cite one of your highlights</dd>
+        <dt class="owner-only"><kbd>&larr;</kbd> <kbd>&rarr;</kbd></dt><dd class="owner-only">Adjusting a highlight: move the end that has focus by a word (<kbd>Esc</kbd> puts it back)</dd>
         <dt><kbd>Esc</kbd></dt><dd>Close a comment, clear the selection, leave full screen, close the reader</dd>
       </dl></section>
     </div>
@@ -7499,6 +7537,7 @@ function closeReader() {
 function hideReader() {
   const el = document.getElementById('reader');
   hidePdfModal();
+  endAdjust(true);
   finishNotesEdit();
   closeAnnoCard(); hideSelBar(); closeCiteDD(); endInk(); exitZen(true);
   const wasOpen = el.classList.contains('open');
@@ -7520,7 +7559,7 @@ async function showReader(id) {
   if (!p) { location.hash = '#all'; return; }
   noteRecentRead(p.id);
   const el = document.getElementById('reader');
-  if (_reader.paper !== p) { _rnFilter = { colors: new Set(), comments: false, notes: false, q: '' }; endDraft('discard'); endInk(); }
+  if (_reader.paper !== p) { _rnFilter = { colors: new Set(), comments: false, notes: false, q: '' }; endAdjust(true); endDraft('discard'); endInk(); }
   _reader.paper = p;
   clearTimeout(_reader.panelT); el.classList.remove('panel-leaving');
   el.classList.toggle('panel-open', isOwner() && window.innerWidth >= 1024);   // notes beside the paper by default; on a phone or an upright iPad the paper needs the width (Notes opens it)
@@ -8100,6 +8139,7 @@ async function toggleReaderDark() {
   document.getElementById('reader').classList.toggle('dark', on);
   if (!reduceMotion() && body.animate) body.animate([{ opacity: 0.12 }, { opacity: 1 }], { duration: 170, easing: 'ease-out' });
   document.getElementById('readerDarkBtn').setAttribute('aria-pressed', on ? 'true' : 'false');
+  renderInkBar();   // (the black pen is called white on dark pages)
 }
 document.addEventListener('keydown', e => {
   if (!document.getElementById('reader').classList.contains('open')) return;
@@ -8892,7 +8932,7 @@ function renderAnnoLayer(pageDiv) {
     pageDiv.insertBefore(layer, pageDiv.querySelector('.textLayer'));
   }
   const page = +pageDiv.dataset.page;
-  const list = visibleAnnos().filter(a => a.page === page);
+  const list = visibleAnnos().filter(a => a.page === page && !(Adj && Adj.id === a.id));
   layer.innerHTML = list.map(a => a.rects.map(r =>
     `<div class="anno-rect ${a.kind === 'note' ? 'note' : a.kind === 'ref' ? 'ref' : ''}" data-anno="${a.id}" style="--hc:${annoHc(a)};left:${r[0] * 100}%;top:${r[1] * 100}%;width:${r[2] * 100}%;height:${r[3] * 100}%"></div>`).join('')).join('');
   // a marker in the right margin, level with the first line, for anything that carries a comment
@@ -8905,6 +8945,7 @@ function renderAnnoLayer(pageDiv) {
     return `<button class="anno-mark ${a.kind === 'note' ? 'note' : ''}" data-anno="${a.id}" style="--hc:${annoHc(a)};top:${y * 100}%;right:${6 + slot * step}px" title="${escAttr((a.note || 'Comment').replace(CITE_RE, (m, id, rest) => '\u201c' + ((rest.match(/"([^"]*)/) || [])[1] || '\u2026') + '\u201d').slice(0, 120))}" aria-label="Open comment" onclick="event.stopPropagation();openAnnoCard('${a.id}', true)" onmouseenter="markHover('${a.id}',true)" onmouseleave="markHover('${a.id}',false)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8l-4 3v-3H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg></button>`;
   }).join('');
   renderInkLayer(pageDiv);
+  if (Adj && Adj.pg === pageDiv) drawAdjust();
 }
 /* Ink strokes: points as fractions of the page, drawn as smooth paths in an SVG over the text */
 const SVGNS = 'http://www.w3.org/2000/svg';
@@ -8963,20 +9004,50 @@ function selInfo() {
   if (range !== live && (range.startContainer !== live.startContainer || range.startOffset !== live.startOffset || range.endContainer !== live.endContainer || range.endOffset !== live.endOffset)) {
     sel.removeAllRanges(); sel.addRange(range);
   }
+  return rangeInfo(range, sel.toString());
+}
+/* The text in a range as a selection would copy it (a line break in the text layer is a space) */
+function rangeText(range) {
+  const root = range.commonAncestorContainer.nodeType === 1 ? range.commonAncestorContainer : range.commonAncestorContainer.parentNode;
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+  let out = '', n;
+  while ((n = w.nextNode())) {
+    if (!range.intersectsNode(n)) continue;
+    if (n.nodeType === 1) { if (n.tagName === 'BR') out += ' '; continue; }
+    out += n.data.slice(n === range.startContainer ? range.startOffset : 0, n === range.endContainer ? range.endOffset : n.data.length);
+  }
+  return out;
+}
+/* What a highlight of this range would be: its page, its line boxes (fractions of the page), its words */
+function rangeInfo(range, selText) {
   const el = n => (n.nodeType === 1 ? n : n.parentElement);
   const a = el(range.startContainer) && el(range.startContainer).closest('.reader-page');
   const b = el(range.endContainer) && el(range.endContainer).closest('.reader-page');
   if (!a || !b) return null;
   if (a !== b) return { error: 'Select within one page to highlight.' };
-  const pr = a.getBoundingClientRect();
-  const raw = [...range.getClientRects()].filter(r => r.width > 1 && r.height > 1).map(r => [(r.left - pr.left) / pr.width, (r.top - pr.top) / pr.height, r.width / pr.width, r.height / pr.height]);
-  const rects = mergeLineRects(raw);
-  const quote = sel.toString().replace(/\s+/g, ' ').trim();
+  const rects = pageRects(a, range);
+  const quote = (selText == null ? rangeText(range) : selText).replace(/\s+/g, ' ').trim();
   if (!quote || !rects.length) return null;
   const text = (a.querySelector('.textLayer') || {}).textContent || '';
   const flat = text.replace(/\s+/g, ' '), i = flat.indexOf(quote);
   return { page: +a.dataset.page, rects, quote, prefix: i > 0 ? flat.slice(Math.max(0, i - 40), i) : '', suffix: i >= 0 ? flat.slice(i + quote.length, i + quote.length + 40) : '', end: range.getClientRects()[range.getClientRects().length - 1], box: range.getBoundingClientRect() };
 }
+/* a range's line boxes as fractions of its page */
+function pageRects(pg, range) {
+  const pr = pg.getBoundingClientRect();
+  return mergeLineRects([...range.getClientRects()].filter(r => r.width > 1 && r.height > 1).map(r => [(r.left - pr.left) / pr.width, (r.top - pr.top) / pr.height, r.width / pr.width, r.height / pr.height]));
+}
+/* Drawn over the page while the Pencil marks (or Adjust moves an end): shown as the highlight will look, under the
+   words, in the page's own layer. One per page; a redraw of the layer takes it away. */
+function drawLiveMark(pg, rects, look) {   // look: a highlight colour, 'note' (an underline) or 'adjust' (a selection)
+  const layer = pg && pg.querySelector('.annoLayer');
+  if (!layer) return;
+  let live = layer.querySelector('.anno-live');
+  if (!live) { live = document.createElement('div'); live.className = 'anno-live'; layer.appendChild(live); }
+  const cls = look === 'note' ? 'note' : look === 'adjust' ? 'adj' : '', hc = look === 'note' || look === 'adjust' ? 'var(--note-line, #8aa4f0)' : `var(--hl-${look})`;
+  live.innerHTML = rects.map(r => `<div class="anno-rect ${cls}" style="--hc:${hc};left:${r[0] * 100}%;top:${r[1] * 100}%;width:${r[2] * 100}%;height:${r[3] * 100}%"></div>`).join('');
+}
+function clearLiveMark() { document.querySelectorAll('#readerBody .anno-live').forEach(el => el.remove()); }
 /* one box per line: text layers give a rect per span, often overlapping */
 function mergeLineRects(rs) {
   rs = rs.filter(r => r[2] > 0.001 && r[3] > 0.001).sort((p, q) => p[1] - q[1] || p[0] - q[0]);
@@ -9151,7 +9222,7 @@ async function citeSelection() {
   if (!editorInsertCite(tok)) { _rnDraft += (_rnDraft && !/\s$/.test(_rnDraft) ? ' ' : '') + tok + ' '; renderReaderPanel(); }
   draftChanged();
 }
-async function createAnno(kind, color) {
+async function createAnno(kind, color, drawn) {   // drawn: the Pencil's marker already shows it
   if (notesBusy()) return;
   const info = _selPending || selInfo();
   if (!info || info.error) return;
@@ -9173,7 +9244,7 @@ async function createAnno(kind, color) {
   _rn.annos = (_rn.annos || []).concat(a);
   await savePaperNotes(_rn);
   redrawAnnoLayers(); renderReaderPanel();
-  annoArrives(a.id);
+  if (!drawn) annoArrives(a.id);
   const item = document.querySelector(`.rp-item[data-id="${a.id}"]`); if (item) item.classList.add('fresh');
   if (kind === 'note') openAnnoCard(a.id, true);
 }
@@ -9225,6 +9296,7 @@ function openAnnoCard(id, focusNote) {
     <div class="ac-row">${HL_COLORS.map(c => `<button class="sel-dot ${cur === c ? 'on' : ''}" style="--hc:var(--hl-${c})" title="${escAttr(hlLabel(c))}" aria-label="${escAttr(hlLabel(c))}" onclick="setAnnoColor('${id}','${c}')"></button>`).join('')}
       <button class="sel-icon ${a.kind === 'note' ? 'on' : ''}" title="Comment only (underline, no colour)" aria-label="Comment only" onclick="setAnnoColor('${id}',null)">${ICON_UNDERLINE}</button>
       <span class="sel-sep"></span>
+      ${_acPending && _acPending.id === id ? '' : `<button class="sel-icon" onclick="adjustAnno('${id}')" title="Adjust: drag its ends to take in more or less" aria-label="Adjust what it covers">${ICON_ADJUST}</button>`}
       <button class="sel-icon sel-cite" onclick="citeAnno('${id}')" title="Cite in a note" aria-label="Cite in a note">${ICON_QUOTE}</button>
       <button class="sel-icon" onclick="copyAnnoQuote('${id}')" title="Copy quote" aria-label="Copy quote">${ICON_COPY}</button>
       <button class="sel-icon danger" onclick="deleteAnno('${id}')" title="Delete" aria-label="Delete">${ICON_TRASH}</button></div>
@@ -9235,6 +9307,142 @@ function openAnnoCard(id, focusNote) {
   document.querySelectorAll(`.anno-rect[data-anno="${id}"]`).forEach(r => r.classList.add('hover'));
   if (focusNote) setTimeout(() => { const t = document.getElementById('acNote'); if (!t) return; t.focus(); t.setSelectionRange(t.value.length, t.value.length); }, 0);
 }
+/* --- Adjust: move a highlight's ends ---
+   From its card: the highlight shows as a selection with a handle at each end; drag one (Pencil, finger or mouse)
+   and the highlight follows word by word (arrow keys move a focused handle a word). Done, or a tap elsewhere on the
+   paper, keeps the new extent; Cancel or Esc puts it back. A comment's underline adjusts the same way. */
+const ICON_ADJUST = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6v14M17.5 4v14"/><circle cx="6.5" cy="4.5" r="2"/><circle cx="17.5" cy="19.5" r="2"/></svg>';
+let Adj = null;
+/* A caret in the text under a point of this page (null in a margin or a gap: the browser would pick some text far away) */
+function caretOnText(pg, x, y) {
+  const over = document.elementFromPoint(x, y), span = over && over.closest && over.closest('.textLayer span');
+  if (!span || !pg.contains(span)) return null;
+  const c = caretAt(x, y);
+  return c && c.node.nodeType === 3 && span.contains(c.node) ? c : null;
+}
+/* The words a highlight covers, found from its first and last line boxes */
+function annoRange(a, pg) {
+  const pr = pg.getBoundingClientRect(), f = a.rects[0], l = a.rects[a.rects.length - 1];
+  const at = (r, end) => caretOnText(pg, pr.left + (end ? r[0] + r[2] - 0.003 : r[0] + 0.003) * pr.width, pr.top + (r[1] + r[3] / 2) * pr.height);
+  const s = at(f, false), e = at(l, true);
+  if (!s || !e) return null;
+  const r = document.createRange(); r.setStart(s.node, s.offset); r.setEnd(e.node, e.offset);
+  if (r.collapsed) return null;
+  wholeWords(r);
+  return r;
+}
+function adjRange() {
+  const { s, e } = Adj, r = document.createRange();
+  r.setStart(s.node, s.offset); r.setEnd(e.node, e.offset);
+  if (r.collapsed && (s.node !== e.node || s.offset !== e.offset)) { r.setStart(e.node, e.offset); r.setEnd(s.node, s.offset); }
+  wholeWords(r);
+  return r;
+}
+function adjustAnno(id) {
+  const a = annoById(id), pg = a && document.querySelector(`#readerBody .reader-page[data-page="${a.page}"]`);
+  if (!a || !pg) return;
+  closeAnnoCard();
+  const first = document.querySelector(`.anno-rect[data-anno="${id}"]`);
+  if (first) { const b = first.getBoundingClientRect(), body = document.getElementById('readerBody').getBoundingClientRect(); if (b.top < body.top + 40 || b.bottom > body.bottom - 80) first.scrollIntoView({ block: 'center' }); }
+  const r = annoRange(a, pg);
+  if (!r) { toast('Couldn\u2019t find its words on the page to adjust.'); return; }
+  Adj = { id, pg, s: { node: r.startContainer, offset: r.startOffset }, e: { node: r.endContainer, offset: r.endOffset } };
+  renderAnnoLayer(pg);   // without the highlight itself; the selection and handles stand in for it
+  const card = document.getElementById('annoCard');
+  card.style.removeProperty('--hc');
+  card.innerHTML = `<div class="ac-row ac-adjust"><span class="ac-hint">Drag the ends</span><span class="grow"></span><button class="ui-btn ui-btn-secondary ui-btn-sm" onclick="endAdjust(false)">Cancel</button><button class="ui-btn ui-btn-primary ui-btn-sm" onclick="endAdjust(true)">Done</button></div>`;
+  popIn(card);
+  placeAdjBar();
+  const h = pg.querySelector('.adj-handle.end'); if (h && !matchMedia('(pointer: coarse)').matches) h.focus({ preventScroll: true });
+}
+function drawAdjust() {
+  const pg = Adj.pg, r = adjRange(), rects = pageRects(pg, r);
+  if (!rects.length) return;
+  drawLiveMark(pg, rects, 'adjust');
+  const marks = pg.querySelector('.annoMarks');
+  if (!marks) return;
+  const f = rects[0], l = rects[rects.length - 1];
+  [['start', f[0], f[1], f[3]], ['end', l[0] + l[2], l[1], l[3]]].forEach(([k, x, y, hgt]) => {
+    let h = marks.querySelector('.adj-handle.' + k);
+    if (!h) {
+      h = document.createElement('button'); h.className = 'adj-handle ' + k;
+      h.setAttribute('aria-label', k === 'start' ? 'Start of the highlight (arrow keys move it a word)' : 'End of the highlight (arrow keys move it a word)');
+      marks.appendChild(h);
+    }
+    Object.assign(h.style, { left: x * 100 + '%', top: y * 100 + '%', height: hgt * 100 + '%' });
+  });
+}
+function placeAdjBar() {
+  const card = document.getElementById('annoCard'), live = Adj && Adj.pg.querySelectorAll('.anno-live .anno-rect');
+  if (!Adj || !live || !live.length) return;
+  const f = live[0].getBoundingClientRect(), l = live[live.length - 1].getBoundingClientRect(), cw = card.offsetWidth, ch = card.offsetHeight;
+  let x = Math.min(window.innerWidth - cw - 12, Math.max(12, l.right - cw)), y = l.bottom + 22;   // clear of the end handle's knob
+  if (y + ch > window.innerHeight - 12) y = Math.max(64, f.top - ch - 22);
+  card.style.left = x + 'px'; card.style.top = y + 'px';
+}
+async function endAdjust(keep) {
+  const A = Adj;
+  if (!A) return;
+  const info = keep ? rangeInfo(adjRange()) : null;
+  Adj = null;
+  A.pg.querySelectorAll('.adj-handle').forEach(h => h.remove());
+  clearLiveMark();
+  fadeAway(document.getElementById('annoCard'));
+  const a = annoById(A.id);
+  if (info && info.error) toast(info.error);
+  else if (a && info && info.quote.length > 1 && (info.quote !== a.quote || JSON.stringify(info.rects) !== JSON.stringify(a.rects))) {
+    Object.assign(a, { rects: info.rects, quote: info.quote, prefix: info.prefix, suffix: info.suffix, updated: new Date().toISOString() });
+    if (_rn && (_rn.annos || []).includes(a)) { await savePaperNotes(_rn); renderReaderPanel(); }   // (a comment not written yet is saved with its text)
+  }
+  redrawAnnoLayers();
+}
+(function () {   // dragging a handle; the arrow keys; Esc; a tap elsewhere on the paper
+  let drag = null;
+  document.addEventListener('pointerdown', e => {
+    const h = e.target.closest && e.target.closest('.adj-handle');
+    if (!h || !Adj) return;
+    e.preventDefault(); e.stopPropagation();
+    try { h.setPointerCapture(e.pointerId); } catch (err) {}
+    const b = h.getBoundingClientRect();
+    drag = { id: e.pointerId, h, end: h.classList.contains('end'), dy: b.top + (h.classList.contains('end') ? (b.height - 14) / 2 : 14 + (b.height - 14) / 2) - e.clientY, raf: 0 };   // aim at the handle's line, wherever it was taken hold of
+    h.classList.add('dragging');
+  }, true);
+  window.addEventListener('pointermove', e => {
+    if (!drag || e.pointerId !== drag.id || !Adj) return;
+    e.preventDefault();
+    const c = caretOnText(Adj.pg, e.clientX, e.clientY + drag.dy);
+    if (!c) return;
+    Adj[drag.end ? 'e' : 's'] = c;
+    if (!drag.raf) drag.raf = requestAnimationFrame(() => { if (drag) drag.raf = 0; if (Adj) { drawAdjust(); placeAdjBar(); } });
+  }, { passive: false });
+  const up = e => { if (!drag || e.pointerId !== drag.id) return; drag.h.classList.remove('dragging'); drag = null; };
+  window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
+  document.addEventListener('keydown', e => {
+    if (!Adj) return;
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); endAdjust(false); return; }
+    const h = e.target.closest && e.target.closest('.adj-handle');
+    if (!h || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return;
+    e.preventDefault(); e.stopPropagation();
+    const k = h.classList.contains('end') ? 'e' : 's', back = e.key === 'ArrowLeft', sel = window.getSelection();
+    sel.collapse(Adj[k].node, Adj[k].offset); sel.modify('move', back ? 'backward' : 'forward', 'word');
+    const n = sel.focusNode;
+    if (n && n.nodeType === 3 && Adj.pg.contains(n)) {
+      // land between words, or the whole-word snap would take the step back: an end steps back to the previous
+      // word's end, a start steps on to the next word's start
+      let o = sel.focusOffset; const isW = c => /[\p{L}\p{N}]/u.test(c || '');
+      if (k === 'e' && back) while (o > 0 && !isW(n.data[o - 1])) o--;
+      if (k === 's' && !back) while (o < n.data.length && !isW(n.data[o])) o++;
+      Adj[k] = { node: n, offset: o };
+    }
+    sel.removeAllRanges();
+    drawAdjust(); placeAdjBar();
+  }, true);
+  document.addEventListener('DOMContentLoaded', () => {
+    const body = document.getElementById('readerBody');
+    body.addEventListener('pointerdown', e => { if (Adj && !(e.target.closest && e.target.closest('.adj-handle'))) endAdjust(true); }, true);   // a tap elsewhere keeps it
+    body.addEventListener('scroll', () => { if (Adj) placeAdjBar(); }, { passive: true });
+  });
+})();
 function positionAnnoCard(a) {
   const card = document.getElementById('annoCard');
   const rect = document.querySelector(`.anno-rect[data-anno="${a.id}"]`);
@@ -9248,7 +9456,7 @@ function positionAnnoCard(a) {
 function closeAnnoCard() {
   const id = _acId, t = document.getElementById('acNote'), text = t && document.getElementById('annoCard').classList.contains('open') ? t.value : null;
   if (_acTimer) { clearTimeout(_acTimer); _acTimer = null; }
-  fadeAway(document.getElementById('annoCard'));
+  if (!Adj) fadeAway(document.getElementById('annoCard'));   // (while adjusting, the card is Adjust's bar: endAdjust puts it away)
   document.querySelectorAll('.anno-rect.hover').forEach(r => r.classList.remove('hover'));
   _acId = null;
   return id ? endCommentSession(id, text) : Promise.resolve();
@@ -9361,7 +9569,7 @@ function jumpToAnno(id) {
   body.addEventListener('pointercancel', () => { down = false; });   // touch: a long-press turns into a text selection
   document.addEventListener('pointerup', () => { down = false; }, true);
   body.addEventListener('pointerup', e => {
-    if (e.target.closest && e.target.closest('.anno-mark')) return;   // a margin marker opens its card by its own click
+    if (e.target.closest && e.target.closest('.anno-mark, .adj-handle')) return;   // a margin marker opens its card by its own click; a handle being let go isn't a tap
     if (Ink.on && e.pointerType !== 'touch') return;                    // the pen is writing
     const tapped = downAt && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) <= 6;
     if (e.pointerType !== 'mouse' && tapped && hadSel) { window.getSelection().removeAllRanges(); hideSelBar(); hadSel = false; return; }   // touch: a tap puts a selection away
@@ -9422,7 +9630,9 @@ function jumpToAnno(id) {
    - normally a stroke across text highlights it at once, in the colour you used last; a tap opens a highlight
    - with the pen on (the pen button, shown on touch screens), it writes and draws: ink strokes are kept in your
      encrypted notes as fractions of the page, so they sit right at any zoom; the eraser removes strokes it touches */
-const PEN_COLORS = { ink: '#1f2a44', red: '#d93025', blue: '#1a73e8' };
+const PEN_COLORS = { black: '#000000', ink: '#1f2a44', red: '#d93025', blue: '#1a73e8' };   // black writes white on dark pages (ink is shown as the page is)
+/* what a pen is called where it shows: black writes white wherever ink is shown inverted (dark pages, written notes) */
+function penName(k, inverted) { return k === 'black' ? (inverted ? 'white' : 'black') : k === 'ink' ? 'navy' : k; }
 const INK_SIZES = { fine: 0.0013, medium: 0.0024, bold: 0.0042 };   // stroke width as a share of the page width
 const Ink = { on: false, tool: 'pen', color: 'ink', size: 'medium', smooth: 1, undo: [], saveTimer: null };   // smooth: 0 (raw) .. 1 (smoothest); fixed at the smoothest
 /* What the Pencil does, chosen in the strip above the paper: 'read' (like a finger: scroll, select), 'hl' (strokes
@@ -9500,7 +9710,7 @@ function inkToolsHTML() {
   }
   if (Pencil.mode === 'write') {
     const pen = Ink.tool === 'pen', rest = pen ? '' : ' resting';   // while erasing, the pen's colour and size stay marked, faded
-    return Object.entries(PEN_COLORS).map(([k, c]) => `<button class="sel-dot${Ink.color === k ? ' on' + rest : ''}" style="--hc:${c}" title="Pen" aria-label="Pen, ${k}" aria-pressed="${pen && Ink.color === k}" onclick="setInkTool('pen','${k}')"></button>`).join('')
+    return Object.entries(PEN_COLORS).map(([k, c]) => `<button class="sel-dot pen-dot${Ink.color === k ? ' on' + rest : ''}" style="--hc:${c}" title="Pen: ${penName(k, readerDark())}" aria-label="Pen, ${penName(k, readerDark())}" aria-pressed="${pen && Ink.color === k}" onclick="setInkTool('pen','${k}')"></button>`).join('')
       + `<span class="sel-sep"></span>` + Object.entries({ fine: 4, medium: 7, bold: 11 }).map(([k, d]) => `<button class="ink-size${Ink.size === k ? ' on' + rest : ''}" onclick="setInkTool('pen',null,'${k}')" title="${k[0].toUpperCase() + k.slice(1)} line" aria-label="${k} line" aria-pressed="${pen && Ink.size === k}"><i style="width:${d}px;height:${d}px"></i></button>`).join('')
       + `<span class="sel-sep"></span><button class="sel-icon ink-eraser ${Ink.tool === 'eraser' ? 'on' : ''}" onclick="setInkTool('eraser')" title="Stroke eraser: removes every stroke it touches (tap again for the pen)" aria-label="Stroke eraser" aria-pressed="${Ink.tool === 'eraser'}">${ICON_ERASER}</button>`
       + `<button class="sel-icon ink-eraser ${Ink.tool === 'erasePart' ? 'on' : ''}" onclick="setInkTool('erasePart')" title="Partial eraser: rubs out just the part it passes over (tap again for the pen)" aria-label="Partial eraser" aria-pressed="${Ink.tool === 'erasePart'}">${ICON_ERASE_PART}</button>`
@@ -9767,18 +9977,28 @@ function caretAt(x, y) {
     const c = caretAt(x, y);
     return c && c.node.nodeType === 3 && span.contains(c.node) ? c : null;
   }
+  /* Highlight mode is a marker: the words under the Pencil fill with the colour as it moves, and what you see when
+     you lift is the highlight (no selection on the way, nothing sweeping in after). A stroke keeps to the line it
+     started on: drifting down a little stays there; moving most of a line height onto another line takes the
+     highlight on to there. It may start in a margin: it begins at the first word it reaches. */
+  function markCaret(x, y) {
+    if (st.line && Math.abs(y - st.line.mid) < st.line.h * 0.85) y = st.line.mid;   // still on its line
+    const c = textCaretAt(x, y);
+    if (c && (!st.line || y !== st.line.mid)) { const r = c.node.parentElement.getBoundingClientRect(); st.line = { mid: r.top + r.height / 2, h: r.height }; }
+    return c;
+  }
   function highlightTo(e) {
-    if (st.a === undefined) st.a = textCaretAt(st.x0, st.y0);
-    if (!st.a) return;                                   // started off the text (a margin): not a highlight
-    const b = textCaretAt(e.clientX, e.clientY) || st.b;  // off the text for a moment: keep the last word it touched
-    if (!b) return;
-    st.b = b;
-    const a = st.a;
-    const r = document.createRange();
-    r.setStart(a.node, a.offset); r.setEnd(b.node, b.offset);
-    if (r.collapsed && (a.node !== b.node || a.offset !== b.offset)) { r.setStart(b.node, b.offset); r.setEnd(a.node, a.offset); }   // stroked right to left
+    if (!st.from) { st.from = true; st.a = markCaret(st.x0, st.y0); }   // from where it touched down (the first 6px only decide it's a stroke)
+    const b = markCaret(e.clientX, e.clientY);
+    if (!st.a) { if (!b) return; st.a = b; }   // not on the text yet (a margin)
+    if (b) st.b = b;                            // off the text for a moment: keep the last word it touched
+    if (!st.b) return;
+    const a = st.a, z = st.b, r = document.createRange();
+    r.setStart(a.node, a.offset); r.setEnd(z.node, z.offset);
+    if (r.collapsed && (a.node !== z.node || a.offset !== z.offset)) { r.setStart(z.node, z.offset); r.setEnd(a.node, a.offset); }   // stroked right to left
     wholeWords(r);   // a stroke is coarser than a cursor: take in the words it touches
-    const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+    st.range = r;
+    if (!st.raf) { const s = st; s.raf = requestAnimationFrame(() => { s.raf = 0; if (st === s && s.range) drawLiveMark(s.pg, pageRects(s.pg, s.range), pencilHl()); }); }
   }
   body.addEventListener('pointermove', e => {
     if (!st || e.pointerId !== st.id) return;
@@ -9810,11 +10030,13 @@ function caretAt(x, y) {
     } else if (s.mode === 'eraser' || s.mode === 'erasePart') {
       eraseCursor(null);
       if (s.erased.length || s.added.length) { Ink.undo.push(s.added.length ? { erased: s.erased, added: s.added } : { erased: s.erased }); scheduleInkSave(); renderInkBar(); }
-    } else if (s.moved && e.type !== 'pointercancel') {   // a stroke across text: highlight it
-      const info = selInfo();
-      window.getSelection().removeAllRanges();
-      const tool = pencilHl();
-      if (info && !info.error && info.quote.length > 1) { _selPending = info; tool === 'note' ? createAnno('note') : createAnno('hl', tool); }
+    } else {   // Highlight: what the marker shows becomes the highlight (or the underline of a comment)
+      if (s.raf) cancelAnimationFrame(s.raf);
+      const info = s.moved && e.type !== 'pointercancel' && s.range ? rangeInfo(s.range) : null, tool = pencilHl();
+      if (!info || info.error || info.quote.length < 2) { clearLiveMark(); return; }
+      drawLiveMark(s.pg, info.rects, tool);   // exactly what will be saved, until the page redraws with it
+      _selPending = info;
+      (tool === 'note' ? createAnno('note') : createAnno('hl', tool, true)).finally(() => { const l = s.pg.querySelector('.anno-live'); if (l && !st) l.remove(); });
     }
   };
   body.addEventListener('pointerup', finish); body.addEventListener('pointercancel', finish);
@@ -10054,10 +10276,10 @@ function renderReaderPanel() {
   const filtering = f.colors.size || f.comments || f.notes || f.q;
   const showFilters = total >= 6 || filtering;
   const kept = keepLiveEditor(() => { panel.innerHTML = head + `<div class="rp-scroll">
-    <div class="rp-toolbar">${_rnEditing === 'new' ? '<span class="rp-count-l">New note</span>' : `<button class="rp-add" onclick="startNewNote()">${ICON_PLUS}Add note</button>${_reader.paper && _reader.paper.uploaded && !(n.entries || []).some(e => REVIEW_MARK.test(e.text)) ? '<button class="rp-text-btn" onclick="startReview()" title="A note laid out as a review">Start review</button>' : ''}`}<span class="grow"></span>
+    <div class="rp-toolbar">${_rnEditing === 'new' || (_hw && _hw.id === 'new') ? '<span class="rp-count-l">New note</span>' : `${pencilDevice() ? `<button class="rp-add" onclick="startNewNote()" title="Type a note">${ICON_PLUS}Type</button><button class="rp-add" onclick="startHandwritten()" title="Write or draw a note with the Pencil">${ICON_WRITE}Write</button>` : `<button class="rp-add" onclick="startNewNote()">${ICON_PLUS}Add note</button>`}${_reader.paper && _reader.paper.uploaded && !(n.entries || []).some(e => REVIEW_MARK.test(e.text)) ? '<button class="rp-text-btn" onclick="startReview()" title="A note laid out as a review">Start review</button>' : ''}`}<span class="grow"></span>
       ${total >= 3 ? `<div class="rp-seg" role="group" aria-label="Order"><button class="${_rnSort === 'page' ? 'on' : ''}" onclick="setRnSort('page')" title="Notes first, then in page order">Page</button><button class="${_rnSort === 'recent' ? 'on' : ''}" onclick="setRnSort('recent')" title="Newest first">Recent</button></div>` : ''}</div>
     ${showFilters ? `<div class="rp-filters">${HL_COLORS.filter(c => used.has(c) || f.colors.has(c)).map(c => `<button class="sel-dot ${f.colors.has(c) ? 'on' : ''}" style="--hc:var(--hl-${c})" title="${escAttr(hlLabel(c))}" aria-pressed="${f.colors.has(c)}" onclick="toggleRnColor('${c}')"></button>`).join('')}${hasComments || f.comments ? chip(f.comments, 'Comments', "_rnFilter.comments=!_rnFilter.comments;renderReaderPanel()") : ''}${hasNotes || f.notes ? chip(f.notes, 'Notes', "_rnFilter.notes=!_rnFilter.notes;renderReaderPanel()") : ''}<input class="rp-search" id="rpSearch" placeholder="Search" value="${esc(f.q)}" oninput="_rnFilter.q=this.value;keepLiveEditor(() => renderRnList())"></div>` : ''}
-    ${_rnEditing === 'new' ? noteEditorHTML() : ''}
+    ${_rnEditing === 'new' ? noteEditorHTML() : _hw && _hw.id === 'new' ? hwEditorHTML() : ''}
     <div class="rp-list" id="rpList"></div>
     ${used.size ? `<div class="rp-colors">${HL_COLORS.map(c => `<button onclick="renameHlColor('${c}')" title="Rename this colour"><i style="--hc:var(--hl-${c})"></i>${esc(hlLabel(c))}</button>`).join('')}</div>` : ''}
   </div><div class="rp-foot"><span id="rpSync">${esc(_notesSyncText)}</span></div>`;
@@ -10110,19 +10332,21 @@ function renderRnList(shown, total, anyFilter) {
   const list = document.getElementById('rpList');
   if (!list) return;
   if (!shown) { const n = _rn || emptyPaperNotes(''); const items = rnItems(n); shown = rnFilterItems(items); total = items.length; }
-  if (!total) { list.innerHTML = _rnEditing === 'new' ? '' : (_reader.doc ? '<div class="rp-empty">Select text in the paper to highlight, comment on or cite it. Notes take Markdown and $math$.</div>' : '<div class="rp-empty">Add a PDF to highlight and cite passages, or write a note with <strong>Add note</strong>.</div>'); return; }
+  if (!total) { list.innerHTML = _rnEditing === 'new' || (_hw && _hw.id === 'new') ? '' : (_reader.doc ? '<div class="rp-empty">Select text in the paper to highlight, comment on or cite it. Notes take Markdown and $math$.</div>' : '<div class="rp-empty">Add a PDF to highlight and cite passages, or write a note with <strong>Add note</strong>.</div>'); return; }
   if (!shown.length) { list.innerHTML = '<div class="rp-empty">Nothing matches this filter.</div>'; return; }
   const acts = (it) => {
-    const edit = `<button class="rp-icon-btn sm" onclick="${it.type === 'note' ? `editNote('${it.id}')` : `editAnnoComment('${it.id}')`}" title="${it.type === 'note' ? 'Edit note' : (it.a.note || '').trim() ? 'Edit comment' : 'Add a comment'}" aria-label="Edit">${ICON_EDIT}</button>`;
+    const canDraw = pencilDevice() || !matchMedia('(pointer: coarse)').matches;   // (a finger doesn't write: no editing a written note on a phone)
+    const edit = it.type === 'note' && it.e.hand && !canDraw ? '' : `<button class="rp-icon-btn sm" onclick="${it.type === 'note' ? `editNote('${it.id}')` : `editAnnoComment('${it.id}')`}" title="${it.type === 'note' ? 'Edit note' : (it.a.note || '').trim() ? 'Edit comment' : 'Add a comment'}" aria-label="Edit">${ICON_EDIT}</button>`;
     const cite = it.type === 'note' ? '' : `<button class="rp-icon-btn sm" onclick="citeAnno('${it.id}')" title="Cite in a note" aria-label="Cite in a note">${ICON_QUOTE}</button>`;
     const del = `<button class="rp-icon-btn sm" onclick="${it.type === 'note' ? `deleteGeneralNote('${it.id}')` : `deleteAnno('${it.id}')`}" title="Delete" aria-label="Delete">${ICON_TRASH}</button>`;
     return `<span class="rp-item-acts">${edit}${cite}${del}</span>`;
   };
   list.innerHTML = shown.map(it => {
     const editing = _rnEditing === it.id || _rnEditing === 'a:' + it.id;
-    if (it.type === 'note') return `<div class="rp-card rp-card-note ${_rnFresh === it.id ? 'fresh' : ''}" data-id="${it.id}">
-        <div class="rp-card-top"><span>Note · ${esc(noteDate(it.e))}</span><span class="grow"></span>${editing ? '' : acts(it)}</div>
-        ${editing ? noteEditorHTML() : `<div class="md rp-card-body" data-md-note="${it.id}"></div>`}</div>`;
+    if (it.type === 'note') { const writing = !!(it.e.hand && _hw && _hw.id === it.id);
+      return `<div class="rp-card rp-card-note ${_rnFresh === it.id ? 'fresh' : ''}" data-id="${it.id}">
+        <div class="rp-card-top"><span>Note · ${esc(noteDate(it.e))}</span><span class="grow"></span>${editing || writing ? '' : acts(it)}</div>
+        ${writing ? hwEditorHTML() : it.e.hand ? hwViewHTML(it.e) : editing ? noteEditorHTML() : `<div class="md rp-card-body" data-md-note="${it.id}"></div>`}</div>`; }
     const a = it.a, label = a.kind === 'hl' ? esc(hlLabel(a.color)) : 'Comment';
     return `<div class="rp-card rp-card-anchor ${a.kind === 'note' ? 'is-comment' : ''} ${_rnFresh === it.id ? 'fresh' : ''}" data-id="${it.id}" style="--hc:${annoHc(a)}" tabindex="0" onclick="if (!event.target.closest('button, textarea, a, .cite-chip')) jumpToAnno('${it.id}')">
         <div class="rp-card-top"><span>p. ${a.page} · ${label}</span><span class="grow"></span>${editing ? '' : acts(it)}</div>
@@ -10158,7 +10382,7 @@ async function startNewNote(prefill) {
   if (notesBusy()) return;
   if (!await vaultReady()) return;
   if (!_rn) { setRnState('loading'); await loadReaderNotes(); if (!_rn) return; }
-  if (_rnEditing) await finishNotesEdit();
+  await finishNotesEdit();
   _rnEditing = 'new'; _rnDraft = prefill || ''; _rnRange = null;
   if (!document.getElementById('reader').classList.contains('panel-open')) toggleReaderPanel(true);
   else renderReaderPanel();
@@ -10167,6 +10391,8 @@ async function editNote(id) {
   if (notesBusy()) return;
   const e = _rn && (_rn.entries || []).find(x => x.id === id);
   if (!e) return;
+  if (e.hand) return editHandwritten(id);
+  if (_hw) await saveHandwritten(true);
   if (_rnEditing && _rnEditing !== id) await finishNotesEdit();
   _rnEditing = id; _rnDraft = e.text;
   if (!document.getElementById('reader').classList.contains('panel-open')) toggleReaderPanel(true);
@@ -10177,7 +10403,7 @@ function draftOriginal() {
   const ed = String(_rnEditing || '');
   return !ed || ed === 'new' ? '' : ed.startsWith('a:') ? ((annoById(ed.slice(2)) || {}).note || '') : (((_rn && _rn.entries) || []).find(e => e.id === ed) || {}).text || '';
 }
-function draftUnsaved() { return !!_rnEditing && _rnDraft.trim() !== draftOriginal().trim(); }
+function draftUnsaved() { return (!!_rnEditing && _rnDraft.trim() !== draftOriginal().trim()) || !!(_hw && _hw.dirty); }
 /* Cancel is one keystroke (Esc), so a changed draft can be brought back */
 function cancelNoteEdit() {
   const snap = { editing: _rnEditing, draft: _rnDraft, refs: _rnPendingRefs.slice(), pid: _rn && _rn.id };
@@ -10197,6 +10423,7 @@ async function editAnnoComment(id) {
   const a = annoById(id);
   if (!a) return;
   closeAnnoCard();
+  if (_hw) await saveHandwritten(true);
   if (_rnEditing && _rnEditing !== 'a:' + id) await finishNotesEdit();
   _rnEditing = 'a:' + id; _rnDraft = a.note || ''; _rnRange = null;
   if (!document.getElementById('reader').classList.contains('panel-open')) toggleReaderPanel(true); else renderReaderPanel();
@@ -10221,7 +10448,7 @@ async function saveNoteEdit(quiet) {
   redrawAnnoLayers();
   if (!quiet) renderReaderPanel();
 }
-async function finishNotesEdit() { if (_rnEditing) { if (_rnDraft.trim() || String(_rnEditing).startsWith('a:')) await saveNoteEdit(true); else endDraft('discard'); } }
+async function finishNotesEdit() { if (_hw) await saveHandwritten(true); if (_rnEditing) { if (_rnDraft.trim() || String(_rnEditing).startsWith('a:')) await saveNoteEdit(true); else endDraft('discard'); } }
 function noteEditorKey(e) {
   if (_citeCtx && document.getElementById('citeDD').classList.contains('open')) { citeKey(e); if (e.defaultPrevented) return; }
   if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); saveNoteEdit(); }
@@ -10246,6 +10473,176 @@ async function deleteGeneralNote(id) {
     await savePaperNotes(_rn); renderReaderPanel();
   });
 }
+
+/* ===== WRITTEN NOTES =====
+   A note can be written with the Pencil (or drawn with a mouse) instead of typed: Write opens a card as wide as the
+   panel to write and draw on, and it grows as you near its bottom. Strokes are kept the way the page keeps ink (the
+   same pens; points as fractions of the card's width) in the note's entry, as hand: { h, strokes }, h being the
+   card's height as a share of its width; its text stays '' so whatever reads notes as text still works. The panel
+   is dark, so a card shows ink as dark pages do (the same filter): the black pen writes white. On an iPad the
+   Pencil writes and a finger scrolls the panel; the Pencil on a written note opens it to write on. */
+const HW_W = 0.0058, HW_START_H = 0.7, HW_GROW = 0.4;   // line width (share of the card's width), first height, room added
+const ICON_WRITE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1.2-4.6L15.6 5a2 2 0 0 1 2.8 0l.6.6a2 2 0 0 1 0 2.8L8.6 18.8z"/></svg>';
+let _hw = null;   // the written note open: { id ('new' or the note's id), h, strokes, undo, tool ('pen' | 'eraser'), color, dirty }
+function hwPaths(strokes) { return strokes.map(k => `<path d="${inkD(k.pts, 1)}" stroke="${k.color}" stroke-width="${(k.w * 1000).toFixed(2)}"/>`).join(''); }
+function hwSvgHTML(hand) { return `<svg class="hw-svg" viewBox="0 0 1000 ${(1000 * hand.h).toFixed(1)}" preserveAspectRatio="xMinYMin slice" aria-hidden="true">${hwPaths(hand.strokes || [])}</svg>`; }
+/* shown no wider than it was written (px), so a note from the narrow panel isn't blown up on the paper's page */
+function hwViewHTML(e) { return `<div class="hw-view" data-hw="${escAttr(e.id)}" style="aspect-ratio:1 / ${e.hand.h};max-width:${e.hand.px || 380}px" role="img" aria-label="Handwritten note">${hwSvgHTML(e.hand)}</div>`; }
+function hwColor() { try { const c = localStorage.getItem('scholar_hw_color'); return PEN_COLORS[c] ? c : 'black'; } catch (e) { return 'black'; } }
+function hwToolsHTML() {
+  const hw = _hw, pen = hw.tool === 'pen';
+  return Object.entries(PEN_COLORS).map(([k, c]) => `<button class="sel-dot pen-dot${hw.color === k ? (pen ? ' on' : ' on resting') : ''}" style="--hc:${c}" title="Pen: ${penName(k, true)}" aria-label="Pen, ${penName(k, true)}" aria-pressed="${pen && hw.color === k}" onclick="hwTool('pen','${k}')"></button>`).join('')
+    + `<span class="sel-sep"></span><button class="sel-icon ${pen ? '' : 'on'}" onclick="hwTool('eraser')" title="Eraser: removes the strokes it touches (tap again for the pen)" aria-label="Eraser" aria-pressed="${!pen}">${ICON_ERASER}</button>`
+    + `<button class="sel-icon" onclick="hwUndo()" ${hw.undo.length ? '' : 'aria-disabled="true"'} title="Undo" aria-label="Undo">${ICON_UNDO}</button>`;
+}
+function hwEditorHTML() {
+  return `<div class="hw-editor" id="hwEditor" onkeydown="hwKey(event)">
+    <div class="hw-tools" role="toolbar" aria-label="Pens">${hwToolsHTML()}</div>
+    <div class="hw-pad" id="hwPad" style="aspect-ratio:1 / ${_hw.h}" aria-label="Writing area">${hwSvgHTML(_hw)}</div>
+    <div class="rp-editor-foot"><span class="rp-hint">${pencilDevice() ? 'Write with the Pencil' : 'Draw with the mouse'} · ${MOD_KEY}↵ save · Esc cancel</span><span class="grow"></span><button class="ui-btn ui-btn-secondary ui-btn-sm" onclick="cancelHandwritten()">Cancel</button><button class="ui-btn ui-btn-primary ui-btn-sm" onclick="saveHandwritten()">Save</button></div></div>`;
+}
+function hwRedraw() {
+  const pad = document.getElementById('hwPad'), tools = document.querySelector('#hwEditor .hw-tools');
+  if (pad && _hw) pad.innerHTML = hwSvgHTML(_hw);
+  if (tools && _hw) morphInto(tools, hwToolsHTML());
+}
+function hwTool(tool, color) {
+  if (!_hw) return;
+  _hw.tool = tool === 'eraser' && _hw.tool === 'eraser' ? 'pen' : tool;   // the eraser is a toggle, as on the page
+  if (color) { _hw.color = color; try { localStorage.setItem('scholar_hw_color', color); } catch (e) {} }
+  hwRedraw();
+}
+function hwUndo() {
+  const last = _hw && _hw.undo.pop();
+  if (!last) return;
+  if (last.added) _hw.strokes = _hw.strokes.filter(k => !last.added.includes(k));
+  if (last.erased) _hw.strokes = _hw.strokes.concat(last.erased);
+  _hw.dirty = true; hwRedraw();
+}
+/* More room as you near the bottom: the card grows smoothly (the drawing keeps its scale, held by the width) */
+function hwGrowFor(maxY) {
+  if (!_hw || maxY < _hw.h - 0.15) return;
+  const pad = document.getElementById('hwPad'), before = pad ? pad.offsetHeight : 0;
+  _hw.h = Math.round((maxY + HW_GROW) * 100) / 100;
+  if (!pad) return;
+  pad.style.aspectRatio = `1 / ${_hw.h}`;
+  const svg = pad.querySelector('svg'); if (svg) svg.setAttribute('viewBox', `0 0 1000 ${(1000 * _hw.h).toFixed(1)}`);
+  if (!reduceMotion() && pad.animate) pad.animate([{ height: before + 'px' }, { height: pad.offsetHeight + 'px' }], { duration: 240, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' });
+}
+async function startHandwritten() {
+  if (notesBusy()) return;
+  if (!await vaultReady()) return;
+  if (!_rn) { setRnState('loading'); await loadReaderNotes(); if (!_rn) return; }
+  await finishNotesEdit();
+  _hw = { id: 'new', h: HW_START_H, strokes: [], undo: [], tool: 'pen', color: hwColor(), dirty: false };
+  if (!document.getElementById('reader').classList.contains('panel-open')) toggleReaderPanel(true); else renderReaderPanel();
+  hwFocus();
+}
+async function editHandwritten(id) {
+  const e = _rn && (_rn.entries || []).find(x => x.id === id);
+  if (!e || !e.hand || (_hw && _hw.id === id)) return;
+  await finishNotesEdit();
+  _hw = { id, h: Math.max(HW_START_H, e.hand.h + 0.3), strokes: (e.hand.strokes || []).slice(), undo: [], tool: 'pen', color: hwColor(), dirty: false, px: e.hand.px };   // room to go on writing
+  if (!document.getElementById('reader').classList.contains('panel-open')) toggleReaderPanel(true); else renderReaderPanel();
+  hwFocus();
+}
+function hwFocus() { setTimeout(() => { const ed = document.getElementById('hwEditor'); if (!ed) return; ed.scrollIntoView({ block: 'nearest' }); const b = ed.querySelector('.pen-dot.on'); if (b && !matchMedia('(pointer: coarse)').matches) b.focus({ preventScroll: true }); }, 0); }
+async function saveHandwritten(quiet) {
+  const hw = _hw;
+  _hw = null;
+  if (!hw || !_rn) return;
+  const now = new Date().toISOString();
+  _rn.entries = _rn.entries || [];
+  const pad = document.getElementById('hwPad'), px = pad && pad.offsetWidth ? Math.round(pad.offsetWidth) : hw.px || 380;   // the width it was written at
+  const low = Math.max(0, ...hw.strokes.flatMap(k => k.pts.map(q => q[1])));
+  hw.h = Math.max(0.18, Math.min(hw.h, Math.round((low + 0.06) * 100) / 100));   // kept as tall as what's written (no empty card below it)
+  if (hw.id === 'new') {
+    if (hw.strokes.length) { const e = { id: newNoteId(), text: '', hand: { h: hw.h, strokes: hw.strokes, px }, created: now, updated: now }; _rn.entries.push(e); _rnFresh = e.id; }
+  } else {
+    const e = _rn.entries.find(x => x.id === hw.id);
+    if (e && !hw.strokes.length) { if (!quiet) renderReaderPanel(); return deleteGeneralNote(hw.id); }   // all rubbed out: as an emptied typed note
+    if (e && hw.dirty) { e.hand = { h: hw.h, strokes: hw.strokes, px: Math.max(px, e.hand.px || 0) }; e.updated = now; _rnFresh = e.id; }
+  }
+  if (hw.dirty) await savePaperNotes(_rn);
+  if (!quiet) renderReaderPanel();
+}
+function cancelHandwritten() {
+  const hw = _hw, pid = _rn && _rn.id;
+  _hw = null;
+  renderReaderPanel();
+  if (hw && hw.dirty) toast(hw.id === 'new' ? 'Note discarded' : 'Changes discarded', () => {
+    if (_hw || _rnEditing || !_rn || _rn.id !== pid) return;
+    _hw = hw; renderReaderPanel(); hwFocus();
+  });
+}
+function hwKey(e) {
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); saveHandwritten(); }
+  else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cancelHandwritten(); }
+}
+(function () {   // writing: the Pencil or a mouse draws, a finger scrolls; a stroke is one undo step, as is one rub of the eraser
+  let st = null;
+  const padOf = t => t && t.closest && t.closest('#hwPad');
+  document.addEventListener('touchstart', e => { if (padOf(e.target) && [...e.changedTouches].some(t => t.touchType === 'stylus')) e.preventDefault(); }, { passive: false });   // Safari would scroll or select with it
+  document.addEventListener('pointerdown', e => {
+    const view = e.target.closest && e.target.closest('#notesPane .hw-view[data-hw]');
+    if (view && e.pointerType === 'pen') { e.preventDefault(); editNote(view.dataset.hw); return; }   // the Pencil on a written note: write on it
+    const pad = padOf(e.target);
+    if (!pad || !_hw || e.pointerType === 'touch' || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    e.preventDefault();
+    try { pad.setPointerCapture(e.pointerId); } catch (err) {}
+    st = { id: e.pointerId, r: pad.getBoundingClientRect(), svg: pad.querySelector('svg'), erased: [] };
+    if (_hw.tool === 'pen') {
+      st.k = { id: 'k' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), color: PEN_COLORS[_hw.color], w: HW_W, pts: [], pr: [] };
+      st.path = document.createElementNS(SVGNS, 'path'); st.path.setAttribute('stroke', st.k.color);
+      if (st.svg) st.svg.appendChild(st.path);
+      add(e);
+    } else erase(e);
+  });
+  function add(e, final) {
+    const evs = (e.getCoalescedEvents && e.getCoalescedEvents().length) ? e.getCoalescedEvents() : [e], k = st.k, W = st.r.width;
+    evs.forEach(ev => {
+      const rx = (ev.clientX - st.r.left) / W, ry = (ev.clientY - st.r.top) / W;   // both as shares of the width
+      st.sm = st.sm ? [st.sm[0] + 0.18 * (rx - st.sm[0]), st.sm[1] + 0.18 * (ry - st.sm[1])] : [rx, ry];   // as the page's ink: a light average takes out the jitter
+      const [x, y] = final ? [rx, ry] : st.sm, last = k.pts[k.pts.length - 1];
+      if (last && Math.hypot(x - last[0], y - last[1]) * W < 1.5) return;
+      k.pts.push([+x.toFixed(5), +y.toFixed(5)]); k.pr.push(ev.pressure || 0.5);
+    });
+    const p = k.pr.reduce((a, b) => a + b, 0) / k.pr.length;
+    k.w = +(HW_W * (0.75 + 0.5 * Math.min(1, p))).toFixed(5);
+    st.path.setAttribute('d', inkD(k.pts, 1)); st.path.setAttribute('stroke-width', (k.w * 1000).toFixed(2));
+  }
+  function erase(e) {
+    const W = st.r.width, px = e.clientX - st.r.left, py = e.clientY - st.r.top;
+    const near = (k) => { const R = 10 + k.w * W / 2, P = k.pts.map(q => [q[0] * W, q[1] * W]);
+      if (P.length === 1) return Math.hypot(P[0][0] - px, P[0][1] - py) < R;
+      for (let i = 1; i < P.length; i++) { const [ax, ay] = P[i - 1], [bx, by] = P[i], dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy, t = l2 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / l2)) : 0; if (Math.hypot(px - ax - t * dx, py - ay - t * dy) < R) return true; }
+      return false; };
+    const hit = _hw.strokes.filter(near);
+    if (!hit.length) return;
+    _hw.strokes = _hw.strokes.filter(k => !hit.includes(k)); st.erased.push(...hit);
+    hwRedraw(); st.svg = document.querySelector('#hwPad svg');
+  }
+  window.addEventListener('pointermove', e => {
+    if (!st || e.pointerId !== st.id || !_hw) return;
+    if (st.k) add(e); else erase(e);
+  });
+  const done = e => {
+    if (!st || e.pointerId !== st.id) return;
+    const s = st; st = null;
+    if (!_hw) return;
+    if (s.k) {
+      if (e.type === 'pointercancel') { s.path.remove(); return; }
+      st = s; add(e, true); st = null;
+      const k = s.k; delete k.pr;
+      k.pts = simplifyInk(k.pts, s.r.width, s.r.width, 0.6);
+      _hw.strokes.push(k); _hw.undo.push({ added: [k] }); _hw.dirty = true;
+      hwGrowFor(Math.max(...k.pts.map(q => q[1])));
+      if (!s.path.isConnected) hwRedraw();   // (the panel was redrawn while writing)
+      else { const t = document.querySelector('#hwEditor .hw-tools'); if (t) morphInto(t, hwToolsHTML()); }
+    } else if (s.erased.length) { _hw.undo.push({ erased: s.erased }); _hw.dirty = true; hwRedraw(); }
+  };
+  window.addEventListener('pointerup', done); window.addEventListener('pointercancel', done);
+})();
 
 /* ===== CHAT WITH CLAUDE: one Claude Code session per paper, through bridge/scholar_bridge.py on this laptop =====
    The page talks to the bridge on 127.0.0.1 (Chrome asks once to allow that); the bridge runs Claude Code.
@@ -10773,7 +11170,7 @@ function notesContext(n) {
   const out = [];
   if (hl.length) out.push('Highlights:\n' + hl.sort((a, b) => a.page - b.page).map(a => `- p.${a.page} [${hlLabel(a.color)}] “${a.quote}”${(a.note || '').trim() ? ' — my comment: ' + a.note.trim() : ''}`).join('\n'));
   if (com.length) out.push('Comments:\n' + com.sort((a, b) => a.page - b.page).map(a => `- p.${a.page} “${a.quote}”: ${a.note.trim()}`).join('\n'));
-  if ((n.entries || []).length) out.push('Notes:\n' + n.entries.map(e => '- ' + quote(e.text).replace(/\n/g, '\n  ')).join('\n'));
+  if ((n.entries || []).length) out.push('Notes:\n' + n.entries.map(e => '- ' + (e.hand ? '(a handwritten note: ink, no text)' : quote(e.text).replace(/\n/g, '\n  '))).join('\n'));
   return out.join('\n\n');
 }
 function chatProfile() {
@@ -11390,7 +11787,7 @@ function renderPaperDetail(p) {
   let main = '';
   if (hasText(p.summary)) main += `<section class="pd-section"><h2>Summary</h2><p class="pd-prose">${esc(p.summary)}</p></section>`;
   if (hasText(p.abstract)) main += `<section class="pd-section"><h2>Abstract</h2><p class="pd-prose">${esc(p.abstract)}</p></section>`;
-  if (hasNotes || (ix && ix.h + ix.c)) main += `<section class="pd-section pd-notes"><h2>Your notes <button class="pd-edit" onclick="openReader('${ka}', 'new')">+ Add note</button></h2>${hasNotes ? vn.entries.map(e => `<div class="pd-note"><div class="pd-note-top"><span>${esc(noteDate(e))}</span><button class="rp-icon-btn sm" onclick="openReader('${ka}', '${e.id}')" title="Edit note" aria-label="Edit note">${ICON_EDIT}</button></div><div class="pd-prose md" data-pdnote="${e.id}"></div></div>`).join('') : ''}${ix && ix.h + ix.c ? `<div class="pd-notes-meta">${[ix.h && `${ix.h} highlight${ix.h === 1 ? '' : 's'}`, ix.c && `${ix.c} comment${ix.c === 1 ? '' : 's'}`].filter(Boolean).join(', ')} · <button onclick="openReader('${ka}', 'panel')">Open in the reader</button></div>` : ''}</section>`;
+  if (hasNotes || (ix && ix.h + ix.c)) main += `<section class="pd-section pd-notes"><h2>Your notes <button class="pd-edit" onclick="openReader('${ka}', 'new')">+ Add note</button></h2>${hasNotes ? vn.entries.map(e => `<div class="pd-note"><div class="pd-note-top"><span>${esc(noteDate(e))}</span><button class="rp-icon-btn sm" onclick="openReader('${ka}', '${e.id}')" title="Edit note" aria-label="Edit note">${ICON_EDIT}</button></div>${e.hand ? hwViewHTML(e) : `<div class="pd-prose md" data-pdnote="${e.id}"></div>`}</div>`).join('') : ''}${ix && ix.h + ix.c ? `<div class="pd-notes-meta">${[ix.h && `${ix.h} highlight${ix.h === 1 ? '' : 's'}`, ix.c && `${ix.c} comment${ix.c === 1 ? '' : 's'}`].filter(Boolean).join(', ')} · <button onclick="openReader('${ka}', 'panel')">Open in the reader</button></div>` : ''}</section>`;
   if (!main) main = `<p class="pd-empty">No summary or abstract yet. Open the paper to read it at the source.</p>`;
 
   // Side panel: facts + editable topics
@@ -11733,6 +12130,7 @@ document.addEventListener('DOMContentLoaded', () => { loadPapers(); loadInterest
     'vaultReady', 'openVaultModal', 'submitVault', 'unlockFromPanel', 'lockNotes', 'nfSave', 'savePaperNotes', 'scheduleNotesPush', 'pushNotes',
     'reconcileNotesIndex', 'renameHlColor', 'createAnno', 'deleteAnno', 'editAnnoComment', 'setAnnoColor', 'citeAnno', 'citeSelection',
     'startNewNote', 'editNote', 'saveNoteEdit', 'deleteGeneralNote', 'setInkTool', 'setPencilHl', 'undoInk', 'toggleReaderPanel', 'setPanelTab', 'showSelBar',
+    'startHandwritten', 'editHandwritten', 'saveHandwritten', 'hwTool', 'hwUndo', 'adjustAnno', 'endAdjust',
     // Claude on the laptop
     'chatOpen', 'chatSend', 'chatSendOrStop', 'chatNew', 'chatSwitch', 'chatConnect', 'chatSetRemote', 'chatForgetRemote', 'askAboutSelection',
     'startFigureSelect', 'chatApplyBlock', 'chatSaveAsNote', 'chatAddPaper', 'chatRefresh', 'toggleLibPanel', 'startAddPaper', 'stopAddPaper', 'startTopicTag',
