@@ -344,7 +344,7 @@ Notes, highlights and comments the user makes in the dashboard live in `annotati
 
 - `annotations/_vault.json`: salt, round count and an encrypted check value (no secrets)
 - `annotations/_index.json`: encrypted list of which papers have notes, and the user's highlight-colour names
-- `annotations/<paper id>.json`: encrypted notes, highlights, comments and Apple Pencil ink (`ink`: strokes as page fractions) for that paper; a note written with the Pencil is an entry with `text: ''` and `hand: { h, strokes, px }` (points as fractions of the card's width)
+- `annotations/<paper id>.json`: encrypted notes, highlights, comments and Apple Pencil ink (`ink`: strokes as page fractions) for that paper; a note written with the Pencil is an entry with `text: ''` and `hand: { h, strokes, px }` (points as fractions of the card's width); a highlight's or comment's written comment is the same `hand` on that annotation, beside its typed `note`
 
 **Digest runs and other tasks must never create, edit, move or delete anything in `annotations/`.** The files can't be read without the password, and changing them can destroy the user's notes. If a paper is ever merged into another id, leave its notes file alone and tell the user.
 
