@@ -226,6 +226,9 @@ html.offline .off-mark { display: inline-flex; }
 .abs-popup { position: fixed; width: 601px; max-height: 476px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 12px 40px rgba(0,0,0,0.55); z-index: 9999; font-size: 15px; color: var(--text); line-height: 1.7; animation: dropdown-in 0.15s ease forwards; display: flex; flex-direction: column; overflow: hidden; }
 .abs-popup-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px 10px; flex-shrink: 0; }
 .abs-popup-body { padding: 0 20px 18px; overflow-y: auto; font-size: 16px; }
+.paper-text .katex { font-size: 1.05em; }
+.paper-text .katex-display { margin: 0.6em 0; overflow-x: auto; overflow-y: hidden; max-width: 100%; }
+.p-detail-panel.open.paper-text { max-height: none; }
 .abs-popup-title { font-size: 16px; font-weight: 500; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
 .abs-popup-close { background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer; padding: 0 2px; line-height: 1; transition: color 0.15s; }
 .abs-popup-close:hover { color: var(--text); }
@@ -4305,7 +4308,7 @@ function toggleDetail(btn, type) {
       const p = allPapers.find(x => paperKey(x) === card.dataset.key);
       panel.innerHTML = p ? whyHTML(p) : '';
     } else {
-      panel.textContent = type === 'summary' ? panel.dataset.summary : panel.dataset.abstract;
+      renderPaperText(panel, type === 'summary' ? panel.dataset.summary : panel.dataset.abstract);
     }
     panel.dataset.activeType = type;
     panel.classList.add('open');
@@ -4326,6 +4329,7 @@ function toggleAbsPopup(btn, key) {
   popup.onclick = e => e.stopPropagation();
   popup.innerHTML = `<div class="abs-popup-header"><span class="abs-popup-title">Abstract</span><button class="abs-popup-close" onclick="event.stopPropagation();closeAbsPopup()" title="Close">&times;</button></div><div class="abs-popup-body">${esc(p.abstract)}</div>`;
   document.body.appendChild(popup);
+  renderPaperText(popup.querySelector('.abs-popup-body'), p.abstract);
   const pW = popup.offsetWidth, pH = popup.offsetHeight;
   const gap = 6, pad = 8;
   const vw = window.innerWidth, vh = window.innerHeight;
@@ -7376,7 +7380,7 @@ if ('serviceWorker' in navigator && window.isSecureContext) window.addEventListe
   navigator.serviceWorker.register(APP_ROOT + 'sw.js', { scope: APP_ROOT }).catch(e => console.warn('service worker', e));
   navigator.serviceWorker.ready.then(reg => setTimeout(() => {
     const seen = performance.getEntriesByType('resource').map(r => r.name).filter(u => /^https:\/\/(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|fonts\.g)/.test(u));
-    if (reg.active) reg.active.postMessage({ type: 'sw-warm', urls: [...new Set([...seen, PDFJS_BASE + 'pdf.min.mjs', PDFJS_BASE + 'pdf.worker.min.mjs', MD_LIBS.css, ...MD_LIBS.js])] });
+    if (reg.active) reg.active.postMessage({ type: 'sw-warm', urls: [...new Set([...seen, PDFJS_BASE + 'pdf.min.mjs', PDFJS_BASE + 'pdf.worker.min.mjs', MD_LIBS.css, ...MD_LIBS.js, PAPER_MATH_SCRIPT])] });
   }, 4000)).catch(() => {});
 });
 
@@ -11740,6 +11744,53 @@ function loadMdLibs() {
   _mdLibs = Promise.all(MD_LIBS.js.map(loadScript));
   return _mdLibs;
 }
+/* Abstracts are plain text with TeX, not Markdown. Keep the source safe and readable
+   while loading; render only this element so opening another paper cannot race it. */
+const PAPER_MATH_SCRIPT = 'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js';
+let _paperMathLibs = null;
+async function renderPaperText(el, text) {
+  if (!el) return;
+  const source = String(text || '');
+  el.classList.add('paper-text');
+  el.textContent = source;
+  if (!/[$\\]/.test(source)) return;
+  try {
+    if (!_paperMathLibs) _paperMathLibs = loadMdLibs().then(() => loadScript(PAPER_MATH_SCRIPT)).catch(e => { _paperMathLibs = null; throw e; });
+    await _paperMathLibs;
+  } catch (e) { return; } // Plain source remains available offline or if the CDN fails.
+  if (!el.isConnected || el.textContent !== source) return;
+  renderMathInElement(el, {
+    delimiters: [
+      { left: '$$', right: '$$', display: true },
+      { left: '$', right: '$', display: false },
+      { left: '\\(', right: '\\)', display: false },
+      { left: '\\[', right: '\\]', display: true }
+    ],
+    throwOnError: false,
+    trust: false,
+    ignoredClasses: ['katex', 'katex-error']
+  });
+  // Common arXiv prose commands outside equations. Build DOM nodes, never source HTML.
+  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  const nodes = [];
+  while (walker.nextNode()) if (!walker.currentNode.parentElement.closest('.katex, .katex-error')) nodes.push(walker.currentNode);
+  for (const node of nodes) {
+    const fragment = document.createDocumentFragment();
+    const pattern = /\\(textbf|textit|emph|texttt)\{([^{}]*)\}|\\([%&#_$])/g;
+    let start = 0, match;
+    while ((match = pattern.exec(node.data))) {
+      fragment.append(node.data.slice(start, match.index));
+      if (match[1]) {
+        const tag = document.createElement({ textbf: 'strong', textit: 'em', emph: 'em', texttt: 'code' }[match[1]]);
+        tag.textContent = match[2].replace(/\\([%&#_$])/g, '$1');
+        fragment.append(tag);
+      } else fragment.append(match[3]);
+      start = pattern.lastIndex;
+    }
+    fragment.append(node.data.slice(start));
+    node.replaceWith(fragment);
+  }
+}
 async function renderNotesMarkdown(el, text, notesObj) {
   if (!el) return;
   if (!(text || '').trim()) { el.innerHTML = ''; return; }
@@ -11952,8 +12003,8 @@ function renderPaperDetail(p) {
 
   // Reading column
   let main = '';
-  if (hasText(p.summary)) main += `<section class="pd-section"><h2>Summary</h2><p class="pd-prose">${esc(p.summary)}</p></section>`;
-  if (hasText(p.abstract)) main += `<section class="pd-section"><h2>Abstract</h2><p class="pd-prose">${esc(p.abstract)}</p></section>`;
+  if (hasText(p.summary)) main += `<section class="pd-section"><h2>Summary</h2><div class="pd-prose" data-paper-text="summary">${esc(p.summary)}</div></section>`;
+  if (hasText(p.abstract)) main += `<section class="pd-section"><h2>Abstract</h2><div class="pd-prose" data-paper-text="abstract">${esc(p.abstract)}</div></section>`;
   if (hasNotes || (ix && ix.h + ix.c)) main += `<section class="pd-section pd-notes"><h2>Your notes ${pencilDevice() ? `<button class="pd-edit" onclick="openReader('${ka}', 'new')">+ Type</button><button class="pd-edit" onclick="openReader('${ka}', 'write')" title="Write or draw a note with the Pencil">+ Write</button>` : `<button class="pd-edit" onclick="openReader('${ka}', 'new')">+ Add note</button>`}</h2>${hasNotes ? vn.entries.map(e => `<div class="pd-note"><div class="pd-note-top"><span>${esc(noteDate(e))}</span><button class="rp-icon-btn sm" onclick="openReader('${ka}', '${e.id}')" title="Edit note" aria-label="Edit note">${ICON_EDIT}</button></div>${e.hand ? hwViewHTML(e) : `<div class="pd-prose md" data-pdnote="${e.id}"></div>`}</div>`).join('') : ''}${ix && ix.h + ix.c ? `<div class="pd-notes-meta">${[ix.h && `${ix.h} highlight${ix.h === 1 ? '' : 's'}`, ix.c && `${ix.c} comment${ix.c === 1 ? '' : 's'}`].filter(Boolean).join(', ')} · <button onclick="openReader('${ka}', 'panel')">Open in the reader</button></div>` : ''}</section>`;
   if (!main) main = `<p class="pd-empty">No summary or abstract yet. Open the paper to read it at the source.</p>`;
 
@@ -11996,6 +12047,7 @@ function renderPaperDetail(p) {
     </article>
   </div>`;
 
+  document.querySelectorAll('#paperDetail [data-paper-text]').forEach(el => renderPaperText(el, p[el.dataset.paperText]));
   if (hasNotes) document.querySelectorAll('[data-pdnote]').forEach(el => { const e = vn.entries.find(x => x.id === el.dataset.pdnote); if (e) renderNotesMarkdown(el, e.text, vn); });
   offPaint(p.id);
   if (!renderPaperDetail._scrollHooked) {
