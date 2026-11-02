@@ -25,7 +25,10 @@ find "$DIR/.git" -name '*.lock' -type f -mmin +10 -print -delete 2>/dev/null \
 TOKEN_FILE="$DIR/.github_token"
 if [ -f "$TOKEN_FILE" ]; then
   TOKEN="$(cat "$TOKEN_FILE" | tr -d '[:space:]')"
-  FETCH_REMOTE="https://${TOKEN}@github.com/sumanth-tangirala/scholar-dashboard.git"
+  # The token goes in a header, set through the environment (in the URL git would write it into .git/logs)
+  export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="http.https://github.com/.extraheader" \
+    GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$TOKEN" | base64 | tr -d '\n')"
+  FETCH_REMOTE="https://github.com/sumanth-tangirala/scholar-dashboard.git"
   echo "==> Using HTTPS (token auth) for fetch..."
 else
   echo "ERROR: .github_token not found at $TOKEN_FILE"
