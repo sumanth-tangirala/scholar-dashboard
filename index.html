@@ -1426,17 +1426,26 @@ body.rp-splitting, body.rp-splitting * { user-select: none !important; -webkit-u
 .chat-att img { height: 34px; border-radius: 4px; display: block; background: #fff; }
 .chat-att button { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 14px; line-height: 1; padding: 0 3px; border-radius: 50%; }
 .chat-att button:hover { color: var(--text); }
-.chat-box { background: #18181b; border: 1px solid var(--border); border-radius: 10px; padding: 7px 8px 5px 10px; transition: border-color 0.15s; }
+.chat-box { background: #18181b; border: 1px solid var(--border); border-radius: 10px; padding: 7px 8px 5px 10px; transition: border-color 0.15s; container-type: inline-size; }
 .chat-box:focus-within { border-color: var(--accent); }
 .chat-box textarea { width: 100%; box-sizing: border-box; background: none; border: none; resize: none; color: var(--text); font: inherit; font-size: 13.5px; line-height: 1.5; outline: none; max-height: 180px; }
 .chat-box-row { display: flex; align-items: center; gap: 4px; }
+.chat-selects { display: contents; }
 .chat-select { appearance: none; -webkit-appearance: none; field-sizing: content; min-width: 0; max-width: 118px; text-overflow: ellipsis; font: inherit; font-size: 12px; color: var(--text-muted); background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 5px center; border: none; border-radius: 6px; padding: 4px 16px 4px 6px; cursor: pointer; transition: background-color 0.15s, color 0.15s; }
 .chat-select:not(.effort) { flex-shrink: 0; }
 .chat-box-row .rp-icon-btn { width: 28px; height: 28px; flex-shrink: 0; }
 .chat-select.effort { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 17a8 8 0 1 1 16 0'/%3E%3Cpath d='M12 17l4-5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 4px center, left 5px center; padding-left: 21px; }
 .chat-select:hover, .chat-select:focus-visible { background-color: rgba(255,255,255,0.07); color: var(--text); outline: none; }
 .chat-select option { background: #1d1d20; color: var(--text); }
-.chat-send { width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 8px; background: var(--accent); color: #1a1406; cursor: pointer; transition: filter 0.15s, background 0.15s; }
+/* A narrow composer that also has the Code / API menu (an iPad's panel): tighter menus, and Effort shows only its
+   gauge (its level is in its tooltip and in the menu) */
+@container (max-width: 300px) {
+  .chat-box-row:has(#chatEngineSel) { gap: 2px; }
+  .chat-box-row:has(#chatEngineSel) .rp-icon-btn { width: 30px; height: 32px; }
+  .chat-box-row:has(#chatEngineSel) .chat-select { padding-left: 3px; padding-right: 13px; background-position: right 2px center; }
+  .chat-box-row:has(#chatEngineSel) .chat-select.effort { width: 30px; flex-shrink: 0; padding: 4px 0; color: transparent; background-position: right 2px center, left 3px center; }
+}
+.chat-send { width: 28px; height: 28px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 8px; background: var(--accent); color: #1a1406; cursor: pointer; transition: filter 0.15s, background 0.15s; }
 .chat-send:hover { filter: brightness(1.08); }
 .chat-send.stop { background: rgba(255,255,255,0.12); color: var(--text); }
 .chat-send svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
@@ -10814,8 +10823,9 @@ function hwKey(e) {
   window.addEventListener('pointerup', done); window.addEventListener('pointercancel', done);
 })();
 
-/* ===== CHAT WITH CLAUDE: one Claude Code session per paper, through bridge/scholar_bridge.py on this laptop =====
-   The page talks to the bridge on 127.0.0.1 (Chrome asks once to allow that); the bridge runs Claude Code.
+/* ===== CHAT WITH CLAUDE: one conversation per paper, through bridge/scholar_bridge.py on this laptop =====
+   The page talks to the bridge on 127.0.0.1 (Chrome asks once to allow that); the bridge runs Claude Code, or the
+   Claude API once bridge/api_setup.sh has stored a key (the Code / API menu: one setting, kept by the bridge).
    Only this laptop can do it, so the Chat tab only tries to connect after you set it up here. */
 /* On the laptop the helper is at 127.0.0.1; an iPad reaches it through a private Tailscale HTTPS address */
 function bridgeRemote() { try { return localStorage.getItem('claude_bridge_url') || ''; } catch (e) { return ''; } }
@@ -10862,12 +10872,15 @@ function saveBridgeToken(t) { Chat.token = t || ''; try { t ? localStorage.setIt
 function bridgeFetch(path, opts = {}) {
   return fetch(bridgeBase() + path, { ...opts, headers: { 'content-type': 'application/json', ...(Chat.token ? { authorization: 'Bearer ' + Chat.token } : {}), ...(opts.headers || {}) } });
 }
-async function bridgeCheck() {
-  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 2500);
-  try { const j = await (await bridgeFetch('/health', { signal: ctl.signal })).json(); Chat.status = j.paired ? 'ready' : 'unpaired'; Chat.bridgeVersion = j.version || 1; }
-  catch (e) { Chat.status = 'offline'; }
-  clearTimeout(t);
-  return Chat.status;
+let _bridgeChecking = null;   // one check at a time: the panel and a click may both ask
+function bridgeCheck() {
+  return _bridgeChecking || (_bridgeChecking = (async () => {
+    const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 2500);
+    try { const j = await (await bridgeFetch('/health', { signal: ctl.signal })).json(); Chat.status = j.paired ? 'ready' : 'unpaired'; Chat.bridgeVersion = j.version || 1; chatEngineFrom(j); }
+    catch (e) { Chat.status = 'offline'; }
+    clearTimeout(t);
+    return Chat.status;
+  })().finally(() => { _bridgeChecking = null; }));
 }
 /* Tabs appear on wider screens only: Claude Code runs on the laptop, not a phone */
 function panelTabsHTML() {
@@ -10926,6 +10939,7 @@ async function chatLoad() {
     if (!_reader.paper || _reader.paper.id !== pid) return;
     if (Chat.pid !== pid) { Chat.draft = { quotes: [], images: [], mentions: [] }; Chat.draftText = ''; }   // a draft belongs to its paper
     Object.assign(Chat, { pid, messages: j.messages || [], fresh: j.fresh !== false, model: j.model || 'opus', running: !!j.running, streaming: '', tool: '', error: '', loadedFor: pid });
+    chatEngineFrom(j);
     // an answer still being written from before a reload: check back until it's saved
     if (j.running) setTimeout(() => { if (Chat.pid === pid && Chat.running && !Chat.streaming) { Chat.loadedFor = null; chatOpen(); } }, 2000);
   } catch (e) { Chat.status = 'offline'; }
@@ -10972,22 +10986,50 @@ function renderChatPanel(force) {
     ? `<div class="chat-scroll" id="chatScroll"></div>
        <div class="chat-compose"><div class="chat-attach" id="chatAttach"></div>
          <div class="chat-box"><textarea id="chatInput" rows="1" placeholder="Ask about this paper…" oninput="chatInputChanged(this)" onkeydown="chatKey(event)"></textarea>
-           <div class="chat-box-row"><button class="rp-icon-btn sm" onclick="startFigureSelect()" title="Ask about a figure: drag a box on the page" aria-label="Ask about a figure">${ICON_FIGURE}</button><button class="rp-icon-btn sm" onmousedown="event.preventDefault()" onclick="chatAddPaper()" title="Bring in another paper (or type @ and its name in your message)" aria-label="Bring in another paper">${ICON_PAPER}</button><span class="grow"></span>${chatSelectsHTML()}<button class="chat-send" id="chatSend" onclick="chatSendOrStop()" aria-label="Send">${ICON_SEND}</button></div></div></div>`
+           <div class="chat-box-row"><button class="rp-icon-btn sm" onclick="startFigureSelect()" title="Ask about a figure: drag a box on the page" aria-label="Ask about a figure">${ICON_FIGURE}</button><button class="rp-icon-btn sm" onmousedown="event.preventDefault()" onclick="chatAddPaper()" title="Bring in another paper (or type @ and its name in your message)" aria-label="Bring in another paper">${ICON_PAPER}</button><span class="grow"></span><span class="chat-selects" id="chatSelects">${chatSelectsHTML()}</span><button class="chat-send" id="chatSend" onclick="chatSendOrStop()" aria-label="Send">${ICON_SEND}</button></div></div></div>`
     : `<div class="chat-setup">${setup[Chat.status] || setup.setup}</div>`;
   panel.innerHTML = head + `<div class="chat-root" id="chatRoot" data-paper="${escAttr(pid)}" data-status="${Chat.status}">${body}</div>`;
+  if (Chat.status === 'unknown') chatOpen();   // shown before anything asked the laptop (the reader opened on Chat): ask now
   if (ready) {
     renderChatMessages('bottom'); renderChatAttach(); updateChatSend();
     const i = document.getElementById('chatInput'); i.value = Chat.draftText; chatGrow(i);
   }
 }
 const CHAT_MODELS = [['opus', 'Opus', 'Opus 5.5: deepest answers'], ['sonnet', 'Sonnet', 'Sonnet 5: quicker, lighter on usage'], ['haiku', 'Haiku', 'Haiku 4.5: fastest, lightest']];
+const CHAT_MODELS_API = { opus: 'Opus 5.5: deepest answers', sonnet: 'Sonnet 5.5: quicker, about half the price', haiku: 'Haiku 5.5: fastest, cheapest' };
+const CHAT_ENGINES = [['code', 'Code', 'Claude Code on your laptop: uses your Claude plan'], ['api', 'API', 'Claude API: billed to your API account']];
 const CHAT_EFFORTS = [['', 'Default'], ['low', 'Low'], ['medium', 'Medium'], ['high', 'High'], ['xhigh', 'X-high'], ['max', 'Max']];
 Chat.effort = (() => { try { return localStorage.getItem('chat_effort') || ''; } catch (e) { return ''; } })();
+Chat.engine = 'code'; Chat.api = false;
 function chatSelectsHTML() {
-  const m = CHAT_MODELS.find(x => x[0] === Chat.model) || CHAT_MODELS[0];
-  return `<select class="chat-select" aria-label="Model" title="${m[2]}" onchange="chatModel(this.value); this.title = this.selectedOptions[0].title">${CHAT_MODELS.map(([v, l, t]) => `<option value="${v}" title="${t}"${Chat.model === v ? ' selected' : ''}>${l}</option>`).join('')}</select>`
-    + `<select class="chat-select effort" aria-label="Effort" title="Effort: how hard Claude thinks before answering" onchange="chatEffort(this.value)">${CHAT_EFFORTS.map(([v, l]) => `<option value="${v}"${Chat.effort === v ? ' selected' : ''}>${l}</option>`).join('')}</select>`;
+  const tip = ([v, , t]) => Chat.engine === 'api' ? CHAT_MODELS_API[v] : t;
+  const m = CHAT_MODELS.find(x => x[0] === Chat.model) || CHAT_MODELS[0], e = CHAT_ENGINES.find(x => x[0] === Chat.engine);
+  // Code / API: only once the API is set up on the laptop (bridge/api_setup.sh)
+  return (Chat.api ? `<select class="chat-select" id="chatEngineSel" aria-label="Runs on" title="${e[2]}" onchange="chatEngine(this.value)">${CHAT_ENGINES.map(([v, l, t]) => `<option value="${v}" title="${t}"${Chat.engine === v ? ' selected' : ''}>${l}</option>`).join('')}</select>` : '')
+    + `<select class="chat-select" aria-label="Model" title="${tip(m)}" onchange="chatModel(this.value); this.title = this.selectedOptions[0].title">${CHAT_MODELS.map(x => `<option value="${x[0]}" title="${tip(x)}"${Chat.model === x[0] ? ' selected' : ''}>${x[1]}</option>`).join('')}</select>`
+    + `<select class="chat-select effort" aria-label="Effort" title="${chatEffortTip()}" onchange="chatEffort(this.value); this.title = chatEffortTip()">${CHAT_EFFORTS.map(([v, l]) => `<option value="${v}"${Chat.effort === v ? ' selected' : ''}>${l}</option>`).join('')}</select>`;
 }
+/* What the laptop says chat runs on (it may have been switched on another device) */
+function chatEngineFrom(j) {
+  if (!j || j.engine === undefined) return;
+  if (Chat.engine === j.engine && Chat.api === !!j.api) return;
+  Chat.engine = j.engine; Chat.api = !!j.api;
+  const box = document.getElementById('chatSelects'); if (box) box.innerHTML = chatSelectsHTML();
+}
+/* Code / API: one setting on the laptop, for every chat and device; a conversation carries on in the other engine */
+async function chatEngine(e) {
+  const was = Chat.engine;
+  Chat.engine = e;
+  const redo = () => { const box = document.getElementById('chatSelects'); if (box) { box.innerHTML = chatSelectsHTML(); const s = document.getElementById('chatEngineSel'); if (s) s.focus(); } };
+  redo();
+  try {
+    const r = await bridgeFetch('/engine', { method: 'POST', body: JSON.stringify({ engine: e }) });
+    if (!r.ok) throw new Error();
+    Chat.engine = (await r.json()).engine;
+  } catch (x) { Chat.engine = was; toast('Couldn’t switch: the laptop didn’t answer'); }
+  if (Chat.engine !== e) redo();
+}
+function chatEffortTip() { return `Effort: ${(CHAT_EFFORTS.find(x => x[0] === Chat.effort) || CHAT_EFFORTS[0])[1]} (how hard Claude thinks before answering)`; }
 function chatModel(m) { Chat.model = m; }   // used from the next message; kept with this paper's chat
 function chatEffort(e) { Chat.effort = e; try { e ? localStorage.setItem('chat_effort', e) : localStorage.removeItem('chat_effort'); } catch (x) {} }
 async function chatNew() {
@@ -11064,7 +11106,8 @@ function chatMsgHTML(m, i) {
   }
   return `<div class="chat-msg claude"><div class="md chat-md" data-md-chat="${i}"></div><div class="chat-acts"><button class="rp-icon-btn sm" onclick="chatCopy(${i})" title="Copy" aria-label="Copy">${ICON_COPY}</button><button class="rp-icon-btn sm" onclick="chatSaveAsNote(${i})" title="Save as a note" aria-label="Save as a note">${ICON_NOTE}</button></div></div>`;
 }
-function chatToolLabel(t) { return { WebSearch: 'Searching the web…', WebFetch: 'Reading a web page…', Read: 'Looking at the PDF…', Grep: 'Looking through your library…', Glob: 'Looking through your library…' }[t] || (t ? 'Working…' : ''); }
+function chatToolLabel(t) { return { WebSearch: 'Searching the web…', WebFetch: 'Reading a web page…', Read: 'Looking at the PDF…', Grep: 'Looking through your library…', Glob: 'Looking through your library…',
+  web_search: 'Searching the web…', web_fetch: 'Reading a web page…', view_pages: 'Looking at the PDF…', search_library: 'Looking through your library…' }[t] || (t ? 'Working…' : ''); }
 
 /* Markdown with clickable citations [[p.N "exact words"]], and cards for notes/highlights Claude was asked to add */
 const QUOTE_RE = /\[\[p\.(\d+)\s+"([^"\]\n]*)"\]\]/g;
@@ -11417,7 +11460,7 @@ async function chatSend(text, auto) {
         const e = JSON.parse(line);
         if (e.t === 'text') { reply += e.v; if (Chat.pid === pid) { Chat.streaming = reply; Chat.tool = ''; scheduleLive(); } }
         else if (e.t === 'tool') { if (Chat.pid === pid) { Chat.tool = e.v; scheduleLive(); } }
-        else if (e.t === 'done' && e.error && !reply) throw new Error(/stopped|terminated|SIGTERM/i.test(e.error) ? 'Stopped.' : 'Claude Code: ' + e.error.slice(-200));
+        else if (e.t === 'done') { chatEngineFrom({ engine: e.engine, api: Chat.api || e.engine === 'api' }); if (e.error && !reply) throw new Error(/stopped|terminated|SIGTERM/i.test(e.error) ? 'Stopped.' : (e.engine === 'api' ? 'Claude API: ' : 'Claude Code: ') + e.error.slice(-200)); }
       }
     }
     Chat.fresh = false;
@@ -12352,7 +12395,7 @@ document.addEventListener('DOMContentLoaded', () => { loadPapers(); loadInterest
     'startHandwritten', 'editHandwritten', 'saveHandwritten', 'hwTool', 'hwUndo', 'adjustAnno', 'endAdjust',
     'acWrite', 'acSaveHand', 'writeAnnoComment',
     // Claude on the laptop
-    'chatOpen', 'chatSend', 'chatSendOrStop', 'chatNew', 'chatSwitch', 'chatConnect', 'chatSetRemote', 'chatForgetRemote', 'askAboutSelection',
+    'chatOpen', 'chatSend', 'chatSendOrStop', 'chatNew', 'chatSwitch', 'chatConnect', 'chatSetRemote', 'chatForgetRemote', 'chatEngine', 'askAboutSelection',
     'startFigureSelect', 'chatApplyBlock', 'chatSaveAsNote', 'chatAddPaper', 'chatRefresh', 'toggleLibPanel', 'startAddPaper', 'stopAddPaper', 'startTopicTag',
     // private papers and PDFs
     'pickUploadPdf', 'uploadPdf', 'usePdfFile', 'openPdfChange', 'removeLocalPdf', 'removeUpload', 'renameUpload', 'startReview', 'saveUploads',

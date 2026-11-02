@@ -241,6 +241,14 @@ With each message the page sends your decrypted notes on that paper and your res
 
 Usage counts against your own Claude plan, the same as using Claude Code directly. The chat's model menu offers Opus, Sonnet and Haiku.
 
+**Or the Claude API (optional).** With an API key from the Claude Console (platform.claude.com → API keys), chat can run on the Claude API instead, billed to your API account:
+
+```bash
+bash bridge/api_setup.sh      # asks for the key (hidden); add your workspace ID (wrkspc_…) if you like, as a note
+```
+
+It installs the Anthropic SDK for the bridge in `~/.scholar-bridge/pylib`, checks the key, stores it in `~/.scholar-bridge/config.json` (readable by you alone; the page never sees it), switches chat to the API and restarts the bridge. A **Code / API** menu then appears next to the model menu: one setting for every chat and device. A conversation can switch midway; the other engine is shown the turns it missed. On the API, Claude gets the same abilities as tools (web search and fetch, looking at the PDF's pages, searching your library), the conversation is kept by the bridge in `~/.scholar-bridge/chats/`, and the paper is cached between questions (prompt caching, 1 hour). `bash bridge/api_setup.sh --off` forgets the key.
+
 Uninstall: `launchctl bootout gui/$(id -u)/com.scholar-dashboard.bridge && rm ~/Library/LaunchAgents/com.scholar-dashboard.bridge.plist`.
 
 ## 10. Chat from an iPad or iPhone (optional)
