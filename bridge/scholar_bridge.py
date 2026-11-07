@@ -19,6 +19,8 @@ Safety:
     own copy of the repository (~/.scholar-bridge/repo); add_paper.py checks what it returns and commits and pushes
     just that row (and its link-preview page) from that copy. Your working copy is never touched.
   * The API key stays in ~/.scholar-bridge/config.json (readable by you alone); the page never sees it.
+  * A copy of each uploaded paper's PDF and video (To review) is kept in ~/.scholar-bridge/uploads (/upload): a browser
+    can lose its own (it wipes a site's storage when the disk runs low), and another device fetches it from here.
 
 Everything lives in ~/.scholar-bridge:  token, config.json, chats/<paper>.json (what the dashboard shows, the paper's
 text, and an API conversation), work/ (Claude Code's working folder: papers/<paper>.pdf, attachments/), pylib/ (the
@@ -36,6 +38,7 @@ HOME = os.path.expanduser(os.environ.get('SCHOLAR_BRIDGE_HOME', '~/.scholar-brid
 WORK = os.path.join(HOME, 'work')
 CHATS = os.path.join(HOME, 'chats')
 TOKEN_FILE = os.path.join(HOME, 'token')
+UPLOADS = os.path.join(HOME, 'uploads')   # uploaded papers' PDFs and videos: <id>.pdf, <id>.video (+ .json: name, type)
 CONFIG_FILE = os.path.join(HOME, 'config.json')   # the API key (bridge/api_setup.sh) and which engine Chat uses
 PYLIB = os.path.join(HOME, 'pylib')   # the Anthropic SDK and pypdf, installed here by api_setup.sh (not into your Python)
 SESSIONS_FILE = os.path.join(HOME, 'sessions.json')
@@ -43,10 +46,13 @@ NO_MCP = os.path.join(HOME, 'no-mcp.json')
 MODELS = {'opus': 'opus', 'sonnet': 'sonnet', 'haiku': 'haiku'}
 API_MODELS = {'opus': 'claude-opus-5-5', 'sonnet': 'claude-sonnet-5-5', 'haiku': 'claude-haiku-5-5'}
 EFFORTS = {'low', 'medium', 'high', 'xhigh', 'max'}   # anything else: the default of Claude Code or of the model
-VERSION = 4   # 2: /paper/add; 3: /topic/tag; 4: the Claude API engine (/engine)
+VERSION = 5   # 2: /paper/add; 3: /topic/tag; 4: the Claude API engine (/engine); 5: copies of uploaded papers (/upload)
+UPLOAD_KINDS = {'pdf': 'application/pdf', 'video': 'video/mp4'}
+UPLOAD_MAX = 4 << 30   # 4 GB
 
 for d in (HOME, WORK, CHATS, os.path.join(WORK, 'papers'), os.path.join(WORK, 'attachments')):
     os.makedirs(d, exist_ok=True)
+os.makedirs(UPLOADS, mode=0o700, exist_ok=True)
 if not os.path.exists(NO_MCP):
     with open(NO_MCP, 'w') as f: json.dump({'mcpServers': {}}, f)
 
@@ -161,11 +167,32 @@ def chat_list(pid):
     return sorted(out, key=lambda c: -c['updated'])
 
 
+def upload_path(pid, kind, meta=False):
+    """Where the copy of an uploaded paper's file is kept (None for anything but an uploaded paper's id)."""
+    if not re.fullmatch(r'up-[0-9a-f]{12}', pid or '') or kind not in UPLOAD_KINDS: return None
+    return os.path.join(UPLOADS, f'{pid}.{kind}' + ('.json' if meta else ''))
+
+
+def upload_list():
+    """What the Mac keeps: {id: {kind: {name, size}}}"""
+    out = {}
+    for f in os.listdir(UPLOADS):
+        m = re.fullmatch(r'(up-[0-9a-f]{12})\.(pdf|video)', f)
+        if m:
+            meta = read_json(os.path.join(UPLOADS, f + '.json'), {})
+            out.setdefault(m.group(1), {})[m.group(2)] = {'name': meta.get('name', ''), 'size': os.path.getsize(os.path.join(UPLOADS, f))}
+    return out
+
+
 def forget_paper(pid):
-    """Everything kept for a paper: its chats, the PDF and figure copies, and Claude Code's own transcripts of them."""
+    """Everything kept for a paper: its chats, the PDF and figure copies, the copies of its uploaded files, and Claude
+    Code's own transcripts of them."""
     base = safe_id(pid)
     if not base: return 0
     sessions, gone = set(), 0
+    for kind in UPLOAD_KINDS:
+        for path in (upload_path(pid, kind), upload_path(pid, kind, meta=True)):
+            if path and os.path.exists(path): os.remove(path); gone += 1
     for f in os.listdir(CHATS):
         if f == base + '.json' or (f.startswith(base + '.') and f.endswith('.json') and f[len(base) + 1:-5].isdigit()):
             s = read_json(os.path.join(CHATS, f), {}).get('session')
@@ -375,7 +402,7 @@ class Handler(BaseHTTPRequestHandler):
         o = self.headers.get('Origin', '')
         if o in ORIGINS:
             self.send_header('Access-Control-Allow-Origin', o)
-            self.send_header('Access-Control-Allow-Headers', 'content-type, authorization')
+            self.send_header('Access-Control-Allow-Headers', 'content-type, authorization, x-file-type')
             self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
             self.send_header('Access-Control-Allow-Private-Network', 'true')
             self.send_header('Vary', 'Origin')
@@ -410,6 +437,21 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(200, {'chats': chat_list(urllib.request.unquote(params.get('paper', '')))})
         if path == '/paper/add':   # the paper being (or last) added
             return self.reply(200, {'job': _add['job']})
+        if path == '/uploads':   # which uploaded papers' files the Mac keeps
+            return self.reply(200, {'uploads': upload_list()})
+        if path == '/upload':   # one of them, back to a browser that lost its own (or never had it)
+            pid, kind = urllib.request.unquote(params.get('paper', '')), params.get('kind', '')
+            f = upload_path(pid, kind)
+            if not f or not os.path.exists(f): return self.reply(404, {'error': 'not kept'})
+            meta = read_json(upload_path(pid, kind, meta=True), {})
+            self.send_response(200); self.cors()
+            self.send_header('Content-Type', meta.get('type') or UPLOAD_KINDS[kind]); self.send_header('Content-Length', str(os.path.getsize(f)))
+            self.send_header('X-File-Name', urllib.request.quote(meta.get('name', ''))); self.send_header('Access-Control-Expose-Headers', 'X-File-Name')
+            self.send_header('Cache-Control', 'no-store'); self.end_headers()
+            with open(f, 'rb') as fh:
+                try: shutil.copyfileobj(fh, self.wfile, 1 << 20)
+                except (BrokenPipeError, ConnectionResetError): pass
+            return
         if path == '/topic/tag':
             return self.reply(200, {'job': _topic['job']})
         if path == '/chat':
@@ -431,7 +473,15 @@ class Handler(BaseHTTPRequestHandler):
             os.chmod(TOKEN_FILE, 0o600)
             return self.reply(200, {'token': t})
         if not self.authed(): return self.reply(401, {'error': 'not paired'})
+        if path == '/upload':   # keep a copy of an uploaded paper's PDF or video (the body is the file itself)
+            return self.receive_upload()
         data = self.body()
+        if path == '/upload/delete':   # the video was removed from the paper
+            f = upload_path(data.get('paper', ''), data.get('kind', ''))
+            if not f: return self.reply(400, {'error': 'paper'})
+            for x in (f, f + '.json'):
+                if os.path.exists(x): os.remove(x)
+            return self.reply(200, {'ok': True})
         if path == '/chat/new':
             pid = data.get('paper', '')
             c = load_chat(pid)
@@ -652,6 +702,29 @@ class Handler(BaseHTTPRequestHandler):
         if text.strip():   # stopped or failed partway: what was shown is kept, as a plain answer
             return text, err, {'api': hist + [new[0], {'role': 'assistant', 'content': [{'type': 'text', 'text': text.strip()}]}], 'api_system': system}
         return text, err, {}   # nothing to keep: the next message is sent as if this one never was
+
+    def receive_upload(self):
+        params = dict(p.split('=', 1) for p in self.path.partition('?')[2].split('&') if '=' in p)
+        pid, kind = urllib.request.unquote(params.get('paper', '')), params.get('kind', '')
+        f, n = upload_path(pid, kind), int(self.headers.get('Content-Length') or 0)
+        if not f or not n: return self.reply(400, {'error': 'paper'})
+        if n > UPLOAD_MAX: return self.reply(413, {'error': 'too large'})
+        tmp = f + '.part'
+        try:
+            with open(tmp, 'wb') as out:
+                left = n
+                while left:
+                    chunk = self.rfile.read(min(left, 1 << 20))
+                    if not chunk: raise ConnectionError('the upload stopped')
+                    out.write(chunk); left -= len(chunk)
+            os.replace(tmp, f)
+        except Exception as e:
+            try: os.remove(tmp)
+            except OSError: pass
+            return self.reply(500, {'error': str(e)[:200]})
+        name = urllib.request.unquote(params.get('name', ''))[:300]
+        write_json(upload_path(pid, kind, meta=True), {'name': name, 'type': (self.headers.get('X-File-Type') or '')[:100], 'size': n, 'at': time.time()})
+        return self.reply(200, {'ok': True, 'size': n})
 
     def fetch_pdf(self, url, b64, path):
         try:

@@ -7491,6 +7491,7 @@ async function uploadPdf(file) {
     const same = fp && Object.keys(_uploads).find(id => !_uploads[id].deleted && _uploads[id].fp === fp);
     if (same) {   // e.g. the same file on another device: its record (and your notes) are already here
       if (!(await localPdfGet(same))) await localPdfPut(same, file).catch(() => {});
+      macBackupAll();   // (the Mac may not have it yet)
       toast('Already in To review: opening it'); openReader(same); return;
     }
     title = await guessPdfTitle(doc);
@@ -7502,8 +7503,9 @@ async function uploadPdf(file) {
   const now = new Date().toISOString();
   _uploads[id] = { title: title || file.name.replace(/\.pdf$/i, '').replace(/[_]+/g, ' ').trim(), fp, added: now, updated: now };
   saveUploads();
+  macKeep(id, 'pdf', file);
   openReader(id);
-  toast('Private: kept in this browser, not added to your database.', null, { duration: 5000 });
+  toast(`Private: kept in this browser${Chat.token ? ' and on your Mac' : ''}, not added to your database.`, null, { duration: 5000 });
 }
 /* The title from the PDF's own metadata when it looks like one, else the largest text at the top of page 1 */
 async function guessPdfTitle(doc) {
@@ -7594,14 +7596,22 @@ function videoEl() { return _vid.box && _vid.box.querySelector('video'); }
 function videoPipSupported(v) { return !!(v && ((document.pictureInPictureEnabled && v.requestPictureInPicture) || (v.webkitSupportsPresentationMode && v.webkitSupportsPresentationMode('picture-in-picture')))); }
 function videoFloating(v) { return !!v && (document.pictureInPictureElement === v || v.webkitPresentationMode === 'picture-in-picture'); }
 /* The paper the reader opened: its video, from this browser (or the offer to add it, when another device has it) */
-async function videoFor(p, fresh) {
-  if (!fresh && _vid.id === p.id && _vid.box) return;
+async function videoFor(p, fresh, again) {
+  if (!fresh && !again && _vid.id === p.id && _vid.box) return;
   videoClose();
   if (!p.uploaded) return;
   const token = ++_vid.token;
-  const file = fresh || await videoGet(p.id), rec = (_uploads[p.id] || {}).video;
+  let file = fresh || await videoGet(p.id);
+  const rec = (_uploads[p.id] || {}).video;
   if (token !== _vid.token || !_reader.paper || _reader.paper.id !== p.id) return;   // another paper opened meanwhile
   if (!file && !rec) return;
+  if (!file) {   // this browser doesn't have it (wiped, or another device): from the Mac
+    videoNote(p, `${ICON_FILM}<span class="rp-vid-name">${esc(rec.name || 'The video')}</span><span class="rp-vid-dur">· getting it from your Mac…</span>`);
+    file = await macRestore(p.id, 'video');
+    if (token !== _vid.token || !_reader.paper || _reader.paper.id !== p.id) return;
+    if (_vid.box) _vid.box.remove();
+    _vid.box = null;
+  }
   _vid.id = p.id;
   const box = _vid.box = document.createElement('div');
   box.className = 'rp-video';
@@ -7615,8 +7625,17 @@ async function videoFor(p, fresh) {
     v.src = _vid.url;
     videoBar(file.name);
   } else {
-    box.innerHTML = `<div class="rp-vid-bar">${ICON_FILM}<span class="rp-vid-name" title="${escAttr(rec.name || '')}">${esc(rec.name || 'A video')}</span><span class="rp-vid-dur">is on another device</span><button class="rp-text-btn" onclick="pickVideo()">Add it here</button></div>`;
+    box.innerHTML = `<div class="rp-vid-bar">${ICON_FILM}<span class="rp-vid-name" title="${escAttr(rec.name || '')}">${esc(rec.name || 'A video')}</span><span class="rp-vid-dur">isn’t on this device</span><button class="rp-text-btn" onclick="pickVideo()">Add it here</button></div>`
+      + `<div class="rp-vid-msg" style="padding-top:2px">${macMissingText(_mac.last, 'video')}${_mac.last === 'unreachable' ? ` <button class="rp-text-btn" onclick="videoFor(_reader.paper, null, true)">Try again</button>` : ''}</div>`;
   }
+  placeVideo();
+}
+/* The bar alone, while the video is on its way */
+function videoNote(p, html) {
+  const box = _vid.box = document.createElement('div');
+  box.className = 'rp-video';
+  box.innerHTML = `<div class="rp-vid-bar">${html}</div>`;
+  _vid.id = p.id;
   placeVideo();
 }
 function videoBar(name) {
@@ -7679,19 +7698,25 @@ async function addVideo(file) {
   if (!document.getElementById('reader').classList.contains('panel-open')) toggleReaderPanel(true);
   await videoFor(p, file);
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});   // ask the browser not to clear it
-  try { await videoPut(p.id, file); }
-  catch (e) { toastError('Couldn’t keep the video in this browser (storage full or blocked). It plays until you leave the paper.'); return; }
+  const toMac = macKeep(p.id, 'video', file);
+  let here = true;
+  try { await videoPut(p.id, file); } catch (e) { here = false; }
   _uploads[p.id] = { ..._uploads[p.id], video: { name: file.name, size: file.size }, updated: new Date().toISOString() };
   saveUploads();
-  toast('Video added: kept in this browser only.');
+  const onMac = await toMac;
+  if (here && onMac) toast('Video added: kept in this browser, with a copy on your Mac');
+  else if (here) toast('Video added: kept in this browser only (your Mac couldn’t be reached for a copy)', null, { duration: 5000 });
+  else if (onMac) toast('Video added: this browser couldn’t keep it, so it comes back from your Mac next time', null, { duration: 5000 });
+  else toastError('Couldn’t keep the video in this browser or on your Mac. It plays until you leave the paper.');
 }
 async function removeVideo() {
   const p = _reader.paper;
   if (!p || !p.uploaded) return;
-  const ok = await showConfirm('Remove the video?', 'It’s deleted from this browser. The paper and your notes stay.', 'Remove', true);
+  const ok = await showConfirm('Remove the video?', 'It’s deleted from this browser and from your Mac. The paper and your notes stay.', 'Remove', true);
   if (!ok) return;
   videoClose();
   await videoDel(p.id);
+  if (await macReady()) bridgeFetch('/upload/delete', { method: 'POST', body: JSON.stringify({ paper: p.id, kind: 'video' }) }).catch(() => {});
   const u = _uploads[p.id];
   if (u && u.video) { const { video, ...rest } = u; _uploads[p.id] = { ...rest, updated: new Date().toISOString() }; saveUploads(); }
   toast('Video removed');
@@ -7717,6 +7742,67 @@ function videoMenuPaint() {
     if (f) addVideo(f);
   });
 })();
+
+/* ===== A COPY ON THE MAC (uploaded papers' PDFs and videos) =====
+   A browser can wipe a site's storage on its own (Arc does when the disk runs low: it took every uploaded PDF on
+   2026-11-07), and a file dropped into one browser isn't on the others. So each uploaded paper's PDF and video also
+   goes to the bridge on the laptop (~/.scholar-bridge/uploads, private, never in the repo), and a browser missing
+   one fetches it back from there: after a wipe, and on another device (the iPad over Tailscale). Uploads the Mac
+   doesn't have yet are sent quietly in the background (macBackupAll). Needs the laptop paired for chat (bridge v5). */
+const _mac = { last: '', sending: new Set(), backedUp: false };
+async function macReady() {
+  if (!Chat.token || Chat.status === 'elsewhere' || !isOwner()) return false;
+  if (Chat.status !== 'ready' || !Chat.bridgeVersion) await bridgeCheck();
+  return Chat.status === 'ready' && Chat.bridgeVersion >= 5;
+}
+/* Why a file isn't here, in words: '' (never asked), 'unpaired', 'unreachable' (the Mac is asleep or the bridge off), 'missing' */
+function macMissingText(why, what) {
+  if (why === 'missing') return `Your Mac doesn’t have a copy of this ${what} either.`;
+  if (why === 'unreachable') return bridgeRemote() ? 'A copy is kept on your Mac, but it couldn’t be reached: it needs to be awake, with Tailscale on.'
+    : 'A copy is kept on this Mac, but the chat bridge isn’t answering (bash bridge/install_bridge.sh starts it).';
+  return `An uploaded ${what} stays in the browser it was added in${Chat.token ? '' : ' (connect Chat to keep a copy on your Mac, which other devices can fetch it from)'}.`;
+}
+async function macKeep(id, kind, file) {
+  const key = id + ':' + kind;
+  if (_mac.sending.has(key) || !await macReady()) return false;
+  _mac.sending.add(key);
+  try {
+    const r = await bridgeFetch(`/upload?paper=${encodeURIComponent(id)}&kind=${kind}&name=${encodeURIComponent(file.name || '')}`,
+      { method: 'POST', body: file, headers: { 'content-type': 'application/octet-stream', 'x-file-type': file.type || '' } });
+    return r.ok;
+  } catch (e) { return false; }
+  finally { _mac.sending.delete(key); }
+}
+/* The Mac's copy, put back into this browser (null when there's none, or the Mac can't be reached: _mac.last says which) */
+async function macRestore(id, kind) {
+  _mac.last = '';
+  if (!Chat.token) return null;
+  if (!await macReady()) { _mac.last = ['unpaired', 'elsewhere'].includes(Chat.status) ? '' : 'unreachable'; return null; }
+  try {
+    const r = await bridgeFetch(`/upload?paper=${encodeURIComponent(id)}&kind=${kind}`);
+    if (r.status === 404) { _mac.last = 'missing'; return null; }
+    if (!r.ok) throw new Error(r.status);
+    const blob = await r.blob(), name = decodeURIComponent(r.headers.get('X-File-Name') || '') || (kind === 'pdf' ? 'paper.pdf' : 'video.mp4');
+    const file = new File([blob], name, { type: blob.type || (kind === 'pdf' ? 'application/pdf' : 'video/mp4') });
+    if (kind === 'pdf') await localPdfPut(id, file).catch(() => {}); else await videoPut(id, file).catch(() => {});
+    toast(`${kind === 'pdf' ? 'PDF' : 'Video'} brought back from your Mac`);
+    return file;
+  } catch (e) { _mac.last = 'unreachable'; return null; }
+}
+/* Once per visit: every uploaded paper's files this browser has and the Mac doesn't, one at a time */
+async function macBackupAll() {
+  if (!await macReady()) return;
+  let kept;
+  try { kept = (await (await bridgeFetch('/uploads')).json()).uploads || {}; } catch (e) { return; }
+  for (const id of Object.keys(_uploads)) {
+    if (_uploads[id].deleted) continue;
+    const has = kept[id] || {};
+    if (!has.pdf) { const f = await localPdfGet(id); if (f) await macKeep(id, 'pdf', f instanceof File ? f : new File([f], (_uploads[id].title || 'paper') + '.pdf', { type: 'application/pdf' })); }
+    if (!has.video && _uploads[id].video) { const f = await videoGet(id); if (f) await macKeep(id, 'video', f); }
+  }
+  _mac.backedUp = true;
+}
+window.addEventListener('load', () => setTimeout(() => { if (isOwner() && Chat.token) macBackupAll().catch(() => {}); }, 6000));
 
 let _reader = { paper: null, doc: null, zoom: 'fit', scale: 1, obs: null, under: null, token: 0, local: false };
 function readerDark() { try { return localStorage.getItem(READER_DARK_KEY) === 'true'; } catch (e) { return false; } }
@@ -7782,9 +7868,15 @@ async function showReader(id) {
   else _rnLoadP = Promise.resolve();   // same paper: notes already here
   const dl = document.getElementById('readerDl');
   dl.dataset.off = p.id; dl.hidden = !offSupported() || !offCanHave(p);
-  const local = await localPdfGet(p.id);
+  let local = await localPdfGet(p.id);
+  if (!local && p.uploaded && Chat.token) {   // not in this browser: from the Mac (the same page-shaped placeholder meanwhile)
+    document.getElementById('reader').classList.add('no-doc');
+    document.getElementById('readerBody').innerHTML = '<div class="reader-skel" role="status" aria-label="Getting the PDF from your Mac"><div></div><p>Getting the PDF from your Mac…</p></div>';
+    local = await macRestore(p.id, 'pdf');
+  }
+  if (_reader.paper !== p) return;   // another paper opened meanwhile
   const src = pdfSourceOf(p);
-  if (!local && !src) { showPdfPicker(p, 'none'); ensureReaderNotes().then(runPendingNotes); return; }
+  if (!local && !src) { showPdfPicker(p, 'none', p.uploaded ? _mac.last : ''); ensureReaderNotes().then(runPendingNotes); return; }
   if (local) { await loadIntoReader(p, { data: await local.arrayBuffer() }, true); return; }
   const kept = await offGet(p);   // downloaded for offline reading
   if (kept) await loadIntoReader(p, { data: await kept.arrayBuffer() }, false, src);
@@ -8452,11 +8544,11 @@ async function showPdfPicker(p, why, detail) {
   const hasLocal = !!(await localPdfGet(p.id));
   if (p.uploaded) {   // your own file: it can only come from a file (a link would go into the public database)
     document.getElementById(inModal ? 'pdfModalBody' : 'readerBody').innerHTML = `<div class="pdf-picker">
-    <h3>${why === 'none' ? 'The PDF is on another device' : why === 'failed' ? "This PDF couldn't be opened here" : 'Use a different PDF'}</h3>
-    <p class="pp-why">${why === 'none' ? 'An uploaded PDF stays in the browser it was uploaded in. Drop the same file here to read it on this device too; your notes are already here.' : why === 'failed' ? esc(detail || '') : 'A revised version, for example. Your notes stay with the paper.'}</p>
+    <h3>${why === 'none' ? 'The PDF isn’t on this device' : why === 'failed' ? "This PDF couldn't be opened here" : 'Use a different PDF'}</h3>
+    <p class="pp-why">${why === 'none' ? macMissingText(detail, 'PDF') + ' Drop the same file here to read it; your notes are already here.' : why === 'failed' ? esc(detail || '') : 'A revised version, for example. Your notes stay with the paper.'}</p>${why === 'none' && detail === 'unreachable' ? `<button class="ui-btn ui-btn-secondary" style="margin:0 0 14px" onclick="showReader(_reader.paper.id)">Try again</button>` : ''}
     <label class="pp-drop" id="ppDrop" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="event.preventDefault();this.classList.remove('over');usePdfFile(event.dataTransfer.files[0])">
       <input type="file" accept="application/pdf,.pdf" onchange="usePdfFile(this.files[0])">
-      ${TOUCH ? '<strong>Choose a PDF</strong> from your files.' : '<strong>Drop a PDF here</strong> or click to choose one.'}<br>It stays in this browser, on this device only.
+      ${TOUCH ? '<strong>Choose a PDF</strong> from your files.' : '<strong>Drop a PDF here</strong> or click to choose one.'}<br>${Chat.token ? 'It stays in this browser, with a copy on your Mac.' : 'It stays in this browser, on this device only.'}
     </label>
     <div class="pp-msg" id="ppMsg"></div>
     ${inModal ? '<div class="pp-foot"><button onclick="closePdfModal()">Keep the current PDF</button></div>' : ''}
@@ -8522,6 +8614,7 @@ async function usePdfFile(file) {
     const doc = await lib.getDocument({ data: data.slice(0), isEvalSupported: false, verbosity: 0 }).promise;
     doc.destroy();
     await localPdfPut(p.id, new Blob([data], { type: 'application/pdf' }));
+    if (p.uploaded) macKeep(p.id, 'pdf', new File([data], file.name, { type: 'application/pdf' }));
     toast('PDF stored in this browser for this paper');
     if (pdfModalOpen()) closePdfModal();
     await loadIntoReader(p, { data }, true);
