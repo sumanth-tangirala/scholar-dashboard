@@ -372,6 +372,7 @@ Chat apps preview a link from its static HTML and never see the part after `#`, 
 Library → **To review** lets the user upload a PDF and use the same reader, notes and chat. These papers are confidential and **never go into `papers_database.csv`**:
 - ids are random (`up-` + 12 hex characters), so nothing about the paper shows in file names;
 - the record (title, PDF fingerprint) lives in the browser (localStorage `scholar_uploads_v1`) and inside the encrypted `annotations/_index.json`; the PDF stays in the browser's IndexedDB;
-- chat tells Claude the paper is a confidential submission (no web searches for it). Removing one deletes its record, local PDF and notes, and the bridge's chats, PDF copy and Claude Code transcripts (`POST /paper/forget`, accepted only for `up-` ids).
+- chat tells Claude the paper is a confidential submission (no web searches for it). Removing one deletes its record, local PDF, video and notes, and the bridge's chats, PDF copy and Claude Code transcripts (`POST /paper/forget`, accepted only for `up-` ids).
+- a review paper can have a **video** (reader ⋯ → Add a video…, or drop one on the reader): like the PDF it stays in this browser (IndexedDB `scholar_videos`), and the record keeps only its name, so another device offers to add it there. It plays at the top of the reader's panel, under the visible pane's header (the VIDEO section of `index.html`: one `<video>` that `placeVideo()` moves back after each pane render, so it keeps playing), with Picture in Picture.
 
 Digest runs never add, dedupe against or otherwise touch uploaded papers.

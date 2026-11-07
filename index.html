@@ -1348,6 +1348,21 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 /* ---- chat with Claude (reader panel) ---- */
 .rp-text-btn { display: inline-flex; align-items: center; gap: 4px; font: inherit; font-size: 12.5px; color: var(--text-muted); background: none; border: none; border-radius: 7px; padding: 5px 9px 5px 7px; cursor: pointer; transition: background 0.15s, color 0.15s; }
 .rp-text-btn:hover { background: rgba(255,255,255,0.07); color: var(--text); }
+/* A review paper's video: at the top of the panel, under the visible pane's header (see VIDEO) */
+.rp-video { flex-shrink: 0; padding: 10px 10px 6px 12px; border-bottom: 1px solid var(--border); }
+.rp-video video { display: block; width: 100%; max-height: 42vh; background: #000; border-radius: 8px; }
+.rp-video.collapsed video, .rp-video.collapsed .rp-vid-msg { display: none; }
+.rp-video.collapsed { padding-top: 6px; }
+.rp-vid-bar { display: flex; align-items: center; gap: 6px; min-height: 28px; padding: 4px 0 0 4px; font-size: 12px; color: var(--text-muted); }
+.rp-video.collapsed .rp-vid-bar { padding-top: 0; }
+.rp-vid-bar > svg { width: 15px; height: 15px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
+.rp-vid-bar > svg .f { fill: currentColor; stroke: none; }
+.rp-vid-name { color: var(--text); font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rp-vid-bar .grow { flex: 1; }
+.rp-vid-dur { flex: none; white-space: nowrap; }
+.rp-vid-bar .rp-text-btn { margin-left: auto; flex: none; }
+.rp-vid-msg { font-size: 12.5px; color: var(--text-muted); padding: 14px 4px 6px; line-height: 1.5; }
+.reader.vid-drop .reader-split { outline: 2px dashed var(--accent); outline-offset: -6px; }
 .rp-text-btn svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
 .reader-panel { position: relative; }
 .chat-hist { position: absolute; right: 10px; z-index: 20; width: min(320px, calc(100% - 20px)); max-height: 60%; overflow: auto; background: #1d1d20; border: 1px solid rgba(255,255,255,0.14); border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.55); padding: 4px; animation: ui-pop 0.16s ease-out; }
@@ -1525,7 +1540,7 @@ body.rp-splitting, body.rp-splitting * { user-select: none !important; -webkit-u
 @keyframes panel-out { to { opacity: 0; transform: translateX(24px); } }
 @keyframes sheet-in { from { transform: translateY(100%); } }
 @keyframes sheet-out { to { transform: translateY(100%); } }
-.reader-panel.tab-swap .rp-pane > :not(:first-child) { animation: tools-swap var(--t-fast) var(--ease); }
+.reader-panel.tab-swap .rp-pane > :not(:first-child):not(.rp-video) { animation: tools-swap var(--t-fast) var(--ease); }
 .anno-rect.fresh { animation: hl-sweep 0.24s var(--ease) backwards; }   /* drawn on left to right by clipping, so its own opacity never jumps */
 @keyframes hl-sweep { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
 .anno-hl.gone, .anno-mark.gone { opacity: 0 !important; transition: opacity 0.15s ease-in; }
@@ -2617,6 +2632,8 @@ html.no-hover .sel-icon:not(.on):active, html.no-hover .ink-bar .ink-size:not(.o
         <span class="reader-menu" id="readerMenu" role="menu">
           <button class="reader-dl" id="readerDl" role="menuitem" data-off="" hidden onclick="toggleReaderMenu(false); offToggle(this.dataset.off)"></button>
           <button class="reader-change" role="menuitem" onclick="toggleReaderMenu(false); openPdfChange()">Use a different PDF…</button>
+          <button id="readerVidAdd" role="menuitem" hidden onclick="toggleReaderMenu(false); pickVideo()">Add a video…</button>
+          <button id="readerVidDel" role="menuitem" hidden onclick="toggleReaderMenu(false); removeVideo()">Remove the video</button>
           <a id="readerExternal" role="menuitem" target="_blank" rel="noopener" onclick="toggleReaderMenu(false)">Open the PDF in a new tab <span aria-hidden="true">&#8599;</span></a>
         </span>
       </span>
@@ -7534,10 +7551,172 @@ async function removeUpload(id) {
   _uploads[id] = { deleted: true, updated: new Date().toISOString() };
   saveUploads();
   localPdfDel(id).catch(() => {});
+  videoDel(id);
   clearPaperNotes(id).catch(() => {});
   if (Chat.token) bridgeFetch('/paper/forget', { method: 'POST', body: JSON.stringify({ paper: id }) }).catch(() => {});
   toast('Removed');
 }
+
+/* ===== VIDEO (a review paper's supplementary video) =====
+   A paper in To review can have a video. Like its PDF, the file stays in this browser (IndexedDB 'scholar_videos')
+   and never leaves the device; the paper's record (synced in the encrypted notes index) keeps its name, so another
+   device offers to add it there too. It plays at the top of the reader's panel, under the visible pane's header,
+   shared by Notes and Chat; Picture in Picture floats it (on the iPad, over everything while you write). The panes
+   are rebuilt often, so the player is one element that placeVideo() moves back in the same task: it keeps playing. */
+const VIDEO_HIDDEN_KEY = 'scholar_video_hidden';   // papers whose video is folded to its bar, on this device
+let _vid = { id: null, box: null, url: '', token: 0 };
+function videoStore(mode, fn) {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('scholar_videos', 1);
+    req.onupgradeneeded = () => req.result.createObjectStore('files');
+    req.onerror = () => reject(req.error);
+    req.onsuccess = () => {
+      const db = req.result, tx = db.transaction('files', mode), st = tx.objectStore('files');
+      const r = fn(st);
+      tx.oncomplete = () => { db.close(); resolve(r && r.result); };
+      tx.onerror = () => { db.close(); reject(tx.error); };
+    };
+  });
+}
+const videoGet = id => videoStore('readonly', st => st.get(id)).catch(() => null);
+const videoPut = (id, file) => videoStore('readwrite', st => st.put(file, id));
+const videoDel = id => videoStore('readwrite', st => st.delete(id)).catch(() => {});
+const ICON_FILM = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path class="f" d="M10 9.3v5.4l4.6-2.7z"/></svg>';
+const ICON_PIP = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><rect x="12" y="11" width="6.5" height="5.5" rx="1" fill="currentColor" stroke="none"/></svg>';
+const ICON_FOLD = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>';
+const ICON_UNFOLD = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+function videoHidden(id) { try { return (JSON.parse(localStorage.getItem(VIDEO_HIDDEN_KEY) || '[]') || []).includes(id); } catch (e) { return false; } }
+function setVideoHidden(id, on) {
+  try { const s = new Set(JSON.parse(localStorage.getItem(VIDEO_HIDDEN_KEY) || '[]') || []); on ? s.add(id) : s.delete(id); localStorage.setItem(VIDEO_HIDDEN_KEY, JSON.stringify([...s])); } catch (e) {}
+}
+function videoTime(t) { if (!isFinite(t) || t <= 0) return ''; t = Math.round(t); const h = Math.floor(t / 3600), m = Math.floor(t / 60) % 60, sec = String(t % 60).padStart(2, '0'); return h ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`; }
+function videoEl() { return _vid.box && _vid.box.querySelector('video'); }
+function videoPipSupported(v) { return !!(v && ((document.pictureInPictureEnabled && v.requestPictureInPicture) || (v.webkitSupportsPresentationMode && v.webkitSupportsPresentationMode('picture-in-picture')))); }
+function videoFloating(v) { return !!v && (document.pictureInPictureElement === v || v.webkitPresentationMode === 'picture-in-picture'); }
+/* The paper the reader opened: its video, from this browser (or the offer to add it, when another device has it) */
+async function videoFor(p, fresh) {
+  if (!fresh && _vid.id === p.id && _vid.box) return;
+  videoClose();
+  if (!p.uploaded) return;
+  const token = ++_vid.token;
+  const file = fresh || await videoGet(p.id), rec = (_uploads[p.id] || {}).video;
+  if (token !== _vid.token || !_reader.paper || _reader.paper.id !== p.id) return;   // another paper opened meanwhile
+  if (!file && !rec) return;
+  _vid.id = p.id;
+  const box = _vid.box = document.createElement('div');
+  box.className = 'rp-video';
+  if (file) {
+    _vid.url = URL.createObjectURL(file);
+    box.classList.toggle('collapsed', videoHidden(p.id));
+    box.innerHTML = `<video controls playsinline preload="metadata"></video><div class="rp-vid-bar"></div>`;
+    const v = box.querySelector('video');
+    v.addEventListener('loadedmetadata', () => videoBar(file.name), { once: true });
+    v.addEventListener('error', () => { if (!v.error) return; v.remove(); box.insertAdjacentHTML('afterbegin', `<div class="rp-vid-msg">This browser can't play ${esc(file.name)} (its format). A video in MP4 (H.264) plays everywhere.</div>`); });
+    v.src = _vid.url;
+    videoBar(file.name);
+  } else {
+    box.innerHTML = `<div class="rp-vid-bar">${ICON_FILM}<span class="rp-vid-name" title="${escAttr(rec.name || '')}">${esc(rec.name || 'A video')}</span><span class="rp-vid-dur">is on another device</span><button class="rp-text-btn" onclick="pickVideo()">Add it here</button></div>`;
+  }
+  placeVideo();
+}
+function videoBar(name) {
+  const box = _vid.box, v = videoEl(), bar = box && box.querySelector('.rp-vid-bar');
+  if (!bar) return;
+  const folded = box.classList.contains('collapsed'), dur = v ? videoTime(v.duration) : '';
+  bar.innerHTML = `${ICON_FILM}<span class="rp-vid-name" title="${escAttr(name)}">${esc(name)}</span>${dur ? `<span class="rp-vid-dur">· ${dur}</span>` : ''}<span class="grow"></span>`
+    + (videoPipSupported(v) && !folded ? `<button class="rp-icon-btn sm" onclick="videoPip()" title="Picture in picture: the video floats over everything" aria-label="Picture in picture">${ICON_PIP}</button>` : '')
+    + `<button class="rp-icon-btn sm" onclick="videoFold()" title="${folded ? 'Show the video' : 'Fold the video away'}" aria-label="${folded ? 'Show the video' : 'Fold the video away'}" aria-expanded="${!folded}">${folded ? ICON_UNFOLD : ICON_FOLD}</button>`;
+  bar._name = name;
+}
+/* Under the header of the pane on show: the open tab, or the first of two docked panes (Notes alone on a phone) */
+function placeVideo() {
+  const box = _vid.box;
+  if (!box) return;
+  const which = readerPhone() ? 'notes' : panelMode() === 'tabs' ? _panelTab : panelFirst();
+  const head = document.querySelector(`#${which === 'chat' ? 'chatPane' : 'notesPane'} > .rp-head`);
+  if (head && head.nextElementSibling !== box) head.after(box);
+}
+function videoFold() {
+  const box = _vid.box, v = videoEl();
+  if (!box) return;
+  const fold = !box.classList.contains('collapsed');
+  if (fold && v && !videoFloating(v)) v.pause();   // folded away, it stops (in Picture in Picture it plays on)
+  box.classList.toggle('collapsed', fold);
+  setVideoHidden(_vid.id, fold);
+  const bar = box.querySelector('.rp-vid-bar'); videoBar(bar._name || '');
+  const btn = box.querySelector('[aria-expanded]'); if (btn) btn.focus({ preventScroll: true });
+}
+async function videoPip() {
+  const v = videoEl();
+  if (!v) return;
+  try {
+    if (videoFloating(v)) { if (document.pictureInPictureElement === v) await document.exitPictureInPicture(); else v.webkitSetPresentationMode('inline'); }
+    else if (document.pictureInPictureEnabled && v.requestPictureInPicture) await v.requestPictureInPicture();
+    else v.webkitSetPresentationMode('picture-in-picture');
+  } catch (e) { toast('Picture in picture isn’t available here'); }
+}
+function videoPauseUnlessFloating() { const v = videoEl(); if (v && !videoFloating(v)) v.pause(); }
+function videoClose() {
+  _vid.token++;
+  const v = videoEl();
+  if (v) { v.pause(); v.removeAttribute('src'); v.load(); }
+  if (_vid.box) _vid.box.remove();
+  if (_vid.url) URL.revokeObjectURL(_vid.url);
+  _vid = { id: null, box: null, url: '', token: _vid.token };
+}
+function pickVideo() {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'video/*,.mp4,.m4v,.mov,.webm,.mkv';
+  inp.onchange = () => { if (inp.files[0]) addVideo(inp.files[0]); };
+  inp.click();
+}
+/* It plays at once from the file; keeping it in this browser (it can be large) finishes behind */
+async function addVideo(file) {
+  const p = _reader.paper;
+  if (!p || !p.uploaded || !_uploads[p.id]) return;
+  if (!/^video\//.test(file.type) && !/\.(mp4|m4v|mov|webm|mkv|avi|ogv)$/i.test(file.name)) { toast('That isn’t a video file'); return; }
+  setVideoHidden(p.id, false);
+  if (!document.getElementById('reader').classList.contains('panel-open')) toggleReaderPanel(true);
+  await videoFor(p, file);
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});   // ask the browser not to clear it
+  try { await videoPut(p.id, file); }
+  catch (e) { toastError('Couldn’t keep the video in this browser (storage full or blocked). It plays until you leave the paper.'); return; }
+  _uploads[p.id] = { ..._uploads[p.id], video: { name: file.name, size: file.size }, updated: new Date().toISOString() };
+  saveUploads();
+  toast('Video added: kept in this browser only.');
+}
+async function removeVideo() {
+  const p = _reader.paper;
+  if (!p || !p.uploaded) return;
+  const ok = await showConfirm('Remove the video?', 'It’s deleted from this browser. The paper and your notes stay.', 'Remove', true);
+  if (!ok) return;
+  videoClose();
+  await videoDel(p.id);
+  const u = _uploads[p.id];
+  if (u && u.video) { const { video, ...rest } = u; _uploads[p.id] = { ...rest, updated: new Date().toISOString() }; saveUploads(); }
+  toast('Video removed');
+}
+/* The reader's ⋯ menu: Add (or Replace) and Remove, for papers in To review */
+function videoMenuPaint() {
+  const p = _reader.paper, up = !!(p && p.uploaded), has = up && _vid.id === p.id && !!videoEl();
+  const add = document.getElementById('readerVidAdd'), del = document.getElementById('readerVidDel');
+  add.hidden = !up; add.textContent = has ? 'Replace the video…' : 'Add a video…';
+  del.hidden = !has;
+}
+/* Dropping a video on the reader of a paper in To review adds it */
+(() => {
+  const r = document.getElementById('reader');
+  const isVideo = e => _reader.paper && _reader.paper.uploaded && [...(e.dataTransfer && e.dataTransfer.items || [])].some(i => i.kind === 'file' && /^video\//.test(i.type));
+  r.addEventListener('dragover', e => { if (isVideo(e)) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; r.classList.add('vid-drop'); } });
+  r.addEventListener('dragleave', e => { if (!r.contains(e.relatedTarget)) r.classList.remove('vid-drop'); });
+  r.addEventListener('drop', e => {
+    r.classList.remove('vid-drop');
+    if (!isVideo(e)) return;
+    e.preventDefault();
+    const f = [...e.dataTransfer.files].find(f => /^video\//.test(f.type));
+    if (f) addVideo(f);
+  });
+})();
 
 let _reader = { paper: null, doc: null, zoom: 'fit', scale: 1, obs: null, under: null, token: 0, local: false };
 function readerDark() { try { return localStorage.getItem(READER_DARK_KEY) === 'true'; } catch (e) { return false; } }
@@ -7565,6 +7744,7 @@ function closeReader() {
 function hideReader() {
   const el = document.getElementById('reader');
   hidePdfModal();
+  videoClose();
   endAdjust(true);
   finishNotesEdit();
   closeAnnoCard(); hideSelBar(); closeCiteDD(); endInk(); exitZen(true);
@@ -7589,6 +7769,7 @@ async function showReader(id) {
   const el = document.getElementById('reader');
   if (_reader.paper !== p) { _rnFilter = { colors: new Set(), comments: false, notes: false, q: '' }; endAdjust(true); endDraft('discard'); endInk(); }
   _reader.paper = p;
+  videoFor(p);
   clearTimeout(_reader.panelT); el.classList.remove('panel-leaving');
   el.classList.toggle('panel-open', isOwner() && window.innerWidth >= 1024);   // notes beside the paper by default; on a phone or an upright iPad the paper needs the width (Notes opens it)
   document.getElementById('readerNotesBtn').setAttribute('aria-pressed', el.classList.contains('panel-open') ? 'true' : 'false'); _reader.zoom = 'fit';
@@ -7635,6 +7816,7 @@ async function showReader(id) {
     if (t.touchType === 'stylus' && Math.hypot(dx, dy) <= PEN_TAP_SLOP) return;
     const tgt = e.target;
     if (tgt === document.activeElement && (tgt.tagName === 'TEXTAREA' || tgt.tagName === 'INPUT' || tgt.isContentEditable)) return;   // moving the caret or a selection
+    if (tgt.closest && tgt.closest('video')) return;   // a video's own controls (scrubbing its timeline)
     for (let el = tgt; el && el !== document.body; el = el.parentElement) {
       if (el.nodeType === 1 && canScroll(el, dx, dy)) return;
       if (el === reader) break;
@@ -7649,7 +7831,7 @@ async function showReader(id) {
    link's menu; and Pencil touches the page already took for itself (writing, highlighting, a written note). */
 const PEN_TAP_SLOP = 10;   // px a Pencil tap may wobble and still be a tap
 (function () {
-  const SAFARI_OWN = 'textarea, select, [contenteditable]:not([contenteditable="false"]), input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"])';
+  const SAFARI_OWN = 'video, textarea, select, [contenteditable]:not([contenteditable="false"]), input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"])';
   let down = null, given = null;   // given: the click made for the last tap (Safari's own, if it follows, is dropped)
   const touchOf = (e, id) => [...e.changedTouches].find(t => t.identifier === id);
   document.addEventListener('touchstart', e => {
@@ -8194,7 +8376,7 @@ async function readerZoom(dir) {
 function toggleReaderMenu(force) {
   const m = document.getElementById('readerMenu'), b = document.getElementById('readerMore');
   const open = typeof force === 'boolean' ? force : !m.classList.contains('open');
-  if (open) { offPaint(document.getElementById('readerDl').dataset.off); popIn(m); } else fadeAway(m);
+  if (open) { offPaint(document.getElementById('readerDl').dataset.off); videoMenuPaint(); popIn(m); } else fadeAway(m);
   b.setAttribute('aria-expanded', open ? 'true' : 'false');
 }
 async function toggleReaderDark() {
@@ -8214,7 +8396,7 @@ document.addEventListener('keydown', e => {
   if (pdfModalOpen()) { if (e.key === 'Escape') { e.preventDefault(); closePdfModal(); } return; }
   if (t && (/^(INPUT|TEXTAREA)$/.test(t.tagName) || t.isContentEditable)) { if (e.key === 'Escape' && !_citeCtx) { t.blur(); if (_acId) closeAnnoCard(); } return; }   // typing: no reader shortcuts
   const SCROLL_KEYS = ['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', ' ', 'Home', 'End'];
-  if (SCROLL_KEYS.includes(e.key) && !e.metaKey && !e.ctrlKey && !e.altKey && (t === document.body || !t || !t.closest || !t.closest('#readerBody, button, a, input, select, [contenteditable]'))) {
+  if (SCROLL_KEYS.includes(e.key) && !e.metaKey && !e.ctrlKey && !e.altKey && (t === document.body || !t || !t.closest || !t.closest('#readerBody, button, a, input, select, video, [contenteditable]'))) {
     const body = document.getElementById('readerBody'), page = body.clientHeight * 0.9;
     e.preventDefault();
     const d = { ArrowDown: 60, ArrowUp: -60, PageDown: page, PageUp: -page, ' ': e.shiftKey ? -page : page }[e.key];
@@ -10299,6 +10481,7 @@ function toggleReaderPanel(force) {
 }
 function setReaderPanel(open, now) {
   const r = document.getElementById('reader');
+  if (!open) videoPauseUnlessFloating();
   clearTimeout(_reader.panelT);
   if (r.classList.contains('panel-leaving')) {
     r.classList.remove('panel-leaving');
@@ -10339,7 +10522,8 @@ function keepLiveEditor(rebuild) {
   }
   return true;
 }
-function renderReaderPanel() {
+function renderReaderPanel() { renderNotesPane(); placeVideo(); }
+function renderNotesPane() {
   const panel = document.getElementById('notesPane');
   if (!panel || !document.getElementById('reader').classList.contains('panel-open')) return;
   applyPanelLayout();
@@ -10961,7 +11145,8 @@ async function chatConnect() {
 
 /* The chat view is built once per paper and then updated in place, so the panel's other re-renders
    (notes syncing, etc.) never disturb what you're typing */
-function renderChatPanel(force) {
+function renderChatPanel(force) { renderChatPane(force); placeVideo(); }
+function renderChatPane(force) {
   const panel = document.getElementById('chatPane');
   if (!panel || !document.getElementById('reader').classList.contains('panel-open') || !chatShown()) return;
   applyPanelLayout();
@@ -12399,6 +12584,7 @@ document.addEventListener('DOMContentLoaded', () => { loadPapers(); loadInterest
     'startFigureSelect', 'chatApplyBlock', 'chatSaveAsNote', 'chatAddPaper', 'chatRefresh', 'toggleLibPanel', 'startAddPaper', 'stopAddPaper', 'startTopicTag',
     // private papers and PDFs
     'pickUploadPdf', 'uploadPdf', 'usePdfFile', 'openPdfChange', 'removeLocalPdf', 'removeUpload', 'renameUpload', 'startReview', 'saveUploads',
+    'pickVideo', 'addVideo', 'removeVideo',
     // reading places and list times
     'noteReading', 'dismissReading', 'flushReading', 'showInProgress', 'saveListMeta',
     // PDFs kept on this device
