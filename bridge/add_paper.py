@@ -145,22 +145,22 @@ def clean_row(p, interests, groups):
 # ---------- publishing ----------
 def publish(papers, star=False, lists=None, cb=None):
     """Append the new papers (duplicates are reported, not added), then commit and push. Retries from a fresh copy if
-    someone else pushed meanwhile. Returns {'added': [rows], 'existing': [ids]}."""
+    someone else pushed meanwhile. Returns {'added': [rows], 'existing': [ids], 'titles': {existing id: title}}."""
     for attempt in range(3):
         log('Saving to your database…', cb)
         fresh_clone()
         fields, rows = read_papers()
         interests, groups = confirmed(INTERESTS, 'interest_name'), confirmed(GROUPS, 'group_name', '|')
         taken = {r['id'] for r in rows}
-        added, existing = [], []
+        added, existing, known = [], [], {}
         for p in papers:
             row = clean_row(p, interests, groups)
             same = existing_match(rows + added, row)
-            if same: existing.append(same['id']); continue
+            if same: existing.append(same['id']); known[same['id']] = same.get('title', ''); continue
             row.update(id=make_id(row, taken), date_found=datetime.date.today().isoformat(), source_mode='manual',
                        is_read='false', is_starred='true' if star else 'false', user_lists='|'.join(lists or []))
             taken.add(row['id']); added.append(row)
-        if not added: return {'added': [], 'existing': existing}
+        if not added: return {'added': [], 'existing': existing, 'titles': known}
         path = os.path.join(CLONE, PAPERS)
         with open(path, 'rb') as f: data = f.read()
         nl = '\r\n' if b'\r\n' in data[:20000] else '\n'
@@ -176,7 +176,7 @@ def publish(papers, star=False, lists=None, cb=None):
         git('commit', '-q', '-m', f'Add paper by hand: {titles}')
         log('Publishing…', cb)
         r = git('push', *(['--dry-run'] if DRY_RUN else []), f'https://x-access-token:{gh_token()}@{REMOTE}', 'HEAD:main', check=False)
-        if r.returncode == 0: return {'added': added, 'existing': existing}
+        if r.returncode == 0: return {'added': added, 'existing': existing, 'titles': known}
         if attempt == 2: raise RuntimeError('push failed: ' + (r.stderr or '')[-300:].replace(gh_token(), '***'))
     return {'added': [], 'existing': []}
 
@@ -229,14 +229,15 @@ def research(text, cb=None, model='opus', on_proc=None):
 
 
 def add(text, star=False, lists=None, cb=None, on_proc=None):
-    """The whole thing, for one input. Returns {'added': [rows], 'existing': [ids]}; raises Stop with a message."""
+    """The whole thing, for one input. Returns {'added': [rows], 'existing': [ids], 'titles': {existing id: title}};
+    raises Stop with a message."""
     text = (text or '').strip()
     if not text: raise Stop('Give a link, DOI, arXiv id or title.')
     log('Checking your database…', cb)
     fresh_clone()
     _, rows = read_papers()
     hit = lookup_input(rows, text)
-    if hit: return {'added': [], 'existing': [hit['id']]}
+    if hit: return {'added': [], 'existing': [hit['id']], 'titles': {hit['id']: hit.get('title', '')}}
     log('Finding the paper…', cb)
     papers = research(text, cb, on_proc=on_proc)
     return publish(papers, star, lists, cb)

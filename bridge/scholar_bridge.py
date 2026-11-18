@@ -15,9 +15,10 @@ Safety:
   * Claude runs with no shell, no connectors or plugins, and may read only files in this bridge's work folder
     (the paper PDFs and figures the dashboard sends); it may search and fetch from the web.
   * Tagging existing papers with a topic you approved (/topic/tag): the same, with add_topic.py.
-  * Adding a paper (the dashboard's Add paper box, /paper/add): Claude only researches it, read-only, in the bridge's
-    own copy of the repository (~/.scholar-bridge/repo); add_paper.py checks what it returns and commits and pushes
-    just that row (and its link-preview page) from that copy. Your working copy is never touched.
+  * Adding a paper (the dashboard's Add paper box, the browser extension, the MCP server: /paper/add): Claude only
+    researches it, read-only, in the bridge's own copy of the repository (~/.scholar-bridge/repo); add_paper.py checks
+    what it returns and commits and pushes just that row (and its link-preview page) from that copy. Your working copy
+    is never touched. Papers asked for while one is being added wait their turn, one at a time.
   * The API key stays in ~/.scholar-bridge/config.json (readable by you alone); the page never sees it.
   * A copy of each uploaded paper's PDF and video (To review) is kept in ~/.scholar-bridge/uploads (/upload): a browser
     can lose its own (it wipes a site's storage when the disk runs low), and another device fetches it from here.
@@ -33,6 +34,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 PORT = int(os.environ.get('SCHOLAR_BRIDGE_PORT', '7823'))
 ORIGINS = {'https://www.sumanthtangirala.com', 'https://sumanthtangirala.com', 'http://scholar.localhost', 'http://localhost'}
+EXTENSION = 'chrome-extension://mhfedfofciaejamdeikbedlfapmpfcpm'   # the browser extension (extension/: its manifest's key fixes this id)
+ORIGINS |= {EXTENSION}
 ORIGINS |= set(filter(None, os.environ.get('SCHOLAR_BRIDGE_ORIGINS', '').split(',')))   # a test copy of the site
 HOME = os.path.expanduser(os.environ.get('SCHOLAR_BRIDGE_HOME', '~/.scholar-bridge'))   # override: a separate test copy
 WORK = os.path.join(HOME, 'work')
@@ -46,7 +49,8 @@ NO_MCP = os.path.join(HOME, 'no-mcp.json')
 MODELS = {'opus': 'opus', 'sonnet': 'sonnet', 'haiku': 'haiku'}
 API_MODELS = {'opus': 'claude-opus-5-5', 'sonnet': 'claude-sonnet-5-5', 'haiku': 'claude-haiku-5-5'}
 EFFORTS = {'low', 'medium', 'high', 'xhigh', 'max'}   # anything else: the default of Claude Code or of the model
-VERSION = 5   # 2: /paper/add; 3: /topic/tag; 4: the Claude API engine (/engine); 5: copies of uploaded papers (/upload)
+VERSION = 6   # 2: /paper/add; 3: /topic/tag; 4: the Claude API engine (/engine); 5: copies of uploaded papers (/upload);
+              # 6: papers to add wait in a queue (/paper/add?id=, /paper/adds), for the extension and the MCP server
 UPLOAD_KINDS = {'pdf': 'application/pdf', 'video': 'video/mp4'}
 UPLOAD_MAX = 4 << 30   # 4 GB
 
@@ -58,7 +62,9 @@ if not os.path.exists(NO_MCP):
 
 _lock = threading.Lock()
 _running = {}   # paper id -> subprocess.Popen
-_add = {'job': None, 'proc': None}   # the paper being added (one at a time); the page polls GET /paper/add
+_adds = {'jobs': [], 'proc': None, 'wake': threading.Event()}   # papers to add, in the order asked (the finished ones too,
+# the last ADDS_KEPT); one is added at a time. The asker follows its job: GET /paper/add?id=<job>, or all of them: /paper/adds
+ADDS_KEPT, ADDS_WAITING = 40, 25
 _topic = {'job': None, 'proc': None}   # the topic whose existing papers are being tagged; GET /topic/tag
 
 
@@ -81,23 +87,54 @@ def start_topic(name):
     return job
 
 
-def start_add(text, star):
-    job = {'id': uuid.uuid4().hex[:12], 'state': 'running', 'stage': 'Starting…', 'input': text[:300], 'started': time.time()}
-    _add['job'] = job
+def queue_add(text, star, title='', source=''):
+    """A paper to add, after the ones already waiting (call with _lock held). The same input asked for again while it
+    waits or runs (a second click) is the same job. Returns the job, or None when too many are waiting."""
+    key = re.sub(r'\s+', ' ', text).strip().lower()
+    for j in _adds['jobs']:
+        if j['state'] in ('queued', 'running') and j['key'] == key:
+            if star: j['star'] = True
+            return j
+    if sum(j['state'] == 'queued' for j in _adds['jobs']) >= ADDS_WAITING: return None
+    job = {'id': uuid.uuid4().hex[:12], 'state': 'queued', 'stage': 'Waiting…', 'input': text, 'title': title[:300],
+           'star': bool(star), 'from': source[:20], 'key': key, 'queued': time.time()}
+    _adds['jobs'].append(job)
+    done = [j for j in _adds['jobs'] if j['state'] not in ('queued', 'running')]
+    for j in done[:max(0, len(done) - ADDS_KEPT)]: _adds['jobs'].remove(j)
+    _adds['wake'].set()
+    return job
 
-    def stage(s): job['stage'] = s
-    def run():
+
+def add_view(j):
+    """A job as the asker sees it, with how many papers are ahead of it while it waits."""
+    v = {k: x for k, x in dict(j).items() if k != 'key'}
+    if j['state'] == 'queued':
+        v['ahead'] = sum(1 for o in _adds['jobs'] if o['state'] in ('queued', 'running') and o['queued'] < j['queued'])
+    return v
+
+
+def add_job(jid): return next((j for j in _adds['jobs'] if j['id'] == jid), None)
+
+
+def add_worker():
+    """Adds the waiting papers one at a time, oldest first (add_paper resets the shared copy of the repository)."""
+    while True:
+        with _lock:
+            job = next((j for j in _adds['jobs'] if j['state'] == 'queued'), None)
+            if job: job.update(state='running', stage='Starting…', started=time.time())
+        if not job:
+            _adds['wake'].wait(); _adds['wake'].clear(); continue
+        def stage(s, job=job): job['stage'] = s
         try:
-            out = add_paper.add(text, star=star, cb=stage, on_proc=lambda p: _add.__setitem__('proc', p))
-            job.update(state='done', added=out['added'], existing=out['existing'])
+            out = add_paper.add(job['input'], star=job['star'], cb=stage, on_proc=lambda p: _adds.__setitem__('proc', p))
+            job.update(state='done', added=out['added'], existing=out['existing'], titles=out.get('titles', {}))
         except add_paper.Stop as e:
             job.update(state='stopped', message=str(e))
         except Exception as e:
-            job.update(state='error', message=(str(e) or 'failed')[-400:])
+            if job.get('stopping'): job.update(state='stopped', message='Stopped.')
+            else: job.update(state='error', message=(str(e) or 'failed')[-400:])
         finally:
-            _add['proc'] = None; job['ended'] = time.time()
-    threading.Thread(target=run, daemon=True).start()
-    return job
+            _adds['proc'] = None; job['ended'] = time.time()
 
 
 def claude_bin():
@@ -209,10 +246,15 @@ def forget_paper(pid):
     return gone
 
 
-def ask_permission(code):
+WHO = {'extension': 'The Scholar Dashboard extension in your browser wants to add papers through Claude Code on this Mac.',
+       'mcp': 'Scholar Dashboard\'s MCP server (for Claude Code and Claude Desktop) wants to add papers through Claude Code on this Mac.'}
+
+
+def ask_permission(code, who=''):
     """A native dialog on this laptop: the only way to get a token."""
-    script = ('display dialog "Scholar Dashboard wants to chat with Claude through Claude Code on this Mac.\\n\\n'
-              f'Code shown in the page: {code}" with title "Scholar Dashboard" buttons {{"Don\'t Allow", "Allow"}} '
+    what = WHO.get(who, 'Scholar Dashboard wants to chat with Claude through Claude Code on this Mac.')
+    shown = {'extension': 'Code shown in your browser', 'mcp': ''}.get(who, 'Code shown in the page')
+    script = (f'display dialog "{what}' + (f'\\n\\n{shown}: {code}' if shown and code else '') + '" with title "Scholar Dashboard" buttons {"Don\'t Allow", "Allow"} '
               'default button "Allow" cancel button "Don\'t Allow" with icon note giving up after 60')
     try:
         r = subprocess.run(['osascript', '-e', script], capture_output=True, text=True, timeout=70)
@@ -229,7 +271,7 @@ Citing the paper: whenever you point to something in the paper, cite it with its
 
 Other papers: {library_how} If more than one could fit, ask them with a short numbered list of titles. Once you know which paper(s) they mean, reply with only one line per paper, ```paper <id>```, and nothing else: the app then sends you that paper's text and the user's own notes on it, and you continue answering their question. Papers they @-mention arrive the same way, in <other-paper>.
 
-Notes and highlights: never add to the user's notes unless they explicitly ask you to. When they do, put each note in a fenced block ```note ... ``` (Markdown; you may cite with [[p.N "..."]] inside), and each highlight as ```highlight p.N color "exact words"``` (color is one of orange, green, blue, red, purple). The app saves them for the user.
+Notes and highlights: never add to the user's notes unless they explicitly ask you to. When they do, put each note in a fenced block ```note ... ``` (Markdown; you may cite with [[p.N "..."]] inside), and each highlight as ```highlight p.N color "exact words"``` (color is one of orange, yellow, green, blue, red, purple). The app saves them for the user.
 
 Be direct and concise; use Markdown and $math$ / $$math$$. The chat is a narrow side panel (often under 400px): keep tables to about three columns of short cells, and put citations in the text after the table rather than inside its cells. Say when something is your inference rather than in the paper.{web}{profile}"""
 
@@ -396,7 +438,11 @@ class Handler(BaseHTTPRequestHandler):
 
     # ---- plumbing ----
     def origin_ok(self):
-        return self.headers.get('Origin', '') in ORIGINS
+        # The dashboard's own pages; or a request with no Origin that no web page made: the browser extension's GETs
+        # (Chrome sends no Origin there, and Sec-Fetch-Site: none). A web page's requests always say where they're from:
+        # Origin on its fetches, Sec-Fetch-Site: cross-site on its images and links (which can't carry the token anyway).
+        o = self.headers.get('Origin')
+        return o in ORIGINS if o is not None else self.headers.get('Sec-Fetch-Site', 'none') == 'none'
 
     def cors(self):
         o = self.headers.get('Origin', '')
@@ -435,8 +481,12 @@ class Handler(BaseHTTPRequestHandler):
         if not self.authed(): return self.reply(401, {'error': 'not paired'})
         if path == '/chats':
             return self.reply(200, {'chats': chat_list(urllib.request.unquote(params.get('paper', '')))})
-        if path == '/paper/add':   # the paper being (or last) added
-            return self.reply(200, {'job': _add['job']})
+        if path == '/paper/add':   # one paper you asked for (?id=); without an id, the one being added, else the last asked for
+            with _lock:
+                j = add_job(params.get('id', '')) if params.get('id') else (next((x for x in _adds['jobs'] if x['state'] == 'running'), None) or (_adds['jobs'][-1] if _adds['jobs'] else None))
+                return self.reply(200 if j or not params.get('id') else 404, {'job': j and add_view(j)})
+        if path == '/paper/adds':   # every paper asked for lately, newest first (waiting, being added, and finished)
+            with _lock: return self.reply(200, {'jobs': [add_view(j) for j in reversed(_adds['jobs'])]})
         if path == '/uploads':   # which uploaded papers' files the Mac keeps
             return self.reply(200, {'uploads': upload_list()})
         if path == '/upload':   # one of them, back to a browser that lost its own (or never had it)
@@ -466,8 +516,9 @@ class Handler(BaseHTTPRequestHandler):
         if not self.origin_ok(): return self.reply(403, {'error': 'origin'})
         path = self.path.partition('?')[0]
         if path == '/pair':
-            code = re.sub(r'\D', '', str(self.body().get('code', '')))[:6]   # digits only: it goes into the dialog's script
-            if not ask_permission(code): return self.reply(403, {'error': 'declined'})
+            d = self.body()
+            code = re.sub(r'\D', '', str(d.get('code', '')))[:6]   # digits only: it goes into the dialog's script
+            if not ask_permission(code, str(d.get('who', ''))): return self.reply(403, {'error': 'declined'})
             t = token() or secrets.token_urlsafe(32)
             with open(TOKEN_FILE, 'w') as f: f.write(t)
             os.chmod(TOKEN_FILE, 0o600)
@@ -515,13 +566,13 @@ class Handler(BaseHTTPRequestHandler):
             if not re.fullmatch(r'up-[0-9a-f]{12}', pid): return self.reply(400, {'error': 'only uploaded papers'})
             if pid in _running: _running[pid] and _running[pid].terminate()
             return self.reply(200, {'ok': True, 'removed': forget_paper(pid)})
-        if path == '/paper/add':   # add a paper you chose: research (Claude, read-only), then publish (add_paper.py)
+        if path == '/paper/add':   # add a paper you chose: research (Claude, read-only), then publish (add_paper.py); it waits its turn
             text = str(data.get('input', '')).strip()[:2000]
             if not text: return self.reply(400, {'error': 'input'})
             with _lock:
-                j = _add['job']
-                if j and j['state'] == 'running': return self.reply(409, {'error': 'busy', 'job': j})
-                return self.reply(200, {'job': start_add(text, bool(data.get('star')))})
+                j = queue_add(text, bool(data.get('star')), str(data.get('title') or ''), str(data.get('from') or 'dashboard'))
+                if not j: return self.reply(429, {'error': 'Too many papers are waiting to be added; try again once some are in.'})
+                return self.reply(200, {'job': add_view(j)})
         if path == '/topic/tag':   # a topic was approved: put it on the existing papers that belong in it
             name = str(data.get('topic', '')).strip()[:200]
             if not name: return self.reply(400, {'error': 'topic'})
@@ -529,10 +580,14 @@ class Handler(BaseHTTPRequestHandler):
                 j = _topic['job']
                 if j and j['state'] == 'running': return self.reply(409, {'error': 'busy', 'job': j})
                 return self.reply(200, {'job': start_topic(name)})
-        if path == '/paper/add/stop':
-            p = _add['proc']
-            if p: p.terminate()
-            return self.reply(200, {'ok': True})
+        if path == '/paper/add/stop':   # one paper (id), or the one being added: a waiting one is just taken off the queue
+            with _lock:
+                j = add_job(str(data.get('id', ''))) if data.get('id') else next((x for x in _adds['jobs'] if x['state'] == 'running'), None)
+                if j and j['state'] == 'queued': j.update(state='stopped', message='Stopped before it started.', ended=time.time())
+                elif j and j['state'] == 'running':
+                    j['stopping'] = True
+                    if _adds['proc']: _adds['proc'].terminate()
+            return self.reply(200, {'ok': True, 'job': j and add_view(j)})
         if path == '/library':   # the user's paper list, for finding papers they describe (no notes in it)
             with open(os.path.join(WORK, 'library.tsv'), 'w') as f: f.write(str(data.get('tsv', ''))[:3_000_000])
             return self.reply(200, {'ok': True})
@@ -740,4 +795,5 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == '__main__':
     print(f'Scholar bridge on http://127.0.0.1:{PORT} (claude: {claude_bin()})', flush=True)
+    threading.Thread(target=add_worker, daemon=True).start()
     ThreadingHTTPServer(('127.0.0.1', PORT), Handler).serve_forever()

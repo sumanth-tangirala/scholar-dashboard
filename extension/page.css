@@ -1,0 +1,38 @@
+/* Scholar Dashboard's buttons on Google Scholar and in Gmail: they borrow the page's own look (Scholar's footer links,
+   a small outlined chip in an email) and change only what they say and their colour. */
+.sd-add { cursor: pointer; text-decoration: none; white-space: nowrap; transition: color .15s, background-color .15s, border-color .15s, opacity .15s; }
+.sd-add .sd-ico { width: 15px; height: 15px; flex-shrink: 0; fill: currentColor; vertical-align: -3px; margin-right: 4px; }
+.sd-add .sd-ico.sd-spin { animation: sd-spin .9s linear infinite; transform-origin: 50% 50%; transform-box: fill-box; }
+@keyframes sd-spin { to { transform: rotate(360deg); } }
+.sd-add[data-state="in"] { color: #188038 !important; }
+.sd-add[data-state="busy"], .sd-add[data-state="busy"]:hover { color: #70757a !important; cursor: default; text-decoration: none; }
+.sd-add[data-state="fail"] { color: #c5221f !important; }
+.sd-add:focus-visible { outline: 2px solid #1a73e8; outline-offset: 2px; border-radius: 4px; }
+.sd-why { font: 13px/1.45 Arial, sans-serif; color: #c5221f; margin: 2px 0 0; }
+.sd-why[hidden] { display: none; }
+
+/* Scholar: a result's row of links (Save, Cite, Cited by, ...): inline like them, its icon sized and set like theirs (15x16, 5px gap) */
+.sd-scholar { display: inline; }
+.sd-scholar .sd-ico { width: 15px; height: 16px; vertical-align: text-bottom; margin-right: 5px; }
+.sd-scholar:hover .sd-lbl { text-decoration: underline; }
+.sd-scholar[data-state="busy"]:hover .sd-lbl { text-decoration: none; }
+.sd-why-scholar { margin: 4px 0 0; }
+
+/* Scholar: an author's list, and a paper's own page */
+.sd-mini-row { margin-top: 3px; }
+.sd-block-row { margin: 8px 0 4px; font-size: 14px; }
+.sd-mini, .sd-block { display: inline-flex; align-items: center; color: #1a0dab; font-size: 13px; }
+.sd-block { font-size: 14px; }
+.sd-mini:hover .sd-lbl, .sd-block:hover .sd-lbl { text-decoration: underline; }
+.sd-mini[data-state="busy"]:hover .sd-lbl, .sd-block[data-state="busy"]:hover .sd-lbl { text-decoration: none; }
+
+/* Gmail: beside a paper's title in a Scholar alert */
+.sd-pill { display: inline-flex; align-items: center; margin-left: 2px; padding: 1px 10px 1px 7px; border: 1px solid #dadce0; border-radius: 999px; background: #fff;
+  font: 500 12px/20px 'Google Sans', Roboto, Arial, sans-serif; color: #1a73e8; vertical-align: 2px; }
+.sd-pill .sd-ico { width: 14px; height: 14px; margin-right: 4px; vertical-align: 0; }
+.sd-pill:hover { background: #f4f8fe; border-color: #c6dafc; }
+.sd-pill[data-state="in"]:hover { background: #f3faf5; border-color: #b7dfc3; }
+.sd-pill[data-state="busy"]:hover { background: #fff; border-color: #dadce0; }
+.sd-why-pill { margin: 0 0 4px; }
+
+@media (prefers-reduced-motion: reduce) { .sd-add .sd-ico.sd-spin { animation-duration: 2.4s; } .sd-add { transition: none; } }

@@ -1094,7 +1094,7 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 }
 @media (prefers-reduced-motion: reduce) { .reader-spin { animation-duration: 2.4s; } }
 /* ---- notes, highlights and comments ---- */
-:root { --hl-orange: #ff8a3d; --hl-yellow: var(--hl-orange); --hl-green: #4cc38a; --hl-blue: #5b9bf5; --hl-red: #e5484d; --hl-purple: #b48cf2; }
+:root { --hl-orange: #ff8a3d; --hl-yellow: #f2cf3a; --hl-green: #4cc38a; --hl-blue: #5b9bf5; --hl-red: #e5484d; --hl-purple: #b48cf2; }
 .reader-split { flex: 1; min-height: 0; display: flex; }
 .reader-split .reader-body { flex: 1; min-width: 0; }
 .reader-panel { display: none; width: var(--rp-w, 380px); flex-shrink: 0; border-left: 1px solid var(--border); background: var(--reader-bar); flex-direction: column; min-height: 0; }
@@ -1155,7 +1155,7 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .anno-mark:hover { transform: scale(1.15); box-shadow: 0 2px 8px rgba(0,0,0,0.45); }
 .anno-mark svg { width: 12px; height: 12px; fill: currentColor; }
 /* light pages: deeper colours so highlights and comment lines stay visible on white */
-.reader:not(.dark) .annoLayer, .reader:not(.dark) .annoMarks { --hl-orange: #ff7a1f; --hl-yellow: var(--hl-orange); --hl-green: #34c26b; --hl-blue: #4b8ef7; --hl-red: #e03a40; --hl-purple: #a66ff2; --note-line: #1f3a8a; --note-ink: #fff; --ref-tint: rgba(31,58,138,0.10); }
+.reader:not(.dark) .annoLayer, .reader:not(.dark) .annoMarks { --hl-orange: #ff7a1f; --hl-yellow: #ffd000; --hl-green: #34c26b; --hl-blue: #4b8ef7; --hl-red: #e03a40; --hl-purple: #a66ff2; --note-line: #1f3a8a; --note-ink: #fff; --ref-tint: rgba(31,58,138,0.10); }
 .sel-bar { position: fixed; z-index: 340; display: none; align-items: center; gap: 2px; padding: 3px 4px; background: #1d1d20; border: 1px solid rgba(255,255,255,0.14); border-radius: 10px; box-shadow: 0 8px 26px rgba(0,0,0,0.55); }
 .sel-bar.open { display: flex; }
 .sel-dot { width: 22px; height: 22px; border-radius: 50%; border: 2px solid transparent; background: var(--hc); cursor: pointer; transition: transform 0.12s, border-color 0.12s; }
@@ -3133,9 +3133,10 @@ function freshnessOf(rows) {
 function isOlder(a, b) { return a.latest < b.latest; }
 function applyPapers(rows, text) {
   if (anyDirty()) writeBackup();   // edits made meanwhile are re-applied by restorePapersFromBackup
+  _papersFresh = freshnessOf(rows);   // (of this copy alone, before the papers below)
+  keepBridgeAdded(rows);   // papers just added through the bridge that this copy doesn't have yet (ADD A PAPER)
   allPapers = rows; _hiddenPapers = [];
   _papersText = text;
-  _papersFresh = freshnessOf(rows);
   restorePapersFromBackup();
   splitHidden();
   bootstrapStateFromCSV();
@@ -5928,6 +5929,41 @@ function libGroupHTML(key, icon, label, papers, extra) {
    paper and describes it for your interests (read-only), and bridge/add_paper.py checks it, adds the row and
    publishes it. The page follows the job (it keeps going if you leave Library) and shows the paper once it's in. */
 const AddPaper = { open: false, job: null, poll: 0, text: '', star: false };
+const addBusy = j => !!j && (j.state === 'running' || j.state === 'queued');   // a queued one waits for the papers asked for before it (bridge v6)
+/* Papers added through the bridge from anywhere (this box, the browser extension, Claude through the MCP server) show at
+   once, before GitHub's CDN copy of the database has them (it can be minutes behind); kept until a copy does (applyPapers) */
+const _bridgeAdded = new Map();   // id -> row
+function takeAddedRows(list, show) {
+  const fresh = [];
+  (list || []).forEach(r => {
+    if (!r || typeof r.id !== 'string' || !r.id || typeof r.title !== 'string') return;
+    const row = {}; Object.keys(r).forEach(k => { if (typeof r[k] === 'string') row[k] = r[k]; });
+    if (!_bridgeAdded.has(row.id)) _bridgeAdded.set(row.id, row);
+    if (!findPaper(row.id)) fresh.push(row);
+  });
+  fresh.forEach(row => {
+    allPapers.push(row);
+    _loadedPaperFields.set(row.id, paperFields(row));   // as saved: nothing here to push
+    if (row.is_starred === 'true') starSet.add(paperKey(row));
+  });
+  if (fresh.length) { _relIndexKey = null; if (show || quietSwapOK()) { refresh(); if (currentTab === 'library') renderLibrary(); } }
+  return fresh.length;
+}
+function keepBridgeAdded(rows) {
+  const have = new Set(rows.map(r => r.id));
+  _bridgeAdded.forEach((row, id) => { if (have.has(id)) _bridgeAdded.delete(id); else rows.push(row); });
+}
+/* What the bridge added lately (once a visit, and when a paper's link isn't found here) */
+async function takeRecentAdds(quiet) {
+  if (!isOwner() || !Chat.token || chatElsewhere()) return 0;
+  if (Chat.status !== 'ready' || !Chat.bridgeVersion) await bridgeCheck();
+  if (Chat.status !== 'ready' || Chat.bridgeVersion < 6) return 0;
+  try {
+    const jobs = (await (await bridgeFetch('/paper/adds')).json()).jobs || [];
+    return takeAddedRows(jobs.filter(j => j.state === 'done').flatMap(j => j.added || []), !quiet);
+  } catch (e) { return 0; }
+}
+window.addEventListener('load', () => setTimeout(() => { if (_papersText) takeRecentAdds(true); }, 2500));
 /* Library's two header boxes share one place under the header: + Add paper (public, into the database) and Upload
    PDF (private, To review). A button opens its box, or closes it when it's already the one showing. */
 let _libPanel = null;
@@ -5949,9 +5985,16 @@ function toggleLibPanel(which) {
   renderAddPaper();
   addPaperSync().then(() => { const i = document.getElementById('laInput'); if (i && !i.disabled) i.focus(); });
 }
-async function addPaperSync() {   // where things stand: connected? a job already running (from before a reload)?
+async function addPaperSync() {   // where things stand: connected? a paper asked for here still on its way (from before a reload)?
   if (Chat.status !== 'ready' || !Chat.bridgeVersion) await bridgeCheck();
-  if (Chat.status === 'ready' && Chat.bridgeVersion >= 2) {
+  if (Chat.status === 'ready' && Chat.bridgeVersion >= 6) {
+    try {
+      const jobs = (await (await bridgeFetch('/paper/adds')).json()).jobs || [];
+      takeAddedRows(jobs.filter(j => j.state === 'done').flatMap(j => j.added || []));
+      const j = (AddPaper.job && jobs.find(x => x.id === AddPaper.job.id)) || jobs.find(x => addBusy(x) && x.from === 'dashboard');
+      if (j) setAddJob(j, true);
+    } catch (e) {}
+  } else if (Chat.status === 'ready' && Chat.bridgeVersion >= 2) {
     try { const j = (await (await bridgeFetch('/paper/add')).json()).job; if (j && (j.state === 'running' || !AddPaper.job || AddPaper.job.id === j.id)) setAddJob(j, true); } catch (e) {}
   }
   renderAddPaper();
@@ -5966,7 +6009,7 @@ function addPaperResultHTML(j) {
 function renderAddPaper() {
   const box = document.getElementById('libAdd');
   if (!box || box.hidden || _libPanel !== 'add') return;
-  const j = AddPaper.job, running = j && j.state === 'running';
+  const j = AddPaper.job, running = addBusy(j);
   let body;
   if (Chat.status === 'unknown' || Chat.status === 'checking') body = `<div class="la-status"><span class="la-spin"></span>Connecting to Claude Code on your laptop…</div>`;
   else if (Chat.status !== 'ready') body = ['unpaired', 'elsewhere', 'setup'].includes(Chat.status)
@@ -5977,43 +6020,38 @@ function renderAddPaper() {
       <input class="la-input" id="laInput" type="text" enterkeyhint="go" autocomplete="off" spellcheck="false" placeholder="arXiv or DOI link, or the paper’s title" value="${escAttr(running ? j.input : AddPaper.text)}" oninput="AddPaper.text=this.value;document.getElementById('laGo').disabled=!this.value.trim()" ${running ? 'disabled' : ''}>
       ${running ? `<button type="button" class="la-plain" onclick="stopAddPaper()">Stop</button>` : `<button class="la-go" id="laGo" ${AddPaper.text.trim() ? '' : 'disabled'}>Add</button>`}
     </form>
-    ${running ? `<div class="la-status"><span class="la-spin"></span>${esc(j.stage || 'Working…')}</div>`
+    ${running ? `<div class="la-status"><span class="la-spin"></span>${esc(j.state === 'queued' ? (j.ahead ? `Waiting for ${j.ahead === 1 ? 'the paper' : `the ${j.ahead} papers`} asked for before it…` : 'Waiting…') : j.stage || 'Working…')}</div>`
       : `<label class="la-star"><input type="checkbox" ${AddPaper.star ? 'checked' : ''} onchange="AddPaper.star=this.checked"> Star it</label>
          <p class="la-note">Claude Code on your laptop finds the paper, reads its abstract, matches it to your interests and adds it (about a minute). A paper with no public version isn’t added: use Upload PDF instead, where it stays private.</p>`}
-    ${j && j.state !== 'running' ? addPaperResultHTML(j) : ''}`;
+    ${j && !running ? addPaperResultHTML(j) : ''}`;
   box.innerHTML = body;
 }
 async function startAddPaper() {
   const text = (AddPaper.text || '').trim();
   if (!text) return;
   try {
-    const r = await bridgeFetch('/paper/add', { method: 'POST', body: JSON.stringify({ input: text, star: AddPaper.star }) });
+    const r = await bridgeFetch('/paper/add', { method: 'POST', body: JSON.stringify({ input: text, star: AddPaper.star, from: 'dashboard' }) });
     const j = await r.json();
     if (r.status === 401) { saveBridgeToken(''); Chat.status = 'unpaired'; renderAddPaper(); return; }
     if (j.job) setAddJob(j.job);
+    else toastError('Paper not added: ' + (j.error || 'the bridge refused it'));
   } catch (e) { Chat.status = 'offline'; renderAddPaper(); }
 }
-function stopAddPaper() { bridgeFetch('/paper/add/stop', { method: 'POST', body: '{}' }).catch(() => {}); }
+function stopAddPaper() { bridgeFetch('/paper/add/stop', { method: 'POST', body: JSON.stringify({ id: AddPaper.job && AddPaper.job.id }) }).then(r => r.json()).then(r => { if (r.job && r.job.id === (AddPaper.job || {}).id) setAddJob(r.job); }).catch(() => {}); }
 function setAddJob(j, quiet) {
   const was = AddPaper.job;
   AddPaper.job = j;
-  if (j.state === 'running') {
+  if (addBusy(j)) {
     clearTimeout(AddPaper.poll);
-    AddPaper.poll = setTimeout(async () => { try { setAddJob((await (await bridgeFetch('/paper/add')).json()).job); } catch (e) { AddPaper.poll = setTimeout(() => setAddJob(AddPaper.job), 4000); } }, 1500);
-  } else if (was && was.state === 'running' && was.id === j.id && !quiet) addPaperFinished(j);
+    const path = '/paper/add' + (Chat.bridgeVersion >= 6 ? '?id=' + encodeURIComponent(j.id) : '');
+    AddPaper.poll = setTimeout(async () => { try { const n = (await (await bridgeFetch(path)).json()).job; if (n) setAddJob(n); } catch (e) { AddPaper.poll = setTimeout(() => setAddJob(AddPaper.job), 4000); } }, 1500);
+  } else if (addBusy(was) && was.id === j.id && !quiet) addPaperFinished(j);
   renderAddPaper();
 }
 /* The paper is on GitHub now: show it at once (GitHub's copy of the file catches up on its own) */
 function addPaperFinished(j) {
   if (j.added && j.added.length) markDataChanged();
-  const rows = (j.added || []).filter(r => r.id && !findPaper(r.id));
-  rows.forEach(r => {
-    const row = {}; Object.keys(r).forEach(k => { if (typeof r[k] === 'string') row[k] = r[k]; });
-    allPapers.push(row);
-    _loadedPaperFields.set(row.id, paperFields(row));   // as saved: nothing here to push
-    if (row.is_starred === 'true') starSet.add(paperKey(row));
-  });
-  if (rows.length) { _relIndexKey = null; AddPaper.text = ''; refresh(); if (currentTab === 'library') renderLibrary(); }
+  if (takeAddedRows(j.added, true)) AddPaper.text = '';
   const first = (j.added || [])[0] || (j.existing && j.existing[0] ? { id: j.existing[0] } : null);
   if (currentTab !== 'library' || _libPanel !== 'add') {
     if (j.state === 'done' && first) toast(j.added && j.added.length ? 'Added to your library' : 'Already in your library', () => openPaper(first.id), { actionLabel: 'Open', duration: 8000 });
@@ -8891,8 +8929,10 @@ function closePdfModal() {
    Edits land in IndexedDB first and are pushed to GitHub a few seconds later (like other edits);
    a copy changed elsewhere in the meantime is merged, not overwritten. */
 const VAULT_DIR = 'annotations/', VAULT_ITER = 600000, VAULT_CHECK = 'scholar-notes-v1';
-const HL_COLORS = ['orange', 'green', 'blue', 'red', 'purple'];   // orange, not yellow: the site's accent is amber
-const HL_DEFAULT_LABELS = { orange: 'Key idea', green: 'Method', blue: 'Result', red: 'Question', purple: 'My work' };
+/* Orange comes first, as the default. Highlights stored as 'yellow' before 2026-09-27 meant orange; the notes were reset
+   that day, so 'yellow' is free again and is a colour of its own. */
+const HL_COLORS = ['orange', 'yellow', 'green', 'blue', 'red', 'purple'];
+const HL_DEFAULT_LABELS = { orange: 'Key idea', yellow: 'Definition', green: 'Method', blue: 'Result', red: 'Question', purple: 'My work' };
 const Vault = { key: null, meta: undefined, index: null, cache: new Map(), pushing: false, pushTimer: null, pushAgain: false };
 function vaultSupported() { return !!(window.isSecureContext && window.crypto && crypto.subtle); }
 function b64e(buf) { const a = new Uint8Array(buf); let s = ''; for (let i = 0; i < a.length; i += 0x8000) s += String.fromCharCode.apply(null, a.subarray(i, i + 0x8000)); return btoa(s); }
@@ -9269,7 +9309,7 @@ async function lockNotes() {
   if (currentTab === 'library') renderLibrary();
   toast('Notes locked');
 }
-function hlLabel(c) { if (c === 'yellow') c = 'orange'; const cs = (Vault.index && Vault.index.colors) || {}; return cs[c] || (c === 'orange' && cs.yellow) || HL_DEFAULT_LABELS[c]; }
+function hlLabel(c) { const cs = (Vault.index && Vault.index.colors) || {}; return cs[c] || HL_DEFAULT_LABELS[c] || HL_DEFAULT_LABELS.orange; }
 
 /* ---- one paper's notes ---- */
 function emptyPaperNotes(id) { return { v: 1, id, entries: [], annos: [], deleted: {}, pdf: null }; }
@@ -9479,7 +9519,7 @@ let _rn = null;          // notes object of the paper in the reader
 let _rnFilter = { colors: new Set(), comments: false, notes: false, q: '' };
 let _rnEditing = null;   // null, 'new', or the id of the note being edited
 /* An annotation's colour: highlights use their colour; comments and cited passages are navy (their line colour) */
-function annoHc(a) { return a && a.kind === 'hl' ? `var(--hl-${a.color === 'yellow' ? 'orange' : a.color || 'orange'})` : 'var(--note-line, #8aa4f0)'; }
+function annoHc(a) { return a && a.kind === 'hl' ? `var(--hl-${HL_COLORS.includes(a.color) ? a.color : 'orange'})` : 'var(--note-line, #8aa4f0)'; }
 function annoById(id) { return _rn && ((_rn.annos || []).find(a => a.id === id) || _rnPendingRefs.find(a => a.id === id) || (_acPending && _acPending.id === id ? _acPending : null)); }
 function newAnnoId() { return 'a' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 /* The open paper's notes are in one of three states, changed only by setRnState():
@@ -9900,7 +9940,7 @@ function openAnnoCard(id, focusNote, write) {   // write: open its writing card 
   const card = document.getElementById('annoCard');
   card.style.setProperty('--hc', annoHc(a));
   // minimal: the passage is already visible on the page, so the card is just controls and a growing one-line box
-  const cur = a.kind === 'hl' ? (a.color === 'yellow' ? 'orange' : a.color) : null;
+  const cur = a.kind === 'hl' ? a.color : null;
   card.innerHTML = `
     <div class="ac-row">${HL_COLORS.map(c => `<button class="sel-dot ${cur === c ? 'on' : ''}" style="--hc:var(--hl-${c})" title="${escAttr(hlLabel(c))}" aria-label="${escAttr(hlLabel(c))}" onclick="setAnnoColor('${id}','${c}')"></button>`).join('')}
       <button class="sel-icon ${a.kind === 'note' ? 'on' : ''}" title="Comment only (underline, no colour)" aria-label="Comment only" onclick="setAnnoColor('${id}',null)">${ICON_UNDERLINE}</button>
@@ -10903,7 +10943,7 @@ function renderNotesPane() {
   const shown = rnFilterItems(items);
   const chip = (on, label, click, extra) => `<button class="rp-chip ${on ? 'on' : ''}" onclick="${click}" ${extra || ''}>${label}</button>`;
   // controls appear only once they earn their place: filters/search for a longer list (or while in use), and only the kinds that exist
-  const used = new Set(items.filter(it => it.type === 'hl').map(it => it.a.color === 'yellow' ? 'orange' : it.a.color));
+  const used = new Set(items.filter(it => it.type === 'hl').map(it => it.a.color));
   const hasComments = items.some(it => it.type === 'comment'), hasNotes = items.some(it => it.type === 'note');
   const filtering = f.colors.size || f.comments || f.notes || f.q;
   const showFilters = total >= 6 || filtering;
@@ -10937,7 +10977,7 @@ function rnFilterItems(items) {
   const f = _rnFilter, q = f.q.toLowerCase();
   const typed = f.colors.size || f.comments || f.notes;
   const editing = it => _rnEditing === it.id || _rnEditing === 'a:' + it.id || (_hw && (_hw.id === it.id || _hw.id === 'a:' + it.id));   // the item being edited never filters away
-  return items.filter(it => editing(it) || !typed || (it.type === 'hl' ? f.colors.has(it.a.color === 'yellow' ? 'orange' : it.a.color) : it.type === 'comment' ? f.comments : f.notes))
+  return items.filter(it => editing(it) || !typed || (it.type === 'hl' ? f.colors.has(it.a.color) : it.type === 'comment' ? f.comments : f.notes))
     .filter(it => editing(it) || !q || (it.type === 'note' ? it.e.text : it.a.quote + ' ' + (it.a.note || '')).toLowerCase().includes(q));
 }
 const ICON_LOCK = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
@@ -12506,7 +12546,7 @@ let _savedScrollTop = 0;
 
 function showPaperDetail(id) {
   const p = allPapers.find(pp => pp.id === id) || _hiddenPapers.find(pp => pp.id === id);
-  if (!p) { applyHash(); return; }
+  if (!p) { paperNotFound(id); return; }
   // Save the list's scroll position, but not when stepping from one paper to the next; opened from a list page,
   // Back returns to that page at the same place
   if (!_paperViewActive) { _savedScrollTop = document.getElementById('mainScroll').scrollTop; _paperFromList = _listViewActive ? _listKey : null; _sfAnchor = _listViewActive ? sfAnchorNow() : null; }
@@ -12526,6 +12566,28 @@ function showPaperDetail(id) {
 
   renderPaperDetail(p);
   pageIn(document.getElementById('sec-paper'));
+}
+/* A link to a paper this copy of the database doesn't have: usually one just added (from the browser extension, or Claude
+   through the MCP server), which the bridge already knows and GitHub's CDN copy shows a few minutes later. Looks for it
+   once (the bridge, then GitHub's own copy past its CDN); a paper that isn't anywhere leads home, saying so. */
+let _lookingFor = null;
+async function paperNotFound(id) {
+  if (_lookingFor === id) return;
+  _lookingFor = id;
+  const still = () => location.hash.startsWith('#paper/') && decodeURIComponent(location.hash.slice(7)) === id;
+  try {
+    await takeRecentAdds(true);
+    if (!findPaper(id) && CSV_BASE_URL) {
+      const t = await fetchNormalized(CSV_BASE_URL + 'papers_database.csv?t=' + Date.now()).catch(() => null);
+      const rows = t ? parsePapers(t) : [];
+      if (rows.some(r => r.id === id)) { applyPapers(rows, t); refresh(); }
+    }
+  } finally { _lookingFor = null; }
+  if (!still()) return;   // moved on meanwhile
+  if (findPaper(id)) { applyHash(); return; }
+  history.replaceState(null, '', location.pathname + location.search + '#all');
+  applyHash();
+  toast('That paper isn’t in the library');
 }
 /* A view that replaces another arrives with one short fade, already at its place (no scroll animation) */
 function pageIn(el) { if (el && !reduceMotion()) replay(el, 'page-in'); }

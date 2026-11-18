@@ -85,8 +85,8 @@ REPO=scholar-dashboard                       # your fork's name
 SITE="https://$GH_USER.github.io/$REPO/"     # where GitHub Pages will serve it (step 4)
 ORIGIN="https://$GH_USER.github.io"          # the site's origin: no path, no trailing slash
 
-sed -i '' "s#https://www.sumanthtangirala.com/scholar-dashboard/#$SITE#g" make_share_pages.py sync_to_github.sh
-sed -i '' "s#sumanth-tangirala/scholar-dashboard#$GH_USER/$REPO#g" index.html pull_from_github.sh sync_to_github.sh
+sed -i '' "s#https://www.sumanthtangirala.com/scholar-dashboard/#$SITE#g" make_share_pages.py sync_to_github.sh extension/background.js extension/page.js bridge/scholar_mcp.py
+sed -i '' "s#sumanth-tangirala/scholar-dashboard#$GH_USER/$REPO#g" index.html pull_from_github.sh sync_to_github.sh extension/background.js extension/manifest.json bridge/scholar_mcp.py
 sed -i '' "s#const GH_OWNER  = 'sumanth-tangirala'#const GH_OWNER  = '$GH_USER'#; s#const GH_REPO   = 'scholar-dashboard'#const GH_REPO   = '$REPO'#" index.html
 sed -i '' "s#{'https://www.sumanthtangirala.com', 'https://sumanthtangirala.com', #{'$ORIGIN', #" bridge/scholar_bridge.py
 sed -i '' "s#Origin: https://www.sumanthtangirala.com#Origin: $ORIGIN#" bridge/install_bridge.sh
@@ -102,6 +102,8 @@ What that changed:
 | `pull_from_github.sh`, `sync_to_github.sh` | the repo URL | what digest runs pull from and push to |
 | `bridge/scholar_bridge.py` | `ORIGINS` | which websites may talk to the chat bridge |
 | `bridge/install_bridge.sh` | health-check origin | the install script's final check |
+| `extension/background.js`, `extension/page.js`, `bridge/scholar_mcp.py` | `DASHBOARD`, `CSV_URL` | where the browser extension and the MCP server open papers and read your library (step 13) |
+| `extension/manifest.json` | `host_permissions` | the extension may read your database on GitHub |
 | `com.scholar-dashboard.plist` | `WorkingDirectory` | the optional local server (step 11) |
 
 Two edits by hand in `index.html`:
@@ -285,6 +287,30 @@ Then open http://scholar.localhost. Use exactly that address, because notes need
 ## 12. Link previews
 
 When you share a paper's link in a chat app, the preview shows its title, authors and venue. `sync_to_github.sh` regenerates the small `p/<id>/` pages behind this on every push, using `SITE` from step 3. There's nothing to do beyond step 3.
+
+## 13. Add papers from Google Scholar, any paper's page, and Claude (optional)
+
+These all go through the bridge (step 9), the same as Library → **+ Add paper**, so the Mac has to be awake. Papers asked for together wait their turn and are added one at a time.
+
+**The browser extension** (`extension/`, for Chrome, Arc, Brave or Edge on the Mac):
+
+1. Open `chrome://extensions` (in Arc, `arc://extensions`), turn on **Developer mode**, click **Load unpacked** and choose the repo's `extension` folder.
+2. Pin it to the toolbar. The first time you add a paper, a small window asks you to click **Allow** in the dialog on your Mac, once.
+
+Then:
+- **Google Scholar:** every result, every paper on an author's profile and a paper's citation page get **Add to library** (or **In your library**, when it's there already).
+- **Scholar alert emails in Gmail:** the same button beside each paper's title.
+- **Any paper's page** (arXiv, OpenReview, a publisher, a PDF): click the toolbar button, or press Alt+Shift+A. It shows the paper, whether it's in your library, and an **Add to library** button. Right-click a link for **Add link to your library**.
+
+The extension keeps its address fixed with the `key` in its manifest, and the bridge allows that one extension (`EXTENSION` in `bridge/scholar_bridge.py`). After pulling a new version, click the reload arrow on its card in `chrome://extensions`.
+
+**Claude Code and Claude Desktop** (an MCP server, `bridge/scholar_mcp.py`): run
+
+```bash
+bash bridge/mcp_setup.sh
+```
+
+It registers the server in both apps (quit Claude Desktop first). Then ask Claude to "add this paper to my library" with a link or a title. It also has `search_library` and `get_add_status`. It runs locally, started by each app, and isn't reachable from the network, so the ChatGPT and claude.ai websites can't use it.
 
 ---
 
