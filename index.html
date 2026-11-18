@@ -153,7 +153,7 @@ html.ro #crStrip, html.ro #crPhone, html.ro #saveBar, html.ro #syncStatus, html.
 html.ro #libAddBtn, html.ro #libUploadBtn, html.ro .lib-head .btn-new-list, html.ro .lib-add-wrap, html.ro .library-actions,
 html.ro .interest-actions, html.ro .group-drag-handle, html.ro .tt-line,
 html.ro #readerNotesBtn, html.ro #readerPanel, html.ro #rpResize, html.ro #selBar, html.ro .reader-change, html.ro .anno-mark,
-html.ro #vaultOverlay { display: none !important; }
+html.ro #vaultOverlay, html.ro #macOverlay { display: none !important; }
 .nav-refresh.spinning svg { animation: spin 0.7s linear infinite; }
 /* OFFLINE: the nav says so (tap it for what still works); rows mark the papers whose PDF is on this device */
 .nav-offline { display: none; align-items: center; gap: 6px; flex-shrink: 0; height: 28px; padding: 0 11px 0 9px; border-radius: 14px; border: 1px solid var(--border); background: none; color: var(--text-muted); font: inherit; font-size: 12.5px; cursor: pointer; transition: background var(--t-fast), color var(--t-fast); }
@@ -1505,6 +1505,10 @@ body.rp-splitting, body.rp-splitting * { user-select: none !important; -webkit-u
 .vault-box .pp-msg { margin-top: 0; min-height: 0; }
 .vault-gh { display: none; flex-direction: column; gap: 10px; }
 .vault-gh.show { display: flex; }
+/* Connect to your Mac (see CONNECT TO YOUR MAC): the notes dialog's frame; the pairing code as Chat shows it */
+.vault-sub code { font-size: 12px; }
+.mac-code { font-size: 28px; font-weight: 600; letter-spacing: 0.18em; color: var(--text); text-align: center; font-variant-numeric: tabular-nums; margin: 2px 0 0; }
+.mac-wait { display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 13px; color: var(--text-secondary); }
 .vault-step { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; font-size: 13.5px; font-weight: 600; color: var(--text); margin-top: 4px; }
 .vault-num { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: var(--accent-dim); color: var(--accent); font-size: 12px; flex-shrink: 0; align-self: center; }
 .vault-why { font-weight: 400; color: var(--text-muted); font-size: 12.5px; }
@@ -2678,6 +2682,10 @@ html.no-hover .sel-icon:not(.on):active, html.no-hover .ink-bar .ink-size:not(.o
     <div class="pp-msg err" id="vaultErr"></div>
     <div class="vault-btns"><button type="button" class="ui-btn ui-btn-secondary" onclick="closeVaultModal(false)">Cancel</button><button class="ui-btn ui-btn-primary" id="vaultGo" type="submit"></button></div>
   </form>
+</div>
+
+<div class="vault-overlay" id="macOverlay" role="dialog" aria-modal="true" aria-labelledby="macTitle" onclick="if (event.target === this) closeMacConnect()">
+  <form class="vault-box" id="macBox" novalidate onsubmit="event.preventDefault(); macConnectGo()"></form>
 </div>
 
 <div class="keys-help" id="keysHelp" role="dialog" aria-modal="true" aria-labelledby="keysHelpTitle" onclick="if (event.target === this) toggleKeysHelp(false)">
@@ -5706,7 +5714,7 @@ document.addEventListener('keydown', e => {
   const t = e.target;
   if (kbTyping(t)) return;   // (the search box has its own: arrows, Enter, Esc)
   if (e.key === '?') { e.preventDefault(); toggleKeysHelp(); return; }
-  if (document.querySelector('.reader.open, .auth-overlay.open, #vaultOverlay.open, .keys-help.open')) return;   // the reader and dialogs have their own keys
+  if (document.querySelector('.reader.open, .auth-overlay.open, #vaultOverlay.open, #macOverlay.open, .keys-help.open')) return;   // the reader and dialogs have their own keys
   // g then a letter: a page
   if (_kbG) {
     clearTimeout(_kbG); _kbG = 0;
@@ -5781,7 +5789,7 @@ document.addEventListener('keydown', e => {
 });
 /* Overlays keep Tab inside them (the top one: a dialog over the reader keeps it in the dialog), so focus never wanders
    into the page underneath; a menu or card that opens on top of one (a highlight's card, the save menu) keeps its own */
-const KB_MODALS = ['#genericOverlay.open', '#vaultOverlay.open', '.keys-help.open', '#pdfModal.open', '#sfSheet.open', '.reader.open'];
+const KB_MODALS = ['#genericOverlay.open', '#vaultOverlay.open', '#macOverlay.open', '.keys-help.open', '#pdfModal.open', '#sfSheet.open', '.reader.open'];
 const KB_FLOATING = '.save-dd, .copy-dd, .interest-dropdown, .group-add-dd, .abs-popup, .relevance-popup, #chatHist, .anno-card, .cite-dd, #selBar, #tokMenu, #readerMenu';
 const kbFocusables = root => [...root.querySelectorAll('button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"]), [contenteditable="true"]')]
   .filter(x => !x.disabled && x.offsetParent !== null && getComputedStyle(x).visibility !== 'hidden');
@@ -5800,16 +5808,16 @@ document.addEventListener('keydown', e => {
 }, true);
 /* Where focus was before a menu, pop-up or dialog opened: when one closes (Esc, a choice in it, Done) and focus would
    be left nowhere, or on something now hidden, it goes back there, so the keyboard carries on from where you were */
-const KB_LAYERS = KB_FLOATING + ', .sf-sugg, .sf-guide, #sfSheet, .keys-help, #genericOverlay, #vaultOverlay, #pdfModal, .chip-pop';
+const KB_LAYERS = KB_FLOATING + ', .sf-sugg, .sf-guide, #sfSheet, .keys-help, #genericOverlay, #vaultOverlay, #macOverlay, #pdfModal, .chip-pop';
 let _kbBack = null;
 document.addEventListener('focusin', e => { if (e.target && e.target.closest && !e.target.closest(KB_LAYERS) && e.target !== document.body) _kbBack = e.target; }, true);
-const KB_OPEN = '.save-dd, .copy-dd, .interest-dropdown, .group-add-dd.open, .abs-popup, .relevance-popup, #chatHist, #tokMenu.open, #readerMenu.open, #sfSheet.open, .sf-box.sugg-open, .sf-box.guide-open, .keys-help.open, #genericOverlay.open, #vaultOverlay.open, #pdfModal.open';
+const KB_OPEN = '.save-dd, .copy-dd, .interest-dropdown, .group-add-dd.open, .abs-popup, .relevance-popup, #chatHist, #tokMenu.open, #readerMenu.open, #sfSheet.open, .sf-box.sugg-open, .sf-box.guide-open, .keys-help.open, #genericOverlay.open, #vaultOverlay.open, #macOverlay.open, #pdfModal.open';
 function kbRefocus(fromClick) {
   setTimeout(() => {
     if (fromClick && document.querySelector(KB_OPEN)) return;   // still open (a list ticked in the save menu): focus stays in it
     const a = document.activeElement;
     const lost = !a || a === document.body || !a.isConnected || a.offsetParent === null || getComputedStyle(a).visibility === 'hidden'
-      || (a.closest && a.closest('#sfSheet:not(.open), .keys-help:not(.open), #genericOverlay:not(.open), #vaultOverlay:not(.open), #pdfModal:not(.open), .group-add-dd:not(.open)'));
+      || (a.closest && a.closest('#sfSheet:not(.open), .keys-help:not(.open), #genericOverlay:not(.open), #vaultOverlay:not(.open), #macOverlay:not(.open), #pdfModal:not(.open), .group-add-dd:not(.open)'));
     if (lost && _kbBack && _kbBack.isConnected && _kbBack.offsetParent !== null) _kbBack.focus({ preventScroll: true });
   }, 0);
 }
@@ -5835,7 +5843,7 @@ document.addEventListener('keydown', e => {
   const t = e.target, ms = document.getElementById('mainScroll');
   const nowhere = !t || t === document.body || t === document.documentElement, inNav = t && t.closest && t.closest('.navbar');
   if (!nowhere && !(inNav && e.key !== ' ')) return;   // focus is where the keys work on their own (Space still presses a nav button)
-  if (document.querySelector('.reader.open, .auth-overlay.open, .keys-help.open, #vaultOverlay.open, #sfSheet.open')) return;
+  if (document.querySelector('.reader.open, .auth-overlay.open, .keys-help.open, #vaultOverlay.open, #macOverlay.open, #sfSheet.open')) return;
   e.preventDefault();
   const page = ms.clientHeight * 0.9, d = { ArrowDown: 40, ArrowUp: -40, PageDown: page, PageUp: -page, ' ': e.shiftKey ? -page : page }[e.key];   // (40: the browser's own arrow step, as the keys after this one take)
   if (d != null) ms.scrollBy({ top: d, behavior: reduceMotion() ? 'auto' : 'smooth' }); else ms.scrollTo({ top: e.key === 'Home' ? 0 : ms.scrollHeight, behavior: reduceMotion() ? 'auto' : 'smooth' });
@@ -5961,7 +5969,9 @@ function renderAddPaper() {
   const j = AddPaper.job, running = j && j.state === 'running';
   let body;
   if (Chat.status === 'unknown' || Chat.status === 'checking') body = `<div class="la-status"><span class="la-spin"></span>Connecting to Claude Code on your laptop…</div>`;
-  else if (Chat.status !== 'ready') body = `<p class="la-note" style="margin:0">Adding a paper runs through Claude Code on your laptop, like Chat. ${Chat.status === 'unpaired' ? 'Connect this device first: open any paper, choose Chat, and allow it on the Mac.' : 'The laptop isn’t reachable right now: it needs to be awake' + (bridgeRemote() ? ', with Tailscale on.' : '.')}</p><div class="la-row" style="margin-top:12px"><button class="la-plain" onclick="Chat.status='unknown';addPaperSync()">Try again</button></div>`;
+  else if (Chat.status !== 'ready') body = ['unpaired', 'elsewhere', 'setup'].includes(Chat.status)
+    ? `<p class="la-note" style="margin:0">Adding a paper runs through Claude Code on your Mac. Connect this device to it first.</p><div class="la-row" style="margin-top:12px"><button class="la-go" onclick="macConnect().then(ok => ok ? addPaperSync() : renderAddPaper())">Connect to your Mac</button></div>`
+    : `<p class="la-note" style="margin:0">Adding a paper runs through Claude Code on your Mac. It isn’t reachable right now: it needs to be awake${bridgeRemote() ? ', with Tailscale on' : ''}.</p><div class="la-row" style="margin-top:12px"><button class="la-plain" onclick="Chat.status='unknown';addPaperSync()">Try again</button>${bridgeRemote() ? `<button class="la-plain" onclick="macConnect().then(ok => ok ? addPaperSync() : renderAddPaper())">Change address</button>` : ''}</div>`;
   else if (Chat.bridgeVersion < 2) body = `<p class="la-note" style="margin:0">The bridge on your laptop is an older version. Restart it (log out and in, or <code>bash bridge/install_bridge.sh</code>) and try again.</p>`;
   else body = `<form class="la-row" onsubmit="event.preventDefault();startAddPaper()">
       <input class="la-input" id="laInput" type="text" enterkeyhint="go" autocomplete="off" spellcheck="false" placeholder="arXiv or DOI link, or the paper’s title" value="${escAttr(running ? j.input : AddPaper.text)}" oninput="AddPaper.text=this.value;document.getElementById('laGo').disabled=!this.value.trim()" ${running ? 'disabled' : ''}>
@@ -6021,9 +6031,13 @@ function renderLibrary() {
   sortPapers(noted);
 
   const uploads = uploadedPapers();
+  // To review; "Get from your Mac" shows while files are missing here (paintMacPull). On an iPad or iPhone whose notes are
+  // locked, the list itself is missing (it's in the encrypted notes): the hint gets it, asking for what's needed in place
   let html = uploads.length
-    ? libGroupHTML('review', '&#9873;', 'To review', uploads, '<span class="library-actions" onclick="event.stopPropagation()"><button onclick="pickUploadPdf()">Upload PDF</button></span>')
-    : '';
+    ? libGroupHTML('review', '&#9873;', 'To review', uploads, '<span class="library-actions" onclick="event.stopPropagation()"><button onclick="pickUploadPdf()">Upload PDF</button><button class="lib-ico dl-all" id="libMacBtn" hidden onclick="macGetAll()"></button></span>')
+    : isOwner() && macRemoteDevice() && vaultSupported() && !Vault.key && Vault.meta
+      ? '<div class="lib-hint"><strong>To review</strong>: the papers you’re reviewing are kept on your Mac. <button class="lib-hint-btn" onclick="macGetAll()">Get them here</button></div>'
+      : '';
   if (!allPapers.length) {
     html += '<div class="library-empty">No papers in the database yet.</div>';
   } else {
@@ -6073,6 +6087,7 @@ function renderLibrary() {
   }
   document.getElementById('libraryContent').innerHTML = html;
   offPaint();
+  paintMacPull();
 }
 
 /* Library list management */
@@ -6277,12 +6292,12 @@ function topicTagLineHTML(g, n) {
     return `<div class="tt-line warn">${esc(j.message || 'Tagging failed')} <button class="lib-hint-btn" onclick="startTopicTag('${escAttr(g.group_name)}')">Try again</button></div>`;
   }
   if (g.status !== 'confirmed' || n || /Existing papers tagged/.test(g.notes || '')) return '';
-  const can = Chat.status === 'ready' && Chat.bridgeVersion >= 3;
-  return `<div class="tt-line">Its existing papers get tagged at the next weekly run.${can ? ` <button class="lib-hint-btn" onclick="startTopicTag('${escAttr(g.group_name)}')">Tag now</button>` : ''}</div>`;
+  return `<div class="tt-line">Its existing papers get tagged at the next weekly run.${isOwner() ? ` <button class="lib-hint-btn" onclick="startTopicTag('${escAttr(g.group_name)}')" title="Tag them now through Claude Code on your Mac">Tag now</button>` : ''}</div>`;
 }
 async function startTopicTag(name, quiet) {
   if (Chat.status !== 'ready' || !Chat.bridgeVersion) await bridgeCheck();
-  if (Chat.status !== 'ready' || Chat.bridgeVersion < 3) { if (!quiet) toast('Tagging runs on your laptop; it isn\u2019t reachable now, so the next weekly run will do it'); renderInterests(); return false; }
+  if (!quiet && ['unpaired', 'elsewhere', 'setup'].includes(Chat.status)) await macConnect();   // not connected here: connect right away (it asks)
+  if (Chat.status !== 'ready' || Chat.bridgeVersion < 3) { if (!quiet) toast(['unpaired', 'elsewhere', 'setup'].includes(Chat.status) ? 'Not connected to your Mac, so the next weekly run will tag them' : Chat.status === 'ready' ? 'The bridge on your Mac is an older version: restart it to tag now. The next weekly run will do it otherwise' : 'Tagging runs on your Mac; it isn\u2019t reachable now, so the next weekly run will do it'); renderInterests(); return false; }
   try {
     const r = await bridgeFetch('/topic/tag', { method: 'POST', body: JSON.stringify({ topic: name }) });
     const j = await r.json();
@@ -6768,7 +6783,7 @@ function ownerLost() {
   if (t) window.addEventListener('load', () => setTimeout(() => {
     if (t === 'in') toast('Signed in.');
     else if (t === 'out') toast('Signed out. The site is read-only in this browser.');
-    else toast('Your sign-in stopped working, so the site is read-only here. Sign in again with the key icon.', null, { duration: 7000 });
+    else toast('Your sign-in stopped working, so the site is read-only here.', () => connectGitHub(), { actionLabel: 'Sign in', duration: 9000 });
   }, 600));
 })();
 /* Library header: whether edits reach GitHub, and when they last did */
@@ -7453,6 +7468,7 @@ function syncUploadsWithIndex() {
   if (!sameUploads(merged, _uploads)) {
     _uploads = merged; storeUploads();
     if (currentTab === 'library') renderLibrary();
+    if (isOwner() && macPaired()) setTimeout(() => macPullAll().catch(() => {}), 1500);   // their files follow, from the Mac
     const rp = _reader.paper;
     if (rp && rp.uploaded && document.getElementById('reader').classList.contains('open')) {
       if (uploadById(rp.id)) document.getElementById('readerTitle').textContent = rp.title;
@@ -7626,7 +7642,7 @@ async function videoFor(p, fresh, again) {
     videoBar(file.name);
   } else {
     box.innerHTML = `<div class="rp-vid-bar">${ICON_FILM}<span class="rp-vid-name" title="${escAttr(rec.name || '')}">${esc(rec.name || 'A video')}</span><span class="rp-vid-dur">isn’t on this device</span><button class="rp-text-btn" onclick="pickVideo()">Add it here</button></div>`
-      + `<div class="rp-vid-msg" style="padding-top:2px">${macMissingText(_mac.last, 'video')}${_mac.last === 'unreachable' ? ` <button class="rp-text-btn" onclick="videoFor(_reader.paper, null, true)">Try again</button>` : ''}</div>`;
+      + `<div class="rp-vid-msg" style="padding-top:2px">${macMissingText(_mac.last, 'video')}${_mac.last === 'unreachable' ? ` <button class="rp-text-btn" onclick="videoFor(_reader.paper, null, true)">Try again</button>` : !_mac.last && !macPaired() ? ` <button class="rp-text-btn" onclick="macGetHere()">Get it from your Mac</button>` : ''}</div>`;
   }
   placeVideo();
 }
@@ -7747,20 +7763,26 @@ function videoMenuPaint() {
    A browser can wipe a site's storage on its own (Arc does when the disk runs low: it took every uploaded PDF on
    2026-11-07), and a file dropped into one browser isn't on the others. So each uploaded paper's PDF and video also
    goes to the bridge on the laptop (~/.scholar-bridge/uploads, private, never in the repo), and a browser missing
-   one fetches it back from there: after a wipe, and on another device (the iPad over Tailscale). Uploads the Mac
-   doesn't have yet are sent quietly in the background (macBackupAll). Needs the laptop paired for chat (bridge v5). */
-const _mac = { last: '', sending: new Set(), backedUp: false };
+   one fetches it back from there: after a wipe, and on another device (the iPad over Tailscale). Each visit, a paired
+   browser takes what it lacks (macPullAll) and sends what the Mac lacks (macBackupAll). A device that isn't paired
+   yet gets everything with Get from your Mac (macGetAll), which asks for what's missing in place: the notes password
+   (the list of papers is in the encrypted notes), then the connection (CONNECT TO YOUR MAC). Bridge v5. */
+const _mac = { last: '', sending: new Set(), backedUp: false, kept: null, pull: null };
 async function macReady() {
   if (!Chat.token || Chat.status === 'elsewhere' || !isOwner()) return false;
   if (Chat.status !== 'ready' || !Chat.bridgeVersion) await bridgeCheck();
   return Chat.status === 'ready' && Chat.bridgeVersion >= 5;
 }
-/* Why a file isn't here, in words: '' (never asked), 'unpaired', 'unreachable' (the Mac is asleep or the bridge off), 'missing' */
+/* This browser has a token for the Mac (whether or not the Mac answers right now) */
+function macPaired() { return !!Chat.token && !['elsewhere', 'unpaired', 'setup'].includes(Chat.status); }
+/* An iPad or iPhone: it reaches the Mac over Tailscale, not at 127.0.0.1 */
+function macRemoteDevice() { return navigator.maxTouchPoints > 1 || !!bridgeRemote(); }
+/* Why a file isn't here, in words: '' (not connected to the Mac), 'unreachable' (the Mac is asleep or the bridge off), 'missing' */
 function macMissingText(why, what) {
   if (why === 'missing') return `Your Mac doesn’t have a copy of this ${what} either.`;
   if (why === 'unreachable') return bridgeRemote() ? 'A copy is kept on your Mac, but it couldn’t be reached: it needs to be awake, with Tailscale on.'
     : 'A copy is kept on this Mac, but the chat bridge isn’t answering (bash bridge/install_bridge.sh starts it).';
-  return `An uploaded ${what} stays in the browser it was added in${Chat.token ? '' : ' (connect Chat to keep a copy on your Mac, which other devices can fetch it from)'}.`;
+  return macPaired() ? `An uploaded ${what} stays in the browser it was added in.` : `Your Mac keeps a copy: connect this ${macRemoteDevice() ? 'device' : 'browser'} to it to get the ${what}.`;
 }
 async function macKeep(id, kind, file) {
   const key = id + ':' + kind;
@@ -7774,7 +7796,7 @@ async function macKeep(id, kind, file) {
   finally { _mac.sending.delete(key); }
 }
 /* The Mac's copy, put back into this browser (null when there's none, or the Mac can't be reached: _mac.last says which) */
-async function macRestore(id, kind) {
+async function macRestore(id, kind, quiet) {
   _mac.last = '';
   if (!Chat.token) return null;
   if (!await macReady()) { _mac.last = ['unpaired', 'elsewhere'].includes(Chat.status) ? '' : 'unreachable'; return null; }
@@ -7785,15 +7807,99 @@ async function macRestore(id, kind) {
     const blob = await r.blob(), name = decodeURIComponent(r.headers.get('X-File-Name') || '') || (kind === 'pdf' ? 'paper.pdf' : 'video.mp4');
     const file = new File([blob], name, { type: blob.type || (kind === 'pdf' ? 'application/pdf' : 'video/mp4') });
     if (kind === 'pdf') await localPdfPut(id, file).catch(() => {}); else await videoPut(id, file).catch(() => {});
-    toast(`${kind === 'pdf' ? 'PDF' : 'Video'} brought back from your Mac`);
+    if (!quiet) toast(`${kind === 'pdf' ? 'PDF' : 'Video'} brought back from your Mac`);
     return file;
   } catch (e) { _mac.last = 'unreachable'; return null; }
+}
+/* What the Mac keeps ({id: {pdf, video}}), or null when it can't be asked */
+async function macKept() {
+  try { const r = await bridgeFetch('/uploads'); if (!r.ok) return null; return _mac.kept = (await r.json()).uploads || {}; } catch (e) { return null; }
+}
+/* The files of papers in To review that this browser lacks: [id, 'pdf' | 'video'], leaving out any the Mac is known
+   not to have either (kept: what it has, or null when that isn't known) */
+async function macWanted(kept) {
+  const want = [];
+  for (const [id, u] of Object.entries(_uploads)) {
+    if (u.deleted) continue;
+    const has = (kept && kept[id]) || {};
+    if ((!kept || has.pdf) && !(await localPdfGet(id))) want.push([id, 'pdf']);
+    if (u.video && (!kept || has.video) && !(await videoGet(id))) want.push([id, 'video']);
+  }
+  return want;
+}
+/* Every file this browser lacks, from the Mac, one at a time (To review's button shows how far it is).
+   { got, total, reached }: reached is false when the Mac couldn't be asked or stopped answering */
+async function macPullAll(first) {
+  if (_mac.pull) return _mac.pull.run;
+  const pull = _mac.pull = { done: 0, total: 0 };
+  pull.run = (async () => {
+    if (!await macReady() || !await macKept()) return { got: 0, total: 0, reached: false };
+    const want = (await macWanted(_mac.kept)).sort((a, b) => (b[0] === first) - (a[0] === first));   // the paper open in the reader first
+    pull.total = want.length; paintMacPull();
+    let got = 0;
+    for (const [id, kind] of want) {
+      if (!_uploads[id] || _uploads[id].deleted) { pull.done++; continue; }   // removed meanwhile
+      if (await macRestore(id, kind, true)) got++;
+      else if (_mac.last === 'unreachable') return { got, total: want.length, reached: false };
+      pull.done++; paintMacPull();
+      if (_reader.paper && _reader.paper.id === id) {   // open in the reader, waiting for it
+        if (kind === 'video') videoFor(_reader.paper, null, true);
+        else if (document.getElementById('reader').classList.contains('no-doc')) showReader(id);
+      }
+    }
+    return { got, total: want.length, reached: true };
+  })().finally(() => { _mac.pull = null; paintMacPull(); });
+  return pull.run;
+}
+/* To review's "Get from your Mac": the other groups' Download all button (an icon, shown while files are missing here;
+   a ring while they come), since that's what it does, from the Mac */
+async function paintMacPull() {
+  const b = document.getElementById('libMacBtn');
+  if (!b) return;
+  const p = _mac.pull, say = (el, t) => { el.title = t; el.setAttribute('aria-label', t); };
+  if (p) {
+    b.hidden = false; b.disabled = true; b.classList.add('dl-busy'); b.innerHTML = offRingSVG(p.total ? p.done / p.total : 0);
+    return say(b, p.total ? `Getting ${Math.min(p.done + 1, p.total)} of ${p.total} files from your Mac` : 'Getting files from your Mac');
+  }
+  const n = (await macWanted(_mac.kept)).length, now = document.getElementById('libMacBtn');
+  if (!now || _mac.pull) return;   // the Library was drawn again, or a pull started, meanwhile: that one paints
+  now.disabled = false; now.classList.remove('dl-busy'); now.innerHTML = ICON_DL; now.hidden = !n;
+  say(now, `Get from your Mac: ${n === 1 ? 'a file' : n + ' files'} (PDFs and videos) not on this device`);
+}
+/* Get from your Mac: everything for To review on this device, asking in place for what's missing first */
+async function macGetAll() {
+  if (!isOwner() || _mac.pull) return;
+  if (vaultSupported() && !Vault.key && !await vaultReady()) return;   // the list of papers is in the encrypted notes
+  if (!await macReady()) {
+    if (Chat.status !== 'ready' && !await macConnect()) return;   // not connected here, or the Mac didn't answer: the dialog says which
+    if (!await macReady()) { toastError(Chat.status === 'ready' ? 'The bridge on your Mac is an older version. Restart it (bash bridge/install_bridge.sh) and try again.' : 'Your Mac couldn’t be reached. It needs to be awake' + (bridgeRemote() ? ', with Tailscale on.' : '.')); return; }
+  }
+  const r = await macPullAll();
+  if (currentTab === 'library') renderLibrary();
+  macPullSaid(r, true);
+}
+function macPullSaid(r, always) {
+  if (!r.reached) toastError(`Your Mac stopped answering${r.got ? ` after ${r.got} file${r.got === 1 ? '' : 's'}` : ''}. Try again once it’s awake.`);
+  else if (!r.total) { if (always) toast(uploadedPapers().length ? 'Everything you’re reviewing is already on this device' : 'Nothing to review yet: your Mac has no papers uploaded to review'); }
+  else toast(r.got === r.total ? `Got ${r.total} file${r.total === 1 ? '' : 's'} from your Mac` : `Got ${r.got} of ${r.total} files: your Mac doesn’t have the rest`);
+}
+/* The open paper's missing PDF or video, from the Mac (connecting first if this device isn't), with the rest of
+   To review after it: one pull, so nothing comes twice; the reader takes each of its files as it arrives */
+async function macGetHere() {
+  const p = _reader.paper;
+  if (!p || !p.uploaded) return;
+  if (!await macReady() && Chat.status !== 'ready' && !await macConnect()) return;
+  const r = await macPullAll(p.id);
+  if (_reader.paper !== p) return;
+  if (document.getElementById('reader').classList.contains('no-doc')) showReader(p.id);   // still not here: it says why (the Mac lacks it, or stopped answering)
+  if ((_uploads[p.id] || {}).video && !videoEl()) videoFor(p, null, true);
+  macPullSaid(r, false);
 }
 /* Once per visit: every uploaded paper's files this browser has and the Mac doesn't, one at a time */
 async function macBackupAll() {
   if (!await macReady()) return;
-  let kept;
-  try { kept = (await (await bridgeFetch('/uploads')).json()).uploads || {}; } catch (e) { return; }
+  const kept = await macKept();
+  if (!kept) return;
   for (const id of Object.keys(_uploads)) {
     if (_uploads[id].deleted) continue;
     const has = kept[id] || {};
@@ -7802,7 +7908,91 @@ async function macBackupAll() {
   }
   _mac.backedUp = true;
 }
-window.addEventListener('load', () => setTimeout(() => { if (isOwner() && Chat.token) macBackupAll().catch(() => {}); }, 6000));
+window.addEventListener('load', () => setTimeout(() => { if (isOwner() && Chat.token) macPullAll().catch(() => {}).finally(() => macBackupAll().catch(() => {})); }, 6000));
+
+/* ===== CONNECT TO YOUR MAC =====
+   Papers under review, + Add paper, tagging a topic's papers and Chat all go through the bridge on the Mac. Chat's pane
+   has its own steps; everywhere else (and a phone has no Chat) this dialog connects, right where it's needed: on an
+   iPad or iPhone, the Tailscale address (filled in once any of your devices has used it: it's kept in the encrypted
+   notes, never in the public site), then Allow in a dialog on the Mac. macConnect() resolves true once connected. */
+const _macc = { state: '', err: '', addr: '', resolve: null, promise: null, ctl: null };
+function savedBridgeUrl() { return (Vault.index && Vault.index.bridge && Vault.index.bridge.url) || ''; }
+function rememberBridgeUrl() {
+  const u = bridgeRemote();
+  if (!u || !Vault.key || !Vault.index || savedBridgeUrl() === u) return;
+  Vault.index.bridge = { url: u, updated: new Date().toISOString() };
+  nfSave('_index.json', Vault.index).catch(() => {});
+}
+async function macConnect() {
+  if (!isOwner()) return false;
+  if (_macc.resolve) return _macc.promise;
+  _macc.promise = new Promise(res => { _macc.resolve = res; });
+  _macc.err = ''; _macc.addr = bridgeRemote() || savedBridgeUrl();
+  document.getElementById('macOverlay').classList.add('open');
+  if (macRemoteDevice() && !bridgeRemote()) { _macc.state = 'address'; paintMacConnect(); }
+  else macConnectGo(true);   // the address is known (or this is the Mac): ask it straight away
+  return _macc.promise;
+}
+async function macConnectGo(first) {
+  if (!_macc.resolve || _macc.state === 'checking' || _macc.state === 'pairing') return;
+  if (_macc.state === 'address') {
+    const i = document.getElementById('macAddr');
+    _macc.addr = (i ? i.value : _macc.addr).trim();   // as typed, if it has to be corrected
+    let u = _macc.addr.replace(/\/+$/, '');
+    if (u && !/^https?:\/\//i.test(u)) u = 'https://' + u;
+    if (!/^https:\/\/[\w.-]+(:\d+)?$/i.test(u)) { _macc.err = 'Enter the https address Tailscale shows for your Mac, like https://my-mac.tail1234.ts.net'; paintMacConnect(); return; }
+    try { localStorage.setItem('claude_bridge_url', u); } catch (e) {}
+  }
+  _macc.state = 'checking'; _macc.err = ''; paintMacConnect();
+  if (Chat.status !== 'ready') Chat.status = 'unknown';
+  const st = await bridgeCheck();
+  if (!_macc.resolve) return;   // closed meanwhile
+  if (st === 'ready') return closeMacConnect(true);
+  if (st !== 'unpaired') {
+    const host = bridgeRemote().replace(/^https:\/\//, '');
+    _macc.state = macRemoteDevice() ? 'address' : 'retry';
+    _macc.err = macRemoteDevice() ? `Can’t reach your Mac at ${host}. Check that it’s awake and that Tailscale is on, on both devices.` : 'The bridge on this Mac isn’t answering. Start it once with bash bridge/install_bridge.sh in the dashboard’s folder.';
+    return paintMacConnect();
+  }
+  Chat.pairCode = newPairCode(); _macc.state = 'pairing'; paintMacConnect();
+  _macc.ctl = new AbortController();
+  const r = await bridgePair(_macc.ctl.signal);
+  if (!_macc.resolve || r === 'cancelled') return;
+  if (r === 'ready') { if (_reader.paper && chatShown()) renderChatPanel(true); return closeMacConnect(true); }
+  _macc.state = macRemoteDevice() ? 'address' : 'retry';
+  _macc.err = r === 'declined' ? 'Not connected: the dialog on your Mac was declined, or it timed out.' : 'Your Mac stopped answering. Check it’s awake and try again.';
+  paintMacConnect();
+}
+function paintMacConnect() {
+  const box = document.getElementById('macBox'), s = _macc.state, remote = macRemoteDevice();
+  const btns = (go, label) => `<div class="vault-btns"><button type="button" class="ui-btn ui-btn-secondary" onclick="closeMacConnect()">Cancel</button>${go ? `<button class="ui-btn ui-btn-primary" type="submit"${s === 'checking' ? ' disabled' : ''}>${label}</button>` : ''}</div>`;
+  if (s === 'pairing') {
+    box.innerHTML = `<h3 id="macTitle">Allow it on your Mac</h3><p class="vault-sub">A dialog on your Mac asks to let this ${remote ? 'device' : 'browser'} in. Click <strong>Allow</strong> there: it shows this code.</p><p class="mac-code">${Chat.pairCode}</p><div class="mac-wait"><span class="la-spin"></span>Waiting for your Mac…</div>${btns(false)}`;
+    box.querySelector('.ui-btn').focus({ preventScroll: true });
+    return;
+  }
+  const sub = remote
+    ? 'Your Mac keeps the papers you’re reviewing, and runs Chat and Add paper. Connect over Tailscale with your Mac’s address: <code>bash bridge/tailscale_setup.sh</code> printed it, and the Tailscale app lists it.'
+    : 'Your Mac keeps the papers you’re reviewing, and runs Chat and Add paper, through a bridge on this Mac. Allow this browser to use it.';
+  const field = remote && s !== 'retry';
+  box.innerHTML = `<h3 id="macTitle">Connect to your Mac</h3><p class="vault-sub">${sub}</p>`
+    + (field ? `<input class="pp-input" id="macAddr" type="text" inputmode="url" enterkeyhint="go" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://my-mac.tail1234.ts.net" aria-label="Your Mac’s Tailscale address" value="${escAttr(_macc.addr)}"${s === 'checking' ? ' disabled' : ''}>` : '')
+    + (s === 'checking' ? `<div class="mac-wait"><span class="la-spin"></span>Connecting…</div>` : `<div class="pp-msg err" role="alert">${esc(_macc.err)}</div>`)
+    + btns(true, s === 'checking' ? 'Connecting…' : _macc.err && !field ? 'Try again' : 'Connect');
+  if (s !== 'checking') {
+    const i = document.getElementById('macAddr');
+    (i || box.querySelector('[type=submit]')).focus({ preventScroll: true });
+  }
+}
+function closeMacConnect(ok) {
+  if (_macc.ctl) { _macc.ctl.abort(); _macc.ctl = null; }
+  document.getElementById('macOverlay').classList.remove('open');
+  const res = _macc.resolve;
+  _macc.resolve = null; _macc.state = '';
+  if (ok) toast('Connected to your Mac');
+  if (res) res(!!ok);
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.getElementById('macOverlay').classList.contains('open')) { e.preventDefault(); closeMacConnect(); } });
 
 let _reader = { paper: null, doc: null, zoom: 'fit', scale: 1, obs: null, under: null, token: 0, local: false };
 function readerDark() { try { return localStorage.getItem(READER_DARK_KEY) === 'true'; } catch (e) { return false; } }
@@ -7869,6 +8059,7 @@ async function showReader(id) {
   const dl = document.getElementById('readerDl');
   dl.dataset.off = p.id; dl.hidden = !offSupported() || !offCanHave(p);
   let local = await localPdfGet(p.id);
+  _mac.last = '';   // (why this paper's file isn't here: set by macRestore, never left over from another paper)
   if (!local && p.uploaded && Chat.token) {   // not in this browser: from the Mac (the same page-shaped placeholder meanwhile)
     document.getElementById('reader').classList.add('no-doc');
     document.getElementById('readerBody').innerHTML = '<div class="reader-skel" role="status" aria-label="Getting the PDF from your Mac"><div></div><p>Getting the PDF from your Mac…</p></div>';
@@ -8485,6 +8676,7 @@ document.addEventListener('keydown', e => {
   if (!document.getElementById('reader').classList.contains('open')) return;
   const t = e.target;
   if (document.getElementById('vaultOverlay').classList.contains('open')) { if (e.key === 'Escape') closeVaultModal(false); return; }
+  if (document.getElementById('macOverlay').classList.contains('open')) return;   // (its own Esc: see CONNECT TO YOUR MAC)
   if (pdfModalOpen()) { if (e.key === 'Escape') { e.preventDefault(); closePdfModal(); } return; }
   if (t && (/^(INPUT|TEXTAREA)$/.test(t.tagName) || t.isContentEditable)) { if (e.key === 'Escape' && !_citeCtx) { t.blur(); if (_acId) closeAnnoCard(); } return; }   // typing: no reader shortcuts
   const SCROLL_KEYS = ['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', ' ', 'Home', 'End'];
@@ -8543,9 +8735,10 @@ async function showPdfPicker(p, why, detail) {
   }
   const hasLocal = !!(await localPdfGet(p.id));
   if (p.uploaded) {   // your own file: it can only come from a file (a link would go into the public database)
+    const fromMac = why === 'none' && !detail && !macPaired();   // not connected to the Mac, which keeps a copy: connect right here
     document.getElementById(inModal ? 'pdfModalBody' : 'readerBody').innerHTML = `<div class="pdf-picker">
     <h3>${why === 'none' ? 'The PDF isn’t on this device' : why === 'failed' ? "This PDF couldn't be opened here" : 'Use a different PDF'}</h3>
-    <p class="pp-why">${why === 'none' ? macMissingText(detail, 'PDF') + ' Drop the same file here to read it; your notes are already here.' : why === 'failed' ? esc(detail || '') : 'A revised version, for example. Your notes stay with the paper.'}</p>${why === 'none' && detail === 'unreachable' ? `<button class="ui-btn ui-btn-secondary" style="margin:0 0 14px" onclick="showReader(_reader.paper.id)">Try again</button>` : ''}
+    <p class="pp-why">${why === 'none' ? macMissingText(detail, 'PDF') + (fromMac ? ' Or choose the same file below; your notes are already here.' : ' Drop the same file here to read it; your notes are already here.') : why === 'failed' ? esc(detail || '') : 'A revised version, for example. Your notes stay with the paper.'}</p>${why === 'none' && detail === 'unreachable' ? `<button class="ui-btn ui-btn-secondary" style="margin:0 0 14px" onclick="showReader(_reader.paper.id)">Try again</button>` : ''}${fromMac ? `<button class="ui-btn ui-btn-primary" style="margin:0 0 14px" onclick="macGetHere()">Get it from your Mac</button>` : ''}
     <label class="pp-drop" id="ppDrop" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="event.preventDefault();this.classList.remove('over');usePdfFile(event.dataTransfer.files[0])">
       <input type="file" accept="application/pdf,.pdf" onchange="usePdfFile(this.files[0])">
       ${TOUCH ? '<strong>Choose a PDF</strong> from your files.' : '<strong>Drop a PDF here</strong> or click to choose one.'}<br>${Chat.token ? 'It stays in this browser, with a copy on your Mac.' : 'It stays in this browser, on this device only.'}
@@ -8773,7 +8966,9 @@ function mergeIndex(a, b) {
   const papers = { ...(a.papers || {}) };
   Object.entries(b.papers || {}).forEach(([id, e]) => { if (!papers[id] || (e.updated || '') > (papers[id].updated || '')) papers[id] = e; });
   const newerColors = (a.colorsUpdated || '') >= (b.colorsUpdated || '') ? a : b;
-  return { v: 1, papers, colors: newerColors.colors || {}, colorsUpdated: newerColors.colorsUpdated || '', uploads: mergeUploads(a.uploads, b.uploads), reading: mergeReading(a.reading, b.reading), lists: mergeReading(a.lists, b.lists) };
+  const at = x => (x && x.updated) || '';
+  return { v: 1, papers, colors: newerColors.colors || {}, colorsUpdated: newerColors.colorsUpdated || '', uploads: mergeUploads(a.uploads, b.uploads), reading: mergeReading(a.reading, b.reading), lists: mergeReading(a.lists, b.lists),
+    bridge: at(a.bridge) >= at(b.bridge) ? a.bridge : b.bridge };   // the Mac's Tailscale address (see CONNECT TO YOUR MAC)
 }
 
 /* ---- pushing: every dirty file, merged with GitHub's copy when that changed meanwhile ---- */
@@ -11151,9 +11346,10 @@ function bridgeFetch(path, opts = {}) {
 }
 let _bridgeChecking = null;   // one check at a time: the panel and a click may both ask
 function bridgeCheck() {
+  if (chatElsewhere()) { Chat.status = 'elsewhere'; return Promise.resolve('elsewhere'); }   // an iPad or iPhone with no address yet: 127.0.0.1 there is itself
   return _bridgeChecking || (_bridgeChecking = (async () => {
     const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 2500);
-    try { const j = await (await bridgeFetch('/health', { signal: ctl.signal })).json(); Chat.status = j.paired ? 'ready' : 'unpaired'; Chat.bridgeVersion = j.version || 1; chatEngineFrom(j); }
+    try { const j = await (await bridgeFetch('/health', { signal: ctl.signal })).json(); Chat.status = j.paired ? 'ready' : 'unpaired'; Chat.bridgeVersion = j.version || 1; chatEngineFrom(j); if (j.paired) rememberBridgeUrl(); }
     catch (e) { Chat.status = 'offline'; }
     clearTimeout(t);
     return Chat.status;
@@ -11226,14 +11422,24 @@ async function chatConnect() {
   const st = await bridgeCheck();
   if (st === 'ready') return chatOpen(true);
   if (st !== 'unpaired') return renderChatPanel(true);
-  Chat.pairCode = String(Math.floor(1000 + Math.random() * 9000));
+  Chat.pairCode = newPairCode();
   Chat.status = 'pairing'; renderChatPanel(true);
+  const r = await bridgePair();
+  if (r === 'ready') return chatOpen(true);
+  Chat.status = r; renderChatPanel(true);
+}
+function newPairCode() { return String(Math.floor(1000 + Math.random() * 9000)); }
+/* Ask the Mac for a token: a dialog there shows Chat.pairCode and waits for Allow. 'ready', 'declined', 'offline'
+   or 'cancelled' (the signal aborted it). Chat's pane and the Connect dialog both come here. */
+async function bridgePair(signal) {
   try {
-    const r = await bridgeFetch('/pair', { method: 'POST', body: JSON.stringify({ code: Chat.pairCode }) });
-    if (!r.ok) { Chat.status = 'declined'; return renderChatPanel(true); }
+    const r = await bridgeFetch('/pair', { method: 'POST', body: JSON.stringify({ code: Chat.pairCode }), signal });
+    if (!r.ok) return 'declined';
     saveBridgeToken((await r.json()).token); Chat.status = 'ready';
-    chatOpen(true);
-  } catch (e) { Chat.status = 'offline'; renderChatPanel(true); }
+    if (!Chat.bridgeVersion) await bridgeCheck();
+    rememberBridgeUrl();
+    return 'ready';
+  } catch (e) { return signal && signal.aborted ? 'cancelled' : 'offline'; }
 }
 
 /* The chat view is built once per paper and then updated in place, so the panel's other re-renders
@@ -11257,7 +11463,7 @@ function renderChatPane(force) {
     unpaired: `<p>Claude Code is running on this laptop. Allow this page to use it:</p><button class="ui-btn ui-btn-primary" onclick="chatConnect()">Connect</button>`,
     pairing: `<p>Check the dialog on your Mac and click <strong>Allow</strong>.</p><p class="chat-code">${Chat.pairCode}</p><p class="chat-dim">It should show the same code.</p>`,
     declined: `<p>Not connected (the dialog was declined or timed out).</p><button class="ui-btn ui-btn-secondary" onclick="chatConnect()">Try again</button>`,
-    elsewhere: `<p>Chat runs through Claude Code on your laptop. To use it here, connect to the laptop over Tailscale (set up once on the Mac with <code>bash bridge/tailscale_setup.sh</code>, which prints the address).</p><form class="pp-row" onsubmit="event.preventDefault(); chatSetRemote()"><input class="pp-input" id="chatRemote" placeholder="https://my-mac.tail1234.ts.net" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="ui-btn ui-btn-primary" type="submit">Connect</button></form><p class="chat-dim" id="chatRemoteMsg"></p>`,
+    elsewhere: `<p>Chat runs through Claude Code on your laptop. To use it here, connect to the laptop over Tailscale (set up once on the Mac with <code>bash bridge/tailscale_setup.sh</code>, which prints the address).</p><form class="pp-row" onsubmit="event.preventDefault(); chatSetRemote()"><input class="pp-input" id="chatRemote" placeholder="https://my-mac.tail1234.ts.net" value="${escAttr(savedBridgeUrl())}" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="ui-btn ui-btn-primary" type="submit">Connect</button></form><p class="chat-dim" id="chatRemoteMsg"></p>`,
     offline: bridgeRemote() ? `<p>Can't reach your laptop at <code>${esc(bridgeRemote().replace(/^https:\/\//, ''))}</code>. It needs to be awake, with Tailscale on, on both devices.</p><button class="ui-btn ui-btn-secondary" onclick="chatConnect()">Try again</button> <button class="ui-btn ui-btn-secondary" onclick="chatForgetRemote()">Change address</button>` : `<p>Can't reach Claude Code on this computer. Chat works on the laptop where the helper runs; to start it there, run <code>bash bridge/install_bridge.sh</code> once from the dashboard's folder.</p><button class="ui-btn ui-btn-secondary" onclick="chatConnect()">Try again</button>`,
   };
   const body = ready
@@ -12677,7 +12883,7 @@ document.addEventListener('DOMContentLoaded', () => { loadPapers(); loadInterest
     'startFigureSelect', 'chatApplyBlock', 'chatSaveAsNote', 'chatAddPaper', 'chatRefresh', 'toggleLibPanel', 'startAddPaper', 'stopAddPaper', 'startTopicTag',
     // private papers and PDFs
     'pickUploadPdf', 'uploadPdf', 'usePdfFile', 'openPdfChange', 'removeLocalPdf', 'removeUpload', 'renameUpload', 'startReview', 'saveUploads',
-    'pickVideo', 'addVideo', 'removeVideo',
+    'pickVideo', 'addVideo', 'removeVideo', 'macGetAll', 'macGetHere', 'macPullAll', 'macConnect', 'macConnectGo', 'rememberBridgeUrl',
     // reading places and list times
     'noteReading', 'dismissReading', 'flushReading', 'showInProgress', 'saveListMeta',
     // PDFs kept on this device
