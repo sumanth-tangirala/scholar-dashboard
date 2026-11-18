@@ -5,7 +5,7 @@
 #
 #   bash bridge/mcp_setup.sh            both apps
 #   bash bridge/mcp_setup.sh code       Claude Code only
-#   bash bridge/mcp_setup.sh desktop    Claude Desktop only (quit it first: it rewrites its settings file while open)
+#   bash bridge/mcp_setup.sh desktop    Claude Desktop only (then quit it and open it again)
 #
 # Undo: claude mcp remove --scope user scholar-dashboard; and in Claude Desktop, Settings > Developer > Edit Config,
 # remove "scholar-dashboard" from "mcpServers".
@@ -30,9 +30,6 @@ if [ "$WHICH" != code ]; then
   CFG="$HOME/Library/Application Support/Claude/claude_desktop_config.json"
   if [ ! -d "$(dirname "$CFG")" ]; then
     echo "Claude Desktop: not installed, skipped."
-  elif pgrep -xq Claude; then
-    echo "Claude Desktop: it's open, so it was left alone (it rewrites its settings file). Quit it, then run:"
-    echo "    bash bridge/mcp_setup.sh desktop"
   else
     [ -f "$CFG" ] && cp "$CFG" "$CFG.before-scholar"
     "$PY" - "$CFG" "$PY" "$SERVER" <<'PY'
@@ -43,9 +40,11 @@ if os.path.exists(path):
     with open(path) as f: cfg = json.load(f)
 cfg.setdefault('mcpServers', {})['scholar-dashboard'] = {'command': py, 'args': [server]}
 with open(path + '.tmp', 'w') as f: json.dump(cfg, f, indent=2)
+os.chmod(path + '.tmp', 0o600)
 os.replace(path + '.tmp', path)
 PY
-    echo "Claude Desktop: added (the old settings are in claude_desktop_config.json.before-scholar). Open it again to use it."
+    echo "Claude Desktop: added (the old settings are in claude_desktop_config.json.before-scholar)."
+    pgrep -xq Claude && echo "    Quit Claude Desktop (Cmd+Q) and open it again: it reads its MCP servers when it starts."
   fi
 fi
 

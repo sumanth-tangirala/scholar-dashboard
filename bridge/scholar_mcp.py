@@ -2,9 +2,12 @@
 """Scholar Dashboard as an MCP server, so Claude Code and Claude Desktop on this Mac can add papers to your library.
 
     add_paper        a link, DOI, arXiv id or title -> the bridge's add queue (the same as the dashboard's Add paper box:
-                     Claude Code researches it read-only, bridge/add_paper.py checks and publishes it)
+                     Claude Code researches it read-only, bridge/add_paper.py checks and publishes it); can put it in lists
     get_add_status   how a paper asked for is getting on, or the recent ones
     search_library   your published papers (the public papers_database.csv), to see what's already there
+    list_lists       your lists and their papers
+    add_to_list,     papers already in the library into a list (a new name makes it) or out of one
+    remove_from_list
 
 Local only, over stdio: the app starts it as `python3 bridge/scholar_mcp.py` (bridge/mcp_setup.sh registers it).
 Nothing listens on the network. It talks to the bridge on 127.0.0.1 with the bridge's pairing token
@@ -54,15 +57,15 @@ def bridge(path, body=None, token=None, timeout=15):
                           '(in the Scholar Dashboard folder).')
 
 
-def bridge_call(path, body=None):
+def bridge_call(path, body=None, timeout=15):
     """A call that needs the pairing token; with none yet, the Allow dialog on this Mac gives one first."""
-    status, out = bridge(path, body)
+    status, out = bridge(path, body, timeout=timeout)
     if status != 401: return status, out
     log('not paired: asking for permission on this Mac')
     status, pair = bridge('/pair', {'code': '', 'who': 'mcp'}, token='', timeout=80)
     if status != 200 or not pair.get('token'):
         raise BridgeError('This needs your permission on the Mac, which wasn\'t given (the Allow dialog was declined or timed out). Ask again to show the dialog again.')
-    return bridge(path, body)
+    return bridge(path, body, timeout=timeout)
 
 
 # ---------- the library: the public database, plus papers just added (GitHub's copy can lag a few minutes) ----------
@@ -84,6 +87,30 @@ def library():
     rows = [r for r in csv.DictReader(io.StringIO(text or '')) if (r.get('title') or '').strip()] if text else []
     if rows: _lib.update(at=time.time(), rows=rows)
     return rows or _lib['rows']
+
+
+def recent_lists():
+    """Lists changed through the bridge lately, oldest first: [{rows: [{id, before, after}]}]."""
+    try:
+        status, out = bridge('/lists/changes', timeout=5)
+        return list(reversed(out.get('changes') or [])) if status == 200 else []
+    except BridgeError: return []
+
+
+def library_now():
+    """The library as it is now: GitHub's copy, plus papers and list changes the bridge made that it may not show yet."""
+    rows = [dict(r) for r in library()]
+    known = {r['id'] for r in rows}
+    rows += [dict(r) for r in recent_added() if r.get('id') not in known]
+    by_id = {r['id']: r for r in rows}
+    for c in recent_lists():
+        for x in c.get('rows') or []:
+            r = by_id.get(x.get('id'))
+            if r is not None and (r.get('user_lists') or '') == x.get('before', ''): r['user_lists'] = x.get('after', '')
+    return rows
+
+
+def lists_of(r): return [n for n in (r.get('user_lists') or '').split('|') if n]
 
 
 def recent_added():
@@ -110,15 +137,13 @@ def describe(r, i=None):
     if r.get('headline'): out.append('   Takeaway: ' + r['headline'].strip())
     topics = ' | '.join(x for x in (r.get('theme_groups') or '').split('|') if x)
     if topics: out.append('   Topics: ' + topics)
-    out.append(f"   In the library: {link(r['id'])}" + (f"  ·  Paper: {r['url']}" if r.get('url') else ''))
+    if lists_of(r): out.append('   Lists: ' + ', '.join(lists_of(r)))
+    out.append(f"   Id: {r['id']}  ·  In the library: {link(r['id'])}" + (f"  ·  Paper: {r['url']}" if r.get('url') else ''))
     return '\n'.join(out)
 
 
 def search(query, limit=8):
-    rows = library()
-    known = {r['id'] for r in rows}
-    rows = rows + [r for r in recent_added() if r.get('id') not in known]
-    rows = [r for r in rows if (r.get('is_hidden') or '').lower() != 'true']
+    rows = [r for r in library_now() if (r.get('is_hidden') or '').lower() != 'true']
     q = query.lower()
     ids = set(re.findall(r'\d{4}\.\d{4,5}', q)) | set(re.findall(r'10\.\d{4,9}/\S+', q))
     words = re.findall(r'"([^"]+)"', q) + [w for w in re.findall(r'[\w-]+', re.sub(r'"[^"]*"', ' ', q)) if len(w) > 1 and w not in STOP]
@@ -150,7 +175,8 @@ TOOLS = [
                      'Call it once per paper.'),
      'inputSchema': {'type': 'object', 'properties': {
          'paper': {'type': 'string', 'description': 'A link, DOI, arXiv id, or the paper\'s title (add an author or year if ambiguous)'},
-         'star': {'type': 'boolean', 'description': 'Also star the paper in the library (default false)'}},
+         'star': {'type': 'boolean', 'description': 'Also star the paper in the library (default false)'},
+         'lists': {'type': 'array', 'items': {'type': 'string'}, 'description': 'Also put the paper in these lists (a new name makes a new list); if it is already in the library, it still goes into them'}},
          'required': ['paper'], 'additionalProperties': False},
      'annotations': {'title': 'Add a paper', 'readOnlyHint': False, 'destructiveHint': False, 'idempotentHint': True, 'openWorldHint': True}},
     {'name': 'get_add_status', 'title': 'Check papers being added',
@@ -169,7 +195,54 @@ TOOLS = [
          'limit': {'type': 'integer', 'minimum': 1, 'maximum': 20, 'description': 'How many papers to return (default 8)'}},
          'required': ['query'], 'additionalProperties': False},
      'annotations': {'title': 'Search my library', 'readOnlyHint': True, 'openWorldHint': False}},
+    {'name': 'list_lists', 'title': 'My lists',
+     'description': ('The user\'s lists in their Scholar Dashboard library (reading lists and the like) with how many papers each '
+                     'holds, or the papers in one list. Use it to find a list\'s exact name before adding to it.'),
+     'inputSchema': {'type': 'object', 'properties': {'list': {'type': 'string', 'description': 'A list\'s name, to see its papers (optional)'}},
+                     'additionalProperties': False},
+     'annotations': {'title': 'My lists', 'readOnlyHint': True, 'openWorldHint': False}},
+    {'name': 'add_to_list', 'title': 'Add papers to a list',
+     'description': ('Put papers that are already in the user\'s library into one of their lists; a name that isn\'t a list yet '
+                     'makes a new list (names match whatever the capitals). Name each paper by its library id (from search_library '
+                     'or add_paper), its link, arXiv id, DOI or exact title. For a paper not in the library yet, use add_paper with '
+                     'lists instead: it adds the paper and puts it in the list. Takes a few seconds; the dashboard shows it at once.'),
+     'inputSchema': {'type': 'object', 'properties': {
+         'papers': {'type': 'array', 'items': {'type': 'string'}, 'minItems': 1, 'maxItems': 50, 'description': 'Library ids (best), links, arXiv ids, DOIs or exact titles'},
+         'list': {'type': 'string', 'description': 'The list\'s name; a new name makes a new list'}},
+         'required': ['papers', 'list'], 'additionalProperties': False},
+     'annotations': {'title': 'Add papers to a list', 'readOnlyHint': False, 'destructiveHint': False, 'idempotentHint': True, 'openWorldHint': False}},
+    {'name': 'remove_from_list', 'title': 'Take papers out of a list',
+     'description': ('Take papers out of one of the user\'s lists (they stay in the library). Name each paper by its library id, '
+                     'link, arXiv id, DOI or exact title.'),
+     'inputSchema': {'type': 'object', 'properties': {
+         'papers': {'type': 'array', 'items': {'type': 'string'}, 'minItems': 1, 'maxItems': 50, 'description': 'Library ids (best), links, arXiv ids, DOIs or exact titles'},
+         'list': {'type': 'string', 'description': 'The list\'s name'}},
+         'required': ['papers', 'list'], 'additionalProperties': False},
+     'annotations': {'title': 'Take papers out of a list', 'readOnlyHint': False, 'destructiveHint': False, 'idempotentHint': True, 'openWorldHint': False}},
 ]
+
+
+def quoted(n): return f'\u201c{n}\u201d'
+
+
+def lists_text(out, verb):
+    """What add_to_list / remove_from_list did, in words."""
+    names, counts = out.get('lists') or [], out.get('counts') or {}
+    name = names[0] if names else ''
+    n = counts.get(name, 0)
+    lines = []
+    if out.get('changed'):
+        k = len(out['changed'])
+        new = ' (a new list)' if name in (out.get('created') or []) else ''
+        lines.append(f"{'Put' if verb == 'add' else 'Took'} {k} paper{'s' if k != 1 else ''} {'in' if verb == 'add' else 'out of'} {quoted(name)}{new}; "
+                     f"it now has {n} paper{'s' if n != 1 else ''}{'' if n else ' (an empty list stops showing once the dashboard reloads, unless you made it there)'}:")
+        lines += [f"  - {r['title']}" for r in out['changed']]
+    if out.get('unchanged'):
+        lines.append(('Already in it: ' if verb == 'add' else 'Not in it anyway: ') + '; '.join(r['title'] for r in out['unchanged']))
+    if out.get('missing'):
+        lines.append('Not in the library: ' + '; '.join(out['missing']) + ('. Add it with add_paper, which can put it in the list too.' if verb == 'add' else '.'))
+    lines.append(f'The list in the dashboard: {DASHBOARD}#library')
+    return '\n'.join(lines)
 
 
 def job_text(j):
@@ -182,8 +255,11 @@ def job_text(j):
                          f"{'; ' + r['venue'] if r.get('venue') else ''}{', ' + r['publishing_date'] if r.get('publishing_date') else ''})"
                          f"{' and starred' if r.get('is_starred') == 'true' else ''}.\n  Takeaway: {r.get('headline', '').strip()}\n  Open: {link(r['id'])}")
         titles = j.get('titles') or {}
+        moved = {r['id'] for r in ((j.get('listed') or {}).get('changed') or [])}
         for pid in j.get('existing') or []:
-            lines.append(f"Already in the library: {titles.get(pid) or pid}.\n  Open: {link(pid)}")
+            lines.append(f"Already in the library: {titles.get(pid) or pid}" + (f", now in {', '.join(quoted(n) for n in (j.get('listed') or {}).get('lists') or j.get('lists') or [])}" if pid in moved else '') + f".\n  Open: {link(pid)}")
+        names = (j.get('listed') or {}).get('lists') or j.get('lists') or []   # as the file spells them
+        if names and j.get('added'): lines.append('Put in ' + ', '.join(quoted(n) for n in names) + '.')
         return '\n'.join(lines) or 'Nothing was added.'
     if st in ('stopped', 'error'):
         return f"Not added ({what}): {j.get('message') or 'something went wrong'}"
@@ -209,9 +285,12 @@ def call_tool(name, args):
     if name == 'add_paper':
         paper = str(args.get('paper') or '').strip()
         if not paper: return 'Give a link, DOI, arXiv id or title.', True
-        status, out = bridge_call('/paper/add', {'input': paper[:2000], 'star': bool(args.get('star')), 'from': 'mcp'})
+        lists = [str(x) for x in args.get('lists') or [] if str(x).strip()] if isinstance(args.get('lists'), list) else []
+        status, out = bridge_call('/paper/add', {'input': paper[:2000], 'star': bool(args.get('star')), 'lists': lists, 'from': 'mcp'})
         if status == 409: raise BridgeError('The bridge on this Mac is an older version that adds one paper at a time: restart it with bash bridge/install_bridge.sh.')
         if status != 200 or not out.get('job'): return out.get('error') or f'The bridge refused it ({status}).', True
+        if lists and 'lists' not in out['job']: raise BridgeError('The bridge on this Mac is an older version that can\'t put papers in lists: restart it with bash bridge/install_bridge.sh.')
+        _lib['at'] = 0
         j = wait_for(out['job']['id'], WAIT)
         return job_text(j), j.get('state') == 'error'
     if name == 'get_add_status':
@@ -230,6 +309,30 @@ def call_tool(name, args):
         if not n: return 'The library couldn\'t be loaded (no connection to GitHub?).', True
         if not hits: return f'No paper in the library ({n} papers) matches "{q}". Try other keywords.', False
         return f'{len(hits)} best match{"es" if len(hits) != 1 else ""} in the library ({n} papers):\n\n' + '\n\n'.join(describe(r, i + 1) for i, r in enumerate(hits)), False
+    if name == 'list_lists':
+        rows = [r for r in library_now() if (r.get('is_hidden') or '').lower() != 'true']
+        if not rows: return 'The library couldn\'t be loaded (no connection to GitHub?).', True
+        counts = {}
+        for r in rows:
+            for n in lists_of(r): counts[n] = counts.get(n, 0) + 1
+        want = str(args.get('list') or '').strip()
+        if want:
+            name = next((n for n in counts if n.lower() == want.lower()), None)
+            if not name: return f'No list is called {quoted(want)}. The lists: ' + (', '.join(f'{quoted(n)} ({c})' for n, c in sorted(counts.items())) or 'none yet') + '.', False
+            papers = [r for r in rows if name in lists_of(r)]
+            return f'{quoted(name)} has {len(papers)} paper{"s" if len(papers) != 1 else ""}:\n\n' + '\n\n'.join(describe(r, i + 1) for i, r in enumerate(papers)), False
+        if not counts: return 'There are no lists yet. add_to_list makes one.', False
+        return 'The lists (papers in each):\n' + '\n'.join(f'- {quoted(n)}: {c}' for n, c in sorted(counts.items(), key=lambda x: x[0].lower())), False
+    if name in ('add_to_list', 'remove_from_list'):
+        papers = [str(x) for x in args.get('papers') or [] if str(x).strip()] if isinstance(args.get('papers'), list) else []
+        lst = str(args.get('list') or '').strip()
+        if not papers or not lst: return 'Name the papers and the list.', True
+        verb = 'add' if name == 'add_to_list' else 'remove'
+        status, out = bridge_call('/lists', {'papers': papers[:50], verb: [lst], 'from': 'mcp'}, timeout=120)
+        if status == 404: raise BridgeError('The bridge on this Mac is an older version without lists: restart it with bash bridge/install_bridge.sh.')
+        if status != 200: return out.get('error') or f'The bridge refused it ({status}).', True
+        _lib['at'] = 0
+        return lists_text(out, verb), False
     raise KeyError(name)
 
 
@@ -247,9 +350,11 @@ def handle(m):
             v = params.get('protocolVersion')
             result = {'protocolVersion': v if v in VERSIONS else VERSIONS[0], 'capabilities': {'tools': {'listChanged': False}},
                       'serverInfo': {'name': 'scholar-dashboard', 'title': 'Scholar Dashboard', 'version': '1.0.0'},
-                      'instructions': ('Adds papers to the user\'s Scholar Dashboard library and searches it. When the user asks to '
-                                       'add, save or keep a paper ("add this to my library"), call add_paper once per paper. '
-                                       'Adding takes about a minute per paper; tell the user when it\'s in, with its link.')}
+                      'instructions': ('Adds papers to the user\'s Scholar Dashboard library, keeps their lists, and searches it. When '
+                                       'the user asks to add, save or keep a paper ("add this to my library"), call add_paper once '
+                                       'per paper, with lists if they name a list. To put papers already in the library into a list '
+                                       '(a new name makes the list), use add_to_list with their ids from search_library. Adding '
+                                       'takes about a minute per paper; tell the user when it\'s in, with its link.')}
         elif method == 'ping': result = {}
         elif method == 'tools/list': result = {'tools': TOOLS}
         elif method == 'tools/call':

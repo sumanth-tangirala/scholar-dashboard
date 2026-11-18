@@ -5946,24 +5946,74 @@ function takeAddedRows(list, show) {
     _loadedPaperFields.set(row.id, paperFields(row));   // as saved: nothing here to push
     if (row.is_starred === 'true') starSet.add(paperKey(row));
   });
-  if (fresh.length) { _relIndexKey = null; if (show || quietSwapOK()) { refresh(); if (currentTab === 'library') renderLibrary(); } }
+  if (fresh.some(r => r.user_lists)) bootstrapStateFromCSV();   // added straight into lists (Claude, through the MCP server)
+  if (fresh.length) { markDataChanged(); _relIndexKey = null; if (show || quietSwapOK()) { refresh(); if (currentTab === 'library') renderLibrary(); } }
   return fresh.length;
 }
+const _bridgeListed = new Map();   // id -> { before, after }: lists changed through the bridge that GitHub's copy may still lack
 function keepBridgeAdded(rows) {
   const have = new Set(rows.map(r => r.id));
   _bridgeAdded.forEach((row, id) => { if (have.has(id)) _bridgeAdded.delete(id); else rows.push(row); });
+  rows.forEach(r => {
+    const c = _bridgeListed.get(r.id);
+    if (!c) return;
+    if ((r.user_lists || '') === c.before) r.user_lists = c.after;
+    else _bridgeListed.delete(r.id);   // this copy has it (or something newer)
+  });
 }
-/* What the bridge added lately (once a visit, and when a paper's link isn't found here) */
+/* Lists changed through the bridge (Claude, through the MCP server: bridge v7). A change is applied once per device, only
+   while GitHub's copy may still lack it (10 minutes), and only to a paper whose lists are still as they were before it,
+   so nothing changed since is undone; each list it touched gets the change's time (YOUR LISTS). Applying one makes the
+   next few minutes' loads ask GitHub for its newest copy (markDataChanged), which has the change by then. */
+const LISTS_SEEN_KEY = 'scholar_list_changes_seen';
+function takeListChanges(changes, show) {
+  let seen = [];
+  try { seen = JSON.parse(localStorage.getItem(LISTS_SEEN_KEY) || '[]'); } catch (e) {}
+  const meta = listMetaAll(), stamp = {};
+  let n = 0;
+  changes.slice().reverse().forEach(c => {   // oldest first
+    const at = new Date(c.at * 1000).toISOString();
+    if (!seen.includes(c.id) && Date.now() / 1000 - c.at < 600) {
+      (c.rows || []).forEach(r => {
+        const p = allPapers.find(x => x.id === r.id) || _hiddenPapers.find(x => x.id === r.id);
+        if (!p || (p.user_lists || '') !== (r.before || '')) return;
+        p.user_lists = r.after || ''; n++;
+        const prev = _bridgeListed.get(r.id);   // changes one after another: kept as one, from the first before to the last after
+        _bridgeListed.set(r.id, { before: prev && prev.after === (r.before || '') ? prev.before : r.before || '', after: r.after || '' });
+        const lf = _loadedPaperFields.get(r.id);
+        if (lf && lf.user_lists === (r.before || '')) lf.user_lists = r.after || '';   // as saved: nothing here to push
+      });
+    }
+    seen.push(c.id);
+    (c.lists || []).forEach(name => {
+      const m = stamp[name] || meta[name];
+      if (m && (m.at || '') >= at) return;
+      stamp[name] = { created: (m && !m.deleted && m.created) || ((c.created || []).includes(name) ? at : listDates(name).created || at), at };
+    });
+  });
+  try { localStorage.setItem(LISTS_SEEN_KEY, JSON.stringify([...new Set(seen)].slice(-100))); } catch (e) {}
+  if (Object.keys(stamp).length) saveListMeta(stamp);
+  if (n) { markDataChanged(); splitHidden(); bootstrapStateFromCSV(); }   // and for a few minutes, ask GitHub for its newest copy
+  if ((n || Object.keys(stamp).length) && (show || quietSwapOK())) { refresh(); if (currentTab === 'library') renderLibrary(); }
+  return n;
+}
+/* What the bridge added and changed lately: once a visit, on coming back to the page (from asking Claude, say), and when
+   a paper's link isn't found here */
+let _recentAddsAt = 0;
 async function takeRecentAdds(quiet) {
   if (!isOwner() || !Chat.token || chatElsewhere()) return 0;
+  _recentAddsAt = Date.now();
   if (Chat.status !== 'ready' || !Chat.bridgeVersion) await bridgeCheck();
   if (Chat.status !== 'ready' || Chat.bridgeVersion < 6) return 0;
   try {
     const jobs = (await (await bridgeFetch('/paper/adds')).json()).jobs || [];
-    return takeAddedRows(jobs.filter(j => j.state === 'done').flatMap(j => j.added || []), !quiet);
+    let n = takeAddedRows(jobs.filter(j => j.state === 'done').flatMap(j => j.added || []), !quiet);
+    if (Chat.bridgeVersion >= 7) n += takeListChanges((await (await bridgeFetch('/lists/changes')).json()).changes || [], !quiet);
+    return n;
   } catch (e) { return 0; }
 }
 window.addEventListener('load', () => setTimeout(() => { if (_papersText) takeRecentAdds(true); }, 2500));
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && _papersText && Date.now() - _recentAddsAt > 20000) takeRecentAdds(true); });
 /* Library's two header boxes share one place under the header: + Add paper (public, into the database) and Upload
    PDF (private, To review). A button opens its box, or closes it when it's already the one showing. */
 let _libPanel = null;

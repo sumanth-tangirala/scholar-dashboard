@@ -8,11 +8,14 @@ Two steps, kept apart on purpose:
      pages, commit and push. This happens in the bridge's own copy of the repository (~/.scholar-bridge/repo), never
      in your working copy, so nothing you are editing is ever committed along with it.
 
-Used by the bridge (the dashboard's Add paper box) and from the command line:
+Also your lists (edit_lists): put papers in a list (made if it's new) or take them out. A list is just a name in the
+papers' user_lists column, so a list exists while a paper is in it.
+
+Used by the bridge (the dashboard's Add paper box, the browser extension, the MCP server) and from the command line:
     python3 bridge/add_paper.py "https://arxiv.org/abs/2609.01234"      # research + publish
     python3 bridge/add_paper.py --rows rows.json                          # publish rows you (or Claude Code) made
 """
-import csv, datetime, io, json, os, re, shutil, subprocess, sys, unicodedata
+import csv, datetime, io, json, os, re, shutil, subprocess, sys, threading, unicodedata
 
 REPO_SRC = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # this checkout: its token and instructions
 HOME = os.path.expanduser(os.environ.get('SCHOLAR_BRIDGE_HOME', '~/.scholar-bridge'))
@@ -28,6 +31,9 @@ TEXT_FIELDS = ('title', 'authors', 'venue', 'publishing_date', 'url', 'pdf_url',
 
 class Stop(Exception):
     """A reason to add nothing, worded for the user."""
+
+
+_repo = threading.RLock()   # one change at a time to the bridge's copy of the repository (in this process)
 
 
 def log(stage, cb):
@@ -142,11 +148,123 @@ def clean_row(p, interests, groups):
     return out
 
 
+# ---------- lists ----------
+def clean_list_names(names):
+    """List names as given: trimmed, no '|' (it separates them in the file), at most 60 characters, no repeats."""
+    out = []
+    for n in names or []:
+        n = re.sub(r'\s+', ' ', str(n).replace('|', ' ')).strip()[:60]
+        if n and n.lower() not in {o.lower() for o in out}: out.append(n)
+    return out[:10]
+
+
+def lists_of(r): return [n for n in (r.get('user_lists') or '').split('|') if n]
+
+
+def list_names(rows):
+    """Every list, by its lower-case name: a name asked for in other capitals is the same list."""
+    names = {}
+    for r in rows:
+        for n in lists_of(r): names.setdefault(n.lower(), n)
+    return names
+
+
+def list_changes(rows, targets, add, remove):
+    """What each paper's lists become. Returns ({id: (before, after)} for the ones that change, the names as the file
+    spells them, the lists that are new)."""
+    known = list_names(rows)
+    add = [known.get(n.lower(), n) for n in clean_list_names(add)]
+    gone = {n.lower() for n in clean_list_names(remove)} - {n.lower() for n in add}
+    changes = {}
+    for r in targets:
+        before = r.get('user_lists') or ''
+        cur = [n for n in lists_of(r) if n.lower() not in gone]
+        cur += [n for n in add if n.lower() not in {c.lower() for c in cur}]
+        if '|'.join(cur) != before: changes[r['id']] = (before, '|'.join(cur))
+    return changes, add, [n for n in add if n.lower() not in known]
+
+
+def record_spans(text):
+    """Where each record of a CSV text is, [(start, end)] without its line break (quoted fields can hold line breaks)."""
+    spans, start, quoted = [], 0, False
+    for m in re.finditer(r'["\n]', text):
+        if m.group() == '"': quoted = not quoted
+        elif not quoted:
+            end = m.start() - (1 if m.start() > start and text[m.start() - 1] == '\r' else 0)
+            spans.append((start, end)); start = m.end()
+    if start < len(text): spans.append((start, len(text)))
+    return spans
+
+
+def set_field(text, fields, field, values):
+    """The papers file with one field of some rows changed ({id: value}); every other byte stays as it was."""
+    ci, fi, out, last = fields.index('id'), fields.index(field), [], 0
+    for s, e in record_spans(text)[1:]:
+        row = next(csv.reader(io.StringIO(text[s:e], newline='')), [])
+        if len(row) <= max(ci, fi) or row[ci] not in values: continue
+        row[fi] = values[row[ci]]
+        buf = io.StringIO(); csv.writer(buf, lineterminator='').writerow(row)
+        out += [text[last:s], buf.getvalue()]; last = e
+    return ''.join(out) + text[last:]
+
+
+def find_paper(rows, s):
+    """A paper named by its id, link, arXiv id, DOI or exact title."""
+    s = str(s or '').strip()
+    hit = next((r for r in rows if r['id'] == s), None) or lookup_input(rows, s)
+    t = norm_title(s)
+    return hit or (next((r for r in rows if norm_title(r.get('title')) == t), None) if len(t) > 12 else None)
+
+
+def push(message, cb):
+    log('Publishing…', cb)
+    git('commit', '-q', '-m', message)
+    r = git('push', *(['--dry-run'] if DRY_RUN else []), f'https://x-access-token:{gh_token()}@{REMOTE}', 'HEAD:main', check=False)
+    return r
+
+
+def edit_lists(papers, add=(), remove=(), cb=None):
+    """Put papers in lists (a new name makes the list) and take them out of lists, then commit and push. Papers are
+    named by id, link, arXiv id, DOI or exact title. Returns {'changed': [{id, title, before, after}], 'unchanged':
+    [{id, title}], 'missing': [what wasn't found], 'lists': [names as spelt], 'created': [new lists], 'counts': {list: n}}."""
+    if not clean_list_names(add) and not clean_list_names(remove): raise Stop('Name the list.')
+    for attempt in range(3):
+        with _repo:
+            log('Reading your lists…', cb)
+            fresh_clone()
+            fields, rows = read_papers()
+            if 'user_lists' not in fields: raise Stop('The papers file has no user_lists column.')
+            found, missing = [], []
+            for x in papers or []:
+                r = find_paper(rows, x)
+                if not r: missing.append(str(x)[:200])
+                elif r not in found: found.append(r)
+            changes, names, created = list_changes(rows, found, add, remove)
+            out = {'changed': [{'id': i, 'title': next(r['title'] for r in found if r['id'] == i), 'before': b, 'after': a} for i, (b, a) in changes.items()],
+                   'unchanged': [{'id': r['id'], 'title': r['title']} for r in found if r['id'] not in changes],
+                   'missing': missing, 'lists': names + [n for n in clean_list_names(remove) if n.lower() not in {x.lower() for x in names}],
+                   'created': created if changes else []}
+            for r in rows:
+                if r['id'] in changes: r['user_lists'] = changes[r['id']][1]
+            out['counts'] = {n: sum(n in lists_of(r) for r in rows) for n in set(names) | {list_names(rows).get(n.lower(), n) for n in clean_list_names(remove)}}
+            if not changes: return out
+            path = os.path.join(CLONE, PAPERS)
+            with open(path, encoding='utf-8', newline='') as f: text = f.read()
+            with open(path, 'w', encoding='utf-8', newline='') as f: f.write(set_field(text, fields, 'user_lists', {i: a for i, (b, a) in changes.items()}))
+            git('add', PAPERS)
+            what = ', '.join(names) if names else ', '.join(clean_list_names(remove))
+            r = push(f"Lists: {len(changes)} paper{'s' if len(changes) != 1 else ''} {'into' if names else 'out of'} {what}"[:120], cb)
+            if r.returncode == 0: return out
+            if attempt == 2: raise RuntimeError('push failed: ' + (r.stderr or '')[-300:].replace(gh_token(), '***'))
+
+
 # ---------- publishing ----------
 def publish(papers, star=False, lists=None, cb=None):
     """Append the new papers (duplicates are reported, not added), then commit and push. Retries from a fresh copy if
-    someone else pushed meanwhile. Returns {'added': [rows], 'existing': [ids], 'titles': {existing id: title}}."""
+    someone else pushed meanwhile. With lists, the new papers go into them, and so do the ones already there.
+    Returns {'added': [rows], 'existing': [ids], 'titles': {existing id: title}, 'listed': (as edit_lists)}."""
     for attempt in range(3):
+      with _repo:
         log('Saving to your database…', cb)
         fresh_clone()
         fields, rows = read_papers()
@@ -158,25 +276,29 @@ def publish(papers, star=False, lists=None, cb=None):
             same = existing_match(rows + added, row)
             if same: existing.append(same['id']); known[same['id']] = same.get('title', ''); continue
             row.update(id=make_id(row, taken), date_found=datetime.date.today().isoformat(), source_mode='manual',
-                       is_read='false', is_starred='true' if star else 'false', user_lists='|'.join(lists or []))
+                       is_read='false', is_starred='true' if star else 'false', user_lists='')
             taken.add(row['id']); added.append(row)
-        if not added: return {'added': [], 'existing': existing, 'titles': known}
+        old = [r for r in rows if r['id'] in existing]
+        changes, names, created = list_changes(rows, old, lists, ()) if lists and 'user_lists' in fields else ({}, [], [])
+        for r in added: r['user_lists'] = '|'.join(names)
+        listed = {'changed': [{'id': r['id'], 'title': r['title'], 'before': changes[r['id']][0], 'after': changes[r['id']][1]} for r in old if r['id'] in changes],
+                  'lists': names, 'created': created if (changes or added) else []}
+        out = {'added': added, 'existing': existing, 'titles': known, 'listed': listed}
+        if not added and not changes: return out
         path = os.path.join(CLONE, PAPERS)
-        with open(path, 'rb') as f: data = f.read()
-        nl = '\r\n' if b'\r\n' in data[:20000] else '\n'
+        with open(path, encoding='utf-8', newline='') as f: text = f.read()
+        nl = '\r\n' if '\r\n' in text[:20000] else '\n'
+        if changes: text = set_field(text, fields, 'user_lists', {i: a for i, (b, a) in changes.items()})
         buf = io.StringIO()
         w = csv.DictWriter(buf, fieldnames=fields, extrasaction='ignore', lineterminator=nl)
         for r in added: w.writerow({k: r.get(k, '') for k in fields})
-        with open(path, 'ab') as f:
-            if data and not data.endswith(b'\n'): f.write(nl.encode())
-            f.write(buf.getvalue().encode('utf-8'))
-        subprocess.run([sys.executable, os.path.join(CLONE, 'make_share_pages.py')], cwd=CLONE, capture_output=True, timeout=120)
+        if added and text and not text.endswith('\n'): text += nl
+        with open(path, 'w', encoding='utf-8', newline='') as f: f.write(text + buf.getvalue())
+        if added: subprocess.run([sys.executable, os.path.join(CLONE, 'make_share_pages.py')], cwd=CLONE, capture_output=True, timeout=120)
         git('add', PAPERS); git('add', '-A', 'p')
         titles = '; '.join(r['title'][:60] for r in added)
-        git('commit', '-q', '-m', f'Add paper by hand: {titles}')
-        log('Publishing…', cb)
-        r = git('push', *(['--dry-run'] if DRY_RUN else []), f'https://x-access-token:{gh_token()}@{REMOTE}', 'HEAD:main', check=False)
-        if r.returncode == 0: return {'added': added, 'existing': existing, 'titles': known}
+        r = push(f'Add paper by hand: {titles}' if added else f"Lists: {len(changes)} paper{'s' if len(changes) != 1 else ''} into {', '.join(names)}"[:120], cb)
+        if r.returncode == 0: return out
         if attempt == 2: raise RuntimeError('push failed: ' + (r.stderr or '')[-300:].replace(gh_token(), '***'))
     return {'added': [], 'existing': []}
 
@@ -234,10 +356,14 @@ def add(text, star=False, lists=None, cb=None, on_proc=None):
     text = (text or '').strip()
     if not text: raise Stop('Give a link, DOI, arXiv id or title.')
     log('Checking your database…', cb)
-    fresh_clone()
-    _, rows = read_papers()
-    hit = lookup_input(rows, text)
-    if hit: return {'added': [], 'existing': [hit['id']], 'titles': {hit['id']: hit.get('title', '')}}
+    with _repo:
+        fresh_clone()
+        _, rows = read_papers()
+        hit = lookup_input(rows, text)
+    if hit:
+        out = {'added': [], 'existing': [hit['id']], 'titles': {hit['id']: hit.get('title', '')}}
+        if clean_list_names(lists): out['listed'] = edit_lists([hit['id']], lists, cb=cb)
+        return out
     log('Finding the paper…', cb)
     papers = research(text, cb, on_proc=on_proc)
     return publish(papers, star, lists, cb)

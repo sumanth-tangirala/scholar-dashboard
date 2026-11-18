@@ -49,8 +49,9 @@ NO_MCP = os.path.join(HOME, 'no-mcp.json')
 MODELS = {'opus': 'opus', 'sonnet': 'sonnet', 'haiku': 'haiku'}
 API_MODELS = {'opus': 'claude-opus-5-5', 'sonnet': 'claude-sonnet-5-5', 'haiku': 'claude-haiku-5-5'}
 EFFORTS = {'low', 'medium', 'high', 'xhigh', 'max'}   # anything else: the default of Claude Code or of the model
-VERSION = 6   # 2: /paper/add; 3: /topic/tag; 4: the Claude API engine (/engine); 5: copies of uploaded papers (/upload);
-              # 6: papers to add wait in a queue (/paper/add?id=, /paper/adds), for the extension and the MCP server
+VERSION = 7   # 2: /paper/add; 3: /topic/tag; 4: the Claude API engine (/engine); 5: copies of uploaded papers (/upload);
+              # 6: papers to add wait in a queue (/paper/add?id=, /paper/adds), for the extension and the MCP server;
+              # 7: lists (/lists: papers into or out of a list; /lists/changes; /paper/add takes lists)
 UPLOAD_KINDS = {'pdf': 'application/pdf', 'video': 'video/mp4'}
 UPLOAD_MAX = 4 << 30   # 4 GB
 
@@ -65,6 +66,19 @@ _running = {}   # paper id -> subprocess.Popen
 _adds = {'jobs': [], 'proc': None, 'wake': threading.Event()}   # papers to add, in the order asked (the finished ones too,
 # the last ADDS_KEPT); one is added at a time. The asker follows its job: GET /paper/add?id=<job>, or all of them: /paper/adds
 ADDS_KEPT, ADDS_WAITING = 40, 25
+_list_log = []   # lists changed here lately, newest last: the dashboard applies the ones its copy of the database lacks
+
+
+def log_lists(listed, source, added=()):
+    """Remember a change to lists ({changed: [{id, title, before, after}], created} from add_paper; papers just added
+    into lists count as going from no list to theirs)."""
+    rows = list((listed or {}).get('changed') or []) + [{'id': r['id'], 'title': r.get('title', ''), 'before': '', 'after': r['user_lists']} for r in added if r.get('user_lists')]
+    if not rows: return
+    sets = lambda v: {n for n in v.split('|') if n}
+    _list_log.append({'id': uuid.uuid4().hex[:12], 'at': time.time(), 'from': source, 'rows': rows,
+                      'lists': sorted({n for r in rows for n in sets(r['before']) ^ sets(r['after'])}),   # the lists that changed
+                      'created': (listed or {}).get('created') or []})
+    del _list_log[:-40]
 _topic = {'job': None, 'proc': None}   # the topic whose existing papers are being tagged; GET /topic/tag
 
 
@@ -87,17 +101,18 @@ def start_topic(name):
     return job
 
 
-def queue_add(text, star, title='', source=''):
+def queue_add(text, star, title='', source='', lists=()):
     """A paper to add, after the ones already waiting (call with _lock held). The same input asked for again while it
     waits or runs (a second click) is the same job. Returns the job, or None when too many are waiting."""
     key = re.sub(r'\s+', ' ', text).strip().lower()
     for j in _adds['jobs']:
         if j['state'] in ('queued', 'running') and j['key'] == key:
             if star: j['star'] = True
+            if lists and j['state'] == 'queued': j['lists'] = add_paper.clean_list_names(list(j.get('lists') or []) + list(lists))
             return j
     if sum(j['state'] == 'queued' for j in _adds['jobs']) >= ADDS_WAITING: return None
     job = {'id': uuid.uuid4().hex[:12], 'state': 'queued', 'stage': 'Waiting…', 'input': text, 'title': title[:300],
-           'star': bool(star), 'from': source[:20], 'key': key, 'queued': time.time()}
+           'star': bool(star), 'lists': add_paper.clean_list_names(lists), 'from': source[:20], 'key': key, 'queued': time.time()}
     _adds['jobs'].append(job)
     done = [j for j in _adds['jobs'] if j['state'] not in ('queued', 'running')]
     for j in done[:max(0, len(done) - ADDS_KEPT)]: _adds['jobs'].remove(j)
@@ -126,8 +141,9 @@ def add_worker():
             _adds['wake'].wait(); _adds['wake'].clear(); continue
         def stage(s, job=job): job['stage'] = s
         try:
-            out = add_paper.add(job['input'], star=job['star'], cb=stage, on_proc=lambda p: _adds.__setitem__('proc', p))
-            job.update(state='done', added=out['added'], existing=out['existing'], titles=out.get('titles', {}))
+            out = add_paper.add(job['input'], star=job['star'], lists=job.get('lists'), cb=stage, on_proc=lambda p: _adds.__setitem__('proc', p))
+            job.update(state='done', added=out['added'], existing=out['existing'], titles=out.get('titles', {}), listed=out.get('listed'))
+            log_lists(out.get('listed'), job['from'], out['added'])
         except add_paper.Stop as e:
             job.update(state='stopped', message=str(e))
         except Exception as e:
@@ -504,6 +520,8 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path == '/topic/tag':
             return self.reply(200, {'job': _topic['job']})
+        if path == '/lists/changes':   # lists changed here lately, newest first
+            return self.reply(200, {'changes': list(reversed(_list_log))})
         if path == '/chat':
             pid = urllib.request.unquote(params.get('paper', ''))
             c = load_chat(pid)
@@ -570,7 +588,8 @@ class Handler(BaseHTTPRequestHandler):
             text = str(data.get('input', '')).strip()[:2000]
             if not text: return self.reply(400, {'error': 'input'})
             with _lock:
-                j = queue_add(text, bool(data.get('star')), str(data.get('title') or ''), str(data.get('from') or 'dashboard'))
+                lists = data.get('lists') if isinstance(data.get('lists'), list) else []
+                j = queue_add(text, bool(data.get('star')), str(data.get('title') or ''), str(data.get('from') or 'dashboard'), lists)
                 if not j: return self.reply(429, {'error': 'Too many papers are waiting to be added; try again once some are in.'})
                 return self.reply(200, {'job': add_view(j)})
         if path == '/topic/tag':   # a topic was approved: put it on the existing papers that belong in it
@@ -580,6 +599,19 @@ class Handler(BaseHTTPRequestHandler):
                 j = _topic['job']
                 if j and j['state'] == 'running': return self.reply(409, {'error': 'busy', 'job': j})
                 return self.reply(200, {'job': start_topic(name)})
+        if path == '/lists':   # papers into a list (made if it's new) or out of one: {papers: [ids, links or titles], add: [names], remove: [names]}
+            papers = [str(x)[:300] for x in (data.get('papers') or []) if str(x).strip()][:50] if isinstance(data.get('papers'), list) else []
+            add = data.get('add') if isinstance(data.get('add'), list) else []
+            remove = data.get('remove') if isinstance(data.get('remove'), list) else []
+            if not papers: return self.reply(400, {'error': 'Name the papers.'})
+            try:
+                out = add_paper.edit_lists(papers, add, remove)
+            except add_paper.Stop as e:
+                return self.reply(400, {'error': str(e)})
+            except Exception as e:
+                return self.reply(500, {'error': (str(e) or 'failed')[-300:]})
+            log_lists(out, str(data.get('from') or 'dashboard')[:20])
+            return self.reply(200, out)
         if path == '/paper/add/stop':   # one paper (id), or the one being added: a waiting one is just taken off the queue
             with _lock:
                 j = add_job(str(data.get('id', ''))) if data.get('id') else next((x for x in _adds['jobs'] if x['state'] == 'running'), None)

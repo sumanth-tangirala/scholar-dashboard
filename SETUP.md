@@ -310,7 +310,7 @@ The extension keeps its address fixed with the `key` in its manifest, and the br
 bash bridge/mcp_setup.sh
 ```
 
-It registers the server in both apps (quit Claude Desktop first). Then ask Claude to "add this paper to my library" with a link or a title. It also has `search_library` and `get_add_status`. It runs locally, started by each app, and isn't reachable from the network, so the ChatGPT and claude.ai websites can't use it.
+It registers the server in both apps; Claude Desktop picks it up the next time it starts (quit it with Cmd+Q and open it again). Then ask Claude to "add this paper to my library" with a link or a title. Or "put these in my Reading group list": it can make lists and add papers to them (`list_lists`, `add_to_list`, `remove_from_list`, and `add_paper` with lists). It also has `search_library` and `get_add_status`. It runs locally, started by each app, and isn't reachable from the network, so the ChatGPT and claude.ai websites can't use it.
 
 ---
 
