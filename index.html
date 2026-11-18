@@ -6751,7 +6751,11 @@ function hasPAT() { try { return !!localStorage.getItem('gh_pat'); } catch (e) {
    site is read-only for whoever is looking: every control that changes anything, the notes (and their password
    prompt), chat, uploads, Add paper, Continue reading and the save bar are gone, and the functions behind them do
    nothing (the guards at the end of the script), so no key, swipe or link can reach them either. The mode is
-   fixed for the page's life: signing in or out reloads it. */
+   fixed for the page's life: signing in or out reloads it.
+   One password signs in: the notes password. The token is kept in the repo encrypted with the notes key
+   (annotations/_owner.json, saved by a signed-in device once its notes are unlocked: syncOwnerToken), so the
+   password opens it (tokenFromPassword), and the notes stay unlocked over the reload. Typing a GitHub token still
+   works (to set things up, or to replace a token), and that token is then saved for next time. */
 const PAT_OK_KEY = 'gh_pat_ok';
 var _ownerAtLoad;   // (var: callable from code that runs earlier in the script)
 function isOwner() { if (_ownerAtLoad === undefined) _ownerAtLoad = hasPAT(); return _ownerAtLoad && hasPAT(); }
@@ -6812,14 +6816,49 @@ function updateSyncStatus() {
     el.innerHTML = `<span class="sync-dot on"></span>Saves to GitHub automatically${last ? ` \u00b7 last saved ${agoText(last)}` : ''} <button class="sync-btn quiet" onclick="disconnectGitHub()" title="Sign out on this browser: the site becomes read-only here">Sign out</button>`;
   }
 }
+const looksLikeToken = s => /^(github_pat_|gh[pousr]_)\w{20,}$/.test(s) || /^[0-9a-f]{40}$/.test(s);
 async function connectGitHub() {
-  const pat = (await showPrompt('Sign in', null, 'Password', '', true) || '').trim();   // (it's the GitHub token; checked with GitHub)
-  if (!pat) return;
+  const input = (await showPrompt('Sign in', null, 'Password', '', true) || '').trim();   // your notes password (or a GitHub token)
+  if (!input) return;
+  if (looksLikeToken(input)) return signInWithToken(input, null);
+  toast('Signing in\u2026');
+  const r = await tokenFromPassword(input);
+  if (r.error) { toastError(r.error); return; }
+  if (r.ok === false) {   // the token kept with your password was revoked or has expired: a new one, right here
+    const pat = (await showPrompt('Sign in', 'Your password is right, but the GitHub token saved with it no longer works (revoked or expired). Paste a new one, with Contents: read and write on scholar-dashboard. It\u2019s saved for next time.', 'GitHub token', '', true) || '').trim();
+    if (pat) signInWithToken(pat, r);
+    return;
+  }
+  if (r.ok !== true) { toastError('Couldn\u2019t check the password. Try again when you\u2019re online.'); return; }
+  finishSignIn(r.pat, r, false);
+}
+async function signInWithToken(pat, unlocked) {
   const ok = await patCanWrite(pat);
   if (ok !== true) { toastError(ok === false ? 'That password didn\u2019t work.' : 'Couldn\u2019t check the password. Try again when you\u2019re online.'); return; }
+  finishSignIn(pat, unlocked, true);
+}
+/* unlocked: the notes key when the password was typed (carried over the reload); newToken: save it for next time */
+async function finishSignIn(pat, unlocked, newToken) {
   localStorage.setItem('gh_pat', pat); localStorage.setItem(PAT_OK_KEY, patPrint(pat));
-  try { sessionStorage.setItem('owner_toast', 'in'); } catch (e) {}
+  try { sessionStorage.setItem('owner_toast', 'in'); if (newToken) sessionStorage.setItem('owner_token_new', '1'); } catch (e) {}
+  if (unlocked) await notesDB('keys', 'readwrite', st => st.put({ key: unlocked.key, salt: unlocked.salt, at: Date.now() }, 'once')).catch(() => {});
   location.reload();   // everything is drawn again, with your controls
+}
+/* Your notes password -> the GitHub token kept with it: { pat, key, salt, ok } (ok: GitHub's answer for the token:
+   true, false when it's revoked or expired, null when it couldn't be asked), or { error }. Reads only the public
+   files, so it works before signing in. */
+async function tokenFromPassword(pw) {
+  if (!vaultSupported()) return { error: 'Signing in with your password needs this site\u2019s secure address (https, or scholar.localhost).' };
+  let meta, owner;
+  try { meta = await ghNoteRead('_vault.json'); owner = meta && await ghNoteRead('_owner.json'); }
+  catch (e) { return { error: 'Couldn\u2019t check the password. Try again when you\u2019re online.' }; }
+  if (!meta) return { error: 'That password didn\u2019t work.' };
+  const key = await vaultDerive(pw, b64d(meta.env.salt), meta.env.iter);
+  if (!await vaultCheckKey(key, meta.env)) return { error: 'That password didn\u2019t work.' };
+  let pat = null;
+  try { pat = owner ? (await vaultDecrypt(owner.env, key)).token : null; } catch (e) {}
+  if (!pat) return { error: 'That\u2019s your notes password, but signing in with it isn\u2019t set up yet. Unlock your notes once on a device where you\u2019re signed in (that sets it up), or sign in here with your GitHub token.' };
+  return { pat, key, salt: meta.env.salt, ok: await patCanWrite(pat) };
 }
 async function disconnectGitHub() {
   const ok = await showConfirm('Sign out on this browser?', 'The site becomes read-only here: no changes, notes or chat until you sign in again with the key icon.', 'Sign out', true);
@@ -8847,6 +8886,7 @@ function closePdfModal() {
    public repo only ever holds ciphertext:
      annotations/_vault.json    salt, rounds and an encrypted check value (no secrets)
      annotations/_index.json    encrypted: which papers have notes, and your colour names
+     annotations/_owner.json    encrypted: the GitHub token, so the notes password signs you in (see OWNER MODE)
      annotations/<paper>.json   encrypted: that paper's notes, highlights and comments
    Edits land in IndexedDB first and are pushed to GitHub a few seconds later (like other edits);
    a copy changed elsewhere in the meantime is merged, not overwritten. */
@@ -9006,7 +9046,7 @@ async function pushNotes() {
       for (const [name, rec] of dirty) {
         const remote = await ghNoteRead(name);
         let env = rec.env;
-        if (remote && remote.env.updated !== rec.base && name !== '_vault.json') {
+        if (remote && remote.env.updated !== rec.base && name !== '_vault.json' && name !== '_owner.json') {   // (the token: the newest one saved wins)
           const mine = await vaultDecrypt(rec.env), theirs = await vaultDecrypt(remote.env);
           const merged = name === '_index.json' ? mergeIndex(theirs, mine) : mergePaperNotes(theirs, mine);
           env = await vaultEncrypt(merged);
@@ -9077,11 +9117,17 @@ async function vaultReady(quiet) {
   if (!vaultSupported()) return false;
   const meta = await vaultMeta();
   if (meta) {
-    const saved = await notesDB('keys', 'readonly', st => st.get('k')).catch(() => null);
+    const saved = (await notesDB('keys', 'readonly', st => st.get('k')).catch(() => null)) || await takeOnceKey();
     if (saved && saved.salt === meta.salt && await vaultCheckKey(saved.key, meta) && Vault.meta === meta) { Vault.key = saved.key; await afterUnlock(); return true; }   // unless the vault was reset meanwhile
   }
   if (quiet) return false;
   return openVaultModal(meta ? 'unlock' : 'create');
+}
+/* The key carried over the reload that signing in with the notes password makes: used once, within two minutes */
+async function takeOnceKey() {
+  const k = await notesDB('keys', 'readonly', st => st.get('once')).catch(() => null);
+  if (k) await notesDB('keys', 'readwrite', st => st.delete('once')).catch(() => {});
+  return k && Date.now() - (k.at || 0) < 120000 ? k : null;
 }
 let _vaultResolve = null, _vaultMode = null;
 function openVaultModal(mode) {
@@ -9194,13 +9240,30 @@ async function afterUnlock() {
   if (currentTab === 'library') renderLibrary();
   if (_paperViewActive) { const p = allPapers.find(x => location.hash === '#paper/' + encodeURIComponent(x.id)); if (p) renderPaperDetail(p); }
   setTimeout(() => reconcileNotesIndex().catch(() => {}), 3000);   // after the page has what it needs
+  setTimeout(() => syncOwnerToken().catch(() => {}), 2500);
+}
+/* The sign-in kept with the notes (annotations/_owner.json, see OWNER MODE): this device's token is saved when there's
+   none yet, when the saved one can't be opened (the notes were given a new password), when GitHub says it no longer
+   works, or when you just signed in with a new one. Another device's working token is left alone, so two devices
+   with different tokens don't take turns replacing it. */
+async function syncOwnerToken() {
+  const pat = localStorage.getItem('gh_pat');
+  if (!isOwner() || !pat || !Vault.key) return;
+  if (((await nfGet('_owner.json')) || {}).dirty) return;   // a save of it is waiting to be pushed
+  let rec;
+  try { rec = await ghNoteRead('_owner.json'); } catch (e) { return; }   // what GitHub has decides (a copy kept here may be gone there); offline: change nothing, until next time
+  let fresh = false; try { fresh = sessionStorage.getItem('owner_token_new') === '1'; sessionStorage.removeItem('owner_token_new'); } catch (e) {}
+  let saved = null;
+  if (rec) try { saved = (await vaultDecrypt(rec.env)).token || null; } catch (e) {}
+  if (saved === pat || (saved && !fresh && await patCanWrite(saved) !== false)) return;
+  await nfSave('_owner.json', { token: pat, updated: new Date().toISOString() });
 }
 async function lockNotes() {
   await closeAnnoCard();   // the open comment is settled (kept, restored or discarded) while the key is still here
   await finishNotesEdit();
   endDraft('discard');
   Vault.key = null; Vault.index = null; Vault.cache.clear(); _rn = null; _acPending = null;
-  await notesDB('keys', 'readwrite', st => st.delete('k')).catch(() => {});
+  await notesDB('keys', 'readwrite', st => { st.delete('once'); return st.delete('k'); }).catch(() => {});
   hideSelBar();
   if (_reader.paper) { renderReaderPanel(); redrawAnnoLayers(); }
   if (currentTab === 'library') renderLibrary();
@@ -12873,7 +12936,7 @@ document.addEventListener('DOMContentLoaded', () => { loadPapers(); loadInterest
     'showCopyDD', 'doCopyList', 'doCopyNew', 'updateI', 'updateG', 'updateInterestField', 'toggleInterestDropdown', 'gDragStart', 'gDrop',
     'resetChanges', 'pushToGitHub', 'showSaveBar', 'openStrengthDD', 'setMatchStrength', 'scheduleAutoPush', 'disconnectGitHub', 'submitPdfLink', 'pinPdfVersion', 'tokMenuAct',
     // notes and their password
-    'vaultReady', 'openVaultModal', 'submitVault', 'unlockFromPanel', 'lockNotes', 'nfSave', 'savePaperNotes', 'scheduleNotesPush', 'pushNotes',
+    'vaultReady', 'openVaultModal', 'submitVault', 'unlockFromPanel', 'lockNotes', 'nfSave', 'syncOwnerToken', 'savePaperNotes', 'scheduleNotesPush', 'pushNotes',
     'reconcileNotesIndex', 'renameHlColor', 'createAnno', 'deleteAnno', 'editAnnoComment', 'setAnnoColor', 'citeAnno', 'citeSelection',
     'startNewNote', 'editNote', 'saveNoteEdit', 'deleteGeneralNote', 'setInkTool', 'setPencilHl', 'undoInk', 'toggleReaderPanel', 'setPanelTab', 'showSelBar',
     'startHandwritten', 'editHandwritten', 'saveHandwritten', 'hwTool', 'hwUndo', 'adjustAnno', 'endAdjust',
