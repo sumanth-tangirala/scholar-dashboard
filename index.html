@@ -2432,6 +2432,15 @@ html.no-hover .sel-icon:not(.on):active, html.no-hover .ink-bar .ink-size:not(.o
   .rp-resize { flex-basis: 24px; margin: 0 -12px; }
   .rp-resize::after { left: 11px; }
 }
+/* Writing into a text box with the Pencil (Scribble) needs room under what's written: on an iPad the boxes you write
+   in keep an empty line below the last one. They grow with it up to their height limit, then scroll, keeping that
+   empty line in view while you write at the end (keepRoomBelow). A box still empty stays as it was. */
+@media (pointer: coarse) and (min-width: 701px) {
+  .anno-card textarea#acNote { padding-bottom: calc(6px + 1.45em); }
+  .anno-card.writing textarea#acNote:placeholder-shown { padding-bottom: 6px; }
+  .rp-notes-edit:not(.is-empty) { padding-bottom: calc(8px + 1.55em); }
+  .chat-box textarea:not(:placeholder-shown) { padding-bottom: calc(2px + 1.5em); }
+}
 </style>
 </head>
 <body>
@@ -10255,7 +10264,16 @@ async function endCommentSession(id, text) {
   redrawAnnoLayers(); renderReaderPanel();
 }
 /* the comment box starts as one line and grows with the text, up to ~8 lines, then scrolls */
-function acGrow(t) { if (!t) return; t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight + 2, 190) + 'px'; t.style.overflowY = t.scrollHeight + 2 > 190 ? 'auto' : 'hidden'; }
+function acGrow(t) { if (!t) return; t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight + 2, 190) + 'px'; t.style.overflowY = t.scrollHeight + 2 > 190 ? 'auto' : 'hidden'; keepRoomBelow(t); }
+/* Writing at the end of a box that has reached its height: scrolled right down, so the empty line kept under the last
+   one (see the CSS for writing with the Pencil) stays in view. Editing earlier words leaves the scroll alone. */
+function keepRoomBelow(el) {
+  if (!el || document.activeElement !== el || el.scrollHeight <= el.clientHeight) return;
+  let atEnd;
+  if (el.tagName === 'TEXTAREA') atEnd = el.selectionEnd >= el.value.replace(/\s+$/, '').length;
+  else { const sel = getSelection(); if (!sel.rangeCount) return; const r = document.createRange(); r.selectNodeContents(el); r.setStart(sel.focusNode, sel.focusOffset); atEnd = !r.toString().trim() && !r.cloneContents().querySelector('.cite-pill'); }
+  if (atEnd) el.scrollTop = el.scrollHeight;
+}
 function copyAnnoQuote(id) { const a = annoById(id); if (a) navigator.clipboard.writeText('\u201c' + a.quote + '\u201d (p. ' + a.page + ')').then(() => toast('Quote copied'), () => toastError('Couldn’t copy: the browser blocked the clipboard')); }
 function acNoteInput() { clearTimeout(_acTimer); _acTimer = setTimeout(() => { _acTimer = null; acSaveNote(); }, 600); }
 async function acSaveNote() {
@@ -11954,7 +11972,7 @@ async function renderChatLive() {
 function scheduleLive() { if (!_liveTimer) _liveTimer = setTimeout(() => { _liveTimer = 0; renderChatLive(); }, 70); }
 
 /* ---- composing ---- */
-function chatGrow(t) { t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 180) + 'px'; }
+function chatGrow(t) { t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 180) + 'px'; keepRoomBelow(t); }
 function chatInputChanged(t) { Chat.draftText = t.value; chatGrow(t); chatMentionInput(t); }
 function chatKey(e) {
   if (_mentionCtx && document.getElementById('citeDD').classList.contains('open')) {
@@ -12450,7 +12468,7 @@ function editorSync(ed) {
   ed.classList.toggle('is-empty', !_rnDraft.trim() && !ed.querySelector('.cite-pill'));
   draftChanged();
 }
-function editorInput(ed) { editorSaveRange(ed); editorSync(ed); citeInput(ed); }
+function editorInput(ed) { editorSaveRange(ed); editorSync(ed); citeInput(ed); keepRoomBelow(ed); }
 function editorKey(e) {
   const ed = e.currentTarget;
   if (_citeCtx && document.getElementById('citeDD').classList.contains('open')) { citeKey(e); if (e.defaultPrevented) return; }
