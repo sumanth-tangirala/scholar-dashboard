@@ -8,8 +8,8 @@ Two steps, kept apart on purpose:
      pages, commit and push. This happens in the bridge's own copy of the repository (~/.scholar-bridge/repo), never
      in your working copy, so nothing you are editing is ever committed along with it.
 
-Also your lists (edit_lists): put papers in a list (made if it's new) or take them out. A list is just a name in the
-papers' user_lists column, so a list exists while a paper is in it.
+Also your lists and stars (edit_papers): put papers in a list (made if it's new) or take them out, star or unstar them.
+A list is just a name in the papers' user_lists column, so a list exists while a paper is in it.
 
 Used by the bridge (the dashboard's Add paper box, the browser extension, the MCP server) and from the command line:
     python3 bridge/add_paper.py "https://arxiv.org/abs/2609.01234"      # research + publish
@@ -196,16 +196,46 @@ def record_spans(text):
     return spans
 
 
-def set_field(text, fields, field, values):
-    """The papers file with one field of some rows changed ({id: value}); every other byte stays as it was."""
-    ci, fi, out, last = fields.index('id'), fields.index(field), [], 0
+def set_fields(text, fields, values):
+    """The papers file with some fields of some rows changed ({id: {field: value}}); every other byte stays as it was."""
+    ci, out, last = fields.index('id'), [], 0
     for s, e in record_spans(text)[1:]:
         row = next(csv.reader(io.StringIO(text[s:e], newline='')), [])
-        if len(row) <= max(ci, fi) or row[ci] not in values: continue
-        row[fi] = values[row[ci]]
+        if len(row) <= ci or row[ci] not in values: continue
+        row += [''] * (len(fields) - len(row))
+        for f, v in values[row[ci]].items(): row[fields.index(f)] = v
         buf = io.StringIO(); csv.writer(buf, lineterminator='').writerow(row)
         out += [text[last:s], buf.getvalue()]; last = e
     return ''.join(out) + text[last:]
+
+
+def paper_changes(rows, targets, add=(), remove=(), star=None):
+    """What changes for these papers: their lists (add, remove) and their star (True, False, or None to leave it).
+    Returns ([{id, title, field, before, after}], the list names as the file spells them, the lists that are new)."""
+    lists, names, created = list_changes(rows, targets, add, remove) if add or remove else ({}, [], [])
+    out = [{'id': r['id'], 'title': r['title'], 'field': 'user_lists', 'before': lists[r['id']][0], 'after': lists[r['id']][1]} for r in targets if r['id'] in lists]
+    if star is not None:
+        want = 'true' if star else 'false'
+        out += [{'id': r['id'], 'title': r['title'], 'field': 'is_starred', 'before': r.get('is_starred') or 'false', 'after': want}
+                for r in targets if (r.get('is_starred') == 'true') != bool(star)]
+    return out, names, created
+
+
+def write_changes(text, fields, changed):
+    values = {}
+    for c in changed: values.setdefault(c['id'], {})[c['field']] = c['after']
+    return set_fields(text, fields, values) if values else text
+
+
+def describe_changes(changed, names, remove):
+    """A commit message for changes to lists and stars."""
+    parts, n = [], lambda k: f"{k} paper{'s' if k != 1 else ''}"
+    lc = [c for c in changed if c['field'] == 'user_lists']
+    if lc: parts.append(f"{n(len(lc))} {'into' if names else 'out of'} {', '.join(names or clean_list_names(remove))}")
+    for v, word in (('true', 'starred'), ('false', 'unstarred')):
+        k = sum(c['field'] == 'is_starred' and c['after'] == v for c in changed)
+        if k: parts.append(f'{n(k)} {word}')
+    return ('Lists and stars: ' + '; '.join(parts))[:120]
 
 
 def find_paper(rows, s):
@@ -223,37 +253,38 @@ def push(message, cb):
     return r
 
 
-def edit_lists(papers, add=(), remove=(), cb=None):
-    """Put papers in lists (a new name makes the list) and take them out of lists, then commit and push. Papers are
-    named by id, link, arXiv id, DOI or exact title. Returns {'changed': [{id, title, before, after}], 'unchanged':
-    [{id, title}], 'missing': [what wasn't found], 'lists': [names as spelt], 'created': [new lists], 'counts': {list: n}}."""
-    if not clean_list_names(add) and not clean_list_names(remove): raise Stop('Name the list.')
+def edit_papers(papers, add=(), remove=(), star=None, cb=None):
+    """Put papers in lists (a new name makes the list), take them out of lists, star or unstar them (star True/False),
+    then commit and push. Papers are named by id, link, arXiv id, DOI or exact title. Returns {'changed': [{id, title,
+    field, before, after}], 'unchanged': [{id, title}], 'missing': [what wasn't found], 'lists': [names as spelt],
+    'created': [new lists], 'counts': {list: n}}."""
+    if not clean_list_names(add) and not clean_list_names(remove) and star is None: raise Stop('Say which list, or to star them.')
     for attempt in range(3):
         with _repo:
-            log('Reading your lists…', cb)
+            log('Reading your library…', cb)
             fresh_clone()
             fields, rows = read_papers()
-            if 'user_lists' not in fields: raise Stop('The papers file has no user_lists column.')
+            for f in ('user_lists',) * bool(add or remove) + ('is_starred',) * (star is not None):
+                if f not in fields: raise Stop(f'The papers file has no {f} column.')
             found, missing = [], []
             for x in papers or []:
                 r = find_paper(rows, x)
                 if not r: missing.append(str(x)[:200])
                 elif r not in found: found.append(r)
-            changes, names, created = list_changes(rows, found, add, remove)
-            out = {'changed': [{'id': i, 'title': next(r['title'] for r in found if r['id'] == i), 'before': b, 'after': a} for i, (b, a) in changes.items()],
-                   'unchanged': [{'id': r['id'], 'title': r['title']} for r in found if r['id'] not in changes],
+            changed, names, created = paper_changes(rows, found, add, remove, star)
+            ids = {c['id'] for c in changed}
+            out = {'changed': changed, 'unchanged': [{'id': r['id'], 'title': r['title']} for r in found if r['id'] not in ids],
                    'missing': missing, 'lists': names + [n for n in clean_list_names(remove) if n.lower() not in {x.lower() for x in names}],
-                   'created': created if changes else []}
-            for r in rows:
-                if r['id'] in changes: r['user_lists'] = changes[r['id']][1]
+                   'created': created if any(c['field'] == 'user_lists' for c in changed) else [], 'star': star}
+            by_id = {r['id']: r for r in rows}
+            for c in changed: by_id[c['id']][c['field']] = c['after']
             out['counts'] = {n: sum(n in lists_of(r) for r in rows) for n in set(names) | {list_names(rows).get(n.lower(), n) for n in clean_list_names(remove)}}
-            if not changes: return out
+            if not changed: return out
             path = os.path.join(CLONE, PAPERS)
             with open(path, encoding='utf-8', newline='') as f: text = f.read()
-            with open(path, 'w', encoding='utf-8', newline='') as f: f.write(set_field(text, fields, 'user_lists', {i: a for i, (b, a) in changes.items()}))
+            with open(path, 'w', encoding='utf-8', newline='') as f: f.write(write_changes(text, fields, changed))
             git('add', PAPERS)
-            what = ', '.join(names) if names else ', '.join(clean_list_names(remove))
-            r = push(f"Lists: {len(changes)} paper{'s' if len(changes) != 1 else ''} {'into' if names else 'out of'} {what}"[:120], cb)
+            r = push(describe_changes(changed, names, remove), cb)
             if r.returncode == 0: return out
             if attempt == 2: raise RuntimeError('push failed: ' + (r.stderr or '')[-300:].replace(gh_token(), '***'))
 
@@ -262,7 +293,7 @@ def edit_lists(papers, add=(), remove=(), cb=None):
 def publish(papers, star=False, lists=None, cb=None):
     """Append the new papers (duplicates are reported, not added), then commit and push. Retries from a fresh copy if
     someone else pushed meanwhile. With lists, the new papers go into them, and so do the ones already there.
-    Returns {'added': [rows], 'existing': [ids], 'titles': {existing id: title}, 'listed': (as edit_lists)}."""
+    Returns {'added': [rows], 'existing': [ids], 'titles': {existing id: title}, 'listed': (as edit_papers)}."""
     for attempt in range(3):
       with _repo:
         log('Saving to your database…', cb)
@@ -278,17 +309,16 @@ def publish(papers, star=False, lists=None, cb=None):
             row.update(id=make_id(row, taken), date_found=datetime.date.today().isoformat(), source_mode='manual',
                        is_read='false', is_starred='true' if star else 'false', user_lists='')
             taken.add(row['id']); added.append(row)
-        old = [r for r in rows if r['id'] in existing]
-        changes, names, created = list_changes(rows, old, lists, ()) if lists and 'user_lists' in fields else ({}, [], [])
+        old = [r for r in rows if r['id'] in existing]   # already there: they still go into the lists, and get starred
+        changes, names, created = paper_changes(rows, old, lists if 'user_lists' in fields else (), (), True if star else None)
         for r in added: r['user_lists'] = '|'.join(names)
-        listed = {'changed': [{'id': r['id'], 'title': r['title'], 'before': changes[r['id']][0], 'after': changes[r['id']][1]} for r in old if r['id'] in changes],
-                  'lists': names, 'created': created if (changes or added) else []}
+        listed = {'changed': changes, 'lists': names, 'created': created if (changes or added) else []}
         out = {'added': added, 'existing': existing, 'titles': known, 'listed': listed}
         if not added and not changes: return out
         path = os.path.join(CLONE, PAPERS)
         with open(path, encoding='utf-8', newline='') as f: text = f.read()
         nl = '\r\n' if '\r\n' in text[:20000] else '\n'
-        if changes: text = set_field(text, fields, 'user_lists', {i: a for i, (b, a) in changes.items()})
+        text = write_changes(text, fields, changes)
         buf = io.StringIO()
         w = csv.DictWriter(buf, fieldnames=fields, extrasaction='ignore', lineterminator=nl)
         for r in added: w.writerow({k: r.get(k, '') for k in fields})
@@ -297,7 +327,7 @@ def publish(papers, star=False, lists=None, cb=None):
         if added: subprocess.run([sys.executable, os.path.join(CLONE, 'make_share_pages.py')], cwd=CLONE, capture_output=True, timeout=120)
         git('add', PAPERS); git('add', '-A', 'p')
         titles = '; '.join(r['title'][:60] for r in added)
-        r = push(f'Add paper by hand: {titles}' if added else f"Lists: {len(changes)} paper{'s' if len(changes) != 1 else ''} into {', '.join(names)}"[:120], cb)
+        r = push(f'Add paper by hand: {titles}' if added else describe_changes(changes, names, ()), cb)
         if r.returncode == 0: return out
         if attempt == 2: raise RuntimeError('push failed: ' + (r.stderr or '')[-300:].replace(gh_token(), '***'))
     return {'added': [], 'existing': []}
@@ -362,7 +392,7 @@ def add(text, star=False, lists=None, cb=None, on_proc=None):
         hit = lookup_input(rows, text)
     if hit:
         out = {'added': [], 'existing': [hit['id']], 'titles': {hit['id']: hit.get('title', '')}}
-        if clean_list_names(lists): out['listed'] = edit_lists([hit['id']], lists, cb=cb)
+        if clean_list_names(lists) or star: out['listed'] = edit_papers([hit['id']], lists, star=True if star else None, cb=cb)
         return out
     log('Finding the paper…', cb)
     papers = research(text, cb, on_proc=on_proc)

@@ -49,9 +49,10 @@ NO_MCP = os.path.join(HOME, 'no-mcp.json')
 MODELS = {'opus': 'opus', 'sonnet': 'sonnet', 'haiku': 'haiku'}
 API_MODELS = {'opus': 'claude-opus-5-5', 'sonnet': 'claude-sonnet-5-5', 'haiku': 'claude-haiku-5-5'}
 EFFORTS = {'low', 'medium', 'high', 'xhigh', 'max'}   # anything else: the default of Claude Code or of the model
-VERSION = 7   # 2: /paper/add; 3: /topic/tag; 4: the Claude API engine (/engine); 5: copies of uploaded papers (/upload);
+VERSION = 8   # 2: /paper/add; 3: /topic/tag; 4: the Claude API engine (/engine); 5: copies of uploaded papers (/upload);
               # 6: papers to add wait in a queue (/paper/add?id=, /paper/adds), for the extension and the MCP server;
-              # 7: lists (/lists: papers into or out of a list; /lists/changes; /paper/add takes lists)
+              # 7: lists (/lists: papers into or out of a list; /lists/changes; /paper/add takes lists);
+              # 8: stars too (/papers/edit, the same as /lists with star; /papers/changes has both)
 UPLOAD_KINDS = {'pdf': 'application/pdf', 'video': 'video/mp4'}
 UPLOAD_MAX = 4 << 30   # 4 GB
 
@@ -66,19 +67,28 @@ _running = {}   # paper id -> subprocess.Popen
 _adds = {'jobs': [], 'proc': None, 'wake': threading.Event()}   # papers to add, in the order asked (the finished ones too,
 # the last ADDS_KEPT); one is added at a time. The asker follows its job: GET /paper/add?id=<job>, or all of them: /paper/adds
 ADDS_KEPT, ADDS_WAITING = 40, 25
-_list_log = []   # lists changed here lately, newest last: the dashboard applies the ones its copy of the database lacks
+_list_log = []   # lists and stars changed here lately, newest last: the dashboard applies the ones its copy of the database lacks
 
 
 def log_lists(listed, source, added=()):
-    """Remember a change to lists ({changed: [{id, title, before, after}], created} from add_paper; papers just added
-    into lists count as going from no list to theirs)."""
-    rows = list((listed or {}).get('changed') or []) + [{'id': r['id'], 'title': r.get('title', ''), 'before': '', 'after': r['user_lists']} for r in added if r.get('user_lists')]
+    """Remember a change to lists and stars ({changed: [{id, title, field, before, after}], created} from add_paper;
+    papers just added into lists count as going from no list to theirs)."""
+    rows = list((listed or {}).get('changed') or []) + [{'id': r['id'], 'title': r.get('title', ''), 'field': 'user_lists', 'before': '', 'after': r['user_lists']} for r in added if r.get('user_lists')]
     if not rows: return
     sets = lambda v: {n for n in v.split('|') if n}
     _list_log.append({'id': uuid.uuid4().hex[:12], 'at': time.time(), 'from': source, 'rows': rows,
-                      'lists': sorted({n for r in rows for n in sets(r['before']) ^ sets(r['after'])}),   # the lists that changed
+                      'lists': sorted({n for r in rows if r.get('field', 'user_lists') == 'user_lists' for n in sets(r['before']) ^ sets(r['after'])}),   # the lists that changed
                       'created': (listed or {}).get('created') or []})
     del _list_log[:-40]
+
+
+def changes_view(fields=None):
+    """The changes, newest first; only those fields' rows (a dashboard from before stars reads every row as lists)."""
+    out = []
+    for c in reversed(_list_log):
+        rows = [r for r in c['rows'] if not fields or r.get('field', 'user_lists') in fields]
+        if rows: out.append({**c, 'rows': rows})
+    return out
 _topic = {'job': None, 'proc': None}   # the topic whose existing papers are being tagged; GET /topic/tag
 
 
@@ -521,7 +531,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == '/topic/tag':
             return self.reply(200, {'job': _topic['job']})
         if path == '/lists/changes':   # lists changed here lately, newest first
-            return self.reply(200, {'changes': list(reversed(_list_log))})
+            return self.reply(200, {'changes': changes_view({'user_lists'})})
+        if path == '/papers/changes':   # lists and stars
+            return self.reply(200, {'changes': changes_view()})
         if path == '/chat':
             pid = urllib.request.unquote(params.get('paper', ''))
             c = load_chat(pid)
@@ -599,13 +611,15 @@ class Handler(BaseHTTPRequestHandler):
                 j = _topic['job']
                 if j and j['state'] == 'running': return self.reply(409, {'error': 'busy', 'job': j})
                 return self.reply(200, {'job': start_topic(name)})
-        if path == '/lists':   # papers into a list (made if it's new) or out of one: {papers: [ids, links or titles], add: [names], remove: [names]}
+        if path in ('/lists', '/papers/edit'):   # papers into a list (made if it's new) or out of one, starred or not:
+            # {papers: [ids, links or titles], add: [names], remove: [names], star: true | false (left alone if absent)}
             papers = [str(x)[:300] for x in (data.get('papers') or []) if str(x).strip()][:50] if isinstance(data.get('papers'), list) else []
             add = data.get('add') if isinstance(data.get('add'), list) else []
             remove = data.get('remove') if isinstance(data.get('remove'), list) else []
+            star = data.get('star') if isinstance(data.get('star'), bool) else None
             if not papers: return self.reply(400, {'error': 'Name the papers.'})
             try:
-                out = add_paper.edit_lists(papers, add, remove)
+                out = add_paper.edit_papers(papers, add, remove, star)
             except add_paper.Stop as e:
                 return self.reply(400, {'error': str(e)})
             except Exception as e:

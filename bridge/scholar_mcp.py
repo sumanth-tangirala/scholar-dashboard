@@ -8,6 +8,7 @@
     list_lists       your lists and their papers
     add_to_list,     papers already in the library into a list (a new name makes it) or out of one
     remove_from_list
+    star_papers      star papers in the library, or unstar them
 
 Local only, over stdio: the app starts it as `python3 bridge/scholar_mcp.py` (bridge/mcp_setup.sh registers it).
 Nothing listens on the network. It talks to the bridge on 127.0.0.1 with the bridge's pairing token
@@ -90,9 +91,10 @@ def library():
 
 
 def recent_lists():
-    """Lists changed through the bridge lately, oldest first: [{rows: [{id, before, after}]}]."""
+    """Lists and stars changed through the bridge lately, oldest first: [{rows: [{id, field, before, after}]}]."""
     try:
-        status, out = bridge('/lists/changes', timeout=5)
+        status, out = bridge('/papers/changes', timeout=5)
+        if status == 404: status, out = bridge('/lists/changes', timeout=5)   # a bridge from before stars
         return list(reversed(out.get('changes') or [])) if status == 200 else []
     except BridgeError: return []
 
@@ -105,8 +107,8 @@ def library_now():
     by_id = {r['id']: r for r in rows}
     for c in recent_lists():
         for x in c.get('rows') or []:
-            r = by_id.get(x.get('id'))
-            if r is not None and (r.get('user_lists') or '') == x.get('before', ''): r['user_lists'] = x.get('after', '')
+            r, f = by_id.get(x.get('id')), x.get('field', 'user_lists')
+            if r is not None and f in ('user_lists', 'is_starred') and (r.get(f) or ('false' if f == 'is_starred' else '')) == x.get('before', ''): r[f] = x.get('after', '')
     return rows
 
 
@@ -172,10 +174,10 @@ TOOLS = [
                      'to their research interests and publishes it: about a minute each, one paper at a time. A paper already in the '
                      'library is reported, not added twice. A paper with no public version (a submission under review) is not added. '
                      'Waits up to about 40 seconds; if the paper isn\'t in by then, it returns a job id for get_add_status. '
-                     'Call it once per paper.'),
+                     'Call it once per paper. star and lists apply to a paper already in the library too.'),
      'inputSchema': {'type': 'object', 'properties': {
          'paper': {'type': 'string', 'description': 'A link, DOI, arXiv id, or the paper\'s title (add an author or year if ambiguous)'},
-         'star': {'type': 'boolean', 'description': 'Also star the paper in the library (default false)'},
+         'star': {'type': 'boolean', 'description': 'Also star the paper (default false; it never unstars one)'},
          'lists': {'type': 'array', 'items': {'type': 'string'}, 'description': 'Also put the paper in these lists (a new name makes a new list); if it is already in the library, it still goes into them'}},
          'required': ['paper'], 'additionalProperties': False},
      'annotations': {'title': 'Add a paper', 'readOnlyHint': False, 'destructiveHint': False, 'idempotentHint': True, 'openWorldHint': True}},
@@ -219,10 +221,31 @@ TOOLS = [
          'list': {'type': 'string', 'description': 'The list\'s name'}},
          'required': ['papers', 'list'], 'additionalProperties': False},
      'annotations': {'title': 'Take papers out of a list', 'readOnlyHint': False, 'destructiveHint': False, 'idempotentHint': True, 'openWorldHint': False}},
+    {'name': 'star_papers', 'title': 'Star papers',
+     'description': ('Star papers that are already in the user\'s library (starred papers are their shortlist in the dashboard), '
+                     'or unstar them with unstar: true. Name each paper by its library id (from search_library or add_paper), '
+                     'link, arXiv id, DOI or exact title. For a paper not in the library yet, use add_paper with star: true. '
+                     'list_lists with list "Starred" shows the starred papers.'),
+     'inputSchema': {'type': 'object', 'properties': {
+         'papers': {'type': 'array', 'items': {'type': 'string'}, 'minItems': 1, 'maxItems': 50, 'description': 'Library ids (best), links, arXiv ids, DOIs or exact titles'},
+         'unstar': {'type': 'boolean', 'description': 'Unstar them instead (default false)'}},
+         'required': ['papers'], 'additionalProperties': False},
+     'annotations': {'title': 'Star papers', 'readOnlyHint': False, 'destructiveHint': False, 'idempotentHint': True, 'openWorldHint': False}},
 ]
 
 
 def quoted(n): return f'\u201c{n}\u201d'
+
+
+def stars_text(out, star):
+    """What star_papers did, in words."""
+    done = [c for c in out.get('changed') or [] if c.get('field') == 'is_starred']
+    lines = []
+    if done: lines.append(f"{'Starred' if star else 'Unstarred'} {len(done)} paper{'s' if len(done) != 1 else ''}:\n" + '\n'.join(f"  - {c['title']}" for c in done))
+    if out.get('unchanged'): lines.append(('Already starred: ' if star else 'Not starred anyway: ') + '; '.join(r['title'] for r in out['unchanged']))
+    if out.get('missing'): lines.append('Not in the library: ' + '; '.join(out['missing']) + ('. Add it with add_paper and star: true.' if star else '.'))
+    lines.append(f'Starred papers in the dashboard: {DASHBOARD}#library')
+    return '\n'.join(lines)
 
 
 def lists_text(out, verb):
@@ -231,6 +254,7 @@ def lists_text(out, verb):
     name = names[0] if names else ''
     n = counts.get(name, 0)
     lines = []
+    out = {**out, 'changed': [c for c in out.get('changed') or [] if c.get('field', 'user_lists') == 'user_lists']}
     if out.get('changed'):
         k = len(out['changed'])
         new = ' (a new list)' if name in (out.get('created') or []) else ''
@@ -255,9 +279,12 @@ def job_text(j):
                          f"{'; ' + r['venue'] if r.get('venue') else ''}{', ' + r['publishing_date'] if r.get('publishing_date') else ''})"
                          f"{' and starred' if r.get('is_starred') == 'true' else ''}.\n  Takeaway: {r.get('headline', '').strip()}\n  Open: {link(r['id'])}")
         titles = j.get('titles') or {}
-        moved = {r['id'] for r in ((j.get('listed') or {}).get('changed') or [])}
+        ch = (j.get('listed') or {}).get('changed') or []
+        moved = {r['id'] for r in ch if r.get('field', 'user_lists') == 'user_lists'}
+        starred = {r['id'] for r in ch if r.get('field') == 'is_starred'}
         for pid in j.get('existing') or []:
-            lines.append(f"Already in the library: {titles.get(pid) or pid}" + (f", now in {', '.join(quoted(n) for n in (j.get('listed') or {}).get('lists') or j.get('lists') or [])}" if pid in moved else '') + f".\n  Open: {link(pid)}")
+            lines.append(f"Already in the library: {titles.get(pid) or pid}" + (f", now in {', '.join(quoted(n) for n in (j.get('listed') or {}).get('lists') or j.get('lists') or [])}" if pid in moved else '')
+                         + (', now starred' if pid in starred else '') + f".\n  Open: {link(pid)}")
         names = (j.get('listed') or {}).get('lists') or j.get('lists') or []   # as the file spells them
         if names and j.get('added'): lines.append('Put in ' + ', '.join(quoted(n) for n in names) + '.')
         return '\n'.join(lines) or 'Nothing was added.'
@@ -315,14 +342,19 @@ def call_tool(name, args):
         counts = {}
         for r in rows:
             for n in lists_of(r): counts[n] = counts.get(n, 0) + 1
+        starred = [r for r in rows if r.get('is_starred') == 'true']
         want = str(args.get('list') or '').strip()
+        if want.lower() in ('starred', 'stars', 'starred papers') and not any(n.lower() == want.lower() for n in counts):
+            if not starred: return 'No paper is starred.', False
+            return f'{len(starred)} starred paper{"s" if len(starred) != 1 else ""}:\n\n' + '\n\n'.join(describe(r, i + 1) for i, r in enumerate(starred)), False
         if want:
             name = next((n for n in counts if n.lower() == want.lower()), None)
             if not name: return f'No list is called {quoted(want)}. The lists: ' + (', '.join(f'{quoted(n)} ({c})' for n, c in sorted(counts.items())) or 'none yet') + '.', False
             papers = [r for r in rows if name in lists_of(r)]
             return f'{quoted(name)} has {len(papers)} paper{"s" if len(papers) != 1 else ""}:\n\n' + '\n\n'.join(describe(r, i + 1) for i, r in enumerate(papers)), False
-        if not counts: return 'There are no lists yet. add_to_list makes one.', False
-        return 'The lists (papers in each):\n' + '\n'.join(f'- {quoted(n)}: {c}' for n, c in sorted(counts.items(), key=lambda x: x[0].lower())), False
+        star_line = f'\nStarred (not a list, the shortlist): {len(starred)} paper{"s" if len(starred) != 1 else ""}; list "Starred" shows them.'
+        if not counts: return 'There are no lists yet. add_to_list makes one.' + star_line, False
+        return 'The lists (papers in each):\n' + '\n'.join(f'- {quoted(n)}: {c}' for n, c in sorted(counts.items(), key=lambda x: x[0].lower())) + star_line, False
     if name in ('add_to_list', 'remove_from_list'):
         papers = [str(x) for x in args.get('papers') or [] if str(x).strip()] if isinstance(args.get('papers'), list) else []
         lst = str(args.get('list') or '').strip()
@@ -333,6 +365,15 @@ def call_tool(name, args):
         if status != 200: return out.get('error') or f'The bridge refused it ({status}).', True
         _lib['at'] = 0
         return lists_text(out, verb), False
+    if name == 'star_papers':
+        papers = [str(x) for x in args.get('papers') or [] if str(x).strip()] if isinstance(args.get('papers'), list) else []
+        if not papers: return 'Name the papers.', True
+        star = not args.get('unstar')
+        status, out = bridge_call('/papers/edit', {'papers': papers[:50], 'star': star, 'from': 'mcp'}, timeout=120)
+        if status == 404: raise BridgeError('The bridge on this Mac is an older version without stars: restart it with bash bridge/install_bridge.sh.')
+        if status != 200: return out.get('error') or f'The bridge refused it ({status}).', True
+        _lib['at'] = 0
+        return stars_text(out, star), False
     raise KeyError(name)
 
 
@@ -350,7 +391,7 @@ def handle(m):
             v = params.get('protocolVersion')
             result = {'protocolVersion': v if v in VERSIONS else VERSIONS[0], 'capabilities': {'tools': {'listChanged': False}},
                       'serverInfo': {'name': 'scholar-dashboard', 'title': 'Scholar Dashboard', 'version': '1.0.0'},
-                      'instructions': ('Adds papers to the user\'s Scholar Dashboard library, keeps their lists, and searches it. When '
+                      'instructions': ('Adds papers to the user\'s Scholar Dashboard library, keeps their lists and stars, and searches it. When '
                                        'the user asks to add, save or keep a paper ("add this to my library"), call add_paper once '
                                        'per paper, with lists if they name a list. To put papers already in the library into a list '
                                        '(a new name makes the list), use add_to_list with their ids from search_library. Adding '
