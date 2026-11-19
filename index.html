@@ -1329,6 +1329,12 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .cite-chip .cp-q { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .cite-pill { user-select: all; -webkit-user-select: all; }
 .cite-pill.sel { background: color-mix(in srgb, var(--hc) 34%, transparent); border-color: var(--hc); }
+/* math in the note editor: rendered until the caret reaches it, then its source (see MATH IN THE NOTE EDITOR) */
+.rp-notes-edit .math-pill { cursor: text; border-radius: 4px; padding: 1px 2px; margin: 0 1px; user-select: all; -webkit-user-select: all; transition: background 0.15s; }
+html:not(.no-hover) .rp-notes-edit .math-pill:hover { background: rgba(255,255,255,0.07); }
+.rp-notes-edit .math-pill.display { display: inline-block; width: 100%; box-sizing: border-box; margin: 0; padding: 2px 0; text-align: center; vertical-align: top; overflow-x: auto; overflow-y: hidden; }
+.rp-notes-edit .math-pill .katex-display { margin: 0; }
+.rp-notes-edit .math-pill.sel { background: rgba(138,164,240,0.24); }
 .cite-chip.gone { opacity: 0.6; cursor: default; }
 #chatRefreshBtn.spinning svg { animation: chat-spin 0.7s linear infinite; }
 @keyframes chat-spin { to { transform: rotate(360deg); } }
@@ -2758,6 +2764,7 @@ html.no-hover .sel-icon:not(.on):active, html.no-hover .ink-bar .ink-size:not(.o
         <dt><kbd>f</kbd></dt><dd>Full screen</dd>
         <dt class="owner-only"><kbd>&#8984;</kbd> <kbd>Enter</kbd></dt><dd class="owner-only">Save the note or comment you&rsquo;re writing</dd>
         <dt class="owner-only"><kbd>[[</kbd></dt><dd class="owner-only">In a note: cite one of your highlights</dd>
+        <dt class="owner-only"><kbd>$</kbd> <kbd>{</kbd></dt><dd class="owner-only">Over selected text in a note, comment or chat: wrap it in $&hellip;$ (again: $$&hellip;$$) or {&hellip;}</dd>
         <dt class="owner-only"><kbd>&larr;</kbd> <kbd>&rarr;</kbd></dt><dd class="owner-only">Adjusting a highlight: move the end that has focus by a word (<kbd>Esc</kbd> puts it back)</dd>
         <dt><kbd>Esc</kbd></dt><dd>Close a comment, clear the selection, leave full screen, close the reader</dd>
       </dl></section>
@@ -11212,7 +11219,7 @@ function noteDate(e) {
 }
 function noteEditorHTML() {
   const ph = _rnEditing && String(_rnEditing).startsWith('a:') ? 'Your comment on this passage\u2026' : 'Write a note\u2026  [[ cites a highlight';
-  return `<div class="rp-editor"><div class="rp-notes-edit ${_rnDraft.trim() ? '' : 'is-empty'}" id="rpNotes" data-editing="${escAttr(String(_rnEditing))}" contenteditable="true" role="textbox" aria-multiline="true" spellcheck="true" data-ph="${escAttr(ph)}" oninput="editorInput(this)" onkeyup="editorSaveRange(this)" onmouseup="editorSaveRange(this)" onblur="editorSaveRange(this)" onkeydown="editorKey(event)" onpaste="editorPaste(event)" onclick="editorClick(event)" ondrop="event.preventDefault()">${draftToEditorHTML(_rnDraft)}</div>
+  return `<div class="rp-editor"><div class="rp-notes-edit ${_rnDraft.trim() ? '' : 'is-empty'}" id="rpNotes" data-editing="${escAttr(String(_rnEditing))}" contenteditable="true" role="textbox" aria-multiline="true" spellcheck="true" data-ph="${escAttr(ph)}" oninput="editorInput(this)" onkeyup="editorSaveRange(this)" onmouseup="editorSaveRange(this)" onblur="editorSaveRange(this); editorMathSoon()" onkeydown="editorKey(event)" onmousedown="editorDown(event)" oncopy="editorCopy(event)" oncut="editorCopy(event, true)" onpaste="editorPaste(event)" onclick="editorClick(event)" ondrop="event.preventDefault()">${draftToEditorHTML(_rnDraft)}</div>
     <div class="rp-editor-foot"><span class="rp-hint">${MOD_KEY}\u21b5 save \u00b7 Esc cancel</span><span class="grow"></span><button class="ui-btn ui-btn-secondary ui-btn-sm" onmousedown="event.preventDefault()" onclick="cancelNoteEdit()">Cancel</button><button class="ui-btn ui-btn-primary ui-btn-sm" onmousedown="event.preventDefault()" onclick="saveNoteEdit()">Save</button></div></div>`;
 }
 function renderRnList(shown, total, anyFilter) {
@@ -11920,9 +11927,9 @@ function chatToolLabel(t) { return { WebSearch: 'Searching the web…', WebFetch
 /* Markdown with clickable citations [[p.N "exact words"]], and cards for notes/highlights Claude was asked to add */
 const QUOTE_RE = /\[\[p\.(\d+)\s+"([^"\]\n]*)"\]\]/g;
 function citeQuotePill(page, quote, tok, pageOnly) {
-  if (pageOnly) return `<button class="cite-chip quote-chip page-only" data-page="${escAttr(String(page))}" data-quote="${escAttr(quote)}" title="${escAttr('Page ' + page + ' \u00b7 click to go to it')}"><span class="cp-page">p.\u00a0${esc(String(page))}</span></button>`;
-  if (tok) return `<span class="cite-chip cite-pill quote-chip" contenteditable="false" draggable="false" data-tok="${escAttr(tok)}" data-page="${escAttr(String(page))}" data-quote="${escAttr(quote)}" title="${escAttr('\u201c' + shortQuote(quote, 300) + '\u201d \u00b7 click to go to it')}"><span class="cp-page">p.\u00a0${esc(String(page))}</span><span class="cp-q">${esc(shortQuote(quote, 48))}</span></span>`;
-  return `<button class="cite-chip quote-chip" data-page="${escAttr(String(page))}" data-quote="${escAttr(quote)}" title="${escAttr('“' + shortQuote(quote, 300) + '” · click to go to it')}"><span class="cp-page">p. ${esc(String(page))}</span><span class="cp-q">${esc(shortQuote(quote, 48))}</span></button>`;
+  if (pageOnly) return `<button class="cite-chip quote-chip page-only" data-page="${dataAttr(String(page))}" data-quote="${dataAttr(quote)}" title="${dataAttr('Page ' + page + ' \u00b7 click to go to it')}"><span class="cp-page">p.\u00a0${esc(String(page))}</span></button>`;
+  if (tok) return `<span class="cite-chip cite-pill quote-chip" contenteditable="false" draggable="false" data-tok="${dataAttr(tok)}" data-page="${dataAttr(String(page))}" data-quote="${dataAttr(quote)}" title="${dataAttr('\u201c' + shortQuote(quote, 300) + '\u201d \u00b7 click to go to it')}"><span class="cp-page">p.\u00a0${esc(String(page))}</span><span class="cp-q">${esc(shortQuote(quote, 48))}</span></span>`;
+  return `<button class="cite-chip quote-chip" data-page="${dataAttr(String(page))}" data-quote="${dataAttr(quote)}" title="${dataAttr('“' + shortQuote(quote, 300) + '” · click to go to it')}"><span class="cp-page">p. ${esc(String(page))}</span><span class="cp-q">${esc(shortQuote(quote, 48))}</span></button>`;
 }
 /* A citation that carries the sentence's own words ("It [[p.4 "is the observation function…"]]."): the pill would
    show only "p. 4 is the obs…" and the sentence can't be read. When the word before it can't end a sentence, the
@@ -12448,9 +12455,9 @@ function citePillHTML(tok, id, rest, notesObj, editable) {
   const page = a ? a.page : m && m[1], quote = a ? a.quote : m ? m[2] : '';
   const color = a && a.kind === 'hl' ? `style="--hc:${annoHc(a)}"` : '';   // comments and cited passages: the pill's navy default
   const inner = `${page ? `<span class="cp-page">p.\u00a0${esc(String(page))}</span>` : ''}<span class="cp-q">${esc(shortQuote(quote, 48)) || 'deleted passage'}</span>`;
-  const title = escAttr((a ? '' : 'This passage was deleted. ') + '\u201c' + shortQuote(quote, 300) + '\u201d' + (a ? ' \u00b7 click to go to it' : ''));
-  if (editable) return `<span class="cite-chip cite-pill ${a ? '' : 'gone'}" contenteditable="false" draggable="false" data-tok="${escAttr(tok)}" data-anno="${escAttr(id)}" ${color} title="${title}">${inner}</span>`;
-  return `<button class="cite-chip ${a ? '' : 'gone'}" ${a ? `data-anno="${escAttr(id)}"` : ''} ${color} title="${title}">${inner}</button>`;
+  const title = dataAttr((a ? '' : 'This passage was deleted. ') + '\u201c' + shortQuote(quote, 300) + '\u201d' + (a ? ' \u00b7 click to go to it' : ''));   // (dataAttr: escAttr is for JS inside an attribute, and would put a backslash before each apostrophe)
+  if (editable) return `<span class="cite-chip cite-pill ${a ? '' : 'gone'}" contenteditable="false" draggable="false" data-tok="${dataAttr(tok)}" data-anno="${dataAttr(id)}" ${color} title="${title}">${inner}</span>`;
+  return `<button class="cite-chip ${a ? '' : 'gone'}" ${a ? `data-anno="${dataAttr(id)}"` : ''} ${color} title="${title}">${inner}</button>`;
 }
 
 /* --- the note editor: text with citation pills; _rnDraft always holds the plain-text form --- */
@@ -12464,9 +12471,169 @@ function pillsHTML(text, notesObj, editable) {
   }
   return out + seg(text.slice(last));
 }
-function draftToEditorHTML(text, notesObj) {
-  const out = pillsHTML(String(text), notesObj, true);
+function draftToEditorHTML(text, notesObj, keep) {   // keep: [a, b], the caret or selection (math it touches stays as its source)
+  text = String(text);
+  const math = window.katex ? editorMath(text).filter(x => !keep || keep[0] > x.e || keep[1] < x.s) : [];
+  let out = '', last = 0;
+  math.forEach(x => { out += pillsHTML(text.slice(last, x.s), notesObj, true) + mathPillHTML(x, text.slice(x.s, x.e)); last = x.e; });
+  out += pillsHTML(text.slice(last), notesObj, true);
   return /\n$/.test(text) ? out + '<br>' : out;   // a trailing line break needs a second <br> to show
+}
+/* ===== MATH IN THE NOTE EDITOR =====
+   $...$ and $$...$$ show rendered while you write, except the one the caret is in or touching, which shows its
+   source to edit (click rendered math, or move the caret to it, to open it). Rendered math is a pill like a citation
+   (contenteditable=false, its source in data-tok), so the note's text is unchanged. The editor redraws itself from
+   its text when that set changes, and so keeps its own Undo (the browser's can't follow a redraw). Selected text
+   typed over with $ or { (or }) is wrapped in them instead, still selected, so $ again makes it display math. */
+const MATH_DISPLAY_RE = /\$\$([\s\S]+?)\$\$/g, MATH_INLINE_RE = /(^|[^\\$])\$([^\s$](?:[^$\n]*?[^\s$])?)\$/g;   // as notes are rendered (renderNotesMarkdown)
+function editorMath(text) {   // [{ s, e, tex, display }]: where the math is in a note's text (never across a citation)
+  const out = [];
+  const t = String(text).replace(ANY_CITE_RE, m => '\uFFFC'.repeat(m.length))
+    .replace(MATH_DISPLAY_RE, (m, tex, at) => { if (!m.includes('\uFFFC')) out.push({ s: at, e: at + m.length, tex, display: true }); return '\uFFFC'.repeat(m.length); });
+  for (const m of t.matchAll(MATH_INLINE_RE)) if (!m[2].includes('\uFFFC')) out.push({ s: m.index + m[1].length, e: m.index + m[0].length, tex: m[2], display: false });
+  return out.sort((a, b) => a.s - b.s);
+}
+const _mathHTML = new Map();
+function mathPillHTML(x, tok) {
+  const k = (x.display ? 'D' : 'I') + x.tex;
+  let h = _mathHTML.get(k);
+  if (h == null) { h = katex.renderToString(x.tex, { displayMode: x.display, throwOnError: false }); if (_mathHTML.size > 400) _mathHTML.clear(); _mathHTML.set(k, h); }
+  return `<span class="math-pill${x.display ? ' display' : ''}" contenteditable="false" draggable="false" data-tok="${dataAttr(tok)}" title="${dataAttr(tok)}">${h}</span>`;
+}
+/* Positions in the note's text <-> places in the editor (as editorText reads it: a pill is its whole token) */
+function edPos(ed, node, off) {
+  let n = 0, last = '', found = -1;
+  const walk = el => {
+    const kids = el.childNodes;
+    for (let i = 0; i <= kids.length; i++) {
+      if (el === node && i === off) { found = n; return true; }
+      if (i === kids.length) return false;
+      const c = kids[i];
+      if (c.nodeType === 3) { if (c === node) { found = n + Math.min(off, c.length); return true; } n += c.length; if (c.length) last = c.data[c.length - 1]; }
+      else if (c.nodeType !== 1) continue;
+      else if (c.dataset.tok) { n += c.dataset.tok.length; last = c.dataset.tok.slice(-1); if (c.contains(node)) { found = n; return true; } }   // (inside a pill: just after it)
+      else if (c.tagName === 'BR') { if (!(el === ed && i === kids.length - 1)) { n++; last = '\n'; } }
+      else { if (/^(DIV|P)$/.test(c.tagName) && n && last !== '\n') { n++; last = '\n'; } if (walk(c)) return true; }
+    }
+    return false;
+  };
+  walk(ed);
+  return found < 0 ? n : found;
+}
+function edPoint(ed, p) {
+  let n = 0, last = '', res = null;
+  const walk = el => {
+    const kids = el.childNodes;
+    for (let i = 0; i < kids.length; i++) {
+      const c = kids[i];
+      if (c.nodeType === 3) { if (p <= n + c.length) { res = [c, p - n]; return true; } n += c.length; if (c.length) last = c.data[c.length - 1]; }
+      else if (c.nodeType !== 1) continue;
+      else if (c.dataset.tok) { if (p <= n) { res = [el, i]; return true; } n += c.dataset.tok.length; last = c.dataset.tok.slice(-1); if (p < n) { res = [el, i + 1]; return true; } }
+      else if (c.tagName === 'BR') { if (el === ed && i === kids.length - 1) continue; if (p <= n) { res = [el, i]; return true; } n++; last = '\n'; }
+      else { if (/^(DIV|P)$/.test(c.tagName) && n && last !== '\n') { if (p <= n) { res = [el, i]; return true; } n++; last = '\n'; } if (walk(c)) return true; }
+    }
+    return false;
+  };
+  if (walk(ed)) return res;
+  const k = ed.childNodes.length;
+  return [ed, k && ed.lastChild.nodeName === 'BR' && /\n$/.test(editorText(ed)) ? k - 1 : k];   // the end (before the <br> that holds an empty last line open)
+}
+function edSelection(ed) {   // the selection as [start, end] in the text, or null when it isn't in the editor
+  const s = getSelection();
+  if (!s.rangeCount || !ed.contains(s.anchorNode) || !ed.contains(s.focusNode)) return null;
+  const r = s.getRangeAt(0);
+  return [edPos(ed, r.startContainer, r.startOffset), edPos(ed, r.endContainer, r.endOffset)];
+}
+/* Redraw the editor from its text, with the selection [a, b] (or, not editing, where the caret was saved) kept in place */
+function editorRedraw(ed, text, sel) {
+  const saved = !sel && _rnRange && ed.contains(_rnRange.startContainer) ? [edPos(ed, _rnRange.startContainer, _rnRange.startOffset), edPos(ed, _rnRange.endContainer, _rnRange.endOffset)] : null;
+  const top = ed.scrollTop;
+  ed.innerHTML = draftToEditorHTML(text, null, sel);
+  ed.scrollTop = top;
+  const range = ([a, b]) => { const r = document.createRange(); r.setStart(...edPoint(ed, Math.min(a, text.length))); r.setEnd(...edPoint(ed, Math.min(b, text.length))); return r; };
+  if (sel) { const r = range(sel), s = getSelection(); s.removeAllRanges(); s.addRange(r); _rnRange = outsidePill(r.cloneRange()); }
+  else if (saved) _rnRange = outsidePill(range(saved));
+}
+let _edFrame = 0, _edComposing = false, _edApplying = false;
+function editorMathSoon() { cancelAnimationFrame(_edFrame); _edFrame = requestAnimationFrame(editorMathCheck); }
+function editorMathCheck() {
+  const ed = document.getElementById('rpNotes');
+  if (!ed || _edComposing) return;
+  if (!window.katex) { if (_rnDraft.includes('$')) loadMdLibs().then(editorMathSoon, () => {}); return; }   // (offline: the source stays)
+  const sel = document.activeElement === ed ? edSelection(ed) : null;
+  if (sel && sel[0] !== sel[1]) return;   // selecting: left as it is until the selection is put away
+  const text = editorText(ed), at = sel && sel[0];
+  const want = editorMath(text).filter(x => at == null || at < x.s || at > x.e).map(x => x.s + ':' + text.slice(x.s, x.e)).join('|');
+  const have = [...ed.querySelectorAll('.math-pill')].map(p => edPos(ed, p.parentNode, [...p.parentNode.childNodes].indexOf(p)) + ':' + p.dataset.tok).join('|');
+  if (want === have) return;
+  editorRedraw(ed, text, sel);
+  keepRoomBelow(ed);
+  if (_citeCtx) citeInput(ed);
+}
+document.addEventListener('compositionstart', e => { if (e.target.id === 'rpNotes') _edComposing = true; });
+document.addEventListener('compositionend', e => { if (e.target.id === 'rpNotes') { _edComposing = false; editorMathSoon(); } });
+/* rendered math, clicked or tapped: its source, the caret just inside its closing $ */
+function editorDown(e) {
+  const mp = e.target.closest && e.target.closest('.math-pill');
+  if (!mp || e.button > 0) return;
+  e.preventDefault();
+  const ed = e.currentTarget, tok = mp.dataset.tok, at = edPos(ed, mp.parentNode, [...mp.parentNode.childNodes].indexOf(mp)) + tok.length - (tok.startsWith('$$') ? 2 : 1);
+  ed.focus({ preventScroll: true });
+  editorRedraw(ed, editorText(ed), [at, at]);
+  keepRoomBelow(ed);
+}
+/* $, { or } typed over a selection wraps it */
+const WRAP_PAIRS = { '$': '$$', '{': '{}', '}': '{}' };
+function editorWrap(ed, pair) {
+  const sel = edSelection(ed);
+  if (!sel || sel[0] >= sel[1]) return false;
+  const text = editorText(ed), [a, b] = sel;
+  editorRedraw(ed, text.slice(0, a) + pair[0] + text.slice(a, b) + pair[1] + text.slice(b), [a + 1, b + 1]);
+  editorSync(ed); closeCiteDD(); keepRoomBelow(ed);
+  return true;
+}
+document.addEventListener('beforeinput', e => {
+  const t = e.target, pair = e.inputType === 'insertText' && !e.isComposing && WRAP_PAIRS[e.data];
+  if (!t || !t.id) return;
+  if (t.id === 'rpNotes' && /^history(Undo|Redo)$/.test(e.inputType)) { e.preventDefault(); edUndo(t, e.inputType === 'historyRedo'); return; }
+  if (!pair) return;
+  if (t.id === 'rpNotes') { if (editorWrap(t, pair)) e.preventDefault(); }
+  else if ((t.id === 'acNote' || t.id === 'chatInput') && t.selectionStart < t.selectionEnd) {   // (plain text boxes: the browser's Undo takes it back)
+    e.preventDefault();
+    const a = t.selectionStart, b = t.selectionEnd;
+    document.execCommand('insertText', false, pair[0] + t.value.slice(a, b) + pair[1]);
+    t.setSelectionRange(a + 1, b + 1);
+  }
+});
+/* The editor's Undo: an entry is the text and the selection after an edit. Typing is one step a word: a space or a
+   line break typed after a word begins the next step, and a pause, a deletion or anything bigger than a key ends one. */
+function edRecord(ed, before, after) {
+  const h = ed._undo || (ed._undo = { list: [{ text: before, sel: [before.length, before.length] }], i: 0, t: 0, typing: 0, ws: false });
+  const sel = edSelection(ed) || [after.length, after.length], d = after.length - before.length, now = performance.now();
+  let p = 0; while (p < before.length && p < after.length && before[p] === after[p]) p++;
+  const typing = Math.abs(d) === 1 ? d : 0, ws = !!typing && /\s/.test(d > 0 ? after[p] : before[p]);
+  h.list.length = h.i + 1;   // an edit after Undo: what was undone can't come back
+  if (typing && typing === h.typing && now - h.t < 1500 && !(ws && !h.ws)) h.list[h.i] = { text: after, sel };
+  else { h.list.push({ text: after, sel }); if (h.list.length > 300) h.list.shift(); h.i = h.list.length - 1; }
+  h.t = now; h.typing = typing; h.ws = ws;
+}
+function edUndo(ed, redo) {
+  const h = ed._undo;
+  if (!h || (redo ? h.i >= h.list.length - 1 : h.i <= 0)) return;
+  h.i += redo ? 1 : -1; h.typing = 0;
+  const to = h.list[h.i];
+  _edApplying = true;
+  try { editorRedraw(ed, to.text, to.sel); editorSync(ed); } finally { _edApplying = false; }
+  closeCiteDD(); keepRoomBelow(ed);
+}
+/* Copied or cut, a selection is its text: math as its source and citations as their tokens (pasted back into a note
+   they are pills again), not what the pills show */
+function editorCopy(e, cut) {
+  const ed = e.currentTarget, sel = edSelection(ed);
+  if (!sel || sel[0] === sel[1] || !e.clipboardData) return;
+  e.preventDefault();
+  e.clipboardData.setData('text/plain', editorText(ed).slice(sel[0], sel[1]));
+  if (cut) document.execCommand('delete');
 }
 function editorText(ed) {
   let s = '';
@@ -12487,7 +12654,7 @@ let _rnRange = null;   // where the caret last was in the editor, so a citation 
 /* A caret never rests inside a pill (clicking one selects it): move it to just after the pill */
 function outsidePill(r) {
   const el = n => (n.nodeType === 1 ? n : n.parentElement);
-  const p = el(r.startContainer) && el(r.startContainer).closest('.cite-pill') || el(r.endContainer) && el(r.endContainer).closest('.cite-pill');
+  const p = el(r.startContainer) && el(r.startContainer).closest('.cite-pill, .math-pill') || el(r.endContainer) && el(r.endContainer).closest('.cite-pill, .math-pill');
   if (p) { r = r.cloneRange(); r.setStartAfter(p); r.collapse(true); }
   return r;
 }
@@ -12496,21 +12663,26 @@ document.addEventListener('selectionchange', () => {
   if (!ed || !sel.rangeCount) return;
   const r = sel.getRangeAt(0);
   if (ed.contains(r.startContainer)) _rnRange = outsidePill(r.cloneRange());
-  ed.querySelectorAll('.cite-pill').forEach(p => p.classList.toggle('sel', !r.collapsed && r.intersectsNode(p)));
+  ed.querySelectorAll('.cite-pill, .math-pill').forEach(p => p.classList.toggle('sel', !r.collapsed && r.intersectsNode(p)));
+  editorMathSoon();
 });
 function editorSaveRange(ed) {
   const sel = getSelection();
   if (sel.rangeCount && ed.contains(sel.getRangeAt(0).startContainer)) _rnRange = outsidePill(sel.getRangeAt(0).cloneRange());
 }
 function editorSync(ed) {
+  const before = _rnDraft;
   _rnDraft = editorText(ed);
+  if (!_edApplying && before !== _rnDraft) edRecord(ed, before, _rnDraft);
   ed.classList.toggle('is-empty', !_rnDraft.trim() && !ed.querySelector('.cite-pill'));
   draftChanged();
 }
-function editorInput(ed) { editorSaveRange(ed); editorSync(ed); citeInput(ed); keepRoomBelow(ed); }
+function editorInput(ed) { editorSaveRange(ed); editorSync(ed); citeInput(ed); keepRoomBelow(ed); editorMathSoon(); }
 function editorKey(e) {
   const ed = e.currentTarget;
   if (_citeCtx && document.getElementById('citeDD').classList.contains('open')) { citeKey(e); if (e.defaultPrevented) return; }
+  const k = e.key.toLowerCase();
+  if ((e.metaKey || e.ctrlKey) && !e.altKey && (k === 'z' || (k === 'y' && e.ctrlKey))) { e.preventDefault(); edUndo(ed, k === 'y' || e.shiftKey); return; }   // its own Undo (see MATH IN THE NOTE EDITOR)
   if (e.key === 'Enter' && !(e.metaKey || e.ctrlKey)) { e.preventDefault(); document.execCommand('insertLineBreak'); return; }   // a plain line break, not a <div>
   if ((e.key === 'Backspace' || e.key === 'Delete') && !e.metaKey && !e.ctrlKey && !e.altKey && pillDelete(ed, e.key === 'Delete', true)) { e.preventDefault(); return; }
   noteEditorKey(e);
@@ -12553,7 +12725,7 @@ function editorPaste(e) {
   if (!t) return;
   const ed = e.currentTarget;
   document.execCommand('insertText', false, t);
-  if (CITE_RE.test(t)) { CITE_RE.lastIndex = 0; editorSync(ed); ed.innerHTML = draftToEditorHTML(_rnDraft); editorCaretEnd(ed); editorSync(ed); }   // pasted citations become pills
+  if (/\[\[(cite:|p\.\d)/.test(t)) { editorSync(ed); editorRedraw(ed, _rnDraft, edSelection(ed)); }   // pasted citations become pills, the caret where the paste ended
 }
 function editorClick(e) {
   const p = e.target.closest('.cite-pill');
