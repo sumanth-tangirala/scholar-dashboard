@@ -1266,6 +1266,7 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .rp-gnote-body { font-size: 14px; line-height: 1.6; color: var(--text-secondary); }
 .rp-gnote.fresh { animation: item-in 0.5s ease-out; }
 .rp-editor { margin-bottom: 10px; animation: ui-pop 0.16s ease-out; }
+.rp-editor.kept { animation: none; }   /* (see keepLiveEditor) */
 .rp-editor-foot { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
 .rp-editor-foot .grow { flex: 1; }
 .rp-editor-foot .rp-hint { margin-top: 0; }
@@ -1286,7 +1287,12 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .rp-notes-view:empty::before { content: 'Click to write notes about this paper. Markdown and $math$ work; type [[ to cite a highlight.'; color: var(--text-muted); font-style: italic; font-size: 13px; }
 .rp-hint { font-size: 11.5px; color: var(--text-muted); margin-top: 6px; }
 .md p { margin: 0 0 0.7em; } .md p:last-child { margin-bottom: 0; }
-.md ul, .md ol { margin: 0 0 0.7em 1.2em; } .md li { margin: 0.15em 0; }
+@counter-style paren-decimal { system: extends decimal; suffix: ") "; }
+@counter-style paren-lower-alpha { system: extends lower-alpha; suffix: ") "; }
+@counter-style paren-upper-alpha { system: extends upper-alpha; suffix: ") "; }
+.md ol.la { list-style-type: lower-alpha; } .md ol.ua { list-style-type: upper-alpha; }   /* (classes: [type] is matched ignoring case) */
+.md ol.paren { list-style-type: paren-decimal; } .md ol.paren.la { list-style-type: paren-lower-alpha; } .md ol.paren.ua { list-style-type: paren-upper-alpha; }
+.md ul, .md ol { margin: 0 0 0.7em 1.2em; } .md li { margin: 0.15em 0; } .md li > ul, .md li > ol { margin: 0.15em 0 0.15em 1.2em; }
 .md h1, .md h2, .md h3 { font-size: 15px; font-weight: 600; color: var(--text); margin: 0.9em 0 0.4em; }
 .md code { font-size: 12.5px; background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 4px; }
 .md pre { background: rgba(255,255,255,0.05); padding: 8px 10px; border-radius: 6px; overflow: auto; }
@@ -1335,6 +1341,20 @@ html:not(.no-hover) .rp-notes-edit .math-pill:hover { background: rgba(255,255,2
 .rp-notes-edit .math-pill.display { display: inline-block; width: 100%; box-sizing: border-box; margin: 0; padding: 2px 0; text-align: center; vertical-align: top; overflow-x: auto; overflow-y: hidden; }
 .rp-notes-edit .math-pill .katex-display { margin: 0; }
 .rp-notes-edit .math-pill.sel { background: rgba(138,164,240,0.24); }
+/* list items in the editor: the marker hangs in its own column, the item's lines beside it, each level one column in */
+.rp-notes-edit .ln.li { padding-left: calc((var(--d, 0) + 1) * 1.6em); text-indent: -1.6em; }
+.rp-notes-edit .li-mark { display: inline-block; min-width: 1.6em; padding-right: 0.45em; box-sizing: border-box; text-indent: 0; text-align: right; color: var(--text-secondary); font-variant-numeric: tabular-nums; user-select: all; -webkit-user-select: all; }
+/* bullets drawn, not typed: the glyphs \u2022 \u25e6 \u25aa come in different sizes; these match the saved note's disc, circle, square */
+.rp-notes-edit .li-mark.b0, .rp-notes-edit .li-mark.b1, .rp-notes-edit .li-mark.b2 { position: relative; color: transparent; }
+.rp-notes-edit .li-mark.b0::after, .rp-notes-edit .li-mark.b1::after, .rp-notes-edit .li-mark.b2::after { content: ''; position: absolute; top: 50%; left: calc(50% - 0.2em); width: 5px; height: 5px; margin: -2px 0 0 -3px; box-sizing: border-box; border-radius: 50%; background: var(--text-secondary); }
+.rp-notes-edit .li-mark.b1::after { background: none; border: 1.2px solid var(--text-secondary); }
+.rp-notes-edit .li-mark.b2::after { border-radius: 1px; }
+.rp-notes-edit .li-mark.sel { background: rgba(138,164,240,0.24); border-radius: 3px; }
+.rp-list-tools { display: none; gap: 4px; }
+.rp-editor.in-list .rp-list-tools { display: inline-flex; }
+.rp-list-tools .ui-btn { width: 32px; padding: 0; }
+.rp-list-tools .ui-btn[aria-disabled="true"] { opacity: 0.4; cursor: default; }
+.rp-list-tools svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
 .cite-chip.gone { opacity: 0.6; cursor: default; }
 #chatRefreshBtn.spinning svg { animation: chat-spin 0.7s linear infinite; }
 @keyframes chat-spin { to { transform: rotate(360deg); } }
@@ -2764,7 +2784,8 @@ html.no-hover .sel-icon:not(.on):active, html.no-hover .ink-bar .ink-size:not(.o
         <dt><kbd>f</kbd></dt><dd>Full screen</dd>
         <dt class="owner-only"><kbd>&#8984;</kbd> <kbd>Enter</kbd></dt><dd class="owner-only">Save the note or comment you&rsquo;re writing</dd>
         <dt class="owner-only"><kbd>[[</kbd></dt><dd class="owner-only">In a note: cite one of your highlights</dd>
-        <dt class="owner-only"><kbd>Enter</kbd></dt><dd class="owner-only">On a list item (- or 1.): the next item; on an empty one, the list ends (in chat: <kbd>Shift</kbd> <kbd>Enter</kbd>)</dd>
+        <dt class="owner-only"><kbd>Enter</kbd></dt><dd class="owner-only">On a list item (-, 1., a. or a)): the next item; on an empty one, out a level, or the list ends (in chat: <kbd>Shift</kbd> <kbd>Enter</kbd>)</dd>
+        <dt class="owner-only"><kbd>Tab</kbd> <kbd>Shift</kbd> <kbd>Tab</kbd></dt><dd class="owner-only">On a list item: nest it under the item above, or move it back out</dd>
         <dt class="owner-only"><kbd>$</kbd> <kbd>{</kbd></dt><dd class="owner-only">Over selected text in a note, comment or chat: wrap it in $&hellip;$ (again: $$&hellip;$$) or {&hellip;}</dd>
         <dt class="owner-only"><kbd>&larr;</kbd> <kbd>&rarr;</kbd></dt><dd class="owner-only">Adjusting a highlight: move the end that has focus by a word (<kbd>Esc</kbd> puts it back)</dd>
         <dt><kbd>Esc</kbd></dt><dd>Close a comment, clear the selection, leave full screen, close the reader</dd>
@@ -11126,10 +11147,13 @@ function keepLiveEditor(rebuild) {
   const focused = !!keep && document.activeElement === keep;
   const r = focused && getSelection().rangeCount ? getSelection().getRangeAt(0) : null;
   const pos = r && { sc: r.startContainer, so: r.startOffset, ec: r.endContainer, eo: r.endOffset };   // plain values: a Range would collapse when the node is detached
+  const box = keep && keep.closest('.rp-editor');
   rebuild();
   if (!keep) return false;
-  const fresh = document.getElementById('rpNotes');
-  if (fresh && fresh !== keep) fresh.replaceWith(keep);
+  const fresh = document.getElementById('rpNotes'), freshBox = fresh && fresh.closest('.rp-editor');
+  // the editor goes back whole, box and all (its list buttons as they were), and doesn't pop in again: the panel
+  // redraws around a note being written whenever a card closes or a highlight is made
+  if (fresh && fresh !== keep) { if (box && freshBox) { box.classList.add('kept'); freshBox.replaceWith(box); } else fresh.replaceWith(keep); }
   if (focused) {
     keep.focus({ preventScroll: true });
     if (pos) { try { const nr = document.createRange(); nr.setStart(pos.sc, pos.so); nr.setEnd(pos.ec, pos.eo); const s = getSelection(); s.removeAllRanges(); s.addRange(nr); } catch (e) {} }
@@ -11221,7 +11245,7 @@ function noteDate(e) {
 function noteEditorHTML() {
   const ph = _rnEditing && String(_rnEditing).startsWith('a:') ? 'Your comment on this passage\u2026' : 'Write a note\u2026  [[ cites a highlight';
   return `<div class="rp-editor"><div class="rp-notes-edit ${_rnDraft.trim() ? '' : 'is-empty'}" id="rpNotes" data-editing="${escAttr(String(_rnEditing))}" contenteditable="true" role="textbox" aria-multiline="true" spellcheck="true" data-ph="${escAttr(ph)}" oninput="editorInput(this)" onkeyup="editorSaveRange(this)" onmouseup="editorSaveRange(this)" onblur="editorSaveRange(this); editorMathSoon()" onkeydown="editorKey(event)" onmousedown="editorDown(event)" oncopy="editorCopy(event)" oncut="editorCopy(event, true)" onpaste="editorPaste(event)" onclick="editorClick(event)" ondrop="event.preventDefault()">${draftToEditorHTML(_rnDraft)}</div>
-    <div class="rp-editor-foot"><span class="rp-hint">${MOD_KEY}\u21b5 save \u00b7 Esc cancel</span><span class="grow"></span><button class="ui-btn ui-btn-secondary ui-btn-sm" onmousedown="event.preventDefault()" onclick="cancelNoteEdit()">Cancel</button><button class="ui-btn ui-btn-primary ui-btn-sm" onmousedown="event.preventDefault()" onclick="saveNoteEdit()">Save</button></div></div>`;
+    <div class="rp-editor-foot"><span class="rp-hint">${MOD_KEY}\u21b5 save \u00b7 Esc cancel</span><span class="grow"></span><span class="rp-list-tools" role="group" aria-label="List item"><button class="ui-btn ui-btn-secondary ui-btn-sm" data-dir="-1" onmousedown="event.preventDefault()" onclick="if (this.getAttribute('aria-disabled') !== 'true') editorShiftList(-1)" title="Move the item out (Shift+Tab)" aria-label="Move the item out">${ICON_OUTDENT}</button><button class="ui-btn ui-btn-secondary ui-btn-sm" data-dir="1" onmousedown="event.preventDefault()" onclick="if (this.getAttribute('aria-disabled') !== 'true') editorShiftList(1)" title="Nest it under the item above (Tab)" aria-label="Nest the item">${ICON_INDENT}</button></span><button class="ui-btn ui-btn-secondary ui-btn-sm" onmousedown="event.preventDefault()" onclick="cancelNoteEdit()">Cancel</button><button class="ui-btn ui-btn-primary ui-btn-sm" onmousedown="event.preventDefault()" onclick="saveNoteEdit()">Save</button></div></div>`;
 }
 function renderRnList(shown, total, anyFilter) {
   const list = document.getElementById('rpList');
@@ -11991,9 +12015,9 @@ async function renderChatMarkdown(el, text, msgIdx) {
   }).replace(QUOTE_RE, quoteReplacer(slot))
     .replace(/\$\$([\s\S]+?)\$\$/g, (m, tex) => slot(katex.renderToString(tex, { displayMode: true, throwOnError: false })))
     .replace(/(^|[^\\$])\$([^\s$](?:[^$\n]*?[^\s$])?)\$/g, (m, pre, tex) => pre + slot(katex.renderToString(tex, { throwOnError: false })));
-  let html = DOMPurify.sanitize(marked.parse(src, { breaks: true, gfm: true }));
+  let html = DOMPurify.sanitize(marked.parse(mdAlphaIn(src), { breaks: true, gfm: true }));
   html = html.replace(/@@SLOT(\d+)@@/g, (m, i) => slots[+i]);
-  const tmp = document.createElement('div'); tmp.innerHTML = html; mdTables(tmp);
+  const tmp = document.createElement('div'); tmp.innerHTML = html; mdTables(tmp); mdAlphaOut(tmp);
   const blocks = chatBlocks(text);
   tmp.querySelectorAll('[data-card-note]').forEach(n => { const b = blocks[+n.dataset.cardNote]; n.dataset.cardSrc = b ? b.body.length + ':' + b.body.slice(-40) : ''; });
   morphChat(el, tmp.innerHTML);
@@ -12472,13 +12496,26 @@ function pillsHTML(text, notesObj, editable) {
   }
   return out + seg(text.slice(last));
 }
-function draftToEditorHTML(text, notesObj, keep) {   // keep: [a, b], the caret or selection (math it touches stays as its source)
+/* The editor draws a note as one <div> a line (so a list item that wraps keeps its hanging indent): a list item's
+   marker is a pill showing its bullet, number or letter (see LISTS); math is rendered except what keep, the caret or
+   selection [a, b], touches (see MATH IN THE NOTE EDITOR); citations are pills. Its text never changes. */
+function draftToEditorHTML(text, notesObj, keep) {
   text = String(text);
+  if (!text) return '';
   const math = window.katex ? editorMath(text).filter(x => !keep || keep[0] > x.e || keep[1] < x.s) : [];
-  let out = '', last = 0;
-  math.forEach(x => { out += pillsHTML(text.slice(last, x.s), notesObj, true) + mathPillHTML(x, text.slice(x.s, x.e)); last = x.e; });
-  out += pillsHTML(text.slice(last), notesObj, true);
-  return /\n$/.test(text) ? out + '<br>' : out;   // a trailing line break needs a second <br> to show
+  const lists = new Map(listInfo(text).filter(l => l.list).map(l => [l.s, l]));
+  const inMath = p => math.some(x => x.s < p && p < x.e);
+  const line = (a, b) => {
+    const l = !inMath(a) && lists.get(a);
+    let html = '', p = a;
+    if (l) { html = `<span class="li-mark${l.kind === 'bullet' ? ' b' + l.depth % 3 : ''}" contenteditable="false" draggable="false" data-tok="${dataAttr(l.tok)}" data-d="${l.depth}">${esc(l.label)}</span>`; p = a + l.tok.length; }
+    for (const x of math) if (x.s >= p && x.e <= b) { html += pillsHTML(text.slice(p, x.s), notesObj, true) + mathPillHTML(x, text.slice(x.s, x.e)); p = x.e; }
+    html += pillsHTML(text.slice(p, b), notesObj, true);
+    return l ? `<div class="ln li" data-k="${l.kind}" style="--d:${l.depth}">${html}</div>` : `<div class="ln">${html || '<br>'}</div>`;
+  };
+  let out = '', s = 0;
+  for (let i = 0; i <= text.length; i++) if (i === text.length || (text[i] === '\n' && !inMath(i))) { out += line(s, i); s = i + 1; }
+  return out;
 }
 /* ===== MATH IN THE NOTE EDITOR =====
    $...$ and $$...$$ show rendered while you write, except the one the caret is in or touching, which shows its
@@ -12501,43 +12538,72 @@ function mathPillHTML(x, tok) {
   if (h == null) { h = katex.renderToString(x.tex, { displayMode: x.display, throwOnError: false }); if (_mathHTML.size > 400) _mathHTML.clear(); _mathHTML.set(k, h); }
   return `<span class="math-pill${x.display ? ' display' : ''}" contenteditable="false" draggable="false" data-tok="${dataAttr(tok)}" title="${dataAttr(tok)}">${h}</span>`;
 }
-/* Positions in the note's text <-> places in the editor (as editorText reads it: a pill is its whole token) */
-function edPos(ed, node, off) {
-  let n = 0, last = '', found = -1;
+/* The editor's text read from its DOM as pieces, each knowing where it is in both, so a place in one maps to a place
+   in the other. Once drawn, lines are <div>s, but typing can leave text and <br>s outside them: a line starts at each
+   block and after one; a <br> or a typed line break that ends a block (or the editor) only holds its last line open. */
+const ED_BLOCK = /^(DIV|P|LI|UL|OL|PRE|BLOCKQUOTE|H[1-6])$/;
+function edPieces(ed) {
+  const ps = [];
+  let len = 0, atStart = true, needBreak = false, lineEnd = [ed, 0];
+  const push = p => { p.at = len; len += p.len; ps.push(p); };
+  const sep = anchor => push({ kind: 'sep', len: 1, str: '\n', anchor, lineEnd });
+  const idx = n => Array.prototype.indexOf.call(n.parentNode.childNodes, n);
   const walk = el => {
-    const kids = el.childNodes;
-    for (let i = 0; i <= kids.length; i++) {
-      if (el === node && i === off) { found = n; return true; }
-      if (i === kids.length) return false;
-      const c = kids[i];
-      if (c.nodeType === 3) { if (c === node) { found = n + Math.min(off, c.length); return true; } n += c.length; if (c.length) last = c.data[c.length - 1]; }
-      else if (c.nodeType !== 1) continue;
-      else if (c.dataset.tok) { n += c.dataset.tok.length; last = c.dataset.tok.slice(-1); if (c.contains(node)) { found = n; return true; } }   // (inside a pill: just after it)
-      else if (c.tagName === 'BR') { if (!(el === ed && i === kids.length - 1)) { n++; last = '\n'; } }
-      else { if (/^(DIV|P)$/.test(c.tagName) && n && last !== '\n') { n++; last = '\n'; } if (walk(c)) return true; }
+    let last = el.lastChild;
+    while (last && last.nodeType === 3 && !last.data) last = last.previousSibling;
+    const holds = el === ed || ED_BLOCK.test(el.tagName);   // a block: its last <br> or line break only holds the line open
+    for (const c of [...el.childNodes]) {
+      if (c.nodeType === 1 && ED_BLOCK.test(c.tagName) && !c.dataset.tok) {
+        if (!atStart) sep([el, idx(c)]);
+        atStart = true; needBreak = false; lineEnd = [c, 0];
+        walk(c);
+        atStart = false; needBreak = true;
+        continue;
+      }
+      if (c.nodeType === 3) {
+        if (!c.data) continue;
+        const n = c.data.length - (holds && c === last && /\n$/.test(c.data) ? 1 : 0);
+        if (needBreak) { sep([el, idx(c)]); needBreak = false; }
+        if (n) push({ kind: 'text', node: c, len: n, str: c.data.slice(0, n) });
+        lineEnd = [c, n]; atStart = /\n$/.test(c.data.slice(0, n)) || (!n && atStart);
+      } else if (c.nodeType !== 1) continue;
+      else if (c.dataset.tok) {
+        if (needBreak) { sep([el, idx(c)]); needBreak = false; }
+        push({ kind: 'tok', el: c, len: c.dataset.tok.length, str: c.dataset.tok });
+        lineEnd = [el, idx(c) + 1]; atStart = false;
+      } else if (c.tagName === 'BR') {
+        if (holds && c === last) { if (needBreak) { sep([el, idx(c)]); needBreak = false; } lineEnd = [el, idx(c)]; continue; }
+        if (needBreak) { sep([el, idx(c)]); needBreak = false; }
+        push({ kind: 'br', el: c, len: 1, str: '\n' });
+        lineEnd = [el, idx(c) + 1]; atStart = true;
+      } else walk(c);   // an inline wrapper
     }
-    return false;
   };
   walk(ed);
-  return Math.min(found < 0 ? n : found, editorText(ed).length);   // (past a line break that only holds the last line open)
+  return { ps, len, end: lineEnd };
 }
-function edPoint(ed, p) {
-  let n = 0, last = '', res = null;
-  const walk = el => {
-    const kids = el.childNodes;
-    for (let i = 0; i < kids.length; i++) {
-      const c = kids[i];
-      if (c.nodeType === 3) { if (p <= n + c.length) { res = [c, p - n]; return true; } n += c.length; if (c.length) last = c.data[c.length - 1]; }
-      else if (c.nodeType !== 1) continue;
-      else if (c.dataset.tok) { if (p <= n) { res = [el, i]; return true; } n += c.dataset.tok.length; last = c.dataset.tok.slice(-1); if (p < n) { res = [el, i + 1]; return true; } }
-      else if (c.tagName === 'BR') { if (el === ed && i === kids.length - 1) continue; if (p <= n) { res = [el, i]; return true; } n++; last = '\n'; }
-      else { if (/^(DIV|P)$/.test(c.tagName) && n && last !== '\n') { if (p <= n) { res = [el, i]; return true; } n++; last = '\n'; } if (walk(c)) return true; }
-    }
-    return false;
-  };
-  if (walk(ed)) return res;
-  const k = ed.childNodes.length;
-  return [ed, k && ed.lastChild.nodeName === 'BR' && /\n$/.test(editorText(ed)) ? k - 1 : k];   // the end (before the <br> that holds an empty last line open)
+function edPos(ed, node, off) {   // the place in the text of a place in the editor
+  const { ps, len } = edPieces(ed);
+  for (const p of ps) if (p.kind === 'text' && p.node === node) return p.at + Math.min(off, p.len);
+  for (const p of ps) if (p.kind === 'tok' && p.el.contains(node)) return p.at + p.len;   // inside a pill: just after it
+  const r = document.createRange();
+  try { r.setStart(node, off); } catch (e) { return len; }
+  for (const p of ps) {
+    const a = p.kind === 'text' ? [p.node, 0] : p.kind === 'sep' ? p.anchor : [p.el.parentNode, Array.prototype.indexOf.call(p.el.parentNode.childNodes, p.el)];
+    if (r.comparePoint(a[0], a[1]) >= 0) return p.at;   // the first piece that starts at or after it
+  }
+  return len;
+}
+function edPoint(ed, at) {   // the place in the editor of a place in the text
+  const { ps, end } = edPieces(ed);
+  const before = el => [el.parentNode, Array.prototype.indexOf.call(el.parentNode.childNodes, el)];
+  for (const p of ps) {
+    if (p.kind === 'text') { if (at <= p.at + p.len) return [p.node, Math.max(0, at - p.at)]; }
+    else if (p.kind === 'tok') { if (at <= p.at) return before(p.el); if (at < p.at + p.len) { const b = before(p.el); return [b[0], b[1] + 1]; } }
+    else if (p.kind === 'br') { if (at <= p.at) return before(p.el); }
+    else if (at <= p.at) return p.lineEnd;
+  }
+  return end;
 }
 function edSelection(ed) {   // the selection as [start, end] in the text, or null when it isn't in the editor
   const s = getSelection();
@@ -12546,26 +12612,41 @@ function edSelection(ed) {   // the selection as [start, end] in the text, or nu
   return [edPos(ed, r.startContainer, r.startOffset), edPos(ed, r.endContainer, r.endOffset)];
 }
 /* Redraw the editor from its text, with the selection [a, b] (or, not editing, where the caret was saved) kept in place */
-function editorRedraw(ed, text, sel) {
+function editorRedraw(ed, text, sel, reveal) {
   const saved = !sel && _rnRange && ed.contains(_rnRange.startContainer) ? [edPos(ed, _rnRange.startContainer, _rnRange.startOffset), edPos(ed, _rnRange.endContainer, _rnRange.endOffset)] : null;
   const top = ed.scrollTop;
   ed.innerHTML = draftToEditorHTML(text, null, sel);
   ed.scrollTop = top;
   const range = ([a, b]) => { const r = document.createRange(); r.setStart(...edPoint(ed, Math.min(a, text.length))); r.setEnd(...edPoint(ed, Math.min(b, text.length))); return r; };
-  if (sel) { const r = range(sel), s = getSelection(); s.removeAllRanges(); s.addRange(r); _rnRange = outsidePill(r.cloneRange()); }
+  if (sel) { const r = range(sel), s = getSelection(); s.removeAllRanges(); s.addRange(r); _rnRange = outsidePill(r.cloneRange()); if (reveal) edReveal(ed, r); }
   else if (saved) _rnRange = outsidePill(range(saved));
+}
+function edReveal(ed, r) {   // an edit the editor made itself (a line break, a list change): its line scrolled into view
+  const n = r.endContainer, line = (n.nodeType === 1 ? n : n.parentElement).closest('.ln');
+  if (!line || !ed.contains(line) || ed.scrollHeight <= ed.clientHeight) return;
+  const a = line.getBoundingClientRect(), b = ed.getBoundingClientRect();
+  if (a.bottom > b.bottom - 6) ed.scrollTop += a.bottom - b.bottom + 6;
+  else if (a.top < b.top + 6) ed.scrollTop -= b.top + 6 - a.top;
 }
 let _edFrame = 0, _edComposing = false, _edApplying = false;
 function editorMathSoon() { cancelAnimationFrame(_edFrame); _edFrame = requestAnimationFrame(editorMathCheck); }
+/* The editor redraws itself when what it shows drawn changes: math rendered or opened, a line becoming a list item or
+   not, a list's numbering or depth. Typing within a line changes none of that, so it's left alone. */
 function editorMathCheck() {
   const ed = document.getElementById('rpNotes');
   if (!ed || _edComposing) return;
-  if (!window.katex) { if (_rnDraft.includes('$')) loadMdLibs().then(editorMathSoon, () => {}); return; }   // (offline: the source stays)
+  if (!window.katex && _rnDraft.includes('$')) loadMdLibs().then(editorMathSoon, () => {});   // (offline: the source stays)
   const sel = document.activeElement === ed ? edSelection(ed) : null;
+  editorListTools(ed, sel);
   if (sel && sel[0] !== sel[1]) return;   // selecting: left as it is until the selection is put away
   const text = editorText(ed), at = sel && sel[0];
-  const want = editorMath(text).filter(x => at == null || at < x.s || at > x.e).map(x => x.s + ':' + text.slice(x.s, x.e)).join('|');
-  const have = [...ed.querySelectorAll('.math-pill')].map(p => edPos(ed, p.parentNode, [...p.parentNode.childNodes].indexOf(p)) + ':' + p.dataset.tok).join('|');
+  const math = window.katex ? editorMath(text).filter(x => at == null || at < x.s || at > x.e) : [];
+  const inMath = p => math.some(x => x.s < p && p < x.e);
+  const want = math.map(x => [x.s, 'M' + text.slice(x.s, x.e)])
+    .concat(listInfo(text).filter(l => l.list && !inMath(l.s)).map(l => [l.s, `L${l.tok}:${l.label}:${l.depth}`]))
+    .sort((a, b) => a[0] - b[0]).map(x => x[0] + x[1]).join('|');
+  const have = edPieces(ed).ps.filter(p => p.kind === 'tok' && !p.el.classList.contains('cite-pill'))
+    .map(p => p.at + (p.el.classList.contains('li-mark') ? `L${p.el.dataset.tok}:${p.el.textContent}:${p.el.dataset.d}` : 'M' + p.el.dataset.tok)).join('|');
   if (want === have) return;
   editorRedraw(ed, text, sel);
   keepRoomBelow(ed);
@@ -12597,15 +12678,15 @@ document.addEventListener('beforeinput', e => {
   const t = e.target, pair = e.inputType === 'insertText' && !e.isComposing && WRAP_PAIRS[e.data];
   if (!t || !t.id) return;
   if (t.id === 'rpNotes' && /^history(Undo|Redo)$/.test(e.inputType)) { e.preventDefault(); edUndo(t, e.inputType === 'historyRedo'); return; }
-  if (/^insert(LineBreak|Paragraph)$/.test(e.inputType)) {   // (see LISTS)
-    if (t.id === 'rpNotes') { if (editorListBreak(t)) e.preventDefault(); }
-    else if ((t.id === 'acNote' || t.id === 'chatInput') && t.selectionStart === t.selectionEnd) {
-      const b = listBreak(t.value, t.selectionStart);
-      if (!b) return;
-      e.preventDefault();
-      t.setSelectionRange(b.from, b.to);
-      document.execCommand(b.insert ? 'insertText' : 'delete', false, b.insert);   // one edit: the browser's Undo takes it back
-    }
+  const box = t.id === 'acNote' || t.id === 'chatInput';
+  if (/^insert(LineBreak|Paragraph)$/.test(e.inputType)) {   // (see LISTS; an on-screen keyboard may send no Enter key)
+    if (t.id === 'rpNotes') { e.preventDefault(); editorBreak(t); }
+    else if (box && t.selectionStart === t.selectionEnd) { const b = listBreak(t.value, t.selectionStart); if (b) { e.preventDefault(); textareaEdit(t, b); } }
+    return;
+  }
+  if (e.inputType === 'deleteContentBackward') {   // (nor a Backspace key)
+    if (t.id === 'rpNotes') { if (editorListEdit(t, (x, sel) => sel[0] === sel[1] ? listBackspace(x, sel[0]) : null)) e.preventDefault(); }
+    else if (box && t.selectionStart === t.selectionEnd) { const b = listBackspace(t.value, t.selectionStart); if (b) { e.preventDefault(); textareaEdit(t, b); } }
     return;
   }
   if (!pair) return;
@@ -12618,28 +12699,160 @@ document.addEventListener('beforeinput', e => {
   }
 });
 /* ===== LISTS =====
-   Enter (or Shift+Enter) on a list item starts the next one: a line that starts with a bullet (- * + \u2022), a number
-   (1. or 1)) or a task box (- [ ]) carries its marker on, numbers counting up and a ticked box coming back empty. On an
-   item with nothing in it yet, it takes the marker away instead and the caret stays on that line (the list ends).
+   A line that starts with a bullet (- * + \u2022), a number (1. or 1)) or a letter (a. A. a) A)) is a list item; one
+   indented past the item above it is nested under it. A lettered list starts only at a or A (b. c. ... go on from
+   there), so a line that opens with someone's initial ("B. Smith showed...") stays a line of text. In the note editor its marker shows as what it is (bullets \u2022 \u25e6 \u25aa by
+   depth, numbers and letters counted in order, as the saved note shows them), with the item's lines hanging beside it.
+   - Enter (or Shift+Enter) starts the next item; on an empty item it moves it out a level, or at the top ends the
+     list, the caret staying on that line.
+   - Tab nests an item (and what's under it) under the one above; Shift+Tab moves it back out. Nested, numbers become
+     letters and letters numbers. The notes panel's buttons do the same where there's no Tab key.
+   - Backspace just after a marker moves a nested item out a level, or at the top takes its marker away.
    In the note editor, the comment box and the chat box (where Enter sends: Shift+Enter there). */
-const LIST_RE = /^([ \t]*)([-*+\u2022]|\d{1,9}[.)])([ \t]+)(\[[ xX]\][ \t]+)?/;
-function listBreak(text, at) {   // a line break at `at` on a list item: { from, to, insert, at } (the edit, and where the caret goes), or null
-  const s = text.lastIndexOf('\n', at - 1) + 1, e0 = text.indexOf('\n', at), e = e0 < 0 ? text.length : e0;
-  const m = text.slice(s, e).match(LIST_RE);
-  if (!m || at < s + m[0].length) return null;   // not a list item, or the caret before its marker: a plain break
-  if (!text.slice(s + m[0].length, e).trim()) return { from: s, to: e, insert: '', at: s };
-  const insert = '\n' + m[1] + (/\d/.test(m[2]) ? parseInt(m[2], 10) + 1 + m[2].slice(-1) : m[2]) + m[3] + (m[4] ? '[ ] ' : '');
-  return { from: at, to: at, insert, at: at + insert.length };
+const LIST_RE = /^([ \t]*)([-*+\u2022]|\d{1,9}[.)]|[a-zA-Z][.)])([ \t]+)(\[[ xX]\][ \t]+)?/;
+const LIST_BULLETS = ['\u2022', '\u25e6', '\u25aa'];
+const ICON_OUTDENT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 6H11M21 12H11M21 18H11"/><path d="M7 9l-3 3 3 3"/></svg>';
+const ICON_INDENT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 6H11M21 12H11M21 18H11"/><path d="M4 9l3 3-3 3"/></svg>';
+function listLetters(n) { let s = ''; for (n = Math.max(1, n); n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(97 + (n - 1) % 26) + s; return s; }
+function listMarker(kind, delim, n) { return kind === 'bullet' ? delim : kind === 'num' ? n + delim : (kind === 'ALPHA' ? listLetters(n).toUpperCase() : listLetters(n)) + delim; }
+function listInfo(text) {   // each line of the text: { s, e, line, and for a list item: tok, ws, mk, gap, kind, delim, indent, depth, n, label, empty, task }
+  const out = [], stack = [];
+  let s = 0;
+  for (const line of String(text).split('\n')) {
+    const L = { s, e: s + line.length, line, list: false }, m = line.match(LIST_RE);
+    if (m) {
+      const mk = m[2], indent = m[1].replace(/\t/g, '    ').length;
+      const kind = /\d/.test(mk) ? 'num' : /[a-z]/.test(mk) ? 'alpha' : /[A-Z]/.test(mk) ? 'ALPHA' : 'bullet', delim = kind === 'bullet' ? mk : mk.slice(-1);
+      const lvl = [...stack].reverse().find(x => x.indent <= indent);
+      if ((kind === 'alpha' || kind === 'ALPHA') && !/^[aA]/.test(mk) && !(lvl && lvl.indent === indent && lvl.kind === kind && lvl.delim === delim)) {   // a letter that starts nothing
+        if (!/^\s/.test(line)) stack.length = 0;
+        out.push(L); s = L.e + 1; continue;
+      }
+      while (stack.length && stack[stack.length - 1].indent > indent) stack.pop();
+      let top = stack[stack.length - 1];
+      if (top && top.indent === indent && (top.kind !== kind || top.delim !== delim)) { stack.pop(); top = null; }   // another kind of marker: another list
+      if (top && top.indent === indent) top.n++;
+      else { top = { indent, kind, delim, n: kind === 'num' ? parseInt(mk, 10) : kind === 'bullet' ? 1 : mk.toLowerCase().charCodeAt(0) - 96 }; stack.push(top); }
+      const depth = stack.length - 1;
+      Object.assign(L, { list: true, tok: m[1] + m[2] + m[3], ws: m[1], mk, gap: m[3], kind, delim, indent, depth, n: top.n,
+        label: kind === 'bullet' ? LIST_BULLETS[depth % 3] : listMarker(kind, delim, top.n), empty: !line.slice(m[0].length).trim(), task: !!m[4] });
+    } else if (line.trim() && !/^\s/.test(line)) stack.length = 0;   // a line of text at the margin ends the lists
+    out.push(L); s = L.e + 1;
+  }
+  return out;
 }
-function editorListBreak(ed) {
-  const sel = edSelection(ed);
-  if (!sel || sel[0] !== sel[1]) return false;
-  const text = editorText(ed), b = listBreak(text, sel[0]);
+function listLineAt(L, at) { let i = L.length - 1; while (i > 0 && L[i].s > at) i--; return i; }
+/* Each returns the edit, { from, to, insert, sel } (sel: the selection after it), or null when it doesn't apply */
+function listBreak(text, at) {   // Enter
+  const L = listInfo(text), l = L[listLineAt(L, at)];
+  if (!l.list || at < l.s + l.tok.length) return null;   // not a list item, or the caret before its marker: a plain break
+  if (l.empty) return l.depth > 0 ? listShift(text, [at, at], -1) : { from: l.s, to: l.e, insert: '', sel: [l.s, l.s] };
+  const insert = '\n' + l.ws + listMarker(l.kind, l.delim, l.n + 1) + l.gap + (l.task ? '[ ] ' : '');
+  return { from: at, to: at, insert, sel: [at + insert.length, at + insert.length] };
+}
+function listBackspace(text, at) {   // Backspace just after a marker
+  const L = listInfo(text), l = L[listLineAt(L, at)];
+  if (!l.list || at !== l.s + l.tok.length) return null;
+  return l.depth > 0 ? listShift(text, [at, at], -1) : { from: l.s, to: at, insert: '', sel: [l.s, l.s] };
+}
+function listShift(text, sel, dir) {   // Tab (dir 1) / Shift+Tab (-1): the items in the selection, and what's nested under them
+  const L = listInfo(text), i0 = listLineAt(L, sel[0]), first = L[i0];
+  let i1 = Math.max(i0, listLineAt(L, sel[1]));
+  if (!first.list) return null;
+  while (i1 + 1 < L.length && L[i1 + 1].line.trim() && (L[i1 + 1].list ? L[i1 + 1].indent : L[i1 + 1].line.match(/^\s*/)[0].length) > first.indent) i1++;
+  let delta, conv;
+  if (dir > 0) {
+    let k = i0 - 1;
+    while (k >= 0 && L[k].list && L[k].indent > first.indent) k--;
+    const P = k >= 0 && L[k].list && L[k].indent === first.indent ? L[k] : null;
+    if (!P) return null;   // the first item of a list has nothing to go under
+    delta = P.indent + P.mk.length + P.gap.length - first.indent;
+    const kid = L.slice(k + 1, i0).filter(x => x.list && x.depth === P.depth + 1).pop();   // children P has already: join them
+    conv = kid ? { kind: kid.kind, delim: kid.delim, n: kid.n + 1 }
+      : { kind: first.kind === 'num' ? 'alpha' : first.kind === 'bullet' ? 'bullet' : 'num', delim: first.delim, n: 1 };
+  } else {
+    if (!first.depth) return null;
+    let k = i0 - 1;
+    while (k >= 0 && !(L[k].list && L[k].indent < first.indent)) k--;
+    const P = L[k];
+    delta = P.indent - first.indent;
+    conv = { kind: P.kind, delim: P.delim, n: P.n + 1 };
+  }
+  const lines = [], shift = [];
+  let n = conv.n, pos = L[i0].s;
+  for (let x = i0; x <= i1; x++) {
+    const l = L[x];
+    let nl, oldHead, newHead;
+    if (l.list) {
+      const mk = l.indent === first.indent ? listMarker(conv.kind, conv.delim, n++) : l.mk;
+      nl = ' '.repeat(Math.max(0, l.indent + delta)) + mk + l.gap + l.line.slice(l.tok.length);
+      oldHead = l.tok.length; newHead = nl.length - (l.line.length - l.tok.length);
+    } else {
+      const lead = l.line.match(/^\s*/)[0].length, cut = delta < 0 ? Math.min(lead, -delta) : 0;
+      nl = (delta > 0 ? ' '.repeat(delta) : '') + l.line.slice(cut);
+      oldHead = cut; newHead = delta > 0 ? delta : 0;
+    }
+    shift.push({ s: l.s, e: l.e, ns: pos, oldHead, newHead });
+    lines.push(nl); pos += nl.length + 1;
+  }
+  const map = p => {   // a place in the old text, in the new
+    for (const x of shift) if (p >= x.s && p <= x.e) return x.ns + Math.max(x.newHead, p - x.s - x.oldHead + x.newHead);
+    return p > L[i1].e ? p + (pos - 1 - L[i1].e) : p;
+  };
+  return { from: L[i0].s, to: L[i1].e, insert: lines.join('\n'), sel: [map(sel[0]), map(sel[1])] };
+}
+/* in the note editor */
+function editorListEdit(ed, fn, at) {   // at: the selection to use (the editor's own when not given)
+  const sel = at || edSelection(ed);
+  if (!sel) return false;
+  const text = editorText(ed), b = fn(text, sel);
   if (!b) return false;
-  editorRedraw(ed, text.slice(0, b.from) + b.insert + text.slice(b.to), [b.at, b.at]);
+  editorRedraw(ed, text.slice(0, b.from) + b.insert + text.slice(b.to), b.sel, true);
   editorSync(ed); closeCiteDD(); keepRoomBelow(ed);
   return true;
 }
+function editorBreak(ed) {   // Enter: the next list item, or a line break (the editor draws its own, line by line)
+  return editorListEdit(ed, (t, s) => (s[0] === s[1] && listBreak(t, s[0])) || { from: s[0], to: s[1], insert: '\n', sel: [s[0] + 1, s[0] + 1] });
+}
+function editorShiftList(dir) {   // the buttons: on the line the caret is on, or was on if a tap took the focus away
+  const ed = document.getElementById('rpNotes');
+  if (!ed) return;
+  const at = (document.activeElement === ed && edSelection(ed)) || (_rnRange && ed.contains(_rnRange.startContainer) ? [edPos(ed, _rnRange.startContainer, _rnRange.startOffset), edPos(ed, _rnRange.endContainer, _rnRange.endOffset)] : null);
+  if (!at) return;
+  ed.focus({ preventScroll: true });
+  editorListEdit(ed, (t, s) => listShift(t, s, dir), at);
+}
+function editorListTools(ed, sel) {   // the panel's indent / outdent buttons: shown while the caret is on a list item
+  const box = ed.closest('.rp-editor');
+  if (!box || !sel) return;   // (the editor left: they stay as they were, so a tap that takes the focus still finds them)
+  const text = editorText(ed), L = listInfo(text), on = L[listLineAt(L, sel[0])].list;
+  box.classList.toggle('in-list', on);
+  if (!on) return;
+  box.querySelectorAll('.rp-list-tools button').forEach(b => b.setAttribute('aria-disabled', String(!listShift(text, sel, +b.dataset.dir))));
+}
+/* in the comment box and the chat box: the browser's Undo takes each edit back */
+function textareaEdit(t, b) {
+  t.setSelectionRange(b.from, b.to);
+  if (b.insert || b.from === b.to) document.execCommand('insertText', false, b.insert); else document.execCommand('delete');
+  t.setSelectionRange(b.sel[0], b.sel[1]);
+}
+/* Tab on a list item nests it (elsewhere Tab moves on, as everywhere). Taken first, on the window: the reader keeps
+   Tab inside itself (KB_MODALS), and from its last box would send it round to the first. */
+window.addEventListener('keydown', e => {
+  const t = e.target, id = t && t.id;
+  if ((id !== 'rpNotes' && id !== 'acNote' && id !== 'chatInput') || e.metaKey || e.ctrlKey || e.altKey || e.isComposing) return;
+  if (e.key === 'Tab') {
+    if ((_citeCtx && document.getElementById('citeDD').classList.contains('open')) || _mentionCtx) return;   // (Tab picks from those menus)
+    const text = id === 'rpNotes' ? editorText(t) : t.value, sel = id === 'rpNotes' ? edSelection(t) : [t.selectionStart, t.selectionEnd], L = sel && listInfo(text);
+    if (!L || !L[listLineAt(L, sel[0])].list) return;
+    e.preventDefault(); e.stopPropagation();
+    if (id === 'rpNotes') editorListEdit(t, (x, s) => listShift(x, s, e.shiftKey ? -1 : 1));
+    else { const b = listShift(text, sel, e.shiftKey ? -1 : 1); if (b) textareaEdit(t, b); }
+  } else if (e.key === 'Backspace' && id !== 'rpNotes' && t.selectionStart === t.selectionEnd) {   // (the note editor's own keys do it there)
+    const b = listBackspace(t.value, t.selectionStart);
+    if (b) { e.preventDefault(); textareaEdit(t, b); }
+  }
+}, true);
 /* The editor's Undo: an entry is the text and the selection after an edit. Typing is one step a word: a space or a
    line break typed after a word begins the next step, and a pause, a deletion or anything bigger than a key ends one. */
 function edRecord(ed, before, after) {
@@ -12670,31 +12883,12 @@ function editorCopy(e, cut) {
   e.clipboardData.setData('text/plain', editorText(ed).slice(sel[0], sel[1]));
   if (cut) document.execCommand('delete');
 }
-function editorText(ed) {
-  let s = '';
-  const walk = n => {
-    const kids = [...n.childNodes];
-    kids.forEach((c, i) => {
-      if (c.nodeType === 3) s += c.nodeValue;
-      else if (c.nodeType !== 1) return;
-      else if (c.dataset.tok) s += c.dataset.tok;
-      else if (c.tagName === 'BR') { if (!(n === ed && i === kids.length - 1)) s += '\n'; }   // the last <br> only holds the empty line open
-      else { if (/^(DIV|P)$/.test(c.tagName) && s && !s.endsWith('\n')) s += '\n'; walk(c); }
-    });
-  };
-  walk(ed);
-  // likewise a line break typed at the very end: the browser writes it as two (the editor keeps line breaks as text),
-  // the second only holding the new empty line open; read as it is, a redraw would keep that line for good
-  let last = ed.lastChild;
-  while (last && last.nodeType === 3 && !last.data) last = last.previousSibling;
-  if (last && last.nodeType === 3 && /\n$/.test(last.data)) s = s.slice(0, -1);
-  return s.replace(/\u00a0/g, ' ');
-}
+function editorText(ed) { return edPieces(ed).ps.map(p => p.str).join('').replace(/\u00a0/g, ' '); }
 let _rnRange = null;   // where the caret last was in the editor, so a citation lands there even after clicking the paper
 /* A caret never rests inside a pill (clicking one selects it): move it to just after the pill */
 function outsidePill(r) {
   const el = n => (n.nodeType === 1 ? n : n.parentElement);
-  const p = el(r.startContainer) && el(r.startContainer).closest('.cite-pill, .math-pill') || el(r.endContainer) && el(r.endContainer).closest('.cite-pill, .math-pill');
+  const p = el(r.startContainer) && el(r.startContainer).closest('.cite-pill, .math-pill, .li-mark') || el(r.endContainer) && el(r.endContainer).closest('.cite-pill, .math-pill, .li-mark');
   if (p) { r = r.cloneRange(); r.setStartAfter(p); r.collapse(true); }
   return r;
 }
@@ -12703,7 +12897,7 @@ document.addEventListener('selectionchange', () => {
   if (!ed || !sel.rangeCount) return;
   const r = sel.getRangeAt(0);
   if (ed.contains(r.startContainer)) _rnRange = outsidePill(r.cloneRange());
-  ed.querySelectorAll('.cite-pill, .math-pill').forEach(p => p.classList.toggle('sel', !r.collapsed && r.intersectsNode(p)));
+  ed.querySelectorAll('.cite-pill, .math-pill, .li-mark').forEach(p => p.classList.toggle('sel', !r.collapsed && r.intersectsNode(p)));
   editorMathSoon();
 });
 function editorSaveRange(ed) {
@@ -12723,8 +12917,10 @@ function editorKey(e) {
   if (_citeCtx && document.getElementById('citeDD').classList.contains('open')) { citeKey(e); if (e.defaultPrevented) return; }
   const k = e.key.toLowerCase();
   if ((e.metaKey || e.ctrlKey) && !e.altKey && (k === 'z' || (k === 'y' && e.ctrlKey))) { e.preventDefault(); edUndo(ed, k === 'y' || e.shiftKey); return; }   // its own Undo (see MATH IN THE NOTE EDITOR)
-  if (e.key === 'Enter' && !e.isComposing && !(e.metaKey || e.ctrlKey)) { e.preventDefault(); if (!editorListBreak(ed)) document.execCommand('insertLineBreak'); return; }   // the next list item, or a plain line break (not a <div>)
-  if ((e.key === 'Backspace' || e.key === 'Delete') && !e.metaKey && !e.ctrlKey && !e.altKey && pillDelete(ed, e.key === 'Delete', true)) { e.preventDefault(); return; }
+  if (e.key === 'Enter' && !e.isComposing && !(e.metaKey || e.ctrlKey)) { e.preventDefault(); editorBreak(ed); return; }   // the next list item, or a line break (see LISTS)
+  const mods = e.metaKey || e.ctrlKey || e.altKey;
+  if (e.key === 'Backspace' && !mods && editorListEdit(ed, (t, s) => s[0] === s[1] ? listBackspace(t, s[0]) : null)) { e.preventDefault(); return; }
+  if ((e.key === 'Backspace' || e.key === 'Delete') && !mods && pillDelete(ed, e.key === 'Delete', true)) { e.preventDefault(); return; }
   noteEditorKey(e);
 }
 /* A citation goes with one keystroke. It comes with a space after it, and the two go together: Backspace from just
@@ -12757,7 +12953,7 @@ function pillDelete(ed, forward, asEdit) {
 }
 /* ...also for an on-screen keyboard that sends no Backspace key, only the deletion */
 document.addEventListener('beforeinput', e => {
-  if (e.target && e.target.id === 'rpNotes' && /^deleteContent(Backward|Forward)$/.test(e.inputType) && pillDelete(e.target, e.inputType === 'deleteContentForward', false)) e.preventDefault();
+  if (!e.defaultPrevented && e.target && e.target.id === 'rpNotes' && /^deleteContent(Backward|Forward)$/.test(e.inputType) && pillDelete(e.target, e.inputType === 'deleteContentForward', false)) e.preventDefault();
 });
 function editorPaste(e) {
   e.preventDefault();
@@ -12772,9 +12968,7 @@ function editorClick(e) {
   if (p && p.dataset.anno && annoById(p.dataset.anno)) { e.preventDefault(); jumpToAnno(p.dataset.anno); }
 }
 function editorCaretEnd(ed) {
-  const r = document.createRange(); r.selectNodeContents(ed);
-  if (ed.lastChild && ed.lastChild.nodeName === 'BR' && ed.lastChild.previousSibling && ed.lastChild.previousSibling.nodeName === 'BR') r.setEndBefore(ed.lastChild);
-  r.collapse(false);
+  const r = document.createRange(); r.setStart(...edPoint(ed, editorText(ed).length)); r.collapse(true);
   const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
   _rnRange = r.cloneRange();
 }
@@ -12788,7 +12982,7 @@ function editorInsertCite(tok, range) {
   if (!r) { editorCaretEnd(ed); r = _rnRange.cloneRange(); }
   if (range) r.deleteContents();   // replacing a typed [[query
   else r.collapse(false);          // a saved caret/selection: insert after it, never over what's written
-  const tmp = document.createElement('span'); tmp.innerHTML = draftToEditorHTML(tok);
+  const tmp = document.createElement('span'); tmp.innerHTML = pillsHTML(tok, null, true);
   const pill = tmp.firstChild;
   // spaces only where needed: look at the characters on either side of the caret
   const side = (a, b) => { const x = document.createRange(); x.setStart(...a); x.setEnd(...b); return x.toString(); };
@@ -12850,6 +13044,34 @@ function pickCite(i) {
 }
 function closeCiteDD() { const dd = document.getElementById('citeDD'); if (dd) dd.classList.remove('open'); _citeCtx = null; }
 
+/* Markdown has neither lettered lists nor a way to keep 1) apart from 1.: lettered items (as LISTS finds them) go to
+   marked as numbered ones carrying their letter, and ) items carry a mark; once drawn, their lists count in letters
+   and with ) as typed, and a line that didn't become a list item gets its letter back */
+function mdAlphaIn(src) {
+  let out = '', last = 0;
+  for (const l of listInfo(src)) {
+    if (!l.list || l.empty || l.kind === 'bullet' || (l.kind === 'num' && l.delim !== ')')) continue;
+    const ch = l.mk[0], head = l.kind === 'num' ? l.tok + '\u2064'
+      : l.ws + (ch.toLowerCase().charCodeAt(0) - 96) + l.delim + ' \u2063' + ch + (l.delim === ')' ? '\u2064' : '\u2063') + l.gap;
+    out += src.slice(last, l.s) + head + src.slice(l.s + l.tok.length, l.e); last = l.e;
+  }
+  return out + src.slice(last);
+}
+function mdAlphaOut(el) {
+  el.querySelectorAll('ol > li').forEach(li => {
+    const w = document.createTreeWalker(li, NodeFilter.SHOW_TEXT);
+    let t; while ((t = w.nextNode()) && !t.data.trim()) {}
+    const m = t && t.data.match(/^\s*(?:\u2063([a-zA-Z])([\u2063\u2064])|\u2064)\s*/);
+    if (!m) return;
+    const ol = li.parentElement;
+    if (m[1]) { ol.type = m[1] === m[1].toLowerCase() ? 'a' : 'A'; ol.classList.add(m[1] === m[1].toLowerCase() ? 'la' : 'ua'); }
+    if (!m[1] || m[2] === '\u2064') ol.classList.add('paren');
+    t.data = t.data.slice(m[0].length);
+  });
+  const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT), left = [];
+  while (w.nextNode()) if (/[\u2063\u2064]/.test(w.currentNode.data)) left.push(w.currentNode);
+  left.forEach(t => { t.data = t.data.replace(/(\d+)([.)]) \u2063([a-zA-Z])[\u2063\u2064]/g, '$3$2').replace(/\u2063[a-zA-Z][\u2063\u2064]|\u2064/g, ''); });
+}
 /* --- Markdown + LaTeX, loaded on first use --- */
 let _mdLibs = null;
 const MD_LIBS = { css: 'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css', js: ['https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js', 'https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js', 'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js'] };
@@ -12921,10 +13143,10 @@ async function renderNotesMarkdown(el, text, notesObj) {
     .replace(QUOTE_RE, quoteReplacer(slot))
     .replace(/\$\$([\s\S]+?)\$\$/g, (m, tex) => slot(katex.renderToString(tex, { displayMode: true, throwOnError: false })))
     .replace(/(^|[^\\$])\$([^\s$](?:[^$\n]*?[^\s$])?)\$/g, (m, pre, tex) => pre + slot(katex.renderToString(tex, { throwOnError: false })));
-  let html = DOMPurify.sanitize(marked.parse(src, { breaks: true, gfm: true }));
+  let html = DOMPurify.sanitize(marked.parse(mdAlphaIn(src), { breaks: true, gfm: true }));
   html = html.replace(/@@SLOT(\d+)@@/g, (m, i) => slots[+i]);
   el.innerHTML = html;
-  mdTables(el);
+  mdTables(el); mdAlphaOut(el);
   wire();
   el.querySelectorAll('a[href]').forEach(a => { a.target = '_blank'; a.rel = 'noopener'; });
 }
