@@ -1175,6 +1175,14 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .sel-act:hover { background: rgba(255,255,255,0.08); color: var(--text); }
 .anno-card { position: fixed; z-index: 345; display: none; width: 280px; max-width: calc(100vw - 24px); background: #1d1d20; border: 1px solid rgba(255,255,255,0.14); border-radius: 10px; box-shadow: 0 8px 26px rgba(0,0,0,0.55); padding: 4px; }
 .ac-row { display: flex; align-items: center; gap: 2px; padding: 0 1px; height: 26px; }
+/* Moving the card off the words under it (see MOVING THE CARD): its frame takes a mouse at once; held, it lifts */
+.anno-card { transition: transform 0.12s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.12s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.anno-card, .anno-card .ac-row, .anno-card .sel-sep, .anno-card .ac-comment { cursor: grab; }
+.anno-card > :not(.ac-row):not(.ac-comment), .anno-card .ac-comment > textarea { cursor: auto; }   /* (cursor inherits: the box and the pad keep their own) */
+.anno-card:has(> .ac-adjust), .anno-card .ac-adjust { cursor: auto; }   /* Adjust's bar stays put (its handles are what move) */
+.anno-card .ac-row { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }   /* a finger or the Pencil held on the row moves the card, never the page */
+.anno-card.lifted { transform: scale(1.02); transform-origin: 50% 50%; box-shadow: 0 16px 44px rgba(0,0,0,0.65); }
+.anno-card.lifted, .anno-card.lifted * { cursor: grabbing !important; }
 .ac-row .sel-dot { width: 16px; height: 16px; margin: 0 3px; }
 .sel-icon.on { color: var(--accent); background: rgba(251,177,60,0.14); }
 .sel-icon.danger:hover { color: #f28b82; }
@@ -9852,6 +9860,7 @@ document.addEventListener('focusin', e => {
 });
 document.addEventListener('focusout', e => { if (_fullFocus && !_fullFocus.contains(e.relatedTarget)) { _fullFocus = null; fullSync(); } });
 let _lastPointer = 'mouse';
+const HOLD_MS = 400;   // a press held this long (and still) becomes a hold: the Pencil selects a word, the comment card lifts to be moved
 let _penSelected = false;   // this press of the Pencil (in Read) selected text: see the Pencil's hold
 /* html.no-hover while the last input was a finger or Pencil (see the CSS): a real mouse or trackpad moving turns it off */
 (() => { const html = document.documentElement;
@@ -9984,7 +9993,7 @@ function openAnnoCard(id, focusNote, write) {   // write: open its writing card 
   const a = annoById(id);
   if (!a) return;
   if (_acId && _acId !== id) closeAnnoCard();
-  if (_acId !== id) _acOrigin = { id, kind: a.kind, color: a.color, note: a.note || '', hand: a.hand };
+  if (_acId !== id) { _acOrigin = { id, kind: a.kind, color: a.color, note: a.note || '', hand: a.hand }; _acMoved = null; }
   _acId = id;
   // a comment with writing opens ready to write on (where something can write: not a phone's finger)
   if (!(_hw && _hw.where === 'card' && _hw.id === 'a:' + id) && (write || hasHand(a)) && (pencilDevice() || !matchMedia('(pointer: coarse)').matches)) acStartWriting(a);
@@ -10149,6 +10158,7 @@ async function endAdjust(keep) {
 })();
 function positionAnnoCard(a) {
   const card = document.getElementById('annoCard');
+  if (_acMoved && _acMoved.id === a.id) { placeAnnoCard(_acMoved.x, _acMoved.y); return; }   // moved: it stays where it was put
   const rect = document.querySelector(`.anno-hl[data-anno="${a.id}"] > .anno-rect`);
   const r = rect ? rect.getBoundingClientRect() : { left: window.innerWidth / 2, bottom: 120, top: 120 };
   const cw = card.offsetWidth, ch = card.offsetHeight;
@@ -10157,6 +10167,54 @@ function positionAnnoCard(a) {
   if (y + ch > window.innerHeight - 12) y = Math.max(ceil, r.top - ch - 10);
   card.style.left = x + 'px'; card.style.top = y + 'px';
 }
+/* ===== MOVING THE CARD =====
+   A comment's card sits over the paper, so it can be moved to read what it covers. Held still for a moment on its row
+   of controls (a finger, the Pencil or a mouse), it lifts and follows until let go; a mouse can also take it by its
+   frame straight away. The typing box and the writing pad keep their own gestures. It stays where it was put while
+   it's open (a colour change or starting to write keep it there); the next card opens by its highlight again. */
+let _acMoved = null;   // { id, x, y }
+function placeAnnoCard(x, y) {
+  const card = document.getElementById('annoCard'), w = card.offsetWidth, h = card.offsetHeight;
+  x = Math.max(8, Math.min(window.innerWidth - w - 8, x)); y = Math.max(8, Math.min(window.innerHeight - h - 8, y));
+  card.style.left = x + 'px'; card.style.top = y + 'px';
+  return [x, y];
+}
+(function () {
+  const card = document.getElementById('annoCard');
+  let d = null, swallowUntil = 0;
+  const frame = t => t === card || (t.matches && t.matches('.ac-row, .ac-row > .sel-sep, .ac-comment'));
+  const lift = () => { if (!d || d.lifted) return; d.lifted = true; card.classList.add('lifted'); try { card.setPointerCapture(d.id); } catch (e) {} };
+  const end = drop => {
+    if (!d) return;
+    clearTimeout(d.hold);
+    if (d.lifted) { card.classList.remove('lifted'); swallowUntil = drop ? performance.now() + 600 : 0; if (drop && d.at && _acId) _acMoved = { id: _acId, x: d.at[0], y: d.at[1] }; }
+    d = null;
+  };
+  card.addEventListener('pointerdown', e => {
+    if (d || !_acId || Adj || e.button > 0 || !e.isPrimary) return;
+    const t = e.target;
+    if (t.closest('textarea, input, [contenteditable], .hw-editor, .hw-view') || !(t.closest('.ac-row') || frame(t))) return;
+    const r = card.getBoundingClientRect();
+    d = { id: e.pointerId, x0: e.clientX, y0: e.clientY, dx: e.clientX - r.left, dy: e.clientY - r.top, now: e.pointerType === 'mouse' && frame(t) };
+    if (d.now) e.preventDefault();   // (no text selection starting from the frame)
+    else d.hold = setTimeout(lift, HOLD_MS);
+  });
+  window.addEventListener('pointermove', e => {
+    if (!d || e.pointerId !== d.id) return;
+    if (!d.lifted) {
+      const moved = Math.hypot(e.clientX - d.x0, e.clientY - d.y0);
+      if (d.now && moved > 3) lift();
+      else { if (moved > 8) end(false); return; }   // moved before the hold: a tap that slid, not a move
+    }
+    e.preventDefault();
+    d.at = placeAnnoCard(e.clientX - d.dx, e.clientY - d.dy);
+  }, { passive: false });
+  window.addEventListener('pointerup', e => { if (d && e.pointerId === d.id) end(true); });
+  window.addEventListener('pointercancel', e => { if (d && e.pointerId === d.id) end(true); });
+  // let go after the lift: no button under it is pressed (a quick Pencil tap's click is made by hand, so it's caught here too)
+  card.addEventListener('click', e => { if (performance.now() < swallowUntil) { e.preventDefault(); e.stopPropagation(); swallowUntil = 0; } }, true);
+  card.addEventListener('touchmove', e => { if (d && d.lifted && e.cancelable) e.preventDefault(); }, { passive: false });   // a card that scrolls (writing) doesn't, while it's moved
+})();
 function closeAnnoCard() {
   const id = _acId, t = document.getElementById('acNote'), text = t && document.getElementById('annoCard').classList.contains('open') ? t.value : null;
   if (_acTimer) { clearTimeout(_acTimer); _acTimer = null; }
@@ -10624,7 +10682,6 @@ function caretAt(x, y) {
   let st = null;
   /* Read: a drag scrolls; held still for a moment on a word, the Pencil selects it (as a finger's long press does),
      and moving on from there selects up to the word under it. Lifted, the selection bar comes up. */
-  const PEN_HOLD_MS = 400;
   function holdSelect(s) {
     if (st !== s || s.moved) return;
     const c = markCaret(s.x0, s.y0);
@@ -10648,7 +10705,7 @@ function caretAt(x, y) {
     if (e.pointerType === 'pen' && Pencil.mode === 'read' && onPage(e.target)) {
       stopGlide(); e.preventDefault();
       const s = st = { id: e.pointerId, mode: 'scroll', pg: onPage(e.target), x0: e.clientX, y0: e.clientY, lx: e.clientX, ly: e.clientY, lt: e.timeStamp, vx: 0, vy: 0, moved: false };
-      s.hold = setTimeout(() => holdSelect(s), PEN_HOLD_MS);
+      s.hold = setTimeout(() => holdSelect(s), HOLD_MS);
       return;
     }
     const pen = (e.pointerType === 'pen' && Pencil.mode !== 'read') || (Ink.on && e.pointerType === 'mouse' && e.button === 0);
@@ -12398,8 +12455,41 @@ function editorKey(e) {
   const ed = e.currentTarget;
   if (_citeCtx && document.getElementById('citeDD').classList.contains('open')) { citeKey(e); if (e.defaultPrevented) return; }
   if (e.key === 'Enter' && !(e.metaKey || e.ctrlKey)) { e.preventDefault(); document.execCommand('insertLineBreak'); return; }   // a plain line break, not a <div>
+  if ((e.key === 'Backspace' || e.key === 'Delete') && !e.metaKey && !e.ctrlKey && !e.altKey && pillDelete(ed, e.key === 'Delete', true)) { e.preventDefault(); return; }
   noteEditorKey(e);
 }
+/* A citation goes with one keystroke. It comes with a space after it, and the two go together: Backspace from just
+   after the pill or just after its space, or Delete from just before the pill, takes both (not the space first and
+   the pill on a second press). */
+function pillRange(ed, forward) {
+  const sel = getSelection();
+  if (!sel.rangeCount || !sel.isCollapsed) return null;
+  const at = sel.getRangeAt(0), pills = [...ed.querySelectorAll('.cite-pill')];
+  if (!ed.contains(at.startContainer)) return null;
+  const p = forward ? pills.find(x => at.comparePoint(x, 0) > 0) : pills.filter(x => at.comparePoint(x, 0) < 0).pop();
+  if (!p) return null;
+  const gap = document.createRange();   // between the caret and the pill: nothing (Backspace: or just its space)
+  if (forward) { gap.setStart(at.startContainer, at.startOffset); gap.setEndBefore(p); }
+  else { gap.setStartAfter(p); gap.setEnd(at.startContainer, at.startOffset); }
+  if (gap.cloneContents().querySelector('*') || !(forward ? /^$/ : /^[ \u00a0]?$/).test(gap.toString())) return null;
+  const r = document.createRange(); r.setStartBefore(p); r.setEndAfter(p);
+  let n = p.nextSibling;
+  while (n && n.nodeType === 3 && !n.data) n = n.nextSibling;   // (typing leaves empty text nodes about)
+  if (n && n.nodeType === 3 && /^[ \u00a0]/.test(n.data)) r.setEnd(n, 1);   // its space
+  return r;
+}
+function pillDelete(ed, forward, asEdit) {
+  const r = pillRange(ed, forward);
+  if (!r) return false;
+  const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+  if (asEdit) document.execCommand('delete');   // one edit, so Undo brings the citation back
+  else { r.deleteContents(); sel.collapse(r.startContainer, r.startOffset); editorInput(ed); }
+  return true;
+}
+/* ...also for an on-screen keyboard that sends no Backspace key, only the deletion */
+document.addEventListener('beforeinput', e => {
+  if (e.target && e.target.id === 'rpNotes' && /^deleteContent(Backward|Forward)$/.test(e.inputType) && pillDelete(e.target, e.inputType === 'deleteContentForward', false)) e.preventDefault();
+});
 function editorPaste(e) {
   e.preventDefault();
   const t = (e.clipboardData || window.clipboardData).getData('text/plain');
