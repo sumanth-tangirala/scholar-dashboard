@@ -2764,6 +2764,7 @@ html.no-hover .sel-icon:not(.on):active, html.no-hover .ink-bar .ink-size:not(.o
         <dt><kbd>f</kbd></dt><dd>Full screen</dd>
         <dt class="owner-only"><kbd>&#8984;</kbd> <kbd>Enter</kbd></dt><dd class="owner-only">Save the note or comment you&rsquo;re writing</dd>
         <dt class="owner-only"><kbd>[[</kbd></dt><dd class="owner-only">In a note: cite one of your highlights</dd>
+        <dt class="owner-only"><kbd>Enter</kbd></dt><dd class="owner-only">On a list item (- or 1.): the next item; on an empty one, the list ends (in chat: <kbd>Shift</kbd> <kbd>Enter</kbd>)</dd>
         <dt class="owner-only"><kbd>$</kbd> <kbd>{</kbd></dt><dd class="owner-only">Over selected text in a note, comment or chat: wrap it in $&hellip;$ (again: $$&hellip;$$) or {&hellip;}</dd>
         <dt class="owner-only"><kbd>&larr;</kbd> <kbd>&rarr;</kbd></dt><dd class="owner-only">Adjusting a highlight: move the end that has focus by a word (<kbd>Esc</kbd> puts it back)</dd>
         <dt><kbd>Esc</kbd></dt><dd>Close a comment, clear the selection, leave full screen, close the reader</dd>
@@ -12518,7 +12519,7 @@ function edPos(ed, node, off) {
     return false;
   };
   walk(ed);
-  return found < 0 ? n : found;
+  return Math.min(found < 0 ? n : found, editorText(ed).length);   // (past a line break that only holds the last line open)
 }
 function edPoint(ed, p) {
   let n = 0, last = '', res = null;
@@ -12596,6 +12597,17 @@ document.addEventListener('beforeinput', e => {
   const t = e.target, pair = e.inputType === 'insertText' && !e.isComposing && WRAP_PAIRS[e.data];
   if (!t || !t.id) return;
   if (t.id === 'rpNotes' && /^history(Undo|Redo)$/.test(e.inputType)) { e.preventDefault(); edUndo(t, e.inputType === 'historyRedo'); return; }
+  if (/^insert(LineBreak|Paragraph)$/.test(e.inputType)) {   // (see LISTS)
+    if (t.id === 'rpNotes') { if (editorListBreak(t)) e.preventDefault(); }
+    else if ((t.id === 'acNote' || t.id === 'chatInput') && t.selectionStart === t.selectionEnd) {
+      const b = listBreak(t.value, t.selectionStart);
+      if (!b) return;
+      e.preventDefault();
+      t.setSelectionRange(b.from, b.to);
+      document.execCommand(b.insert ? 'insertText' : 'delete', false, b.insert);   // one edit: the browser's Undo takes it back
+    }
+    return;
+  }
   if (!pair) return;
   if (t.id === 'rpNotes') { if (editorWrap(t, pair)) e.preventDefault(); }
   else if ((t.id === 'acNote' || t.id === 'chatInput') && t.selectionStart < t.selectionEnd) {   // (plain text boxes: the browser's Undo takes it back)
@@ -12605,6 +12617,29 @@ document.addEventListener('beforeinput', e => {
     t.setSelectionRange(a + 1, b + 1);
   }
 });
+/* ===== LISTS =====
+   Enter (or Shift+Enter) on a list item starts the next one: a line that starts with a bullet (- * + \u2022), a number
+   (1. or 1)) or a task box (- [ ]) carries its marker on, numbers counting up and a ticked box coming back empty. On an
+   item with nothing in it yet, it takes the marker away instead and the caret stays on that line (the list ends).
+   In the note editor, the comment box and the chat box (where Enter sends: Shift+Enter there). */
+const LIST_RE = /^([ \t]*)([-*+\u2022]|\d{1,9}[.)])([ \t]+)(\[[ xX]\][ \t]+)?/;
+function listBreak(text, at) {   // a line break at `at` on a list item: { from, to, insert, at } (the edit, and where the caret goes), or null
+  const s = text.lastIndexOf('\n', at - 1) + 1, e0 = text.indexOf('\n', at), e = e0 < 0 ? text.length : e0;
+  const m = text.slice(s, e).match(LIST_RE);
+  if (!m || at < s + m[0].length) return null;   // not a list item, or the caret before its marker: a plain break
+  if (!text.slice(s + m[0].length, e).trim()) return { from: s, to: e, insert: '', at: s };
+  const insert = '\n' + m[1] + (/\d/.test(m[2]) ? parseInt(m[2], 10) + 1 + m[2].slice(-1) : m[2]) + m[3] + (m[4] ? '[ ] ' : '');
+  return { from: at, to: at, insert, at: at + insert.length };
+}
+function editorListBreak(ed) {
+  const sel = edSelection(ed);
+  if (!sel || sel[0] !== sel[1]) return false;
+  const text = editorText(ed), b = listBreak(text, sel[0]);
+  if (!b) return false;
+  editorRedraw(ed, text.slice(0, b.from) + b.insert + text.slice(b.to), [b.at, b.at]);
+  editorSync(ed); closeCiteDD(); keepRoomBelow(ed);
+  return true;
+}
 /* The editor's Undo: an entry is the text and the selection after an edit. Typing is one step a word: a space or a
    line break typed after a word begins the next step, and a pause, a deletion or anything bigger than a key ends one. */
 function edRecord(ed, before, after) {
@@ -12648,6 +12683,11 @@ function editorText(ed) {
     });
   };
   walk(ed);
+  // likewise a line break typed at the very end: the browser writes it as two (the editor keeps line breaks as text),
+  // the second only holding the new empty line open; read as it is, a redraw would keep that line for good
+  let last = ed.lastChild;
+  while (last && last.nodeType === 3 && !last.data) last = last.previousSibling;
+  if (last && last.nodeType === 3 && /\n$/.test(last.data)) s = s.slice(0, -1);
   return s.replace(/\u00a0/g, ' ');
 }
 let _rnRange = null;   // where the caret last was in the editor, so a citation lands there even after clicking the paper
@@ -12683,7 +12723,7 @@ function editorKey(e) {
   if (_citeCtx && document.getElementById('citeDD').classList.contains('open')) { citeKey(e); if (e.defaultPrevented) return; }
   const k = e.key.toLowerCase();
   if ((e.metaKey || e.ctrlKey) && !e.altKey && (k === 'z' || (k === 'y' && e.ctrlKey))) { e.preventDefault(); edUndo(ed, k === 'y' || e.shiftKey); return; }   // its own Undo (see MATH IN THE NOTE EDITOR)
-  if (e.key === 'Enter' && !(e.metaKey || e.ctrlKey)) { e.preventDefault(); document.execCommand('insertLineBreak'); return; }   // a plain line break, not a <div>
+  if (e.key === 'Enter' && !e.isComposing && !(e.metaKey || e.ctrlKey)) { e.preventDefault(); if (!editorListBreak(ed)) document.execCommand('insertLineBreak'); return; }   // the next list item, or a plain line break (not a <div>)
   if ((e.key === 'Backspace' || e.key === 'Delete') && !e.metaKey && !e.ctrlKey && !e.altKey && pillDelete(ed, e.key === 'Delete', true)) { e.preventDefault(); return; }
   noteEditorKey(e);
 }
