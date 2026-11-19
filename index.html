@@ -1181,6 +1181,10 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .anno-card > :not(.ac-row):not(.ac-comment), .anno-card .ac-comment > textarea { cursor: auto; }   /* (cursor inherits: the box and the pad keep their own) */
 .anno-card:has(> .ac-adjust), .anno-card .ac-adjust { cursor: auto; }   /* Adjust's bar stays put (its handles are what move) */
 .anno-card .ac-row { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }   /* a finger or the Pencil held on the row moves the card, never the page */
+/* a card open: a press on the paper only closes it, so its text can't be selected and nothing on it looks pressable
+   (not while adjusting: the card is then Adjust's bar) */
+.reader:has(> #annoCard.open > .ac-row:not(.ac-adjust)) .reader-page .textLayer,
+.reader:has(> #annoCard.open > .ac-row:not(.ac-adjust)) .reader-page .textLayer span { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; cursor: default; }
 .anno-card.lifted { transform: scale(1.02); transform-origin: 50% 50%; box-shadow: 0 16px 44px rgba(0,0,0,0.65); }
 .anno-card.lifted, .anno-card.lifted * { cursor: grabbing !important; }
 .ac-row .sel-dot { width: 16px; height: 16px; margin: 0 3px; }
@@ -9705,7 +9709,7 @@ function renderInkLayer(pageDiv) {
   const ar = pageDiv.offsetHeight / pageDiv.offsetWidth;
   svg.replaceChildren(...strokes.map(k => inkPathEl(k, ar)));
 }
-function markHover(id, on) { document.querySelectorAll(`.anno-hl[data-anno="${id}"]`).forEach(r => r.classList.toggle('hover', on)); }
+function markHover(id, on) { document.querySelectorAll(`.anno-hl[data-anno="${id}"]`).forEach(r => r.classList.toggle('hover', on || id === _acId)); }   // (the open card's highlight stays lit)
 function redrawAnnoLayers() { _rnDrawnSig = refSig(); document.querySelectorAll('#readerBody .reader-page[data-drawn]').forEach(renderAnnoLayer); }
 
 /* --- selection toolbar --- */
@@ -10200,6 +10204,7 @@ function placeAnnoCard(x, y) {
     d = null;
   };
   card.addEventListener('pointerdown', e => {
+    if (e.isPrimary) swallowUntil = 0;   // a new press: only the lift's own click is dropped, never the next tap's
     if (d || !_acId || Adj || e.button > 0 || !e.isPrimary) return;
     const t = e.target;
     if (t.closest('textarea, input, [contenteditable], .hw-editor, .hw-view') || !(t.closest('.ac-row') || frame(t))) return;
@@ -10346,6 +10351,38 @@ function jumpToAnno(id) {
   body.scrollTo({ top, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
 }
 
+/* --- a press on the paper while a card is open only closes it ---
+   As with menus (MENUS AND PICKERS): while a highlight's card is open, a press anywhere on the paper (a finger, the
+   Pencil in any mode, a mouse) closes the card and does nothing more. It doesn't select or highlight text, draw ink,
+   or open the highlight or comment under it: the next press does. Scrolling still scrolls (a finger, or the Pencil in
+   Read), and closes it. While the card is open the paper's text can't be selected either (CSS), so a long press or a
+   mouse drag selects nothing. */
+let _acPress = null;   // { id, live, end }: the press that is closing the card
+const pressClosesCard = e => !!(_acPress && _acPress.id === e.pointerId);
+(function () {
+  document.addEventListener('pointerdown', e => {
+    if (!e.isPrimary) return;   // (a second finger: the first one's press goes on)
+    _acPress = _acId && e.button <= 0 && document.getElementById('readerBody').contains(e.target) ? { id: e.pointerId, live: true, end: 0 } : null;
+  }, true);
+  const end = e => {
+    if (!_acPress || !_acPress.live || e.pointerId !== _acPress.id) return;
+    _acPress.live = false; _acPress.end = e.timeStamp;
+    if (!_acId) return;   // (a scroll already closed it)
+    const card = document.getElementById('annoCard');
+    if (card.contains(document.activeElement)) document.activeElement.blur();   // the keyboard (or Scribble) goes with it
+    closeAnnoCard();
+  };
+  document.addEventListener('pointerup', end, true);
+  document.addEventListener('pointercancel', end, true);   // it became a scroll
+  document.addEventListener('selectstart', e => { if (_acPress && _acPress.live) e.preventDefault(); }, true);
+  // the click that follows (a margin marker's, a link's) presses nothing either
+  document.addEventListener('click', e => {
+    const p = _acPress;
+    if (!p || (!p.live && e.timeStamp - p.end > 600)) return;
+    e.preventDefault(); e.stopPropagation();
+  }, true);
+})();
+
 /* --- reader events: selection toolbar, clicks on highlights --- */
 (function () {
   const body = document.getElementById('readerBody');
@@ -10355,6 +10392,7 @@ function jumpToAnno(id) {
   body.addEventListener('pointercancel', () => { down = false; });   // touch: a long-press turns into a text selection
   document.addEventListener('pointerup', () => { down = false; }, true);
   body.addEventListener('pointerup', e => {
+    if (pressClosesCard(e)) return;   // it closed the card (see above), and does nothing more
     if (e.target.closest && e.target.closest('.anno-mark, .adj-handle')) return;   // a margin marker opens its card by its own click; a handle being let go isn't a tap
     if (Ink.on && e.pointerType !== 'touch') return;                    // the pen is writing
     const tapped = downAt && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) <= 6;
@@ -10391,7 +10429,7 @@ function jumpToAnno(id) {
     cancelAnimationFrame(hoverFrame);
     hoverFrame = requestAnimationFrame(() => {
       const pg = e.target.closest && e.target.closest('.reader-page');
-      const a = pg && !e.target.closest('.anno-mark') ? annoAt(pg, e.clientX, e.clientY) : null;
+      const a = pg && !_acId && !e.target.closest('.anno-mark') ? annoAt(pg, e.clientX, e.clientY) : null;   // (a card open: a click only closes it)
       setHover(pg, a ? a.id : null);
     });
   });
@@ -10723,12 +10761,13 @@ function caretAt(x, y) {
     if (e.pointerType === 'pen' && Pencil.mode === 'read' && onPage(e.target)) {
       stopGlide(); e.preventDefault();
       const s = st = { id: e.pointerId, mode: 'scroll', pg: onPage(e.target), x0: e.clientX, y0: e.clientY, lx: e.clientX, ly: e.clientY, lt: e.timeStamp, vx: 0, vy: 0, moved: false };
-      s.hold = setTimeout(() => holdSelect(s), HOLD_MS);
+      s.hold = pressClosesCard(e) ? 0 : setTimeout(() => holdSelect(s), HOLD_MS);   // closing a card: it may scroll, never select
       return;
     }
     const pen = (e.pointerType === 'pen' && Pencil.mode !== 'read') || (Ink.on && e.pointerType === 'mouse' && e.button === 0);
     const pg = pen && onPage(e.target), rub = pen && Ink.on && Ink.tool !== 'pen' && papersOut() && !control(e.target);   // an eraser may start between pages
     if ((!pg && !rub) || !_reader.doc) return;
+    if (pressClosesCard(e)) { e.preventDefault(); return; }   // it closes the open card: no highlight or ink this time
     if (Ink.on && !_rn) { e.preventDefault(); setPencilMode('write'); return; }   // notes locked: unlock first
     e.preventDefault();
     try { body.setPointerCapture(e.pointerId); } catch (err) {}
