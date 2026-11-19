@@ -1128,7 +1128,7 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 @keyframes note-pulse { 0% { background-color: transparent; } 18% { background-color: color-mix(in srgb, var(--note-line, #8aa4f0) 28%, transparent); } 100% { background-color: transparent; } }
 @keyframes ref-pulse { 0% { background-color: var(--ref-tint); } 18% { background-color: color-mix(in srgb, var(--note-line, #8aa4f0) 36%, transparent); } 100% { background-color: var(--ref-tint); } }
 .anno-hl.hover:not(.note):not(.ref) { opacity: 0.6; }
-.anno-live { position: absolute; inset: 0; }
+.anno-live, .anno-asked { position: absolute; inset: 0; }
 .anno-hl.adj { opacity: 0.34; }
 .anno-rect.adj { padding: 0; margin-left: 0; border-radius: 1px; }   /* Adjust: the highlight as a selection, edge to edge so the handles stand at its ends */
 /* Adjust's handles: a line at each end with a knob (above the start, below the end), the knob inside the button so
@@ -9735,12 +9735,13 @@ function pageRects(pg, range) {
 }
 /* Drawn over the page while the Pencil marks (or Adjust moves an end): shown as the highlight will look, under the
    words, in the page's own layer. One per page; a redraw of the layer takes it away. */
-function drawLiveMark(pg, rects, look) {   // look: a highlight colour, 'note' (an underline) or 'adjust' (a selection)
+function drawLiveMark(pg, rects, look) {   // look: a highlight colour, 'note' (an underline), 'adjust' or 'ask' (a selection)
   const layer = pg && pg.querySelector('.annoLayer');
   if (!layer) return;
   let live = layer.querySelector('.anno-live');
   if (!live) { live = document.createElement('div'); live.className = 'anno-live'; layer.appendChild(live); }
-  const cls = look === 'note' ? 'note' : look === 'adjust' ? 'adj' : '', hc = look === 'note' || look === 'adjust' ? 'var(--note-line, #8aa4f0)' : `var(--hl-${look})`;
+  const sel = look === 'adjust' || look === 'ask';
+  const cls = look === 'note' ? 'note' : sel ? 'adj' : '', hc = look === 'note' || sel ? 'var(--note-line, #8aa4f0)' : `var(--hl-${look})`;
   live.innerHTML = annoShapeHTML(rects, cls, hc);
 }
 function clearLiveMark() { document.querySelectorAll('#readerBody .anno-live').forEach(el => el.remove()); }
@@ -9851,6 +9852,7 @@ document.addEventListener('focusin', e => {
 });
 document.addEventListener('focusout', e => { if (_fullFocus && !_fullFocus.contains(e.relatedTarget)) { _fullFocus = null; fullSync(); } });
 let _lastPointer = 'mouse';
+let _penSelected = false;   // this press of the Pencil (in Read) selected text: see the Pencil's hold
 /* html.no-hover while the last input was a finger or Pencil (see the CSS): a real mouse or trackpad moving turns it off */
 (() => { const html = document.documentElement;
   if (matchMedia('(hover: none)').matches) html.classList.add('no-hover');
@@ -9887,7 +9889,7 @@ function showSelBar() {
       + `<span class="sel-sep"></span>`
       + `<button class="sel-icon sel-cite ${_rnEditing && !busy ? 'primary' : ''}"${dis} onmousedown="event.preventDefault()" onclick="citeSelection()" title="${citeTip}" aria-label="${citeTip}">${ICON_QUOTE}</button>`
       + `<button class="sel-icon"${dis} onmousedown="event.preventDefault()" onclick="createAnno('note')" title="${busy ? wait : 'Comment'}" aria-label="Comment">${ICON_COMMENT}</button>`
-      + (readerPhone() || chatElsewhere() ? '' : `<button class="sel-icon" onmousedown="event.preventDefault()" onclick="askAboutSelection()" title="Ask Claude about this" aria-label="Ask Claude about this">${ICON_ASK}</button>`)
+      + (!canAskClaude() ? '' : `<button class="sel-icon" onmousedown="event.preventDefault()" onclick="askAboutSelection()" title="Ask Claude about this" aria-label="Ask Claude about this">${ICON_ASK}</button>`)
       + `<button class="sel-icon" onmousedown="event.preventDefault()" onclick="copySelQuote()" title="Copy quote" aria-label="Copy quote">${ICON_COPY}</button>`;
   }
   const moving = bar.classList.contains('open');   // already showing: it glides to the new selection instead of popping again
@@ -9915,7 +9917,7 @@ async function citeSelection() {
   const tok = citeToken(a);
   if (!_rnEditing) await startNewNote('');
   _rnPendingRefs.push(a);   // owned by the draft until it is saved
-  if (!editorInsertCite(tok)) { _rnDraft += (_rnDraft && !/\s$/.test(_rnDraft) ? ' ' : '') + tok + ' '; renderReaderPanel(); }
+  if (!editorInsertCite(tok)) { _rnDraft += (_rnDraft && !/\s$/.test(_rnDraft) ? ' ' : '') + tok + ' '; showNotesPane(); }
   draftChanged();
 }
 async function createAnno(kind, color, drawn) {   // drawn: the Pencil's marker already shows it
@@ -9997,6 +9999,7 @@ function openAnnoCard(id, focusNote, write) {   // write: open its writing card 
       <span class="sel-sep"></span>
       ${_acPending && _acPending.id === id ? '' : `<button class="sel-icon" onclick="adjustAnno('${id}')" title="Adjust: drag its ends to take in more or less" aria-label="Adjust what it covers">${ICON_ADJUST}</button>`}
       <button class="sel-icon sel-cite" onclick="citeAnno('${id}')" title="Cite in a note" aria-label="Cite in a note">${ICON_QUOTE}</button>
+      ${canAskClaude() && !(_acPending && _acPending.id === id) ? `<button class="sel-icon" onclick="askAboutAnno('${id}')" title="Ask Claude about this" aria-label="Ask Claude about this">${ICON_ASK}</button>` : ''}
       <button class="sel-icon" onclick="copyAnnoQuote('${id}')" title="Copy quote" aria-label="Copy quote">${ICON_COPY}</button>
       <button class="sel-icon danger" onclick="deleteAnno('${id}')" title="Delete" aria-label="Delete">${ICON_TRASH}</button></div>
     <div class="ac-comment"><textarea id="acNote" rows="1" placeholder="${writing ? 'Type a comment\u2026' : 'Add a comment\u2026'}" title="Markdown and $math$ work \u00b7 ${MOD_KEY}\u21b5 or Esc to close" oninput="acGrow(this); acNoteInput()" onkeydown="if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) { event.preventDefault(); closeAnnoCard(); }">${esc(a.note || '')}</textarea>${pencilDevice() && !writing ? `<button class="sel-icon ac-write" onclick="acWrite('${id}')" title="Write the comment with the Pencil" aria-label="Write the comment">${ICON_WRITE}</button>` : ''}</div>
@@ -10272,14 +10275,14 @@ function jumpToAnno(id) {
   const body = document.getElementById('readerBody');
   let downAt = null, down = false, settle = 0;
   let hadSel = false;
-  body.addEventListener('pointerdown', e => { downAt = [e.clientX, e.clientY]; down = true; _lastPointer = e.pointerType; const s = window.getSelection(); hadSel = !!(s && !s.isCollapsed && body.contains(s.anchorNode)); });
+  body.addEventListener('pointerdown', e => { downAt = [e.clientX, e.clientY]; down = true; _lastPointer = e.pointerType; _penSelected = false; const s = window.getSelection(); hadSel = !!(s && !s.isCollapsed && body.contains(s.anchorNode)); });
   body.addEventListener('pointercancel', () => { down = false; });   // touch: a long-press turns into a text selection
   document.addEventListener('pointerup', () => { down = false; }, true);
   body.addEventListener('pointerup', e => {
     if (e.target.closest && e.target.closest('.anno-mark, .adj-handle')) return;   // a margin marker opens its card by its own click; a handle being let go isn't a tap
     if (Ink.on && e.pointerType !== 'touch') return;                    // the pen is writing
     const tapped = downAt && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) <= 6;
-    if (e.pointerType !== 'mouse' && tapped && hadSel) { window.getSelection().removeAllRanges(); hideSelBar(); hadSel = false; return; }   // touch: a tap puts a selection away
+    if (e.pointerType !== 'mouse' && tapped && hadSel && !_penSelected) { window.getSelection().removeAllRanges(); hideSelBar(); hadSel = false; return; }   // touch: a tap puts a selection away (not a Pencil's hold that just selected a word)
     setTimeout(() => {
       const sel = window.getSelection();
       if (sel && !sel.isCollapsed && body.contains(sel.anchorNode)) { showSelBar(); return; }
@@ -10344,8 +10347,9 @@ const INK_SIZES = { fine: 0.0013, medium: 0.0024, bold: 0.0042 };   // stroke wi
 const Ink = { on: false, tool: 'pen', color: 'ink', size: 'medium', smooth: 1, undo: [], saveTimer: null };   // smooth: 0 (raw) .. 1 (smoothest); fixed at the smoothest
 /* What the Pencil does, chosen in the strip above the paper: 'read' (like a finger: scroll, select), 'hl' (strokes
    highlight the text, or underline it for a comment) or 'write' (ink). The strip shows the chosen mode's tools beside
-   the switch. In any mode, a tap on a highlight opens it (in Write a tap is a dot of ink). Remembered per device. */
-const Pencil = { mode: 'read', hl: null };
+   the switch. In any mode, a tap on a highlight opens it (in Write a tap is a dot of ink). Remembered per device.
+   Highlight's Ask is for one stroke: the passage goes to Chat, its mark fades, and the tool you had comes back. */
+const Pencil = { mode: 'read', hl: null, before: null };   // before: the tool Ask came from
 const PENCIL_KEY = 'scholar_pencil_v1';
 (() => { try { const v = JSON.parse(localStorage.getItem(PENCIL_KEY)) || {};
   if (['read', 'hl', 'write'].includes(v.mode)) Pencil.mode = v.mode;
@@ -10353,10 +10357,11 @@ const PENCIL_KEY = 'scholar_pencil_v1';
   if (PEN_COLORS[v.color]) Ink.color = v.color;
   if (INK_SIZES[v.size]) Ink.size = v.size; } catch (e) {}
   if (!isOwner()) Pencil.mode = 'read'; })();   // a visitor's Pencil only reads (the saved mode waits for you)
-function savePencil() { try { localStorage.setItem(PENCIL_KEY, JSON.stringify({ mode: Pencil.mode, hl: Pencil.hl, color: Ink.color, size: Ink.size })); } catch (e) {} }
+function savePencil() { try { localStorage.setItem(PENCIL_KEY, JSON.stringify({ mode: Pencil.mode, hl: Pencil.hl === 'ask' ? Pencil.before : Pencil.hl, color: Ink.color, size: Ink.size })); } catch (e) {} }
 function lastHlColor() { try { const c = localStorage.getItem('scholar_pen_hl'); return HL_COLORS.includes(c) ? c : 'orange'; } catch (e) { return 'orange'; } }
 function rememberHlColor(c) { try { if (c) localStorage.setItem('scholar_pen_hl', c); } catch (e) {} }
-function pencilHl() { return Pencil.hl || lastHlColor(); }   // a colour, or 'note' (underline + comment)
+function pencilHl() { return Pencil.hl === 'ask' && !canAskClaude() ? Pencil.before || lastHlColor() : Pencil.hl || lastHlColor(); }   // a colour, 'note' (underline + comment) or 'ask'
+function pencilAskDone() { if (Pencil.hl === 'ask') { Pencil.hl = Pencil.before; Pencil.before = null; } }
 /* A device that can have a Pencil (an iPad; not a phone, not a Mac) gets the strip with the switch at all times */
 const pencilDevice = () => navigator.maxTouchPoints > 1 && !readerPhone();
 const PENCIL_MODES = [
@@ -10373,6 +10378,7 @@ async function setPencilMode(m) {
     hideSelBar(); window.getSelection().removeAllRanges(); closeAnnoCard();
   }
   if (m !== 'write') flushInk();
+  pencilAskDone();
   Pencil.mode = m; savePencil();
   syncPencilUI();
 }
@@ -10384,6 +10390,7 @@ function syncPencilUI() {
 }
 function endInk() {   // leaving the paper: save what was drawn, nothing left to undo (the mode is kept for the next paper)
   flushInk();
+  pencilAskDone();
   Ink.undo = [];
   const bar = document.getElementById('inkBar');
   if (bar._slide) { cancelAnimationFrame(bar._slide.raf); bar._slide.running = false; }
@@ -10393,7 +10400,13 @@ function endInk() {   // leaving the paper: save what was drawn, nothing left to
 const ICON_ERASER = '<svg viewBox="0 0 24 24" aria-hidden="true" style="fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M8 20h12M5.5 14.5l8-8a2 2 0 0 1 2.8 0l2.2 2.2a2 2 0 0 1 0 2.8L11 19H8.5l-3-3a1 1 0 0 1 0-1.5z"/><path d="M9 11l5 5"/></svg>';
 const ICON_ERASE_PART = '<svg viewBox="0 0 24 24" aria-hidden="true" style="fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M3 7c3-3 5 3 8 0s5-3 8 0"/><circle cx="12" cy="15" r="4.5" stroke-dasharray="2.2 2.2"/><path d="M5 21h14"/></svg>';
 const ICON_UNDO = '<svg viewBox="0 0 24 24" aria-hidden="true" style="fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>';
-function setPencilHl(v) { Pencil.hl = v; if (v !== 'note') rememberHlColor(v); savePencil(); renderInkBar(); }
+function setPencilHl(v) {
+  if (v === 'ask') {   // a toggle: tapped again, the tool you had comes back
+    if (Pencil.hl === 'ask') pencilAskDone(); else { Pencil.before = Pencil.hl; Pencil.hl = 'ask'; }
+    renderInkBar(); return;
+  }
+  Pencil.hl = v; Pencil.before = null; if (v !== 'note') rememberHlColor(v); savePencil(); renderInkBar();
+}
 /* The erasers are toggles: tapping the one that's on puts the pen back in your hand, as does tapping a colour or size */
 function setInkTool(tool, color, size) {
   Ink.tool = tool !== 'pen' && Ink.tool === tool ? 'pen' : tool;
@@ -10413,7 +10426,8 @@ function inkToolsHTML() {
   if (Pencil.mode === 'hl') {
     const cur = pencilHl();
     return HL_COLORS.map(c => `<button class="sel-dot ${cur === c ? 'on' : ''}" style="--hc:var(--hl-${c})" title="Highlight: ${escAttr(hlLabel(c))}" aria-label="Highlight: ${escAttr(hlLabel(c))}" aria-pressed="${cur === c}" onclick="setPencilHl('${c}')"></button>`).join('')
-      + `<span class="sel-sep"></span><button class="sel-icon ${cur === 'note' ? 'on' : ''}" onclick="setPencilHl('note')" title="Underline and write a comment" aria-label="Underline for a comment" aria-pressed="${cur === 'note'}">${ICON_UNDERLINE}</button>`;
+      + `<span class="sel-sep"></span><button class="sel-icon ${cur === 'note' ? 'on' : ''}" onclick="setPencilHl('note')" title="Underline and write a comment" aria-label="Underline for a comment" aria-pressed="${cur === 'note'}">${ICON_UNDERLINE}</button>`
+      + (canAskClaude() ? `<button class="sel-icon ${cur === 'ask' ? 'on' : ''}" onclick="setPencilHl('ask')" title="Ask Claude: stroke a passage to ask about it in Chat (just that one; nothing is highlighted)" aria-label="Ask Claude about a passage" aria-pressed="${cur === 'ask'}">${ICON_ASK}</button>` : '');
   }
   if (Pencil.mode === 'write') {
     const pen = Ink.tool === 'pen', rest = pen ? '' : ' resting';   // while erasing, the pen's colour and size stay marked, faded
@@ -10608,10 +10622,33 @@ function caretAt(x, y) {
     glide = requestAnimationFrame(step);
   }
   let st = null;
+  /* Read: a drag scrolls; held still for a moment on a word, the Pencil selects it (as a finger's long press does),
+     and moving on from there selects up to the word under it. Lifted, the selection bar comes up. */
+  const PEN_HOLD_MS = 400;
+  function holdSelect(s) {
+    if (st !== s || s.moved) return;
+    const c = markCaret(s.x0, s.y0);
+    if (!c) return;   // a margin or a gap: nothing to select, and a drag still scrolls
+    const r = document.createRange(); r.setStart(c.node, c.offset); r.collapse(true); wholeWords(r);
+    if (r.collapsed) return;   // between two words
+    s.mode = 'select'; s.word = r;
+    const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r.cloneRange());
+    _penSelected = true;
+  }
+  function selectTo(e) {
+    const b = markCaret(e.clientX, e.clientY);
+    if (!b) return;   // off the text for a moment: keep what's selected
+    const w = st.word, r = document.createRange();
+    if (w.comparePoint(b.node, b.offset) < 0) { r.setStart(b.node, b.offset); r.setEnd(w.endContainer, w.endOffset); }   // back from the first word
+    else { r.setStart(w.startContainer, w.startOffset); r.setEnd(b.node, b.offset); }
+    wholeWords(r);
+    const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+  }
   body.addEventListener('pointerdown', e => {
     if (e.pointerType === 'pen' && Pencil.mode === 'read' && onPage(e.target)) {
       stopGlide(); e.preventDefault();
-      st = { id: e.pointerId, mode: 'scroll', x0: e.clientX, y0: e.clientY, lx: e.clientX, ly: e.clientY, lt: e.timeStamp, vx: 0, vy: 0, moved: false };
+      const s = st = { id: e.pointerId, mode: 'scroll', pg: onPage(e.target), x0: e.clientX, y0: e.clientY, lx: e.clientX, ly: e.clientY, lt: e.timeStamp, vx: 0, vy: 0, moved: false };
+      s.hold = setTimeout(() => holdSelect(s), PEN_HOLD_MS);
       return;
     }
     const pen = (e.pointerType === 'pen' && Pencil.mode !== 'read') || (Ink.on && e.pointerType === 'mouse' && e.button === 0);
@@ -10722,10 +10759,11 @@ function caretAt(x, y) {
   }
   body.addEventListener('pointermove', e => {
     if (!st || e.pointerId !== st.id) return;
+    if (st.mode === 'select') { selectTo(e); return; }
     if (st.mode === 'scroll') {
       const dx = e.clientX - st.lx, dy = e.clientY - st.ly, dt = Math.max(1, e.timeStamp - st.lt);
       if (!st.moved && Math.hypot(e.clientX - st.x0, e.clientY - st.y0) < 4) return;
-      st.moved = true;
+      st.moved = true; clearTimeout(st.hold);
       body.scrollLeft -= dx; body.scrollTop -= dy;
       st.vx = 0.7 * (dx / dt) + 0.3 * st.vx; st.vy = 0.7 * (dy / dt) + 0.3 * st.vy;   // recent speed, for the glide
       st.lx = e.clientX; st.ly = e.clientY; st.lt = e.timeStamp;
@@ -10738,6 +10776,8 @@ function caretAt(x, y) {
   const finish = e => {
     if (!st || e.pointerId !== st.id) return;
     const s = st; st = null;
+    clearTimeout(s.hold);
+    if (s.mode === 'select') { if (e.type === 'pointercancel' && !getSelection().isCollapsed) showSelBar(); return; }   // (a lift: the reader's own pointerup brings up the selection bar)
     if (s.mode === 'scroll') { if (s.moved && e.type !== 'pointercancel' && e.timeStamp - s.lt < 80 && Math.hypot(s.vx, s.vy) > 0.1) startGlide(s.vx, s.vy); return; }
     if (s.mode === 'pen') {
       if (e.type !== 'pointercancel') { st = s; addPoints(e, true); st = null; }   // end exactly where the Pencil lifted
@@ -10755,6 +10795,17 @@ function caretAt(x, y) {
       const info = s.moved && e.type !== 'pointercancel' && s.range ? rangeInfo(s.range) : null, tool = pencilHl();
       if (!info || info.error || info.quote.length < 2) { clearLiveMark(); return; }
       drawLiveMark(s.pg, info.rects, tool);   // exactly what will be saved, until the page redraws with it
+      if (tool === 'ask') {   // nothing is saved: the passage goes to Chat and its mark fades
+        const l = s.pg.querySelector('.anno-live');
+        if (l) {   // renamed, so a stroke made while it fades draws a mark of its own
+          l.className = 'anno-asked';
+          if (reduceMotion() || !l.animate) l.remove();
+          else l.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 240, delay: 120, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)', fill: 'forwards' }).finished.then(() => l.remove(), () => l.remove());
+        }
+        pencilAskDone(); renderInkBar();
+        askAboutPassage(info.page, info.quote);
+        return;
+      }
       _selPending = info;
       (tool === 'note' ? createAnno('note', null, true) : createAnno('hl', tool, true)).finally(() => { const l = s.pg.querySelector('.anno-live'); if (l && !st) l.remove(); });
     }
@@ -10968,7 +11019,7 @@ function renderNotesPane() {
   const panel = document.getElementById('notesPane');
   if (!panel || !document.getElementById('reader').classList.contains('panel-open')) return;
   applyPanelLayout();
-  if (panelMode() === 'tabs' && _panelTab === 'chat' && !readerPhone()) { renderChatPanel(); return; }
+  if (notesBehindChat()) { renderChatPanel(); return; }
   if (chatShown()) { const cr = document.getElementById('chatRoot'); if (!cr || cr.dataset.paper !== (_reader.paper && _reader.paper.id)) chatOpen(); }   // docked beside the notes: it opens with them, for this paper
   const head = `<div class="rp-head">${paneHeadStart('notes')}<span class="grow"></span>${Vault.key ? `<button class="rp-icon-btn" onclick="lockNotes()" title="Lock notes (forget the key on this device)" aria-label="Lock notes">${ICON_LOCK}</button>` : ''}${paneClose('notes')}</div>`;
   if (!vaultSupported()) {
@@ -11100,6 +11151,14 @@ async function startReview() {   // the caret starts on the empty line under Sum
   const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
 }
 const REVIEW_MARK = /\*\*Strengths\*\*[\s\S]*\*\*Weaknesses\*\*/;
+/* Notes are written in the Notes pane, so whatever starts or adds to one (a new note, a citation, an edit) brings it
+   into view: the panel opens if it's closed, and where Notes and Chat share it as tabs, Notes comes to the front */
+function notesBehindChat() { return panelMode() === 'tabs' && _panelTab === 'chat' && !readerPhone(); }
+function showNotesPane() {
+  if (notesBehindChat()) setPanelTab('notes');   // (opens the panel too)
+  else if (!document.getElementById('reader').classList.contains('panel-open')) toggleReaderPanel(true);
+  else renderReaderPanel();
+}
 /* Notes: '+ Add note' opens an editor card; Save (or Cmd/Ctrl+Enter) keeps it, Cancel (or Esc) drops it */
 let _rnDraft = '', _rnFresh = null;
 async function startNewNote(prefill) {
@@ -11108,8 +11167,7 @@ async function startNewNote(prefill) {
   if (!_rn) { setRnState('loading'); await loadReaderNotes(); if (!_rn) return; }
   await finishNotesEdit();
   _rnEditing = 'new'; _rnDraft = prefill || ''; _rnRange = null;
-  if (!document.getElementById('reader').classList.contains('panel-open')) toggleReaderPanel(true);
-  else renderReaderPanel();
+  showNotesPane();
 }
 async function editNote(id) {
   if (notesBusy()) return;
@@ -11120,8 +11178,7 @@ async function editNote(id) {
   if (_hw) await saveHandwritten(true);
   if (_rnEditing && _rnEditing !== id) await finishNotesEdit();
   _rnEditing = id; _rnDraft = e.text;
-  if (!document.getElementById('reader').classList.contains('panel-open')) toggleReaderPanel(true);
-  else renderReaderPanel();
+  showNotesPane();
 }
 /* What the note being edited said before this edit ('' for a new one) */
 function draftOriginal() {
@@ -11139,7 +11196,7 @@ function cancelNoteEdit() {
   toast(ed === 'new' ? 'Note discarded' : 'Changes discarded', () => {
     if (_rnEditing || !_rn || _rn.id !== snap.pid) return;
     _rnEditing = snap.editing; _rnDraft = snap.draft; _rnPendingRefs = snap.refs; _rnRange = null;
-    if (!document.getElementById('reader').classList.contains('panel-open')) toggleReaderPanel(true); else renderReaderPanel();
+    showNotesPane();
     redrawAnnoLayers();
   });
 }
@@ -11151,7 +11208,7 @@ async function editAnnoComment(id) {
   if (_hw) await saveHandwritten(true);
   if (_rnEditing && _rnEditing !== 'a:' + id) await finishNotesEdit();
   _rnEditing = 'a:' + id; _rnDraft = a.note || ''; _rnRange = null;
-  if (!document.getElementById('reader').classList.contains('panel-open')) toggleReaderPanel(true); else renderReaderPanel();
+  showNotesPane();
 }
 async function saveNoteEdit(quiet) {
   if (!_rnEditing || !_rn) return;
@@ -11281,7 +11338,7 @@ async function startHandwritten() {
   if (!_rn) { setRnState('loading'); await loadReaderNotes(); if (!_rn) return; }
   await finishNotesEdit();
   _hw = hwOpen('new', 'panel');
-  if (!document.getElementById('reader').classList.contains('panel-open')) toggleReaderPanel(true); else renderReaderPanel();
+  showNotesPane();
   hwFocus();
 }
 async function editHandwritten(id) {
@@ -11289,7 +11346,7 @@ async function editHandwritten(id) {
   if (!e || !e.hand || (_hw && _hw.id === id)) return;
   await finishNotesEdit();
   _hw = hwOpen(id, 'panel', e.hand);
-  if (!document.getElementById('reader').classList.contains('panel-open')) toggleReaderPanel(true); else renderReaderPanel();
+  showNotesPane();
   hwFocus();
 }
 /* A highlight's comment, written in the panel */
@@ -11300,7 +11357,7 @@ async function writeAnnoComment(id) {
   closeAnnoCard();
   await finishNotesEdit();
   _hw = hwOpen('a:' + id, 'panel', hasHand(a) ? a.hand : null);
-  if (!document.getElementById('reader').classList.contains('panel-open')) toggleReaderPanel(true); else renderReaderPanel();
+  showNotesPane();
   hwFocus();
 }
 function hwFocus() { setTimeout(() => { const ed = hwRoot(); if (!ed) return; if (_hw.where === 'panel') ed.scrollIntoView({ block: 'nearest' }); const b = ed.querySelector('.pen-dot.on'); if (b && !matchMedia('(pointer: coarse)').matches) b.focus({ preventScroll: true }); }, 0); }
@@ -11470,7 +11527,7 @@ const Chat = {
   status: (() => { if (chatElsewhere()) return 'elsewhere'; try { return localStorage.getItem('claude_bridge_token') ? 'unknown' : 'setup'; } catch (e) { return 'setup'; } })(),
   token: (() => { try { return localStorage.getItem('claude_bridge_token') || ''; } catch (e) { return ''; } })(),
   pid: null, messages: [], fresh: true, model: 'opus', running: false, streaming: '', tool: '', error: '',
-  draft: { quotes: [], images: [], mentions: [] }, draftText: '', pairCode: '', loadedFor: null,
+  draft: { quotes: [], images: [], mentions: [] }, draftText: '', draftFor: null, pairCode: '', loadedFor: null,
 };
 /* Notes or Chat: remembered on this device, so coming back to the reader (after iOS reloads the app, too) finds
    the tab you left it on */
@@ -11563,7 +11620,7 @@ async function chatLoad() {
     const j = await r.json();
     Chat.history = hr && hr.ok ? (await hr.json()).chats || [] : [];
     if (!_reader.paper || _reader.paper.id !== pid) return;
-    if (Chat.pid !== pid) { Chat.draft = { quotes: [], images: [], mentions: [] }; Chat.draftText = ''; }   // a draft belongs to its paper
+    chatDraft();   // a draft belongs to its paper
     Object.assign(Chat, { pid, messages: j.messages || [], fresh: j.fresh !== false, model: j.model || 'opus', running: !!j.running, streaming: '', tool: '', error: '', loadedFor: pid });
     chatEngineFrom(j);
     // an answer still being written from before a reload: check back until it's saved
@@ -11870,13 +11927,33 @@ function updateChatSend() {
 function chatSendOrStop() { if (Chat.running) chatStop(); else chatSend(); }
 async function chatStop() { try { await bridgeFetch('/chat/stop', { method: 'POST', body: JSON.stringify({ paper: Chat.pid }) }); } catch (e) {} }
 
-/* Ask about a passage: from the paper's selection bar, or a selection inside a reply */
+/* The message being written (its text, and the passages, figures and papers it asks about) belongs to one paper.
+   Whatever adds to it takes it through here, so a passage asked about before this paper's chat has loaded isn't
+   wiped when it loads: the draft is this paper's from the moment something is added. */
+function chatDraft() {
+  const pid = _reader.paper ? _reader.paper.id : null;
+  if (Chat.draftFor !== pid) { Chat.draft = { quotes: [], images: [], mentions: [] }; Chat.draftText = ''; Chat.draftFor = pid; }
+  return Chat.draft;
+}
+/* Asking Claude needs the Chat tab, which a phone doesn't have. A device not connected to the Mac yet still offers
+   Ask: the passage waits in the message while Chat's pane connects, right there */
+function canAskClaude() { return isOwner() && !readerPhone(); }
+/* Ask about a passage: from the paper's selection bar, a highlight's card, the Pencil's Ask, or a selection inside a reply */
+function askAboutPassage(page, text) {
+  chatDraft().quotes.push({ page, text });
+  setPanelTab('chat', true); renderChatAttach();
+}
 function askAboutSelection() {
   const info = _selPending || selInfo();
   if (!info || info.error) return;
-  Chat.draft.quotes.push({ page: info.page, text: info.quote });
   hideSelBar(); window.getSelection().removeAllRanges();
-  setPanelTab('chat', true); renderChatAttach();
+  askAboutPassage(info.page, info.quote);
+}
+function askAboutAnno(id) {
+  const a = annoById(id);
+  if (!a) return;
+  closeAnnoCard();
+  askAboutPassage(a.page, a.quote);
 }
 document.addEventListener('mouseup', () => {
   setTimeout(() => {
@@ -11924,7 +12001,7 @@ function startFigureSelect() {
     const ctx = out.getContext('2d');
     if (document.getElementById('reader').classList.contains('dark')) ctx.filter = 'none';
     ctx.drawImage(canvas, sel.x * k, sel.y * k, sel.w * k, sel.h * k, 0, 0, out.width, out.height);
-    Chat.draft.images.push({ url: out.toDataURL('image/png'), page: +pg.dataset.page });
+    chatDraft().images.push({ url: out.toDataURL('image/png'), page: +pg.dataset.page });
     setPanelTab('chat', true); renderChatAttach();
   };
   body.addEventListener('pointerdown', down, true);
@@ -12347,7 +12424,7 @@ function editorInsertCite(tok, range) {
   const ed = document.getElementById('rpNotes');
   if (!ed) return false;
   const shown = document.getElementById('reader').classList.contains('panel-open');
-  if (shown) ed.focus();   // hidden (panel closed, e.g. on a phone): add it without focusing, so no keyboard pops up
+  if (shown) { if (notesBehindChat()) setPanelTab('notes'); ed.focus(); }   // hidden (panel closed, e.g. on a phone): add it without focusing, so no keyboard pops up
   let r = range || (_rnRange && ed.contains(_rnRange.startContainer) ? outsidePill(_rnRange.cloneRange()) : null);
   if (!r) { editorCaretEnd(ed); r = _rnRange.cloneRange(); }
   if (range) r.deleteContents();   // replacing a typed [[query
@@ -12363,7 +12440,7 @@ function editorInsertCite(tok, range) {
   if (prev && !/\s$/.test(prev)) pill.before(document.createTextNode(' '));
   const c = document.createRange(); c.setStartAfter(after || pill); c.collapse(true);
   if (shown) { const sel = getSelection(); sel.removeAllRanges(); sel.addRange(c); }
-  else toast('Cited in your note', () => toggleReaderPanel(true), { actionLabel: 'Show' });
+  else toast('Cited in your note', () => showNotesPane(), { actionLabel: 'Show' });
   _rnRange = c.cloneRange();
   editorSync(ed);
   return true;
@@ -13054,7 +13131,7 @@ document.addEventListener('DOMContentLoaded', () => { loadPapers(); loadInterest
     'startHandwritten', 'editHandwritten', 'saveHandwritten', 'hwTool', 'hwUndo', 'adjustAnno', 'endAdjust',
     'acWrite', 'acSaveHand', 'writeAnnoComment',
     // Claude on the laptop
-    'chatOpen', 'chatSend', 'chatSendOrStop', 'chatNew', 'chatSwitch', 'chatConnect', 'chatSetRemote', 'chatForgetRemote', 'chatEngine', 'askAboutSelection',
+    'chatOpen', 'chatSend', 'chatSendOrStop', 'chatNew', 'chatSwitch', 'chatConnect', 'chatSetRemote', 'chatForgetRemote', 'chatEngine', 'askAboutSelection', 'askAboutPassage', 'askAboutAnno',
     'startFigureSelect', 'chatApplyBlock', 'chatSaveAsNote', 'chatAddPaper', 'chatRefresh', 'toggleLibPanel', 'startAddPaper', 'stopAddPaper', 'startTopicTag',
     // private papers and PDFs
     'pickUploadPdf', 'uploadPdf', 'usePdfFile', 'openPdfChange', 'removeLocalPdf', 'removeUpload', 'renameUpload', 'startReview', 'saveUploads',
