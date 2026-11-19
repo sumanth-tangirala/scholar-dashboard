@@ -11,6 +11,8 @@
     star_papers      star papers in the library, or unstar them
 
 Local only, over stdio: the app starts it as `python3 bridge/scholar_mcp.py` (bridge/mcp_setup.sh registers it).
+The app keeps it running for as long as the app is open, so when this file changes the server starts itself again
+(between calls) and tells the app its tools may have changed: a fix reaches Claude without restarting the app.
 Nothing listens on the network. It talks to the bridge on 127.0.0.1 with the bridge's pairing token
 (~/.scholar-bridge/token); with no token yet, it asks for one through the usual Allow dialog on this Mac.
 Never reads or sends your notes or the papers you uploaded for review: only the public database.
@@ -29,6 +31,9 @@ STOP = set('a an the for of with via using in on to and or from by is are be can
            'paper papers about my me any some'.split())
 
 _out = threading.Lock()
+_calls = {'n': 0, 'lock': threading.Lock()}   # tool calls being answered (each on its own thread)
+SELF = os.path.abspath(__file__)
+STARTED = os.path.getmtime(SELF)
 
 
 def log(*a): print('[scholar-mcp]', *a, file=sys.stderr, flush=True)
@@ -389,7 +394,7 @@ def handle(m):
     try:
         if method == 'initialize':
             v = params.get('protocolVersion')
-            result = {'protocolVersion': v if v in VERSIONS else VERSIONS[0], 'capabilities': {'tools': {'listChanged': False}},
+            result = {'protocolVersion': v if v in VERSIONS else VERSIONS[0], 'capabilities': {'tools': {'listChanged': True}},
                       'serverInfo': {'name': 'scholar-dashboard', 'title': 'Scholar Dashboard', 'version': '1.0.0'},
                       'instructions': ('Adds papers to the user\'s Scholar Dashboard library, keeps their lists and stars, and searches it. When '
                                        'the user asks to add, save or keep a paper ("add this to my library"), call add_paper once '
@@ -416,10 +421,49 @@ def handle(m):
         send({'jsonrpc': '2.0', 'id': mid, 'error': {'code': -32603, 'message': str(e) or 'internal error'}})
 
 
+def call_thread(m):
+    try: handle(m)
+    finally:
+        with _calls['lock']: _calls['n'] -= 1
+
+
+def changed():
+    try: return os.path.getmtime(SELF) != STARTED
+    except OSError: return False
+
+
+def reload(line):
+    """This file changed: start it again in this same process (the app's pipes stay as they are), handing the new one
+    the message just read. Only between calls, so no answer is lost."""
+    try:
+        with open(SELF, encoding='utf-8') as f: compile(f.read(), SELF, 'exec')
+    except Exception as e:   # caught mid-write, or broken: keep running as is, and try again with the next message
+        log('this file changed but doesn\'t compile yet:', e); return
+    log('this file changed: starting again')
+    env = dict(os.environ, SCHOLAR_MCP_PENDING=line.decode('utf-8', 'replace'), SCHOLAR_MCP_RELOADED='1')
+    sys.stdout.flush(); sys.stderr.flush()
+    os.execve(sys.executable, [sys.executable, SELF, *sys.argv[1:]], env)
+
+
+def lines():
+    """Messages, one per line. Read a byte at a time (no read-ahead), so nothing waiting in a buffer is lost when the
+    server starts itself again."""
+    pending = os.environ.pop('SCHOLAR_MCP_PENDING', None)
+    if pending is not None: yield pending.encode()
+    raw = sys.stdin.buffer.raw
+    while True:
+        line = raw.readline()
+        if not line: return
+        yield line
+
+
 def main():
     log('started; bridge', BRIDGE)
-    for line in sys.stdin:
-        line = line.strip()
+    if os.environ.pop('SCHOLAR_MCP_RELOADED', None):   # the tools may have changed: the app asks for them again
+        send({'jsonrpc': '2.0', 'method': 'notifications/tools/list_changed'})
+    for raw_line in lines():
+        if changed() and not _calls['n']: reload(raw_line)
+        line = raw_line.decode('utf-8', 'replace').strip()
         if not line: continue
         try: msg = json.loads(line)
         except Exception:
@@ -427,7 +471,10 @@ def main():
         for m in (msg if isinstance(msg, list) else [msg]):
             if isinstance(m, dict) and m.get('method'):
                 # tool calls wait for papers: each runs on its own, so pings and other calls are answered meanwhile
-                (threading.Thread(target=handle, args=(m,), daemon=True).start() if m.get('method') == 'tools/call' else handle(m))
+                if m.get('method') == 'tools/call':
+                    with _calls['lock']: _calls['n'] += 1   # counted before it starts, so a restart never cuts it off
+                    threading.Thread(target=call_thread, args=(m,), daemon=True).start()
+                else: handle(m)
 
 
 if __name__ == '__main__':
