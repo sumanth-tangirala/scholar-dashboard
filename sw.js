@@ -9,7 +9,7 @@
    Left alone, always: GitHub's API and the encrypted notes (annotations/), the chat bridge, and PDFs (downloaded ones
    live in the page's own IndexedDB, see OFFLINE in index.html). A kept copy is only ever a real answer the network
    gave; this never makes up a "not found", which the notes would read as "deleted". */
-const VERSION = 1;
+const VERSION = 2;
 const PAGES = 'scholar-pages-v' + VERSION, LIBS = 'scholar-libs-v' + VERSION;
 const ROOT = new URL('./', self.location).href;   // where index.html lives
 const NET_WAIT = 4000;
@@ -19,7 +19,7 @@ const DATA = /^https:\/\/raw\.githubusercontent\.com\/[^/]+\/[^/]+\/[^/]+\/(pape
 /* Kept from the start: the app, its icons and the data, so even a first visit opens offline next time */
 self.addEventListener('install', e => {
   self.skipWaiting();
-  e.waitUntil(caches.open(PAGES).then(c => Promise.all(['', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png',
+  e.waitUntil(caches.open(PAGES).then(c => Promise.all(['', 'manifest.webmanifest', 'icon.svg', 'favicon.svg', 'favicon-32x32.png', 'favicon.ico', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png',
     'papers_database.csv', 'interests_database.csv', 'groups_database.csv'].map(u => c.add(ROOT + u).catch(() => {})))));
 });
 self.addEventListener('activate', e => {
