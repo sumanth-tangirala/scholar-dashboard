@@ -1151,10 +1151,20 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .anno-hl.hover > .anno-rect.ref { box-shadow: inset 0 -1px 0 var(--note-line, var(--accent)); }
 .reader-page.over-anno .textLayer, .reader-page.over-anno .textLayer span { cursor: pointer; }
 .annoMarks { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
-.anno-mark { position: absolute; width: 18px; height: 18px; margin-top: -9px; padding: 0; border: none; border-radius: 5px; background: var(--hc, var(--accent)); color: #1a1406; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; pointer-events: auto; box-shadow: 0 1px 3px rgba(0,0,0,0.35); transition: transform 0.15s, box-shadow 0.15s; }
-.anno-mark.note { background: var(--note-line, var(--accent)); color: var(--note-ink, #1a1406); }
-.anno-mark:hover { transform: scale(1.15); box-shadow: 0 2px 8px rgba(0,0,0,0.45); }
-.anno-mark svg { width: 12px; height: 12px; fill: currentColor; }
+.annoMarks { --mark-paper: #fff; --mark-ink: #000; }
+.reader.dark .annoMarks { --mark-paper: #1d1d1f; --mark-ink: #fff; }
+/* A comment's mark: a quiet tick in the margin (--tx: its centre, from the button's right edge; see renderAnnoLayer).
+   Pointed at, focused, its highlight pointed at, or its card open (.hover): a soft tile with the comment glyph. */
+.anno-mark { --t: 18px; position: absolute; height: var(--t); margin-top: calc(var(--t) / -2); padding: 0; border: none; background: none; cursor: pointer; pointer-events: auto; color: color-mix(in srgb, var(--hc) 75%, var(--mark-ink)); }
+.anno-mark::before, .anno-mark::after, .anno-mark svg { position: absolute; top: 50%; transition: opacity 0.15s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.anno-mark::before { content: ''; right: calc(var(--tx) - 1.5px); width: 3px; height: 14px; margin-top: -7px; border-radius: 2px; background: var(--hc); opacity: 0.75; }
+.anno-mark::after { content: ''; right: calc(var(--tx) - var(--t) / 2); width: var(--t); height: var(--t); margin-top: calc(var(--t) / -2); border-radius: 5px; background: color-mix(in srgb, var(--hc) 18%, var(--mark-paper)); box-shadow: 0 0 0 2px var(--mark-paper); opacity: 0; }   /* (the ring hides a close neighbour's tick at its corners) */
+.anno-mark svg { --g: 12px; right: calc(var(--tx) - var(--g) / 2); width: var(--g); height: var(--g); margin-top: calc(var(--g) / -2); fill: currentColor; opacity: 0; z-index: 1; }
+.anno-mark:is(.hover, :focus-visible), html:not(.no-hover) .anno-mark:hover { z-index: 1; outline: none; }   /* (over its neighbours' ticks) */
+.anno-mark:is(.hover, :focus-visible)::before, html:not(.no-hover) .anno-mark:hover::before { opacity: 0; }
+.anno-mark:is(.hover, :focus-visible)::after, html:not(.no-hover) .anno-mark:hover::after,
+.anno-mark:is(.hover, :focus-visible) svg, html:not(.no-hover) .anno-mark:hover svg { opacity: 1; }
+.anno-mark:focus-visible::after { box-shadow: 0 0 0 2px var(--mark-paper), 0 0 0 4px var(--accent); }
 /* light pages: deeper colours so highlights and comment lines stay visible on white */
 .reader:not(.dark) .annoLayer, .reader:not(.dark) .annoMarks { --hl-orange: #ff7a1f; --hl-yellow: #ffd000; --hl-green: #34c26b; --hl-blue: #4b8ef7; --hl-red: #e03a40; --hl-purple: #a66ff2; --note-line: #1f3a8a; --note-ink: #fff; --ref-tint: rgba(31,58,138,0.10); }
 .sel-bar { position: fixed; z-index: 340; display: none; align-items: center; gap: 2px; padding: 3px 4px; background: #1d1d20; border: 1px solid rgba(255,255,255,0.14); border-radius: 10px; box-shadow: 0 8px 26px rgba(0,0,0,0.55); }
@@ -2438,8 +2448,10 @@ html.no-hover .sel-icon:not(.on):active, html.no-hover .ink-bar .ink-size:not(.o
   .sf-bar .tl-sort, .sf-filters-btn, .sf-sort-btn { height: 38px; }
   .sf-x { width: 30px; height: 30px; }
   .tok-pill { min-height: 32px; }
-  .anno-mark { width: 26px; height: 26px; margin-top: -13px; border-radius: 7px; }
-  .anno-mark svg { width: 15px; height: 15px; }
+  .anno-mark { --t: 26px; }   /* (renderAnnoLayer uses the same sizes) */
+  .anno-mark::before { height: 18px; margin-top: -9px; }
+  .anno-mark::after { border-radius: 7px; }
+  .anno-mark svg { --g: 15px; }
   .ink-bar .sel-dot { width: 28px; height: 28px; margin: 0 4px; }
   .badge-editable { min-height: 30px; display: inline-flex; align-items: center; padding-left: 10px; padding-right: 10px; }
   .rp-add { height: 36px; }
@@ -9678,14 +9690,19 @@ function renderAnnoLayer(pageDiv) {
   const list = visibleAnnos().filter(a => a.page === page && !(Adj && Adj.id === a.id));
   layer.innerHTML = list.slice().sort((p, q) => annoArea(q) - annoArea(p)).map(   // broader first: a smaller one over it shows on top (see annoAt)
     a => annoShapeHTML(a.rects, a.kind === 'note' ? 'note' : a.kind === 'ref' ? 'ref' : '', annoHc(a), a.id)).join('');
-  // a marker in the right margin, level with the first line, for anything that carries a comment
+  // a mark in the right margin, level with the first line, for anything that carries a comment. Marks sharing a line
+  // sit close (s apart); each is pressed by the strip around its own tick, the outer ones by a tile's width (t)
   let marks = pageDiv.querySelector('.annoMarks');
   if (!marks) { marks = document.createElement('div'); marks.className = 'annoMarks'; pageDiv.appendChild(marks); }
-  const rows = [], step = matchMedia('(pointer: coarse)').matches ? 30 : 20;   // markers side by side when they share a line
-  marks.innerHTML = list.filter(a => a.kind === 'note' || annoHasComment(a)).sort((x, y) => x.rects[0][1] - y.rects[0][1]).map(a => {
+  const coarse = matchMedia('(pointer: coarse)').matches, t = coarse ? 26 : 18, s = coarse ? 8 : 7, r0 = 6 + t / 2;   // (sizes as in the CSS)
+  const rows = [], placed = list.filter(a => a.kind === 'note' || annoHasComment(a)).sort((x, y) => x.rects[0][1] - y.rects[0][1]).map(a => {
     const y = a.rects[0][1] + a.rects[0][3] / 2;
-    const slot = rows.filter(v => Math.abs(v - y) < 0.012).length; rows.push(y);
-    return `<button class="anno-mark ${a.kind === 'note' ? 'note' : ''}" data-anno="${a.id}" style="--hc:${annoHc(a)};top:${y * 100}%;right:${6 + slot * step}px" title="${escAttr(((a.note || '').trim() || (hasHand(a) ? 'Written comment' : 'Comment')).replace(CITE_RE, (m, id, rest) => '\u201c' + ((rest.match(/"([^"]*)/) || [])[1] || '\u2026') + '\u201d').slice(0, 120))}" aria-label="Open comment" onclick="event.stopPropagation();openAnnoCard('${a.id}', true)" onmouseenter="markHover('${a.id}',true)" onmouseleave="markHover('${a.id}',false)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8l-4 3v-3H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg></button>`;
+    let row = rows.find(r => Math.abs(r.y - y) < 0.012); if (!row) rows.push(row = { y, n: 0 });
+    return { a, y, row, k: row.n++ };
+  });
+  marks.innerHTML = placed.map(({ a, y, row, k }) => {
+    const c = r0 + k * s, right = k ? c - s / 2 : c - t / 2, left = k === row.n - 1 ? c + t / 2 : c + s / 2;
+    return `<button class="anno-mark${a.id === _acId ? ' hover' : ''}" data-anno="${a.id}" style="--hc:${annoHc(a)};top:${y * 100}%;right:${right}px;width:${left - right}px;--tx:${c - right}px" title="${escAttr(((a.note || '').trim() || (hasHand(a) ? 'Written comment' : 'Comment')).replace(CITE_RE, (m, id, rest) => '\u201c' + ((rest.match(/"([^"]*)/) || [])[1] || '\u2026') + '\u201d').slice(0, 120))}" aria-label="Open comment" onclick="event.stopPropagation();openAnnoCard('${a.id}', true)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8l-4 3v-3H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg></button>`;
   }).join('');
   renderInkLayer(pageDiv);
   if (Adj && Adj.pg === pageDiv) drawAdjust();
@@ -9741,7 +9758,7 @@ function renderInkLayer(pageDiv) {
   const ar = pageDiv.offsetHeight / pageDiv.offsetWidth;
   svg.replaceChildren(...strokes.map(k => inkPathEl(k, ar)));
 }
-function markHover(id, on) { document.querySelectorAll(`.anno-hl[data-anno="${id}"]`).forEach(r => r.classList.toggle('hover', on || id === _acId)); }   // (the open card's highlight stays lit)
+function markHover(id, on) { document.querySelectorAll(`.anno-hl[data-anno="${id}"], .anno-mark[data-anno="${id}"]`).forEach(r => r.classList.toggle('hover', on || id === _acId)); }   // (the open card's highlight and mark stay lit)
 function redrawAnnoLayers() { _rnDrawnSig = refSig(); document.querySelectorAll('#readerBody .reader-page[data-drawn]').forEach(renderAnnoLayer); }
 
 /* --- selection toolbar --- */
@@ -10065,7 +10082,7 @@ function openAnnoCard(id, focusNote, write) {   // write: open its writing card 
   popIn(card);
   acGrow(document.getElementById('acNote'));
   positionAnnoCard(a);
-  document.querySelectorAll(`.anno-hl[data-anno="${id}"]`).forEach(r => r.classList.add('hover'));
+  document.querySelectorAll(`.anno-hl[data-anno="${id}"], .anno-mark[data-anno="${id}"]`).forEach(r => r.classList.add('hover'));
   if (focusNote) setTimeout(() => { const t = document.getElementById('acNote'); if (!t) return; t.focus(); t.setSelectionRange(t.value.length, t.value.length); }, 0);
 }
 /* --- Adjust: move a highlight's ends ---
@@ -10269,7 +10286,7 @@ function closeAnnoCard() {
   if (_acTimer) { clearTimeout(_acTimer); _acTimer = null; }
   if (_acHandTimer) { clearTimeout(_acHandTimer); _acHandTimer = null; }
   if (!Adj) fadeAway(document.getElementById('annoCard'));   // (while adjusting, the card is Adjust's bar: endAdjust puts it away)
-  document.querySelectorAll('.anno-hl.hover').forEach(r => r.classList.remove('hover'));
+  document.querySelectorAll('.anno-hl.hover, .anno-mark.hover').forEach(r => r.classList.remove('hover'));
   _acId = null;
   return id ? endCommentSession(id, text) : Promise.resolve();
 }
@@ -10464,7 +10481,8 @@ const pressClosesCard = e => !!(_acPress && _acPress.id === e.pointerId);
     cancelAnimationFrame(hoverFrame);
     hoverFrame = requestAnimationFrame(() => {
       const pg = e.target.closest && e.target.closest('.reader-page');
-      const a = pg && !_acId && !e.target.closest('.anno-mark') ? annoAt(pg, e.clientX, e.clientY) : null;   // (a card open: a click only closes it)
+      const m = e.target.closest && e.target.closest('.anno-mark');   // a comment's mark lights its highlight, and the other way round
+      const a = pg && !_acId ? (m ? annoById(m.dataset.anno) : annoAt(pg, e.clientX, e.clientY)) : null;   // (a card open: a click only closes it)
       setHover(pg, a ? a.id : null);
     });
   });
