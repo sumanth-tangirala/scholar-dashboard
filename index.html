@@ -9675,7 +9675,8 @@ function renderAnnoLayer(pageDiv) {
   }
   const page = +pageDiv.dataset.page;
   const list = visibleAnnos().filter(a => a.page === page && !(Adj && Adj.id === a.id));
-  layer.innerHTML = list.map(a => annoShapeHTML(a.rects, a.kind === 'note' ? 'note' : a.kind === 'ref' ? 'ref' : '', annoHc(a), a.id)).join('');
+  layer.innerHTML = list.slice().sort((p, q) => annoArea(q) - annoArea(p)).map(   // broader first: a smaller one over it shows on top (see annoAt)
+    a => annoShapeHTML(a.rects, a.kind === 'note' ? 'note' : a.kind === 'ref' ? 'ref' : '', annoHc(a), a.id)).join('');
   // a marker in the right margin, level with the first line, for anything that carries a comment
   let marks = pageDiv.querySelector('.annoMarks');
   if (!marks) { marks = document.createElement('div'); marks.className = 'annoMarks'; pageDiv.appendChild(marks); }
@@ -10029,8 +10030,11 @@ function annoAt(pageDiv, clientX, clientY) {
   if (!_rn) return null;
   const pr = pageDiv.getBoundingClientRect(), x = (clientX - pr.left) / pr.width, y = (clientY - pr.top) / pr.height, page = +pageDiv.dataset.page;
   const hits = visibleAnnos().filter(a => a.page === page && a.rects.some(r => x >= r[0] - 0.003 && x <= r[0] + r[2] + 0.003 && y >= r[1] - 0.003 && y <= r[1] + r[3] + 0.006));
-  return hits.length ? hits[hits.length - 1] : null;
+  // where highlights overlap, the smaller one: it has nowhere else to be reached, while the broader one shows and opens
+  // from its other words (it's drawn on top too, see renderAnnoLayer). The same size: the newer one.
+  return hits.reduce((best, a) => !best || annoArea(a) <= annoArea(best) ? a : best, null);
 }
+function annoArea(a) { return a.rects.reduce((s, r) => s + r[2] * r[3], 0); }
 let _acId = null, _acTimer = null, _acHandTimer = null;
 function openAnnoCard(id, focusNote, write) {   // write: open its writing card (a comment begun with the Pencil)
   const a = annoById(id);
@@ -11162,6 +11166,23 @@ function keepLiveEditor(rebuild) {
   return true;
 }
 function renderReaderPanel() { renderNotesPane(); placeVideo(); }
+/* A redraw (a comment saved, notes synced, a colour changed...) keeps the panel's place: what was at the top of its view
+   stays there, and at the very top it stays at the top. By hand, as the scroll box is new each time (and Safari has no
+   scroll anchoring). */
+function notesPlace() {
+  const s = document.querySelector('#notesPane .rp-scroll');
+  if (!s || s.scrollTop < 1) return null;
+  const top = s.getBoundingClientRect().top;
+  const el = [...s.querySelectorAll('.rp-editor, #rpList > .rp-card')].find(x => x.getBoundingClientRect().bottom > top + 1);
+  return { scroll: s.scrollTop, el, id: el && el.dataset.id, off: el ? el.getBoundingClientRect().top - top : 0 };
+}
+function keepNotesPlace(p) {
+  const s = p && document.querySelector('#notesPane .rp-scroll');
+  if (!s) return;
+  const el = p.el && s.contains(p.el) ? p.el                  // a note being written: the same box, carried over
+    : p.id ? s.querySelector(`#rpList > .rp-card[data-id="${CSS.escape(p.id)}"]`) : null;
+  s.scrollTop = el ? s.scrollTop + el.getBoundingClientRect().top - s.getBoundingClientRect().top - p.off : p.scroll;
+}
 function renderNotesPane() {
   const panel = document.getElementById('notesPane');
   if (!panel || !document.getElementById('reader').classList.contains('panel-open')) return;
@@ -11195,6 +11216,7 @@ function renderNotesPane() {
   const hasComments = items.some(it => it.type === 'comment'), hasNotes = items.some(it => it.type === 'note');
   const filtering = f.colors.size || f.comments || f.notes || f.q;
   const showFilters = total >= 6 || filtering;
+  const place = notesPlace();
   const kept = keepLiveEditor(() => { panel.innerHTML = head + `<div class="rp-scroll">
     <div class="rp-toolbar">${_rnEditing === 'new' || (_hw && _hw.id === 'new') ? '<span class="rp-count-l">New note</span>' : `${pencilDevice() ? `<button class="rp-add" onclick="startNewNote()" title="Type a note">${ICON_PLUS}Type</button><button class="rp-add" onclick="startHandwritten()" title="Write or draw a note with the Pencil">${ICON_WRITE}Write</button>` : `<button class="rp-add" onclick="startNewNote()">${ICON_PLUS}Add note</button>`}${_reader.paper && _reader.paper.uploaded && !(n.entries || []).some(e => REVIEW_MARK.test(e.text)) ? '<button class="rp-text-btn" onclick="startReview()" title="A note laid out as a review">Start review</button>' : ''}`}<span class="grow"></span>
       ${total >= 3 ? `<div class="rp-seg" role="group" aria-label="Order"><button class="${_rnSort === 'page' ? 'on' : ''}" onclick="setRnSort('page')" title="Notes first, then in page order">Page</button><button class="${_rnSort === 'recent' ? 'on' : ''}" onclick="setRnSort('recent')" title="Newest first">Recent</button></div>` : ''}</div>
@@ -11205,6 +11227,7 @@ function renderNotesPane() {
   </div><div class="rp-foot"><span id="rpSync">${esc(_notesSyncText)}</span></div>`;
   updateNotesSync();
   renderRnList(shown, total, anyFilter); });
+  keepNotesPlace(place);
   _rnFresh = null;
   if (_rnEditing && !kept) {   // an editor that just appeared gets the caret; a kept one stays as it was
     const t = document.getElementById('rpNotes');
@@ -12102,6 +12125,35 @@ function askAboutAnno(id) {
   closeAnnoCard();
   askAboutPassage(a.page, a.quote);
 }
+/* Copying rendered math (chat replies, notes, abstracts) gives its TeX, without the $: the browser's own copy writes
+   out KaTeX's pieces line by line ("w=[w / x / ,w / y / ]"). A selection that starts or ends inside a formula takes
+   all of it. Returns null when the selection has no math (the browser's copy is fine then). */
+function selTextWithMath(sel) {
+  if (!sel || !sel.rangeCount || sel.isCollapsed) return null;
+  const r = sel.getRangeAt(0).cloneRange();
+  const kx = n => { const el = n && (n.nodeType === 1 ? n : n.parentElement); return el && el.closest('.katex'); };
+  const a = kx(r.startContainer), b = kx(r.endContainer);
+  if (!a && !b && !r.cloneContents().querySelector('.katex')) return null;
+  if (a) r.setStartBefore(a);
+  if (b) r.setEndAfter(b);
+  const frag = r.cloneContents();
+  frag.querySelectorAll('.katex').forEach(k => { const tex = k.querySelector('annotation[encoding="application/x-tex"]'); k.replaceWith(tex ? tex.textContent.trim() : k.textContent); });
+  // read as laid out (paragraphs and list items on their own lines), off screen
+  const box = document.createElement('div');
+  box.style.cssText = 'position:fixed;left:-99999px;top:0;width:900px;white-space:normal';
+  box.appendChild(frag); document.body.appendChild(box);
+  const out = { text: box.innerText.replace(/\n{3,}/g, '\n\n').trim(), html: box.innerHTML };
+  box.remove();
+  return out;
+}
+document.addEventListener('copy', e => {
+  if (e.defaultPrevented || !e.clipboardData) return;   // (the notes editor copies its own source, $ and all)
+  const t = selTextWithMath(window.getSelection());
+  if (!t) return;
+  e.preventDefault();
+  e.clipboardData.setData('text/plain', t.text);
+  e.clipboardData.setData('text/html', t.html);
+});
 document.addEventListener('mouseup', () => {
   setTimeout(() => {
     const btn = document.getElementById('chatAskSel');
@@ -12111,7 +12163,7 @@ document.addEventListener('mouseup', () => {
     const r = sel.getRangeAt(0).getBoundingClientRect();
     const b = btn || Object.assign(document.createElement('button'), { id: 'chatAskSel', className: 'chat-ask-sel', innerHTML: ICON_ASK + '<span>Ask</span>' });
     b.onmousedown = ev => ev.preventDefault();
-    b.onclick = () => { const t = window.getSelection().toString().replace(/\s+/g, ' ').trim(); if (t) { Chat.draft.quotes.push({ page: 0, text: t }); renderChatAttach(); } b.remove(); window.getSelection().removeAllRanges(); const i = document.getElementById('chatInput'); if (i) i.focus(); };
+    b.onclick = () => { const s = window.getSelection(), m = selTextWithMath(s), t = (m ? m.text : s.toString()).replace(/\s+/g, ' ').trim(); if (t) { Chat.draft.quotes.push({ page: 0, text: t }); renderChatAttach(); } b.remove(); window.getSelection().removeAllRanges(); const i = document.getElementById('chatInput'); if (i) i.focus(); };
     b.style.left = Math.min(window.innerWidth - 80, r.right - 30) + 'px'; b.style.top = (r.bottom + 6) + 'px';
     if (!btn) document.body.appendChild(b);
   }, 10);
@@ -13134,9 +13186,12 @@ async function renderNotesMarkdown(el, text, notesObj) {
   if (!el) return;
   if (!(text || '').trim()) { el.innerHTML = ''; return; }
   const wire = () => el.querySelectorAll('.cite-chip[data-anno]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); citeClick(b.dataset.anno, notesObj); }));
-  // readable right away (citations as pills), formatted once the Markdown libraries arrive; stays like this offline
-  el.innerHTML = pillsHTML(String(text), notesObj, false); wire();
-  try { await loadMdLibs(); } catch (e) { return; }
+  // readable right away (citations as pills), formatted once the Markdown libraries arrive; stays like this offline.
+  // Once they're here it formats at once, with no wait: a redraw of the panel measures its place straight after.
+  if (!(window.marked && window.DOMPurify && window.katex)) {
+    el.innerHTML = pillsHTML(String(text), notesObj, false); wire();
+    try { await loadMdLibs(); } catch (e) { return; }
+  }
   const slots = [];
   const slot = html => `@@SLOT${slots.push(html) - 1}@@`;
   let src = text
