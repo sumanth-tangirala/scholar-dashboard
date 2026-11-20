@@ -1155,16 +1155,18 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .reader.dark .annoMarks { --mark-paper: #1d1d1f; --mark-ink: #fff; }
 /* A comment's mark: a quiet tick in the margin (--tx: its centre, from the button's right edge; see renderAnnoLayer).
    Pointed at, focused, its highlight pointed at, or its card open (.hover): a soft tile with the comment glyph. */
-.anno-mark { --t: 18px; position: absolute; height: var(--t); margin-top: calc(var(--t) / -2); padding: 0; border: none; background: none; cursor: pointer; pointer-events: auto; color: color-mix(in srgb, var(--hc) 75%, var(--mark-ink)); }
-.anno-mark::before, .anno-mark::after, .anno-mark svg { position: absolute; top: 50%; transition: opacity 0.15s cubic-bezier(0.2, 0.8, 0.2, 1); }
-.anno-mark::before { content: ''; right: calc(var(--tx) - 1.5px); width: 3px; height: 14px; margin-top: -7px; border-radius: 2px; background: var(--hc); opacity: 0.75; }
-.anno-mark::after { content: ''; right: calc(var(--tx) - var(--t) / 2); width: var(--t); height: var(--t); margin-top: calc(var(--t) / -2); border-radius: 5px; background: color-mix(in srgb, var(--hc) 18%, var(--mark-paper)); box-shadow: 0 0 0 2px var(--mark-paper); opacity: 0; }   /* (the ring hides a close neighbour's tick at its corners) */
-.anno-mark svg { --g: 12px; right: calc(var(--tx) - var(--g) / 2); width: var(--g); height: var(--g); margin-top: calc(var(--g) / -2); fill: currentColor; opacity: 0; z-index: 1; }
-.anno-mark:is(.hover, :focus-visible), html:not(.no-hover) .anno-mark:hover { z-index: 1; outline: none; }   /* (over its neighbours' ticks) */
-.anno-mark:is(.hover, :focus-visible)::before, html:not(.no-hover) .anno-mark:hover::before { opacity: 0; }
-.anno-mark:is(.hover, :focus-visible)::after, html:not(.no-hover) .anno-mark:hover::after,
-.anno-mark:is(.hover, :focus-visible) svg, html:not(.no-hover) .anno-mark:hover svg { opacity: 1; }
-.anno-mark:focus-visible::after { box-shadow: 0 0 0 2px var(--mark-paper), 0 0 0 4px var(--accent); }
+.anno-mark { --t: 18px; --th: 14px; position: absolute; height: var(--t); margin-top: calc(var(--t) / -2); padding: 0; border: none; background: none; cursor: pointer; pointer-events: auto; color: color-mix(in srgb, var(--hc) 75%, var(--mark-ink)); }
+.anno-mark::after { content: ''; position: absolute; top: 50%; --w: 3px; --h: var(--th); right: calc(var(--tx) - var(--w) / 2); width: var(--w); height: var(--h); margin-top: calc(var(--h) / -2); border-radius: 2px; background: color-mix(in srgb, var(--hc) 75%, var(--mark-paper)); pointer-events: none;
+  transition: width 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), height 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), margin-top 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), right 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), border-radius 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), background-color 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); }   /* at rest: the tick */
+.anno-mark svg { --g: 12px; position: absolute; top: 50%; right: calc(var(--tx) - var(--g) / 2); width: var(--g); height: var(--g); margin-top: calc(var(--g) / -2); fill: currentColor; opacity: 0; transform: scale(0.4); pointer-events: none; transition: opacity 0.12s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); z-index: 1; }
+/* active, the tick grows into the soft tile and the glyph comes in. Ticks close beside it stay in view on top of it,
+   and stay where they're pointed at: only the strips round the ticks are pressed, never the tile */
+.anno-mark { z-index: 1; }
+.anno-mark:is(.hover, :focus-visible), html:not(.no-hover) .anno-mark:hover { z-index: 0; outline: none; }
+.anno-mark:is(.hover, :focus-visible)::after, html:not(.no-hover) .anno-mark:hover::after { --w: var(--t); --h: var(--t); border-radius: 5px; background: color-mix(in srgb, var(--hc) 18%, var(--mark-paper)); }
+.anno-mark:is(.hover, :focus-visible) svg, html:not(.no-hover) .anno-mark:hover svg { opacity: 1; transform: none; transition-delay: 0.05s; }
+@media (prefers-reduced-motion: reduce) { .anno-mark::after, .anno-mark svg { transition: none; } }
+.anno-mark:focus-visible::after { box-shadow: 0 0 0 2px var(--accent); }
 /* light pages: deeper colours so highlights and comment lines stay visible on white */
 .reader:not(.dark) .annoLayer, .reader:not(.dark) .annoMarks { --hl-orange: #ff7a1f; --hl-yellow: #ffd000; --hl-green: #34c26b; --hl-blue: #4b8ef7; --hl-red: #e03a40; --hl-purple: #a66ff2; --note-line: #1f3a8a; --note-ink: #fff; --ref-tint: rgba(31,58,138,0.10); }
 .sel-bar { position: fixed; z-index: 340; display: none; align-items: center; gap: 2px; padding: 3px 4px; background: #1d1d20; border: 1px solid rgba(255,255,255,0.14); border-radius: 10px; box-shadow: 0 8px 26px rgba(0,0,0,0.55); }
@@ -2448,9 +2450,8 @@ html.no-hover .sel-icon:not(.on):active, html.no-hover .ink-bar .ink-size:not(.o
   .sf-bar .tl-sort, .sf-filters-btn, .sf-sort-btn { height: 38px; }
   .sf-x { width: 30px; height: 30px; }
   .tok-pill { min-height: 32px; }
-  .anno-mark { --t: 26px; }   /* (renderAnnoLayer uses the same sizes) */
-  .anno-mark::before { height: 18px; margin-top: -9px; }
-  .anno-mark::after { border-radius: 7px; }
+  .anno-mark { --t: 26px; --th: 18px; }   /* (renderAnnoLayer uses the same sizes) */
+  .anno-mark:is(.hover, :focus-visible)::after { border-radius: 7px; }
   .anno-mark svg { --g: 15px; }
   .ink-bar .sel-dot { width: 28px; height: 28px; margin: 0 4px; }
   .badge-editable { min-height: 30px; display: inline-flex; align-items: center; padding-left: 10px; padding-right: 10px; }
