@@ -1343,6 +1343,7 @@ html:not(.no-hover) .rp-notes-edit .math-pill:hover { background: rgba(255,255,2
 .rp-notes-edit .math-pill.sel { background: rgba(138,164,240,0.24); }
 /* list items in the editor: the marker hangs in its own column, the item's lines beside it, each level one column in */
 .rp-notes-edit .ln.li { padding-left: calc((var(--d, 0) + 1) * 1.6em); text-indent: -1.6em; }
+.rp-notes-edit .ln.li * { text-indent: 0; }   /* (it's inherited: inside a citation or math pill it would pull their words back over the bullet) */
 .rp-notes-edit .li-mark { display: inline-block; min-width: 1.6em; padding-right: 0.45em; box-sizing: border-box; text-indent: 0; text-align: right; color: var(--text-secondary); font-variant-numeric: tabular-nums; user-select: all; -webkit-user-select: all; }
 /* bullets drawn, not typed: the glyphs \u2022 \u25e6 \u25aa come in different sizes; these match the saved note's disc, circle, square */
 .rp-notes-edit .li-mark.b0, .rp-notes-edit .li-mark.b1, .rp-notes-edit .li-mark.b2 { position: relative; color: transparent; }
