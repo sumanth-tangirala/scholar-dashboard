@@ -289,6 +289,18 @@ def ask_permission(code, who=''):
         return False
 
 
+# What Claude can add to the user's notes on the paper (the app turns these blocks into notes, highlights and comments)
+NOTES = """Notes, highlights and comments: you can add them to the user's notes on this paper. Do it when they ask, in any words ("highlight the assumptions", "comment on where the proof is weak", "put this in my notes", "flag what I should check in section 4"), or when what they asked you to do is to mark up the paper. While answering ordinary questions, don't add anything; you may offer to. The app adds them as soon as your answer ends, marked as yours, and the user can undo them. Write each as its own fenced block, exactly like these:
+```note
+A note, in Markdown (you may cite with [[p.N "..."]]).
+```
+```highlight p.N color "exact words"```
+```comment p.N "exact words"
+The comment, in Markdown: a sentence or a few.
+```
+A comment goes on the user's highlight of those words if they have one, else it underlines them; put a color before its quote (```comment p.N color "exact words"```) to highlight them too. color is one of orange, yellow, green, blue, red, purple; <context> says what each means to this user, so choose by meaning. The quoted words follow the citation rules: verbatim, contiguous, a phrase to a sentence, from that page. Highlight the few passages that matter, not whole paragraphs. Never put a block inside a list or table; outside the blocks, say in a sentence or two what you added. Don't repeat what <context> shows is already there (items marked "added by you" are yours). You can't edit or delete existing notes, highlights or comments; if asked, say so and suggest the change."""
+NOTES_V = 1   # bump when NOTES changes: API conversations begun with an older prompt are told once
+
 SYSTEM = """You are a research assistant inside the user's paper-reading app. The user is reading one paper; its full text is given in <paper> in the conversation (page-marked){pdf_how}
 
 Each message may start with <context>: the user's current highlights, comments and notes on this paper (they change as they read), their research interests, and sometimes other papers they @-mentioned. Use them; don't repeat them back.
@@ -297,7 +309,7 @@ Citing the paper: whenever you point to something in the paper, cite it with its
 
 Other papers: {library_how} If more than one could fit, ask them with a short numbered list of titles. Once you know which paper(s) they mean, reply with only one line per paper, ```paper <id>```, and nothing else: the app then sends you that paper's text and the user's own notes on it, and you continue answering their question. Papers they @-mention arrive the same way, in <other-paper>.
 
-Notes and highlights: never add to the user's notes unless they explicitly ask you to. When they do, put each note in a fenced block ```note ... ``` (Markdown; you may cite with [[p.N "..."]] inside), and each highlight as ```highlight p.N color "exact words"``` (color is one of orange, yellow, green, blue, red, purple). The app saves them for the user.
+{notes}
 
 Be direct and concise; use Markdown and $math$ / $$math$$. The chat is a narrow side panel (often under 400px): keep tables to about three columns of short cells, and put citations in the text after the table rather than inside its cells. Say when something is your inference rather than in the paper.{web}{profile}"""
 
@@ -712,7 +724,7 @@ class Handler(BaseHTTPRequestHandler):
         parts.append(d.get('message', ''))
         how = {**SYSTEM_CODE, 'pdf_how': SYSTEM_CODE['pdf_how'].format(pdf=pdf_name if os.path.exists(os.path.join(WORK, 'papers', pdf_name)) else '(none)')}
         args = [claude_bin(), '-p', '--output-format', 'stream-json', '--verbose', '--include-partial-messages',
-                '--model', MODELS[model], '--system-prompt', SYSTEM.format(**how, profile=profile),
+                '--model', MODELS[model], '--system-prompt', SYSTEM.format(**how, notes=NOTES, profile=profile),
                 *(['--effort', d['effort']] if d.get('effort') in EFFORTS else []),
                 '--tools', 'Read', 'Grep', 'Glob', 'WebSearch', 'WebFetch',
                 '--allowedTools', 'Read(./**)', 'Grep(./**)', 'Glob(./**)', 'WebSearch', 'WebFetch',   # files: this folder only
@@ -752,9 +764,12 @@ class Handler(BaseHTTPRequestHandler):
         except ImportError: return '', 'the Anthropic SDK isn\'t installed for the bridge: run bash bridge/api_setup.sh', {}
         hist = c.get('api') or []
         # the system prompt stays as the conversation began: changing it would make the API drop Claude's earlier thinking
-        system = (hist and c.get('api_system')) or SYSTEM.format(**SYSTEM_API, profile=profile)
+        system = (hist and c.get('api_system')) or SYSTEM.format(**SYSTEM_API, notes=NOTES, profile=profile)
+        # a conversation begun under an older prompt keeps it (see above), so it hears once what it can add now
+        told = not hist or NOTES in system or c.get('api_notes') == NOTES_V
         head = []
         if not hist and c.get('paper_text'): head.append('<paper>\n' + c['paper_text'] + '\n</paper>')
+        if not told: head.append('<app-update>The app has changed what you can add to my notes; this replaces any earlier instruction about notes and highlights.\n' + NOTES + '</app-update>')
         if earlier_turns(missed): head.append(earlier_turns(missed))
         if d.get('context'): head.append('<context>\n' + d['context'] + '\n</context>')
         content = [{'type': 'image', 'source': {'type': 'base64', 'media_type': 'image/' + n.rsplit('.', 1)[1], 'data': '@' + n}} for n in names]
@@ -799,9 +814,9 @@ class Handler(BaseHTTPRequestHandler):
         finally:
             turn.stream = None
         if turn.stopped and not err: err = 'stopped'
-        if done and text: return text, err, {'api': hist + new, 'api_system': system}
+        if done and text: return text, err, {'api': hist + new, 'api_system': system, 'api_notes': NOTES_V}
         if text.strip():   # stopped or failed partway: what was shown is kept, as a plain answer
-            return text, err, {'api': hist + [new[0], {'role': 'assistant', 'content': [{'type': 'text', 'text': text.strip()}]}], 'api_system': system}
+            return text, err, {'api': hist + [new[0], {'role': 'assistant', 'content': [{'type': 'text', 'text': text.strip()}]}], 'api_system': system, 'api_notes': NOTES_V}
         return text, err, {}   # nothing to keep: the next message is sent as if this one never was
 
     def receive_upload(self):

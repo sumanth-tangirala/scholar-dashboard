@@ -1258,6 +1258,8 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .rp-card:hover .rp-item-acts, .rp-card:focus-within .rp-item-acts { opacity: 1; }
 .rp-card-top { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-muted); min-height: 26px; margin-bottom: 2px; }
 .rp-card-top .grow { flex: 1; }
+.rp-ai { display: inline-flex; color: var(--accent); opacity: 0.8; }   /* Claude wrote it */
+.rp-ai svg { width: 12px; height: 12px; fill: currentColor; }
 .rp-card .rp-quote { cursor: pointer; }
 .rp-card-body { font-size: 13.5px; line-height: 1.6; color: var(--text-secondary); margin-top: 6px; cursor: auto; }
 .rp-card-note .rp-card-body { margin-top: 0; font-size: 14px; }
@@ -1481,10 +1483,12 @@ body.rp-splitting, body.rp-splitting * { user-select: none !important; -webkit-u
 .chat-auto { align-self: center; text-align: center; max-width: 90%; }
 @keyframes chat-breathe { 50% { opacity: 0.45; } }
 .chat-error { font-size: 12.5px; color: #e57373; background: rgba(229,115,115,0.08); border-radius: 8px; padding: 7px 10px; }
-.chat-card { border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 8px; padding: 7px 10px; margin: 8px 0; background: rgba(255,255,255,0.02); }
+.chat-card { border: 1px solid var(--border); border-left: 3px solid var(--hc, var(--accent)); border-radius: 8px; padding: 7px 10px; margin: 8px 0; background: rgba(255,255,255,0.02); }
 .chat-card-head { display: flex; align-items: center; justify-content: space-between; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; }
 .chat-card-btn { font: inherit; font-size: 12px; text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--accent); background: none; border: none; cursor: pointer; padding: 1px 4px; border-radius: 5px; transition: background 0.15s; }
 .chat-card-btn:hover { background: rgba(251,177,60,0.12); }
+.chat-card-state { font-size: 12px; text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--text-muted); padding: 1px 4px; }
+.chat-card-body { margin-top: 6px; font-size: 14px; }
 .chat-compose { padding: 8px 12px 12px; border-top: 1px solid var(--border); }
 .chat-attach { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 7px; }
 .chat-att { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; font-size: 12px; color: var(--text); background: rgba(138,164,240,0.12); border: 1px solid rgba(138,164,240,0.35); border-radius: 999px; padding: 1px 4px 1px 8px; }
@@ -10299,7 +10303,7 @@ async function endCommentSession(id, text) {
   if (hw) _hw = null;
   if (!a || !_rn) { if (_acPending && _acPending.id === id) _acPending = null; return; }
   let changed = false;
-  if (text != null && (a.note || '') !== text) { a.note = text; a.updated = now; changed = true; }
+  if (text != null && (a.note || '') !== text) { a.note = text; a.updated = now; changed = true; if (!text.trim()) delete a.noteBy; }
   if (hw && hw.dirty) { setHand(a, hwHandOf(hw)); a.updated = now; changed = true; }
   if (a === _acPending) {
     _acPending = null;
@@ -10338,6 +10342,7 @@ async function acSaveNote() {
   const a = annoById(_acId), t = document.getElementById('acNote');
   if (!a || !t || a.note === t.value) return;
   a.note = t.value; a.updated = new Date().toISOString();
+  if (!a.note.trim()) delete a.noteBy;   // emptied: what's written next is yours
   if (a === _acPending) {                     // first words: the comment now exists
     if (!a.note.trim()) return;
     _acPending = null;
@@ -11279,6 +11284,9 @@ const ICON_QUOTE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 6C
 const ICON_COMMENT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8l-4 3v-3H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg>';
 const ICON_COPY = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/></svg>';
 const ICON_UNDERLINE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v7a5 5 0 0 0 10 0V4M5 20h14"/></svg>';
+const ICON_SPARKLE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5Q10.9 13.1 19 14Q10.9 14.9 10 23Q9.1 14.9 1 14Q9.1 13.1 10 5Z"/><path d="M18.5 1Q18.9 4.6 22.5 5Q18.9 5.4 18.5 9Q18.1 5.4 14.5 5Q18.1 4.6 18.5 1Z"/></svg>';
+/* Claude wrote it (from the chat): a note or highlight it added, or its comment on your highlight */
+function aiMark(x, comment) { return x && (x.by === 'claude' || (comment && x.noteBy === 'claude')) ? `<span class="rp-ai" role="img" aria-label="Added by Claude" title="${x.by === 'claude' ? 'Added by Claude' : 'Comment by Claude'}">${ICON_SPARKLE}</span>` : ''; }
 const ICON_PLUS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
 const MOD_KEY = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent) ? '\u2318' : 'Ctrl';
 function noteDate(e) {
@@ -11309,11 +11317,11 @@ function renderRnList(shown, total, anyFilter) {
     const editing = _rnEditing === it.id || _rnEditing === 'a:' + it.id;
     if (it.type === 'note') { const writing = !!(it.e.hand && _hw && _hw.id === it.id);
       return `<div class="rp-card rp-card-note ${_rnFresh === it.id ? 'fresh' : ''}" data-id="${it.id}">
-        <div class="rp-card-top"><span>Note · ${esc(noteDate(it.e))}</span><span class="grow"></span>${editing || writing ? '' : acts(it)}</div>
+        <div class="rp-card-top"><span>Note · ${esc(noteDate(it.e))}</span>${aiMark(it.e)}<span class="grow"></span>${editing || writing ? '' : acts(it)}</div>
         ${writing ? hwEditorHTML() : it.e.hand ? hwViewHTML(it.e) : editing ? noteEditorHTML() : `<div class="md rp-card-body" data-md-note="${it.id}"></div>`}</div>`; }
     const a = it.a, label = a.kind === 'hl' ? esc(hlLabel(a.color)) : 'Comment', writing = !!(_hw && _hw.where === 'panel' && _hw.id === 'a:' + it.id);
     return `<div class="rp-card rp-card-anchor ${a.kind === 'note' ? 'is-comment' : ''} ${_rnFresh === it.id ? 'fresh' : ''}" data-id="${it.id}" style="--hc:${annoHc(a)}" tabindex="0" onclick="if (!event.target.closest('button, textarea, a, .cite-chip, .hw-editor')) jumpToAnno('${it.id}')">
-        <div class="rp-card-top"><span>p. ${a.page} · ${label}</span><span class="grow"></span>${editing || writing ? '' : acts(it)}</div>
+        <div class="rp-card-top"><span>p. ${a.page} · ${label}</span>${aiMark(a, annoHasComment(a))}<span class="grow"></span>${editing || writing ? '' : acts(it)}</div>
         <div class="rp-quote">${esc(a.quote)}</div>
         ${editing ? noteEditorHTML() : (a.note || '').trim() ? `<div class="md rp-card-body" data-md-anno="${it.id}"></div>` : ''}
         ${writing ? hwEditorHTML() : hasHand(a) ? hwViewHTML({ id: 'a:' + it.id, hand: a.hand }) : ''}</div>`;
@@ -11408,7 +11416,7 @@ async function saveNoteEdit(quiet) {
   if (String(editing).startsWith('a:')) {
     const a = annoById(editing.slice(2));
     if (a && a.kind === 'note' && !text) { if (!quiet) renderReaderPanel(); return deleteAnno(a.id, 'Empty comment removed'); }
-    if (a && (a.note || '') !== text) { a.note = text; a.updated = now; _rnFresh = a.id; }
+    if (a && (a.note || '') !== text) { a.note = text; a.updated = now; _rnFresh = a.id; if (!text) delete a.noteBy; }
   } else if (editing === 'new') {
     if (text) { const e = { id: newNoteId(), text, created: now, updated: now }; _rn.entries.push(e); _rnFresh = e.id; }
   } else {
@@ -12035,37 +12043,57 @@ function morphChat(el, html) {
   };
   walk(el, next);
 }
-const CHAT_BLOCK_RE = /```(note|highlight)([^\n]*)\n?([\s\S]*?)```/g;
-function blockBody(kind, first, rest) { return (kind === 'highlight' ? first + ' ' + rest : rest).replace(/\s+\n/g, '\n').trim(); }
+/* What Claude adds to your notes, as fenced blocks in its answer (the bridge's system prompt teaches them):
+     ```note …```                              a note (Markdown)
+     ```highlight p.N color "exact words"```   a highlight; words after the quote are its comment
+     ```comment p.N "exact words"\n…```        a comment: on your highlight of those words if it has none yet, else
+                                               underlined; a colour before the quote highlights them too
+   The colour is a key (orange…purple) or the name you gave it. */
+const CHAT_BLOCK_RE = /```(note|highlight|comment)((?:(?!```)[^\n])*)\n?([\s\S]*?)```/g;   // (a one-line block ends on its own line: its closing ``` isn't taken for the start of the next)
+const ANCHOR_RE = /^\s*p(?:age)?\.?\s*(\d+)\s*,?\s*([^"“\n]*?)\s*["“]([^"”]+)["”]\s*([\s\S]*)$/i;
+function blockColor(name) {
+  const n = String(name || '').trim().toLowerCase();
+  return !n ? null : HL_COLORS.includes(n) ? n : HL_COLORS.find(c => hlLabel(c).toLowerCase() === n) || 'orange';
+}
 function chatBlocks(text) {
   const out = [];
-  String(text).replace(CHAT_BLOCK_RE, (m, kind, first, rest) => { out.push({ kind, body: blockBody(kind, first, rest), raw: m }); return m; });
+  String(text).replace(CHAT_BLOCK_RE, (m, kind, first, rest) => {
+    const body = ((first.trim() ? first.trim() + '\n' : '') + rest).replace(/[ \t]+\n/g, '\n').trim(), b = { kind, body, raw: m, md: kind === 'note' ? body : '' };
+    const h = kind !== 'note' && body.match(ANCHOR_RE);
+    if (h) Object.assign(b, { page: +h[1], quote: h[3].replace(/\s+/g, ' ').trim(), md: h[4].trim(), color: blockColor(h[2]) || (kind === 'highlight' ? 'orange' : null) });
+    b.ok = kind === 'note' ? !!body : !!(b.quote && (b.color || b.md));
+    out.push(b); return m;
+  });
   return out;
+}
+function chatCardHTML(b, mi, bi) {
+  const head = b.kind === 'note' ? 'Note' : b.color ? 'Highlight · ' + esc(hlLabel(b.color)) : 'Comment';
+  const done = mi != null && b.ok && chatBlockDone(mi, bi);
+  const state = mi == null || !b.ok ? '' : done ? `<span class="chat-card-state">${b.kind === 'note' ? 'In your notes' : 'Added'}</span>`
+    : _chatMissed.has(blockKey(mi, bi)) ? `<span class="chat-card-state" title="These words aren’t on page ${b.page}">Not found</span>`
+    : `<button class="chat-card-btn" onclick="chatApplyBlock(${mi},${bi})">${b.kind === 'note' ? 'Save to notes' : 'Add'}</button>`;
+  const hc = b.kind === 'note' ? '' : ` style="--hc:${b.color ? `var(--hl-${b.color})` : 'var(--note-line, #8aa4f0)'}"`;
+  const quote = b.kind === 'note' ? '' : b.quote ? citeQuotePill(b.page, b.quote) : esc(b.body);
+  return `<div class="chat-card"${hc}><div class="chat-card-head">${head}${state}</div>${quote}${b.md ? `<div class="md chat-card-body" data-card-note="${bi}"></div>` : ''}</div>`;
 }
 let _mdReady = false;
 async function renderChatMarkdown(el, text, msgIdx) {
   if (!_mdReady) el.textContent = text;   // readable at once; formatted when the libraries arrive
   try { await loadMdLibs(); _mdReady = true; } catch (e) { return; }
   const slots = [], slot = html => `@@SLOT${slots.push(html) - 1}@@`;
+  const blocks = chatBlocks(text);
   let bi = 0;
   let src = String(text).replace(/```paper\s+([\w.-]+)\s*```/g, (m, id) => { const q = findPaper(id); return slot(`<div class="chat-status static">Reading ${q ? '<em>' + esc(shortQuote(q.title, 70)) + '</em>' : 'the paper'} and your notes on it\u2026</div>`); })
-    .replace(CHAT_BLOCK_RE, (m, kind, first, rest) => {
-    const i = bi++, body = blockBody(kind, first, rest);
-    if (kind === 'highlight') {
-      const h = body.match(/p\.(\d+)\s+(\w+)\s+"([^"]+)"/);
-      return slot(`<div class="chat-card"><div class="chat-card-head">Highlight${h ? ` · ${esc(h[2])}` : ''}${msgIdx != null ? `<button class="chat-card-btn" onclick="chatApplyBlock(${msgIdx},${i})">${chatBlockDone(msgIdx, i) ? 'Added' : 'Add'}</button>` : ''}</div>${h ? citeQuotePill(h[1], h[3]) : esc(body)}</div>`);
-    }
-    return slot(`<div class="chat-card"><div class="chat-card-head">Note${msgIdx != null ? `<button class="chat-card-btn" onclick="chatApplyBlock(${msgIdx},${i})">${chatBlockDone(msgIdx, i) ? 'In your notes' : 'Save to notes'}</button>` : ''}</div><div class="md" data-card-note="${i}"></div></div>`);
-  }).replace(QUOTE_RE, quoteReplacer(slot))
+    .replace(CHAT_BLOCK_RE, () => { const i = bi++; return slot(chatCardHTML(blocks[i], msgIdx, i)); })
+    .replace(QUOTE_RE, quoteReplacer(slot))
     .replace(/\$\$([\s\S]+?)\$\$/g, (m, tex) => slot(katex.renderToString(tex, { displayMode: true, throwOnError: false })))
     .replace(/(^|[^\\$])\$([^\s$](?:[^$\n]*?[^\s$])?)\$/g, (m, pre, tex) => pre + slot(katex.renderToString(tex, { throwOnError: false })));
   let html = DOMPurify.sanitize(marked.parse(mdAlphaIn(src), { breaks: true, gfm: true }));
   html = html.replace(/@@SLOT(\d+)@@/g, (m, i) => slots[+i]);
   const tmp = document.createElement('div'); tmp.innerHTML = html; mdTables(tmp); mdAlphaOut(tmp);
-  const blocks = chatBlocks(text);
-  tmp.querySelectorAll('[data-card-note]').forEach(n => { const b = blocks[+n.dataset.cardNote]; n.dataset.cardSrc = b ? b.body.length + ':' + b.body.slice(-40) : ''; });
+  tmp.querySelectorAll('[data-card-note]').forEach(n => { const b = blocks[+n.dataset.cardNote]; n.dataset.cardSrc = b ? b.md.length + ':' + b.md.slice(-40) : ''; });
   morphChat(el, tmp.innerHTML);
-  el.querySelectorAll('[data-card-note]').forEach(n => { const b = blocks[+n.dataset.cardNote]; if (b && n.dataset.done !== n.dataset.cardSrc) { n.dataset.done = n.dataset.cardSrc; renderNotesMarkdown(n, b.body, _rn); } });
+  el.querySelectorAll('[data-card-note]').forEach(n => { const b = blocks[+n.dataset.cardNote]; if (b && n.dataset.done !== n.dataset.cardSrc) { n.dataset.done = n.dataset.cardSrc; renderNotesMarkdown(n, b.md, _rn); } });
   el.querySelectorAll('a[href]').forEach(a => { a.target = '_blank'; a.rel = 'noopener'; });
 }
 document.addEventListener('click', e => {   // citation pills anywhere (chat, notes, cards) jump to the passage
@@ -12314,10 +12342,11 @@ function notesContext(n) {
   const quote = t => String(t || '').replace(CITE_RE, (m, id, rest) => { const a = (n.annos || []).find(x => x.id === id); return a ? `“${a.quote}” (p. ${a.page})` : ''; });
   const hl = (n.annos || []).filter(a => a.kind === 'hl'), com = (n.annos || []).filter(a => a.kind === 'note' && annoHasComment(a));
   const said = a => [(a.note || '').trim(), hasHand(a) ? '(a handwritten comment: ink, no text)' : ''].filter(Boolean).join(' ');
+  const yours = x => x.by === 'claude' ? ' (added by you, Claude)' : '';   // what Claude added, so it isn't taken for the reader's own view
   const out = [];
-  if (hl.length) out.push('Highlights:\n' + hl.sort((a, b) => a.page - b.page).map(a => `- p.${a.page} [${hlLabel(a.color)}] “${a.quote}”${annoHasComment(a) ? ' — my comment: ' + said(a) : ''}`).join('\n'));
-  if (com.length) out.push('Comments:\n' + com.sort((a, b) => a.page - b.page).map(a => `- p.${a.page} “${a.quote}”: ${said(a)}`).join('\n'));
-  if ((n.entries || []).length) out.push('Notes:\n' + n.entries.map(e => '- ' + (e.hand ? '(a handwritten note: ink, no text)' : quote(e.text).replace(/\n/g, '\n  '))).join('\n'));
+  if (hl.length) out.push('Highlights:\n' + hl.sort((a, b) => a.page - b.page).map(a => `- p.${a.page} [${hlLabel(a.color)}] “${a.quote}”${yours(a)}${annoHasComment(a) ? (a.by === 'claude' || a.noteBy === 'claude' ? ' — your comment: ' : ' — my comment: ') + said(a) : ''}`).join('\n'));
+  if (com.length) out.push('Comments:\n' + com.sort((a, b) => a.page - b.page).map(a => `- p.${a.page} “${a.quote}”${yours(a)}: ${said(a)}`).join('\n'));
+  if ((n.entries || []).length) out.push('Notes:\n' + n.entries.map(e => '- ' + (e.by === 'claude' ? '(added by you, Claude) ' : '') + (e.hand ? '(a handwritten note: ink, no text)' : quote(e.text).replace(/\n/g, '\n  '))).join('\n'));
   return out.join('\n\n');
 }
 function chatProfile() {
@@ -12366,7 +12395,8 @@ async function chatSend(text, auto) {
   if (images.length) message += `(I attached ${images.length === 1 ? 'a crop of the page' : images.length + ' crops of the page'}.)\n`;
   message += text || (images.length ? 'What does this show?' : 'Explain this.');
   let context = [p.uploaded && 'This paper is an unpublished submission I am reviewing. It is confidential: never search the web for it, its title, its authors or passages from it (searching for related published work is fine). Help me review it rigorously.',
-    notesContext(_rn) ? 'My highlights, comments and notes on this paper:\n' + notesContext(_rn) : (Vault.key ? 'I have no notes on this paper yet.' : '')].filter(Boolean).join('\n\n');
+    notesContext(_rn) ? 'My highlights, comments and notes on this paper:\n' + notesContext(_rn) : (Vault.key ? 'I have no notes on this paper yet.' : ''),
+    Vault.key && 'My highlight colours and what each means to me: ' + HL_COLORS.map(c => `${c} = ${hlLabel(c)}`).join(', ') + '.'].filter(Boolean).join('\n\n');
   if (mentions.length) context += (context ? '\n\n' : '') + (await Promise.all(mentions.map(mentionContext))).join('\n\n');
   const body = { paper: pid, message, display: user.text, auto: user.auto, model: Chat.model, effort: Chat.effort || undefined, context, profile: chatProfile(), quotes: user.quotes, mentions: user.mentions, images };
   if (Chat.fresh) {
@@ -12406,71 +12436,98 @@ async function chatSend(text, auto) {
   Chat.streaming = '';
   if (Chat.status !== 'ready') return renderChatPanel(true);
   renderChatMessages(); updateChatSend();
-  if (reply && chatBlocks(reply).length && /\b(add|save|put|note|highlight)\b/i.test(text)) chatApplyAll(Chat.messages.length - 1);   // you asked for it
+  if (chatBlocks(reply).some(b => b.ok)) chatApplyAll(Chat.messages.length - 1);   // what Claude added goes in at once (it adds only when you ask: see the bridge's prompt)
   // Claude identified papers you described: send their text and your notes on them, and let it continue
   const wanted = [...new Set([...(reply || '').matchAll(/```paper\s+([\w.-]+)\s*```/g)].map(x => x[1]))].map(findPaper).filter(Boolean);
   if (wanted.length && !auto) chatSend('Here is what you asked for (in <other-paper>). Please continue with my question.', { papers: wanted.map(q => ({ id: q.id, title: q.title })) });
 }
 
-/* ---- notes and highlights Claude was asked to add ---- */
-const _chatApplied = new Set();
-function chatBlockDone(mi, bi) {
-  if (_chatApplied.has(mi + ':' + bi)) return true;
-  const b = chatBlocks((Chat.messages[mi] || {}).text || '')[bi];
-  if (!b || !_rn) return false;
-  if (b.kind === 'note') return (_rn.entries || []).some(e => e.text.trim() === b.body.trim());
-  const h = b.body.match(/p\.(\d+)\s+(\w+)\s+"([^"]+)"/);
-  return !!h && (_rn.annos || []).some(a => a.kind === 'hl' && a.page === +h[1] && a.quote === h[3]);
+/* ---- notes, highlights and comments Claude adds ----
+   Claude decides when (the bridge's prompt: when you ask, in any words, or your request is to mark up the paper);
+   they go in as soon as its answer ends, with Undo, marked as Claude's (by: 'claude'; a comment it put on your
+   highlight: noteBy) and shown with a sparkle in the notes list. Each card in the chat says whether it's in your
+   notes; Add puts one back after an Undo or a delete. */
+const _chatApplied = new Set(), _chatMissed = new Set();   // (missed: its words aren't on that page)
+function blockKey(mi, bi) { const m = Chat.messages[mi] || {}; return Chat.pid + ':' + (m.ts || mi) + ':' + bi; }
+const quoteKey = s => String(s || '').normalize('NFKD').replace(/[^\p{L}\p{N}]/gu, '').toLowerCase();   // (as findQuoteRange matches)
+function annosOnWords(page, quote) { const k = quoteKey(quote); return (_rn.annos || []).filter(a => a.page === page && a.kind !== 'ref' && quoteKey(a.quote) === k); }
+function blockInNotes(b, quote) {   // already there: the note, the highlight, or the comment's words on these words
+  if (b.kind === 'note') return (_rn.entries || []).some(e => (e.text || '').trim() === b.body);
+  return annosOnWords(b.page, quote || b.quote).some(a => b.md ? (a.note || '').trim() === b.md : a.kind === 'hl');
 }
-async function chatApplyBlock(mi, bi, quiet) {
+function chatBlockDone(mi, bi) {
+  if (_chatApplied.has(blockKey(mi, bi))) return true;
   const b = chatBlocks((Chat.messages[mi] || {}).text || '')[bi];
-  if (!b || chatBlockDone(mi, bi) || notesBusy()) return null;
-  if (!await vaultReady()) return null;
-  if (!_rn) { setRnState('loading'); await loadReaderNotes(); if (!_rn) return null; }
+  return !!(b && b.ok && _rn) && blockInNotes(b);
+}
+/* One block into the notes (not saved yet): what was added, 'missed' (the words aren't on that page), or null */
+async function chatAddBlock(mi, bi) {
+  const b = chatBlocks((Chat.messages[mi] || {}).text || '')[bi];
+  if (!b || !b.ok || chatBlockDone(mi, bi)) return null;
   const now = new Date().toISOString();
-  let added = null;
+  let added;
   if (b.kind === 'note') {
-    added = { type: 'entry', obj: { id: newNoteId(), text: b.body.trim(), created: now, updated: now } };
+    added = { type: 'entry', obj: { id: newNoteId(), text: b.body, created: now, updated: now, by: 'claude' } };
     _rn.entries = (_rn.entries || []).concat(added.obj);
   } else {
-    const h = b.body.match(/p\.(\d+)\s+(\w+)\s+"([^"]+)"/);
-    if (!h) return null;
-    const found = await locateQuote(+h[1], h[3]);
-    if (!found) { toast(`Couldn’t find that passage on page ${h[1]}`); return null; }
-    await pinPdfVersion();
-    const color = HL_COLORS.includes(h[2]) ? h[2] : 'orange';
-    added = { type: 'anno', obj: { id: newAnnoId(), kind: 'hl', color, page: +h[1], rects: found.rects, quote: found.quote, prefix: '', suffix: '', note: '', created: now, updated: now } };
-    _rn.annos = (_rn.annos || []).concat(added.obj);
+    const found = await locateQuote(b.page, b.quote, true);
+    if (!found) { _chatMissed.add(blockKey(mi, bi)); return 'missed'; }
+    if (blockInNotes(b, found.quote)) { _chatApplied.add(blockKey(mi, bi)); return null; }
+    const bare = b.md && annosOnWords(b.page, found.quote).find(a => !annoHasComment(a));
+    if (bare) {   // your highlight of these words, without a comment yet: the comment goes on it
+      added = { type: 'comment', obj: bare, prev: bare.note || '' };
+      Object.assign(bare, { note: b.md, noteBy: 'claude', updated: now });
+    } else {
+      await pinPdfVersion();
+      added = { type: 'anno', obj: { id: newAnnoId(), kind: b.color ? 'hl' : 'note', color: b.color, page: b.page, rects: found.rects, quote: found.quote, prefix: '', suffix: '', note: b.md, created: now, updated: now, by: 'claude' } };
+      _rn.annos = (_rn.annos || []).concat(added.obj);
+    }
   }
-  _chatApplied.add(mi + ':' + bi);
-  await savePaperNotes(_rn); redrawAnnoLayers();
-  if (!quiet) { renderChatMessages(); toast(b.kind === 'note' ? 'Saved to your notes' : 'Highlight added', () => chatUndoAdds([added])); }
+  _chatApplied.add(blockKey(mi, bi));
   return added;
 }
-async function chatApplyAll(mi) {
-  const adds = [];
-  for (let bi = 0; bi < chatBlocks(Chat.messages[mi].text).length; bi++) { const a = await chatApplyBlock(mi, bi, true); if (a) adds.push(a); }
-  if (!adds.length) return;
-  renderChatMessages();
-  const n = adds.filter(a => a.type === 'entry').length, h = adds.length - n;
-  toast([n ? `${n} note${n > 1 ? 's' : ''}` : '', h ? `${h} highlight${h > 1 ? 's' : ''}` : ''].filter(Boolean).join(' and ') + ' added', () => chatUndoAdds(adds));
+function chatAddedMsg(adds, who) {
+  const n = { highlight: 0, comment: 0, note: 0 };
+  adds.forEach(a => n[a.type === 'entry' ? 'note' : (a.obj.note || '').trim() ? 'comment' : 'highlight']++);
+  const parts = Object.keys(n).filter(k => n[k]).map(k => n[k] === 1 ? 'a ' + k : n[k] + ' ' + k + 's');
+  return who + ' ' + (parts.length > 1 ? parts.slice(0, -1).join(', ') + ' and ' + parts[parts.length - 1] : parts[0]);
 }
+async function chatApplyBlocks(mi, bis, byClaude) {
+  if (notesBusy() || !await vaultReady()) return;
+  if (!_rn) { setRnState('loading'); await loadReaderNotes(); if (!_rn) return; }
+  const adds = []; let missed = 0;
+  for (const bi of bis) { const a = await chatAddBlock(mi, bi); if (a === 'missed') missed++; else if (a) adds.push(a); }
+  if (adds.length) {
+    await savePaperNotes(_rn); redrawAnnoLayers(); renderReaderPanel();
+    adds.forEach(a => { if (a.type !== 'entry') annoArrives(a.obj.id); });
+  }
+  renderChatMessages();
+  const lost = !missed ? '' : missed === 1 ? 'couldn’t find one passage on its page' : `couldn’t find ${missed} passages on their pages`;
+  if (adds.length) toast(chatAddedMsg(adds, byClaude ? 'Claude added' : 'Added') + (lost ? '; ' + lost : ''), () => chatUndoAdds(adds), lost ? { duration: 6000 } : undefined);
+  else if (lost) toast(lost[0].toUpperCase() + lost.slice(1));
+}
+function chatApplyBlock(mi, bi) { return chatApplyBlocks(mi, [bi]); }
+function chatApplyAll(mi) { return chatApplyBlocks(mi, chatBlocks((Chat.messages[mi] || {}).text || '').map((b, i) => i), true); }
 async function chatUndoAdds(adds) {
   const now = new Date().toISOString();
   adds.forEach(a => {
+    if (a.type === 'comment') { const x = annoById(a.obj.id); if (x) { x.note = a.prev; delete x.noteBy; x.updated = now; } return; }
     if (a.type === 'entry') _rn.entries = _rn.entries.filter(e => e.id !== a.obj.id); else _rn.annos = _rn.annos.filter(x => x.id !== a.obj.id);
     _rn.deleted = { ...(_rn.deleted || {}), [a.obj.id]: now };
   });
   _chatApplied.clear();
-  await savePaperNotes(_rn); redrawAnnoLayers(); renderChatMessages();
+  await savePaperNotes(_rn); redrawAnnoLayers(); renderReaderPanel(); renderChatMessages();
 }
+/* A whole answer as a note (Claude's words: it has the sparkle too); its highlights and comments become citations */
 async function chatSaveAsNote(mi) {
   const m = Chat.messages[mi]; if (!m || notesBusy()) return;
   if (!await vaultReady()) return;
   if (!_rn) { setRnState('loading'); await loadReaderNotes(); if (!_rn) return; }
-  const now = new Date().toISOString(), e = { id: newNoteId(), text: m.text.replace(CHAT_BLOCK_RE, (x, kind, first, rest) => kind === 'note' ? rest : '').trim(), created: now, updated: now };
+  const blocks = chatBlocks(m.text); let bi = 0;
+  const text = m.text.replace(CHAT_BLOCK_RE, () => { const b = blocks[bi++]; return b.kind === 'note' ? b.body : b.quote ? `[[p.${b.page} "${b.quote}"]]${b.md ? ' ' + b.md : ''}` : ''; }).replace(/\n{3,}/g, '\n\n').trim();
+  const now = new Date().toISOString(), e = { id: newNoteId(), text, created: now, updated: now, by: 'claude' };
   _rn.entries = (_rn.entries || []).concat(e);
-  await savePaperNotes(_rn);
+  await savePaperNotes(_rn); renderReaderPanel();
   toast('Saved to your notes', () => chatUndoAdds([{ type: 'entry', obj: e }]));
 }
 function chatCopy(mi) { const m = Chat.messages[mi]; if (m) navigator.clipboard.writeText(m.text).then(() => toast('Copied'), () => toastError('Couldn’t copy: the browser blocked the clipboard')); }
@@ -12503,15 +12560,19 @@ function findQuoteRange(pg, quote) {
   r.setStart(s[0], s[1]); r.setEnd(e[0], e[1] + 1);
   return r;
 }
-async function locateQuote(page, quote) {
+async function locateQuote(page, quote, stay) {   // stay: find it where you are (Claude adding highlights): a page not drawn is drawn in place, not scrolled to
   const body = document.getElementById('readerBody'), pg = body.querySelector(`.reader-page[data-page="${page}"]`);
   if (!pg) return null;
-  if (!pg.querySelector('.textLayer span')) { body.scrollTo({ top: pg.offsetTop - 12 }); await waitFor(() => pg.querySelector('.textLayer span'), 4000); }
-  const r = findQuoteRange(pg, quote);
-  if (!r) return null;
-  const pr = pg.getBoundingClientRect();
-  const rects = mergeLineRects([...r.getClientRects()].filter(x => x.width > 1 && x.height > 1).map(x => [(x.left - pr.left) / pr.width, (x.top - pr.top) / pr.height, x.width / pr.width, x.height / pr.height]));
-  return rects.length ? { pg, rects, quote: r.toString().replace(/\s+/g, ' ').trim() } : null;
+  let drew = false;
+  if (!pg.querySelector('.textLayer span')) {
+    if (stay) { drew = !pg.dataset.drawn; drawReaderPage(pg); } else body.scrollTo({ top: pg.offsetTop - 12 });
+    await waitFor(() => pg.querySelector('.textLayer span'), 4000);
+  }
+  const r = findQuoteRange(pg, quote), pr = pg.getBoundingClientRect();
+  const rects = r ? mergeLineRects([...r.getClientRects()].filter(x => x.width > 1 && x.height > 1).map(x => [(x.left - pr.left) / pr.width, (x.top - pr.top) / pr.height, x.width / pr.width, x.height / pr.height])) : [];
+  const text = r ? r.toString().replace(/\s+/g, ' ').trim() : '';
+  if (drew && Math.abs(pg.offsetTop - body.scrollTop) > 4000 + body.clientHeight) releaseReaderPage(pg);   // beyond where pages stay drawn (no observer would let it go)
+  return rects.length ? { pg, rects, quote: text } : null;
 }
 async function jumpToQuote(page, quote) {
   const wait = revealPaper();
