@@ -8636,7 +8636,17 @@ function flushReading(now) {
   }
   if (now && hasPAT() && Vault.key) saved.then(() => { if (Vault.pushTimer) { clearTimeout(Vault.pushTimer); Vault.pushTimer = null; pushNotes(); } }).catch(() => {});
 }
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushReading(true); else refreshNotesIndex(); });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushReading(true); else { refreshNotesIndex(); refreshOpenNotes(); } });
+window.addEventListener('focus', () => refreshOpenNotes());   // (another window on the Mac: no visibilitychange)
+/* Back to the tab or window: the open paper's notes as GitHub has them now (added on another device or in another
+   tab), at most every 20 s. revalidatePaperNotes keeps unpushed edits here and never swaps under typing or writing. */
+let _rnCheckedAt = 0;
+function refreshOpenNotes() {
+  const pid = _reader.paper && _reader.paper.id;
+  if (!pid || !Vault.key || !_rn || Vault.cache.get(pid) !== _rn || Date.now() - _rnCheckedAt < 20000) return;
+  _rnCheckedAt = Date.now();
+  nfGet(pid + '.json').then(local => { if (!local || !local.dirty) revalidatePaperNotes(pid, local ? local.env.updated : null); }).catch(() => {});   // (none here yet: any on GitHub are new)
+}
 /* Back in the app (the tab stayed open): another device may have read on since; take its newer notes index */
 let _ixCheckedAt = 0;
 function refreshNotesIndex() {
