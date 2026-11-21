@@ -1207,6 +1207,11 @@ body.tok-mode .tok-cues { display: block; position: absolute; inset: 0; pointer-
 .ac-comment { display: flex; align-items: flex-start; gap: 4px; }
 .ac-comment textarea#acNote { flex: 1; min-width: 0; }
 .ac-write { flex-shrink: 0; margin-top: 4px; }
+.ac-comment .ac-send { margin-top: 6px; }   /* (centred on the one-line box) */
+.chat-ask-box { position: fixed; z-index: 345; display: flex; align-items: flex-end; gap: 6px; box-sizing: border-box; background: #1d1d20; border: 1px solid rgba(255,255,255,0.14); border-radius: 10px; box-shadow: 0 6px 20px rgba(0,0,0,0.5); padding: 5px 5px 5px 10px; animation: ui-pop 0.16s ease-out; transition: border-color 0.15s; }
+.chat-ask-box:focus-within { border-color: var(--accent); }
+.chat-ask-box textarea { flex: 1; min-width: 0; background: none; border: none; resize: none; color: var(--text); font: inherit; font-size: 13.5px; line-height: 1.5; padding: 3px 0; outline: none; max-height: 140px; }
+::highlight(ask-mark) { background-color: rgba(251,177,60,0.24); }
 /* writing a comment in the card: its pens and the card to write on under the comment box; a long comment scrolls
    inside the card (a finger), it never runs off the screen */
 .anno-card.writing { max-height: calc(100vh - 76px); max-height: calc(100dvh - 76px); overflow-y: auto; overscroll-behavior: contain; }
@@ -1521,6 +1526,7 @@ body.rp-splitting, body.rp-splitting * { user-select: none !important; -webkit-u
 .chat-send.stop { background: rgba(255,255,255,0.12); color: var(--text); }
 .chat-send svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 .chat-send.stop svg { fill: currentColor; stroke: none; }
+@media (pointer: coarse) { .chat-send { width: 34px; height: 34px; border-radius: 9px; } .chat-send svg { width: 17px; height: 17px; } .ac-comment .ac-send { margin-top: 4px; } }   /* a finger's target, wherever a message is sent */
 .rp-icon-btn.sm svg, .chat-box-row .rp-icon-btn svg { width: 16px; height: 16px; }
 .dd-sub { display: block; font-size: 11px; color: var(--text-muted); margin-top: 1px; }
 .chat-sel-bar { position: fixed; z-index: 345; display: inline-flex; background: #1d1d20; border: 1px solid rgba(255,255,255,0.14); border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.5); overflow: hidden; animation: ui-pop 0.16s ease-out; }
@@ -2824,6 +2830,7 @@ html.no-hover .sel-icon:not(.on):active, html.no-hover .ink-bar .ink-size:not(.o
         <dt class="owner-only"><kbd>&#8984;</kbd> <kbd>Enter</kbd></dt><dd class="owner-only">Save the note or comment you&rsquo;re writing</dd>
         <dt class="owner-only"><kbd>[[</kbd></dt><dd class="owner-only">In a note: cite one of your highlights</dd>
         <dt class="owner-only"><kbd>Enter</kbd></dt><dd class="owner-only">On a list item (-, 1., a. or a)): the next item; on an empty one, out a level, or the list ends (in chat: <kbd>Shift</kbd> <kbd>Enter</kbd>)</dd>
+        <dt class="owner-only"><kbd>Enter</kbd></dt><dd class="owner-only">In chat, a side chat, or Ask&rsquo;s box at the words: send (<kbd>Shift</kbd> <kbd>Enter</kbd>: a new line). On the paper, Ask keeps what you write as your comment and asks it</dd>
         <dt class="owner-only"><kbd>Tab</kbd> <kbd>Shift</kbd> <kbd>Tab</kbd></dt><dd class="owner-only">On a list item: nest it under the item above, or move it back out</dd>
         <dt class="owner-only"><kbd>$</kbd> <kbd>{</kbd></dt><dd class="owner-only">Over selected text in a note, comment or chat: wrap it in $&hellip;$ (again: $$&hellip;$$) or {&hellip;}</dd>
         <dt class="owner-only"><kbd>&larr;</kbd> <kbd>&rarr;</kbd></dt><dd class="owner-only">Adjusting a highlight: move the end that has focus by a word (<kbd>Esc</kbd> puts it back)</dd>
@@ -10022,8 +10029,8 @@ async function citeSelection() {
   if (!editorInsertCite(tok)) { _rnDraft += (_rnDraft && !/\s$/.test(_rnDraft) ? ' ' : '') + tok + ' '; showNotesPane(); }
   draftChanged();
 }
-async function createAnno(kind, color, drawn) {   // drawn: the Pencil's marker already shows it
-  if (notesBusy()) return;
+async function createAnno(kind, color, drawn, ask) {   // drawn: the Pencil's marker already shows it; ask: the comment is a question for Claude (ASK IN PLACE)
+  if (notesBusy()) return null;
   const info = _selPending || selInfo();
   if (!info || info.error) return;
   hideSelBar();
@@ -10037,8 +10044,9 @@ async function createAnno(kind, color, drawn) {   // drawn: the Pencil's marker 
     if (_acId) closeAnnoCard();
     _acPending = a;
     redrawAnnoLayers();
-    openAnnoCard(a.id, !drawn, drawn && pencilDevice());   // underlined with the Pencil: write it with the Pencil
-    return;
+    if (ask) openAnnoCard(a.id, true, false, true);
+    else openAnnoCard(a.id, !drawn, drawn && pencilDevice());   // underlined with the Pencil: write it with the Pencil
+    return a;
   }
   if (kind === 'hl') rememberHlColor(color);
   _rn.annos = (_rn.annos || []).concat(a);
@@ -10047,6 +10055,7 @@ async function createAnno(kind, color, drawn) {   // drawn: the Pencil's marker 
   if (!drawn) annoArrives(a.id);
   const item = document.querySelector(`.rp-item[data-id="${a.id}"]`); if (item) item.classList.add('fresh');
   if (kind === 'note') openAnnoCard(a.id, true);
+  return a;
 }
 /* A new (or restored) highlight sweeps on along its lines, one after another, like a marker; its comment marker pops */
 function annoArrives(id) {
@@ -10084,11 +10093,12 @@ function annoAt(pageDiv, clientX, clientY) {
   return hits.reduce((best, a) => !best || annoArea(a) <= annoArea(best) ? a : best, null);
 }
 function annoArea(a) { return a.rects.reduce((s, r) => s + r[2] * r[3], 0); }
-let _acId = null, _acTimer = null, _acHandTimer = null;
-function openAnnoCard(id, focusNote, write) {   // write: open its writing card (a comment begun with the Pencil)
+let _acId = null, _acTimer = null, _acHandTimer = null, _acAsk = null;   // _acAsk: the comment being written as a question for Claude
+function openAnnoCard(id, focusNote, write, ask) {   // write: open its writing card (a comment begun with the Pencil); ask: its comment is asked of Claude (Enter)
   const a = annoById(id);
   if (!a) return;
   if (_acId && _acId !== id) closeAnnoCard();
+  if (ask) _acAsk = id; else if (_acAsk !== id) _acAsk = null;   // (drawn again for the same comment: still asking)
   if (_acId !== id) { _acOrigin = { id, kind: a.kind, color: a.color, note: a.note || '', hand: a.hand }; _acMoved = null; }
   _acId = id;
   // a comment with writing opens ready to write on (where something can write: not a phone's finger)
@@ -10104,10 +10114,10 @@ function openAnnoCard(id, focusNote, write) {   // write: open its writing card 
       <span class="sel-sep"></span>
       ${_acPending && _acPending.id === id ? '' : `<button class="sel-icon" onclick="adjustAnno('${id}')" title="Adjust: drag its ends to take in more or less" aria-label="Adjust what it covers">${ICON_ADJUST}</button>`}
       <button class="sel-icon sel-cite" onclick="citeAnno('${id}')" title="Cite in a note" aria-label="Cite in a note">${ICON_QUOTE}</button>
-      ${canAskClaude() && !(_acPending && _acPending.id === id) ? `<button class="sel-icon" onclick="askAboutAnno('${id}')" title="Ask Claude about this" aria-label="Ask Claude about this">${ICON_ASK}</button>` : ''}
+      ${canAskClaude() && (!(_acPending && _acPending.id === id) || _acAsk === id) ? `<button class="sel-icon ${_acAsk === id ? 'on' : ''}" onclick="askAboutAnno('${id}')" title="${_acAsk === id ? 'Asking Claude: the comment is your question (click to just comment)' : 'Ask Claude about this'}" aria-label="Ask Claude about this" aria-pressed="${_acAsk === id}">${ICON_ASK}</button>` : ''}
       <button class="sel-icon" onclick="copyAnnoQuote('${id}')" title="Copy quote" aria-label="Copy quote">${ICON_COPY}</button>
       <button class="sel-icon danger" onclick="deleteAnno('${id}')" title="Delete" aria-label="Delete">${ICON_TRASH}</button></div>
-    <div class="ac-comment"><textarea id="acNote" rows="1" placeholder="${writing ? 'Type a comment\u2026' : 'Add a comment\u2026'}" title="Markdown and $math$ work \u00b7 ${MOD_KEY}\u21b5 or Esc to close" oninput="acGrow(this); acNoteInput()" onkeydown="if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) { event.preventDefault(); closeAnnoCard(); }">${esc(a.note || '')}</textarea>${pencilDevice() && !writing ? `<button class="sel-icon ac-write" onclick="acWrite('${id}')" title="Write the comment with the Pencil" aria-label="Write the comment">${ICON_WRITE}</button>` : ''}</div>
+    <div class="ac-comment"><textarea id="acNote" rows="1" placeholder="${_acAsk === id ? 'Ask Claude about this\u2026' : writing ? 'Type a comment\u2026' : 'Add a comment\u2026'}" title="${_acAsk === id ? 'Kept as your comment, and asked in Chat \u00b7 \u21b5 asks, \u21e7\u21b5 new line, Esc keeps it without asking' : `Markdown and $math$ work \u00b7 ${MOD_KEY}\u21b5 or Esc to close`}" oninput="acGrow(this); acNoteInput()" onkeydown="acNoteKey(event, '${id}')">${esc(a.note || '')}</textarea>${_acAsk === id ? `<button class="chat-send ac-send" onmousedown="event.preventDefault()" onclick="acAsk('${id}')" title="Ask Claude (Enter)" aria-label="Ask Claude">${ICON_SEND}</button>` : pencilDevice() && !writing ? `<button class="sel-icon ac-write" onclick="acWrite('${id}')" title="Write the comment with the Pencil" aria-label="Write the comment">${ICON_WRITE}</button>` : ''}</div>
     ${writing ? hwEditorHTML() : hasHand(a) ? hwViewHTML({ id: 'a:' + id, hand: a.hand }) : ''}`;
   card.classList.toggle('writing', writing);
   popIn(card);
@@ -10318,7 +10328,7 @@ function closeAnnoCard() {
   if (_acHandTimer) { clearTimeout(_acHandTimer); _acHandTimer = null; }
   if (!Adj) fadeAway(document.getElementById('annoCard'));   // (while adjusting, the card is Adjust's bar: endAdjust puts it away)
   document.querySelectorAll('.anno-hl.hover, .anno-mark.hover').forEach(r => r.classList.remove('hover'));
-  _acId = null;
+  _acId = null; _acAsk = null;
   return id ? endCommentSession(id, text) : Promise.resolve();
 }
 /* The one way a comment card's session ends (click away, Esc, scroll, opening another, leaving the reader) */
@@ -11002,7 +11012,8 @@ function caretAt(x, y) {
           else l.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 240, delay: 120, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)', fill: 'forwards' }).finished.then(() => l.remove(), () => l.remove());
         }
         pencilAskDone(); renderInkBar();
-        askAboutPassage(info.page, info.quote);
+        _selPending = info;   // your question, written as a comment on the words (ASK IN PLACE)
+        createAnno('note', null, true, true).then(a => { if (!a) askAboutPassage(info.page, info.quote); });
         return;
       }
       _selPending = info;
@@ -12196,18 +12207,114 @@ function askAboutPassage(page, text) {
   chatDraft().quotes.push({ page, text });
   setPanelTab('chat', true); renderChatAttach();
 }
-function askAboutSelection() {
+/* ===== ASK IN PLACE =====
+   What you ask about some words is usually a comment on them, so Ask writes it where they are: on the paper, the
+   comment card opens on them in ask mode (Enter keeps it as your comment and asks it in Chat, with the words; Shift
+   Enter: a new line; Esc keeps the comment without asking); in a reply, a box opens at the words. The selection bar,
+   a highlight's card and the Pencil's Ask all come here. Notes locked (and the password not given): the words go to
+   Chat's message box, as before. */
+async function askAboutSelection() {
   const info = _selPending || selInfo();
   if (!info || info.error) return;
+  _selPending = info;
+  if (await createAnno('note', null, false, true)) return;
   hideSelBar(); window.getSelection().removeAllRanges();
   askAboutPassage(info.page, info.quote);
 }
-function askAboutAnno(id) {
-  const a = annoById(id);
-  if (!a) return;
-  closeAnnoCard();
-  askAboutPassage(a.page, a.quote);
+function askAboutAnno(id) {   // from its card: its comment box becomes the question (again: back to just commenting)
+  if (!annoById(id)) return;
+  if (_acAsk === id) { _acAsk = null; openAnnoCard(id, true); }
+  else openAnnoCard(id, true, false, true);
 }
+function acNoteKey(e, id) {
+  if (e.key !== 'Enter' || e.isComposing) return;
+  if (e.metaKey || e.ctrlKey) { e.preventDefault(); closeAnnoCard(); }
+  else if (_acAsk === id && !e.shiftKey) { e.preventDefault(); acAsk(id); }   // (Shift+Enter: a new line, or the next list item)
+}
+async function acAsk(id) {
+  const a = annoById(id), t = document.getElementById('acNote'), q = (t ? t.value : (a && a.note) || '').trim();
+  if (!a) return;
+  if (!q) { if (t) t.focus(); return; }   // nothing to ask yet
+  const quote = { page: a.page, text: a.quote };
+  await closeAnnoCard();   // kept as your comment on the words
+  chatAskWith(quote, q);
+}
+/* A question about some words, asked at once when the chat is ready (it opens to show the answer); otherwise (not
+   connected yet, or Claude still answering) it waits in Chat's message box with the words. What you were writing in
+   that box stays as it was. */
+function chatAskWith(quote, question) {
+  const pid = _reader.paper && _reader.paper.id;
+  if (Chat.status === 'ready' && Chat.loadedFor === pid && !Chat.running) {
+    setPanelTab('chat');
+    const keep = { draft: chatDraft(), text: Chat.draftText };
+    Chat.draft = { quotes: [quote], images: [], mentions: [] };
+    chatSend(question);   // (it takes this draft before its first wait)
+    Chat.draft = keep.draft; Chat.draftText = keep.text; renderChatAttach();
+    return;
+  }
+  setPanelTab('chat', true);   // (first: drawing the pane reads its box back into the draft)
+  chatDraft().quotes.push(quote);
+  Chat.draftText = Chat.draftText.trim() ? Chat.draftText.replace(/\s+$/, '') + '\n' + question : question;
+  const i = document.getElementById('chatInput'); if (i) { i.value = Chat.draftText; chatGrow(i); }
+  renderChatAttach();
+  if (Chat.running) toast('Claude is still answering: your question is in the message box, ready to send');
+}
+/* In a reply: a box at the words. Enter asks; Shift+Enter: a new line. Esc or a tap elsewhere puts it away, and what was
+   written goes to the message box with the words, so nothing typed is lost. It follows the words as the chat scrolls. */
+let _chatAskBox = null;
+function chatAskInline(info) {
+  closeChatAskBox(true);
+  getSelection().removeAllRanges();
+  const b = Object.assign(document.createElement('div'), { id: 'chatAskBox', className: 'chat-ask-box' });
+  b.innerHTML = `<textarea id="chatAskIn" rows="1" placeholder="Ask Claude about these words\u2026" aria-label="Ask Claude about these words" title="\u21b5 asks \u00b7 \u21e7\u21b5 new line \u00b7 Esc puts it in the message box"></textarea><button class="chat-send" title="Ask (Enter)" aria-label="Ask">${ICON_SEND}</button>`;
+  document.body.appendChild(b);
+  _chatAskBox = { el: b, info };
+  const t = b.querySelector('textarea'), send = b.querySelector('button');
+  t.oninput = () => { sideGrow(t); placeChatAskBox(); };
+  t.onkeydown = e => {
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && !e.metaKey && !e.ctrlKey) { e.preventDefault(); sendChatAskBox(); }
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeChatAskBox(true); }
+  };
+  send.onmousedown = e => e.preventDefault(); send.onclick = sendChatAskBox;
+  if (window.CSS && CSS.highlights && typeof Highlight !== 'undefined' && info.range) CSS.highlights.set('ask-mark', new Highlight(info.range));   // the words it's about
+  placeChatAskBox();
+  t.focus({ preventScroll: true });
+}
+function placeChatAskBox() {
+  const x = _chatAskBox, pane = document.getElementById('chatPane');
+  if (!x || !pane) return;
+  const live = x.info.range && x.info.range.startContainer.isConnected, r = live ? x.info.range.getBoundingClientRect() : x.info.rect;
+  if (live) x.info.rect = r;
+  const p = pane.getBoundingClientRect(), vh = window.visualViewport ? visualViewport.height : innerHeight, b = x.el, w = Math.min(380, p.width - 16);
+  b.style.width = w + 'px';
+  b.style.left = Math.max(p.left + 8, Math.min(p.right - w - 8, r.left)) + 'px';
+  const h = b.offsetHeight, below = r.bottom + 8;
+  b.style.top = Math.max(p.top + 8, below + h <= Math.min(vh, p.bottom) - 8 ? below : r.top - h - 8) + 'px';   // under the words, or over them when there's no room (the iPad's keyboard)
+}
+function sendChatAskBox() {
+  const x = _chatAskBox;
+  if (!x) return;
+  const t = x.el.querySelector('textarea'), q = t.value.trim();
+  if (!q) return t.focus();
+  closeChatAskBox(false);
+  chatAskWith({ page: 0, text: x.info.text }, q);
+}
+function closeChatAskBox(keep) {   // keep: what was written goes to the message box, with the words
+  const x = _chatAskBox;
+  if (!x) return;
+  _chatAskBox = null;
+  const q = x.el.querySelector('textarea').value.trim();
+  x.el.remove();
+  if (window.CSS && CSS.highlights) CSS.highlights.delete('ask-mark');
+  if (!keep || !q) return;
+  chatDraft().quotes.push({ page: 0, text: x.info.text });
+  Chat.draftText = Chat.draftText.trim() ? Chat.draftText.replace(/\s+$/, '') + '\n' + q : q;
+  const i = document.getElementById('chatInput'); if (i) { i.value = Chat.draftText; chatGrow(i); }
+  renderChatAttach();
+}
+document.addEventListener('pointerdown', e => { if (_chatAskBox && !_chatAskBox.el.contains(e.target)) closeChatAskBox(true); }, true);
+document.addEventListener('scroll', e => { if (_chatAskBox && e.target && e.target.id === 'chatScroll') placeChatAskBox(); }, true);
+if (window.visualViewport) visualViewport.addEventListener('resize', () => placeChatAskBox());
 /* Copying rendered math (chat replies, notes, abstracts) gives its TeX, without the $: the browser's own copy writes
    out KaTeX's pieces line by line ("w=[w / x / ,w / y / ]"). A selection that starts or ends inside a formula takes
    all of it. Returns null when the selection has no math (the browser's copy is fine then). */
@@ -12334,7 +12441,7 @@ function chatSelInfo() {
   if (!msg || !box.contains(msg)) return null;
   const m = selTextWithMath(sel), text = (m ? m.text : sel.toString()).replace(/\s+/g, ' ').trim();
   const frag = r.cloneContents(); frag.querySelectorAll('.katex-mathml').forEach(x => x.remove());
-  return text ? { text, key: quoteKey(frag.textContent), ts: +msg.dataset.ts || null, rect: r.getBoundingClientRect() } : null;
+  return text ? { text, key: quoteKey(frag.textContent), ts: +msg.dataset.ts || null, rect: r.getBoundingClientRect(), range: r.cloneRange() } : null;
 }
 function showChatSelBar() {
   const old = document.getElementById('chatAskSel'), info = chatSelInfo();
@@ -12344,16 +12451,11 @@ function showChatSelBar() {
   b.innerHTML = `<button type="button" data-act="ask" title="Ask about these words in this chat">${ICON_ASK}<span>Ask</span></button>`
     + (side ? `<button type="button" data-act="side" title="Ask Haiku about them in a side chat, apart from this one">${ICON_SIDE}<span>Side chat</span><span class="sub">Haiku</span></button>` : '');
   b.onmousedown = ev => ev.preventDefault();
-  b.onclick = ev => { const a = ev.target.closest('button'); if (!a) return; b.remove(); if (a.dataset.act === 'side') sideStart(info); else chatAskAbout(info); };
+  b.onclick = ev => { const a = ev.target.closest('button'); if (!a) return; b.remove(); if (a.dataset.act === 'side') sideStart(info); else chatAskInline(info); };
   if (!old) document.body.appendChild(b);
   const r = info.rect;
   b.style.left = Math.max(8, Math.min(innerWidth - b.offsetWidth - 8, r.right - b.offsetWidth / 2)) + 'px';
   b.style.top = Math.min(innerHeight - b.offsetHeight - 8, r.bottom + 8) + 'px';
-}
-function chatAskAbout(info) {
-  Chat.draft.quotes.push({ page: 0, text: info.text }); renderChatAttach();
-  getSelection().removeAllRanges();
-  const i = document.getElementById('chatInput'); if (i) i.focus();
 }
 async function sideStart(info) {
   if (!sideOn() || !info.ts) return;
@@ -13045,7 +13147,7 @@ document.addEventListener('beforeinput', e => {
   const t = e.target, pair = e.inputType === 'insertText' && !e.isComposing && WRAP_PAIRS[e.data];
   if (!t || !t.id) return;
   if (t.id === 'rpNotes' && /^history(Undo|Redo)$/.test(e.inputType)) { e.preventDefault(); edUndo(t, e.inputType === 'historyRedo'); return; }
-  const box = t.id === 'acNote' || t.id === 'chatInput';
+  const box = plainBox(t.id);
   if (/^insert(LineBreak|Paragraph)$/.test(e.inputType)) {   // (see LISTS; an on-screen keyboard may send no Enter key)
     if (t.id === 'rpNotes') { e.preventDefault(); editorBreak(t); }
     else if (box && t.selectionStart === t.selectionEnd) { const b = listBreak(t.value, t.selectionStart); if (b) { e.preventDefault(); textareaEdit(t, b); } }
@@ -13058,7 +13160,7 @@ document.addEventListener('beforeinput', e => {
   }
   if (!pair) return;
   if (t.id === 'rpNotes') { if (editorWrap(t, pair)) e.preventDefault(); }
-  else if ((t.id === 'acNote' || t.id === 'chatInput') && t.selectionStart < t.selectionEnd) {   // (plain text boxes: the browser's Undo takes it back)
+  else if (plainBox(t.id) && t.selectionStart < t.selectionEnd) {   // (plain text boxes: the browser's Undo takes it back)
     e.preventDefault();
     const a = t.selectionStart, b = t.selectionEnd;
     document.execCommand('insertText', false, pair[0] + t.value.slice(a, b) + pair[1]);
@@ -13076,6 +13178,7 @@ document.addEventListener('beforeinput', e => {
      letters and letters numbers. The notes panel's buttons do the same where there's no Tab key.
    - Backspace just after a marker moves a nested item out a level, or at the top takes its marker away.
    In the note editor, the comment box and the chat box (where Enter sends: Shift+Enter there). */
+function plainBox(id) { return id === 'acNote' || id === 'chatInput' || id === 'chatAskIn' || /^sideIn-/.test(id || ''); }   // the plain text boxes that take lists and $ wrapping
 const LIST_RE = /^([ \t]*)([-*+\u2022]|\d{1,9}[.)]|[a-zA-Z][.)])([ \t]+)(\[[ xX]\][ \t]+)?/;
 const LIST_BULLETS = ['\u2022', '\u25e6', '\u25aa'];
 const ICON_OUTDENT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 6H11M21 12H11M21 18H11"/><path d="M7 9l-3 3 3 3"/></svg>';
@@ -13207,7 +13310,7 @@ function textareaEdit(t, b) {
    Tab inside itself (KB_MODALS), and from its last box would send it round to the first. */
 window.addEventListener('keydown', e => {
   const t = e.target, id = t && t.id;
-  if ((id !== 'rpNotes' && id !== 'acNote' && id !== 'chatInput') || e.metaKey || e.ctrlKey || e.altKey || e.isComposing) return;
+  if ((id !== 'rpNotes' && !plainBox(id)) || e.metaKey || e.ctrlKey || e.altKey || e.isComposing) return;
   if (e.key === 'Tab') {
     if ((_citeCtx && document.getElementById('citeDD').classList.contains('open')) || _mentionCtx) return;   // (Tab picks from those menus)
     const text = id === 'rpNotes' ? editorText(t) : t.value, sel = id === 'rpNotes' ? edSelection(t) : [t.selectionStart, t.selectionEnd], L = sel && listInfo(text);
@@ -14083,7 +14186,7 @@ document.addEventListener('DOMContentLoaded', () => { loadPapers(); loadInterest
     'acWrite', 'acSaveHand', 'writeAnnoComment',
     // Claude on the laptop
     'chatOpen', 'chatSend', 'chatSendOrStop', 'chatNew', 'chatSwitch', 'chatConnect', 'chatSetRemote', 'chatForgetRemote', 'chatEngine', 'askAboutSelection', 'askAboutPassage', 'askAboutAnno',
-    'startFigureSelect', 'chatApplyBlock', 'chatSaveAsNote', 'sideStart', 'sideSend', 'sideSendOrStop', 'sideStop', 'sideDelete', 'chatAddPaper', 'chatRefresh', 'toggleLibPanel', 'startAddPaper', 'stopAddPaper', 'startTopicTag',
+    'startFigureSelect', 'chatApplyBlock', 'chatSaveAsNote', 'sideStart', 'sideSend', 'sideSendOrStop', 'sideStop', 'sideDelete', 'acAsk', 'chatAskWith', 'chatAskInline', 'chatAddPaper', 'chatRefresh', 'toggleLibPanel', 'startAddPaper', 'stopAddPaper', 'startTopicTag',
     // private papers and PDFs
     'pickUploadPdf', 'uploadPdf', 'usePdfFile', 'openPdfChange', 'removeLocalPdf', 'removeUpload', 'renameUpload', 'startReview', 'saveUploads',
     'pickVideo', 'addVideo', 'removeVideo', 'macGetAll', 'macGetHere', 'macPullAll', 'macConnect', 'macConnectGo', 'rememberBridgeUrl',
