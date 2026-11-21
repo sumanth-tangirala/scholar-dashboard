@@ -9224,7 +9224,9 @@ async function pushNotes() {
       try {
         await ghCommitFiles(out.map(o => ({ path: VAULT_DIR + o.name, content: JSON.stringify(o.env) })), `Update encrypted notes (${papers} paper${papers === 1 ? '' : 's'})`);
       } catch (e) {
-        if (e.conflict && attempt < 3) continue;   // someone else committed meanwhile: read, merge, try again
+        // someone else committed meanwhile (another device, a digest run, a push from the laptop): read, merge, try again.
+        // Right after a push GitHub can still show the old head for a few seconds, so each try waits longer (1, 2, 4, 8 s).
+        if (e.conflict && attempt < 4) { await new Promise(r => setTimeout(r, 1000 * 2 ** attempt)); continue; }
         throw e;
       }
       for (const o of out) {
@@ -9240,9 +9242,13 @@ async function pushNotes() {
       }
       break;
     }
-    if (sent) { Vault.lastSaved = Date.now(); setSyncTrouble(null); }
+    if (sent) { Vault.lastSaved = Date.now(); Vault.raceRounds = 0; setSyncTrouble(null); }
   } catch (e) {
     console.error(e);
+    // still racing someone else's commits: the next round settles it (the notes are kept here meanwhile), so it is
+    // reported only when it keeps happening, not each time a push from elsewhere lands mid-save
+    Vault.raceRounds = e.conflict ? (Vault.raceRounds || 0) + 1 : 0;
+    if (e.conflict && Vault.raceRounds < 3) { scheduleNotesPush(10000); return; }
     setSyncTrouble(e);
     if (!Vault.troubleToasted) {   // once, not every retry
       Vault.troubleToasted = true;
