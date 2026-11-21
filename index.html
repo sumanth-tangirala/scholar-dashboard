@@ -2726,6 +2726,7 @@ html.no-hover .sel-icon:not(.on):active, html.no-hover .ink-bar .ink-size:not(.o
         <button class="reader-btn rt-more" id="readerMore" onclick="toggleReaderMenu()" title="More" aria-label="More" aria-haspopup="menu" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
         <span class="reader-menu" id="readerMenu" role="menu">
           <button class="reader-dl" id="readerDl" role="menuitem" data-off="" hidden onclick="toggleReaderMenu(false); offToggle(this.dataset.off)"></button>
+          <button id="readerSave" role="menuitem" hidden onclick="toggleReaderMenu(false); savePdfFile()"></button>
           <button class="reader-change" role="menuitem" onclick="toggleReaderMenu(false); openPdfChange()">Use a different PDF…</button>
           <button id="readerVidAdd" role="menuitem" hidden onclick="toggleReaderMenu(false); pickVideo()">Add a video…</button>
           <button id="readerVidDel" role="menuitem" hidden onclick="toggleReaderMenu(false); removeVideo()">Remove the video</button>
@@ -8891,8 +8892,48 @@ async function readerZoom(dir) {
 function toggleReaderMenu(force) {
   const m = document.getElementById('readerMenu'), b = document.getElementById('readerMore');
   const open = typeof force === 'boolean' ? force : !m.classList.contains('open');
-  if (open) { offPaint(document.getElementById('readerDl').dataset.off); videoMenuPaint(); popIn(m); } else fadeAway(m);
+  if (open) { offPaint(document.getElementById('readerDl').dataset.off); videoMenuPaint(); savePdfPaint(); popIn(m); } else fadeAway(m);
   b.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+/* Save the PDF as a file of your own: the copy the reader opened (from arXiv, a file you gave, or the offline copy),
+   named "Author Year - Title.pdf". A Mac downloads it; an iPad or iPhone opens the share sheet (Save to Files, AirDrop,
+   another PDF app), since the app saved to the home screen can't download. The file is made when the menu opens, so
+   the tap that shares it still counts as the tap (Safari allows sharing only straight from one). */
+const shareSaves = () => navigator.maxTouchPoints > 1 && !!navigator.canShare;
+function savePdfPaint() {
+  const b = document.getElementById('readerSave'), doc = _reader.doc, p = _reader.paper;
+  b.hidden = !doc || !p;
+  if (b.hidden) return;
+  b.textContent = shareSaves() ? 'Save or share the PDF\u2026' : 'Save the PDF file';
+  b.title = shareSaves() ? 'Save it to Files, or send it to another app' : 'Download the PDF to this computer';
+  if (_reader.saveFile && _reader.saveFile.doc === doc) return;
+  const job = { doc, file: null };
+  _reader.saveFile = job;
+  doc.getData().then(data => { job.file = new File([data], pdfFileName(p), { type: 'application/pdf' }); }).catch(() => {});
+}
+function pdfFileName(p) {
+  const first = String(p.authors || '').split(/,|;| and /)[0].trim(), last = first && first !== 'not specified' ? first.split(/\s+/).pop() : '';
+  const year = (String(p.publishing_date || p.date_found || '').match(/\b(19|20)\d{2}\b/) || [''])[0];
+  const title = String(p.title || 'Paper').replace(/\s*:\s*/g, ' - ').replace(/[\\/:*?"<>|\u0000-\u001f]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
+  return (last || year ? [last, year].filter(Boolean).join(' ') + ' - ' : '') + title + '.pdf';
+}
+async function savePdfFile() {
+  const doc = _reader.doc, p = _reader.paper;
+  if (!doc || !p) return;
+  let job = _reader.saveFile;
+  if (!job || job.doc !== doc) { savePdfPaint(); job = _reader.saveFile; }
+  if (!job.file) {   // (not ready yet: a very large file, or the menu opened before it finished loading)
+    try { job.file = new File([await doc.getData()], pdfFileName(p), { type: 'application/pdf' }); }
+    catch (e) { toastError('Couldn\u2019t read the PDF to save it'); return; }
+  }
+  if (shareSaves() && navigator.canShare({ files: [job.file] })) {
+    try { await navigator.share({ files: [job.file] }); return; }
+    catch (e) { if (e.name === 'AbortError') return; }   // closed the sheet; anything else: download it instead
+  }
+  const url = URL.createObjectURL(job.file), a = Object.assign(document.createElement('a'), { href: url, download: job.file.name });
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  toast('Saved to your Downloads: ' + esc(job.file.name));
 }
 async function toggleReaderDark() {
   const on = !readerDark(), body = document.getElementById('readerBody');
