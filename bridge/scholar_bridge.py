@@ -49,10 +49,11 @@ NO_MCP = os.path.join(HOME, 'no-mcp.json')
 MODELS = {'opus': 'opus', 'sonnet': 'sonnet', 'haiku': 'haiku'}
 API_MODELS = {'opus': 'claude-opus-5-5', 'sonnet': 'claude-sonnet-5-5', 'haiku': 'claude-haiku-5-5'}
 EFFORTS = {'low', 'medium', 'high', 'xhigh', 'max'}   # anything else: the default of Claude Code or of the model
-VERSION = 8   # 2: /paper/add; 3: /topic/tag; 4: the Claude API engine (/engine); 5: copies of uploaded papers (/upload);
+VERSION = 9   # 2: /paper/add; 3: /topic/tag; 4: the Claude API engine (/engine); 5: copies of uploaded papers (/upload);
               # 6: papers to add wait in a queue (/paper/add?id=, /paper/adds), for the extension and the MCP server;
               # 7: lists (/lists: papers into or out of a list; /lists/changes; /paper/add takes lists);
               # 8: stars too (/papers/edit, the same as /lists with star; /papers/changes has both)
+              # 9: side chats (/chat/side: a quick question about words in an answer, to Haiku, in its own conversation)
 UPLOAD_KINDS = {'pdf': 'application/pdf', 'video': 'video/mp4'}
 UPLOAD_MAX = 4 << 30   # 4 GB
 
@@ -63,7 +64,8 @@ if not os.path.exists(NO_MCP):
     with open(NO_MCP, 'w') as f: json.dump({'mcpServers': {}}, f)
 
 _lock = threading.Lock()
-_running = {}   # paper id -> subprocess.Popen
+_running = {}   # paper id -> subprocess.Popen (side chats: 'side:' + paper id)
+_side_tid = {}   # paper id -> the side chat being answered (one at a time per paper)
 _adds = {'jobs': [], 'proc': None, 'wake': threading.Event()}   # papers to add, in the order asked (the finished ones too,
 # the last ADDS_KEPT); one is added at a time. The asker follows its job: GET /paper/add?id=<job>, or all of them: /paper/adds
 ADDS_KEPT, ADDS_WAITING = 40, 25
@@ -209,6 +211,63 @@ def load_chat(pid):
     return read_json(chat_file(pid), {'paper': pid, 'session': None, 'model': 'opus', 'messages': []})
 
 
+# Side chats: every conversation's, in one file per paper, each tied to the answer it's about by that answer's
+# timestamp (unique), so they come and go with their conversation (New chat, History) with nothing to move
+def side_file(pid): return os.path.join(CHATS, safe_id(pid) + '.side.json')
+def load_side(pid): return read_json(side_file(pid), {'threads': {}})
+
+
+def side_view(pid, msgs):
+    """This conversation's side chats, for the page (without the engines' own records)"""
+    stamps, now, side = {m.get('ts') for m in msgs if m.get('role') == 'assistant'}, time.time(), load_side(pid)
+    gone = [k for k, t in side['threads'].items() if t.get('deleted') and now - t['deleted'] > 86400]   # Undo is long past
+    if gone:
+        for k in gone: del side['threads'][k]
+        write_json(side_file(pid), side)
+    return sorted(({'id': k, 'anchor': t['anchor'], 'messages': t['messages'], 'created': t.get('created', 0)}
+                   for k, t in side['threads'].items() if t.get('messages') and not t.get('deleted') and t['anchor'].get('ts') in stamps),
+                  key=lambda t: t['created'])
+
+
+def side_intro(c, t):
+    """What a side chat is given first: the paper, the main conversation up to the answer asked about, the words"""
+    msgs = c.get('messages') or []
+    at = next((i for i, m in enumerate(msgs) if m.get('ts') == t['anchor']['ts']), len(msgs) - 1)
+    lines = []
+    for m in msgs[:at + 1]:
+        if m.get('role') == 'user':
+            if m.get('auto'): continue
+            about = ''.join(f'[about p.{q["page"]} "{q.get("text", "")}"] ' if q.get('page') else f'[about its words "{q.get("text", "")}"] ' for q in m.get('quotes') or [])
+            lines.append('User: ' + about + (m.get('text') or ('(a figure)' if m.get('images') else '')))
+        else:
+            lines.append('Main chat: ' + (m.get('text') or ''))
+    convo = '\n\n'.join(lines)
+    if len(convo) > 60000: convo = '[earlier turns left out]\n\n' + convo[-60000:]   # its end holds the answer asked about
+    parts = ['<paper>\n' + c['paper_text'] + '\n</paper>'] if c.get('paper_text') else []
+    return parts + ['<main-chat>\n' + convo + '\n</main-chat>', '<selected>\n' + t['anchor']['text'] + '\n</selected>']
+
+
+def code_stream(proc, emit):
+    """A Claude Code reply as it's written (stream-json): the text so far goes to the page; returns (text, result)"""
+    text, result = '', None
+    for line in proc.stdout:
+        try: e = json.loads(line)
+        except Exception: continue
+        t = e.get('type')
+        if t == 'stream_event':
+            ev = e.get('event') or {}
+            if ev.get('type') == 'content_block_delta' and (ev.get('delta') or {}).get('type') == 'text_delta':
+                chunk = ev['delta'].get('text', ''); text += chunk; emit({'t': 'text', 'v': chunk})
+            elif ev.get('type') == 'content_block_start' and (ev.get('content_block') or {}).get('type') in ('tool_use', 'server_tool_use'):
+                emit({'t': 'tool', 'v': ev['content_block'].get('name')})
+            elif ev.get('type') == 'message_start' and text and not text.endswith('\n\n'):
+                text += '\n\n'; emit({'t': 'text', 'v': '\n\n'})   # a new assistant message after a tool call
+        elif t == 'result':
+            result = e
+    proc.wait()
+    return text, result
+
+
 def archive_current(pid):
     """Keep the current conversation as an earlier one (a unique name, so nothing is ever overwritten)."""
     ts = int(time.time())
@@ -256,6 +315,9 @@ def forget_paper(pid):
     for kind in UPLOAD_KINDS:
         for path in (upload_path(pid, kind), upload_path(pid, kind, meta=True)):
             if path and os.path.exists(path): os.remove(path); gone += 1
+    for t in load_side(pid)['threads'].values():
+        if re.fullmatch(r'[0-9a-f-]{36}', t.get('session') or ''): sessions.add(t['session'])
+    if os.path.exists(side_file(pid)): os.remove(side_file(pid)); gone += 1
     for f in os.listdir(CHATS):
         if f == base + '.json' or (f.startswith(base + '.') and f.endswith('.json') and f[len(base) + 1:-5].isdigit()):
             s = read_json(os.path.join(CHATS, f), {}).get('session')
@@ -300,6 +362,12 @@ The comment, in Markdown: a sentence or a few.
 ```
 A comment goes on the user's highlight of those words if they have one, else it underlines them; put a color before its quote (```comment p.N color "exact words"```) to highlight them too. color is one of orange, yellow, green, blue, red, purple; <context> says what each means to this user, so choose by meaning. The quoted words follow the citation rules: verbatim, contiguous, a phrase to a sentence, from that page. Highlight the few passages that matter, not whole paragraphs. Never put a block inside a list or table; outside the blocks, say in a sentence or two what you added. Don't repeat what <context> shows is already there (items marked "added by you" are yours). You can't edit or delete existing notes, highlights or comments; if asked, say so and suggest the change."""
 NOTES_V = 1   # bump when NOTES changes: API conversations begun with an older prompt are told once
+
+# A side chat: the user selected words in one of the main chat's answers and asks a cheaper model what they mean
+SIDE_MODEL = 'haiku'
+SIDE_SYSTEM = """You are a quick helper inside the user's paper-reading app. The user is reading a paper (its text is in <paper>, page-marked) and talking about it with another assistant, the main chat (in <main-chat>). They selected words from one of its answers (in <selected>) and opened this side chat to understand what it meant.
+
+Explain what they ask about those words, in the context of that answer and the paper: plainly and briefly (a few sentences or a short list), defining terms and notation, with a small concrete example when it helps. Focus on what they asked; don't redo the whole answer. If the main chat's answer looks wrong or unclear on this point, say so. You may cite the paper as [[p.N "exact words from the paper"]] (verbatim, contiguous, a phrase to a sentence; the app shows it as a small clickable pill, so each sentence must read fine without it). Use Markdown and $math$ / $$math$$. The panel is narrow: no tables wider than three short columns.{profile}"""
 
 SYSTEM = """You are a research assistant inside the user's paper-reading app. The user is reading one paper; its full text is given in <paper> in the conversation (page-marked){pdf_how}
 
@@ -551,7 +619,8 @@ class Handler(BaseHTTPRequestHandler):
             c = load_chat(pid)
             # fresh: the bridge doesn't have this conversation's paper yet (the page then sends its text and PDF)
             return self.reply(200, {'messages': c['messages'], 'model': c.get('model', 'opus'), 'running': pid in _running, 'fresh': not c.get('paper_text'),
-                                    'engine': engine(), 'api': bool(config().get('api_key'))})
+                                    'engine': engine(), 'api': bool(config().get('api_key')),
+                                    'side': side_view(pid, c['messages']), 'side_running': _side_tid.get(pid) if ('side:' + pid) in _running else None})
         return self.reply(404, {'error': 'not found'})
 
     def do_POST(self):
@@ -591,11 +660,23 @@ class Handler(BaseHTTPRequestHandler):
             os.replace(target, cur)
             return self.reply(200, {'ok': True})
         if path == '/chat/stop':
-            p = _running.get(data.get('paper', ''))
+            p = _running.get(('side:' if data.get('side') else '') + data.get('paper', ''))
             if p: p.terminate()
             return self.reply(200, {'ok': True})
         if path == '/chat/send':
             return self.send_chat(data)
+        if path == '/chat/side':   # a side chat's question (bridge v9)
+            return self.side_chat(data)
+        if path == '/chat/side/delete':   # deleted from the page (kept a day, for Undo: undo=true)
+            pid, tid = data.get('paper', ''), str(data.get('thread', ''))
+            with _lock:
+                side = load_side(pid)
+                t = side['threads'].get(tid)
+                if not t: return self.reply(404, {'error': 'no such side chat'})
+                if data.get('undo'): t.pop('deleted', None)
+                else: t['deleted'] = time.time()
+                write_json(side_file(pid), side)
+            return self.reply(200, {'ok': True})
         if path == '/engine':   # the chat panel's Code / API switch: one setting for every chat and device
             e = data.get('engine')
             cfg = config()
@@ -700,17 +781,112 @@ class Handler(BaseHTTPRequestHandler):
                 text, err, state = run(c, d, pid, model, names, missed, profile, emit)
             except Exception as e:
                 text, err, state = '', str(e) or type(e).__name__, {}
-            c = load_chat(pid)
+            c, ats = load_chat(pid), time.time()
             if len(c['messages']) > at and c['messages'][at].get('ts') == now:   # still this conversation (not a New chat meanwhile)
-                if text: c['messages'].append({'role': 'assistant', 'text': text, 'ts': time.time(), 'model': model, 'engine': eng})
+                if text: c['messages'].append({'role': 'assistant', 'text': text, 'ts': ats, 'model': model, 'engine': eng})
                 c.update(state)
                 if text: c[seen_key] = len(c['messages'])   # (a question that got no answer is never passed on: see earlier_turns)
                 write_json(chat_file(pid), c)
-            emit({'t': 'done', 'engine': eng, 'error': err if not text else ''})
+            emit({'t': 'done', 'engine': eng, 'error': err if not text else '', 'ts': ats if text else None, 'uts': now})   # (ts: the answer's, which side chats are tied to)
             try: self.wfile.write(b'0\r\n\r\n'); self.wfile.flush()
             except Exception: pass
         finally:
             _running.pop(pid, None)
+
+    def side_chat(self, d):
+        """A side chat: a quick question about words in one of the main chat's answers, to a cheaper model, in its own
+        conversation (one per selection), given the paper and the main conversation so far. The main chat never sees it."""
+        pid, tid, anchor = d.get('paper', ''), str(d.get('thread', '')), d.get('anchor') or {}
+        if not pid or not re.fullmatch(r'[A-Za-z0-9_-]{4,40}', tid): return self.reply(400, {'error': 'thread'})
+        key = 'side:' + pid
+        with _lock:
+            if key in _running: return self.reply(409, {'error': 'busy'})
+            _running[key] = None
+            _side_tid[pid] = tid
+        try:
+            c, now = load_chat(pid), time.time()
+            with _lock:
+                side = load_side(pid)
+                t = side['threads'].get(tid)
+                if not t:
+                    if not any(m.get('ts') == anchor.get('ts') and m.get('role') == 'assistant' for m in c['messages']): return self.reply(404, {'error': 'no such answer'})
+                    t = side['threads'][tid] = {'anchor': {'ts': anchor['ts'], 'text': str(anchor.get('text', ''))[:4000], 'key': str(anchor.get('key', ''))[:4000]}, 'messages': [], 'created': now}
+                t.pop('deleted', None)
+                t['messages'].append({'role': 'user', 'text': str(d.get('message') or 'What does this mean?')[:8000], 'ts': now})
+                write_json(side_file(pid), side)
+
+            self.send_response(200); self.cors()
+            self.send_header('Content-Type', 'application/x-ndjson'); self.send_header('Cache-Control', 'no-store')
+            self.send_header('Transfer-Encoding', 'chunked'); self.end_headers()
+            def emit(obj):
+                b = (json.dumps(obj) + '\n').encode()
+                try: self.wfile.write(f'{len(b):x}\r\n'.encode() + b + b'\r\n'); self.wfile.flush()
+                except Exception: pass
+
+            eng, profile = engine(), ('\n\nAbout the user: ' + d['profile']) if d.get('profile') else ''
+            try:
+                text, err, state = (self.side_api_turn if eng == 'api' else self.side_code_turn)(c, t, pid, profile, emit)
+            except Exception as e:
+                text, err, state = '', str(e) or type(e).__name__, {}
+            ats = time.time()
+            with _lock:
+                side = load_side(pid)
+                t = side['threads'].get(tid)
+                if t and t['messages'] and t['messages'][-1].get('ts') == now:
+                    if text: t['messages'].append({'role': 'assistant', 'text': text, 'ts': ats, 'model': SIDE_MODEL, 'engine': eng})
+                    else: t['messages'].pop()   # no answer: the question isn't kept (the page offers it again)
+                    t.update(state)
+                    if not t['messages'] and not t.get('session') and not t.get('api'): del side['threads'][tid]
+                    write_json(side_file(pid), side)
+            emit({'t': 'done', 'engine': eng, 'error': err if not text else '', 'ts': ats if text else None, 'uts': now})
+            try: self.wfile.write(b'0\r\n\r\n'); self.wfile.flush()
+            except Exception: pass
+        finally:
+            _running.pop(key, None)
+            _side_tid.pop(pid, None)
+
+    def side_code_turn(self, c, t, pid, profile, emit):
+        fresh = not t.get('session')
+        session = t.get('session') or str(uuid.uuid4())
+        parts = (side_intro(c, t) if fresh else []) + [t['messages'][-1]['text']]
+        args = [claude_bin(), '-p', '--output-format', 'stream-json', '--verbose', '--include-partial-messages',
+                '--model', MODELS[SIDE_MODEL], '--system-prompt', SIDE_SYSTEM.format(profile=profile),
+                '--tools', '',   # no tools: it has what it needs, and answers fast
+                '--strict-mcp-config', '--mcp-config', NO_MCP, '--setting-sources', '',
+                ('--session-id' if fresh else '--resume'), session]
+        env = dict(os.environ); env['PATH'] = os.path.dirname(claude_bin()) + ':' + env.get('PATH', '/usr/bin:/bin')
+        proc = subprocess.Popen(args, cwd=WORK, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
+        _running['side:' + pid] = proc
+        proc.stdin.write('\n\n'.join(parts).encode()); proc.stdin.close()
+        text, result = code_stream(proc, emit)
+        err = '' if result else (proc.stderr.read().decode(errors='replace')[-600:] or 'stopped')
+        if result and result.get('result') and not text: text = result['result']
+        return text, err, ({'session': session} if text else {})   # a session that never started: the next question starts one
+
+    def side_api_turn(self, c, t, pid, profile, emit):
+        turn = ApiTurn()
+        _running['side:' + pid] = turn
+        try: anthropic, client = anthropic_sdk()
+        except ImportError: return '', 'the Anthropic SDK isn\'t installed for the bridge: run bash bridge/api_setup.sh', {}
+        hist = t.get('api') or []
+        new = {'role': 'user', 'content': [{'type': 'text', 'text': '\n\n'.join(([] if hist else side_intro(c, t)) + [t['messages'][-1]['text']])}]}
+        text, err = '', ''
+        try:
+            with client.beta.messages.stream(model=API_MODELS[SIDE_MODEL], max_tokens=8000, system=SIDE_SYSTEM.format(profile=profile), messages=hist + [new],
+                                             cache_control={'type': 'ephemeral', 'ttl': '1h'}) as s:   # the paper, between follow-ups
+                turn.stream = s
+                for ev in s:
+                    if turn.stopped: break
+                    if ev.type == 'content_block_delta' and ev.delta.type == 'text_delta':
+                        text += ev.delta.text; emit({'t': 'text', 'v': ev.delta.text})
+                if not turn.stopped and s.get_final_message().stop_reason == 'max_tokens': err = 'the answer reached its length limit.'
+        except Exception as e:
+            err = 'stopped' if turn.stopped else api_error(anthropic, e)
+        finally:
+            turn.stream = None
+        if turn.stopped and not err: err = 'stopped'
+        if text.strip(): return text, err, {'api': hist + [new, {'role': 'assistant', 'content': [{'type': 'text', 'text': text.strip()}]}]}
+        return text, err, {}
 
     def code_turn(self, c, d, pid, model, names, missed, profile, emit):
         fresh = not c.get('session')
@@ -737,22 +913,7 @@ class Handler(BaseHTTPRequestHandler):
         c['session'] = session
         write_json(chat_file(pid), c)
 
-        text, result = '', None
-        for line in proc.stdout:
-            try: e = json.loads(line)
-            except Exception: continue
-            t = e.get('type')
-            if t == 'stream_event':
-                ev = e.get('event') or {}
-                if ev.get('type') == 'content_block_delta' and (ev.get('delta') or {}).get('type') == 'text_delta':
-                    chunk = ev['delta'].get('text', ''); text += chunk; emit({'t': 'text', 'v': chunk})
-                elif ev.get('type') == 'content_block_start' and (ev.get('content_block') or {}).get('type') in ('tool_use', 'server_tool_use'):
-                    emit({'t': 'tool', 'v': ev['content_block'].get('name')})
-                elif ev.get('type') == 'message_start' and text and not text.endswith('\n\n'):
-                    text += '\n\n'; emit({'t': 'text', 'v': '\n\n'})   # a new assistant message after a tool call
-            elif t == 'result':
-                result = e
-        proc.wait()
+        text, result = code_stream(proc, emit)
         err = '' if result else (proc.stderr.read().decode(errors='replace')[-600:] or 'stopped')
         if result and result.get('result') and not text: text = result['result']
         return text, err, ({'session': None} if fresh and not text else {})   # a session that never started: the next message starts it again

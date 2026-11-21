@@ -1523,9 +1523,29 @@ body.rp-splitting, body.rp-splitting * { user-select: none !important; -webkit-u
 .chat-send.stop svg { fill: currentColor; stroke: none; }
 .rp-icon-btn.sm svg, .chat-box-row .rp-icon-btn svg { width: 16px; height: 16px; }
 .dd-sub { display: block; font-size: 11px; color: var(--text-muted); margin-top: 1px; }
-.chat-ask-sel { position: fixed; z-index: 345; display: inline-flex; align-items: center; gap: 5px; font: inherit; font-size: 12px; color: var(--text); background: #1d1d20; border: 1px solid rgba(255,255,255,0.14); border-radius: 8px; padding: 4px 9px; box-shadow: 0 6px 20px rgba(0,0,0,0.5); cursor: pointer; animation: ui-pop 0.16s ease-out; }
-.chat-ask-sel svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.chat-ask-sel:hover { border-color: var(--accent); }
+.chat-sel-bar { position: fixed; z-index: 345; display: inline-flex; background: #1d1d20; border: 1px solid rgba(255,255,255,0.14); border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.5); overflow: hidden; animation: ui-pop 0.16s ease-out; }
+.chat-sel-bar button { display: inline-flex; align-items: center; gap: 5px; font: inherit; font-size: 12px; color: var(--text); background: none; border: none; padding: 5px 10px; cursor: pointer; transition: background-color 0.15s; }
+.chat-sel-bar button:hover { background: rgba(255,255,255,0.07); }
+.chat-sel-bar button + button { border-left: 1px solid rgba(255,255,255,0.12); }
+.chat-sel-bar svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.chat-sel-bar .sub { color: var(--text-muted); }
+@media (pointer: coarse) { .chat-sel-bar button { padding: 9px 13px; font-size: 13px; } }   /* a finger's target */
+/* SIDE CHAT: a thread under the answer it's about; its words marked in the answer (amber = the accent, as literals:
+   ::highlight takes no custom properties everywhere) */
+::highlight(side-mark) { background-color: rgba(251,177,60,0.14); text-decoration: underline dotted rgba(251,177,60,0.75); text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+::highlight(side-mark-hot) { background-color: rgba(251,177,60,0.28); }
+.chat-scroll.side-hot .chat-md { cursor: pointer; }
+.side-thread { margin: -6px 0 0 6px; border-left: 2px solid rgba(251,177,60,0.4); padding: 2px 0 4px 12px; display: flex; flex-direction: column; gap: 9px; }
+.side-head { display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); min-height: 26px; }
+.side-head > svg, .side-folded svg { width: 13px; height: 13px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.side-head .grow { flex: 1; }
+.side-chip { text-transform: none; letter-spacing: 0; font-weight: 500; font-size: 11.5px; background: rgba(255,255,255,0.06); border-radius: 999px; padding: 1px 8px; color: var(--text-secondary); }
+.side-q { align-self: flex-end; max-width: 88%; background: rgba(255,255,255,0.06); border: 1px solid var(--border); border-radius: 12px 12px 4px 12px; padding: 6px 10px; font-size: 13.5px; line-height: 1.5; color: var(--text); white-space: pre-wrap; overflow-wrap: anywhere; }
+.side-box { display: flex; align-items: flex-end; gap: 6px; background: #18181b; border: 1px solid var(--border); border-radius: 9px; padding: 4px 4px 4px 10px; transition: border-color 0.15s; }
+.side-box:focus-within { border-color: var(--accent); }
+.side-box textarea { flex: 1; min-width: 0; background: none; border: none; resize: none; color: var(--text); font: inherit; font-size: 13.5px; line-height: 1.5; padding: 3px 0; outline: none; max-height: 140px; }
+.side-folded { margin: -6px 0 0 6px; align-self: flex-start; display: inline-flex; align-items: center; gap: 7px; font: inherit; font-size: 12.5px; color: var(--text-secondary); background: none; border: none; border-left: 2px solid rgba(251,177,60,0.4); border-radius: 0 6px 6px 0; padding: 5px 10px 5px 12px; cursor: pointer; transition: background-color 0.15s, color 0.15s; }
+.side-folded:hover { background: rgba(255,255,255,0.05); color: var(--text); }
 .reader-body.fig-select .reader-page, .reader-body.fig-select .textLayer, .reader-body.fig-select .textLayer span { cursor: crosshair !important; user-select: none; -webkit-user-select: none; }
 .reader-body.fig-select { touch-action: none; }
 .fig-box { position: absolute; z-index: 5; border: 1.5px solid var(--accent); background: rgba(251,177,60,0.12); border-radius: 3px; pointer-events: none; }
@@ -11732,6 +11752,7 @@ const Chat = {
   token: (() => { try { return localStorage.getItem('claude_bridge_token') || ''; } catch (e) { return ''; } })(),
   pid: null, messages: [], fresh: true, model: 'opus', running: false, streaming: '', tool: '', error: '',
   draft: { quotes: [], images: [], mentions: [] }, draftText: '', draftFor: null, pairCode: '', loadedFor: null,
+  side: [], sideOpen: new Set(), sideRun: null, sideDrafts: {},   // side chats (SIDE CHAT): threads, the unfolded ones, the one Haiku is answering, unsent words
 };
 /* Notes or Chat: remembered on this device, so coming back to the reader (after iOS reloads the app, too) finds
    the tab you left it on */
@@ -11825,10 +11846,14 @@ async function chatLoad() {
     Chat.history = hr && hr.ok ? (await hr.json()).chats || [] : [];
     if (!_reader.paper || _reader.paper.id !== pid) return;
     chatDraft();   // a draft belongs to its paper
-    Object.assign(Chat, { pid, messages: j.messages || [], fresh: j.fresh !== false, model: j.model || 'opus', running: !!j.running, streaming: '', tool: '', error: '', loadedFor: pid });
+    if (Chat.pid !== pid) { Chat.sideOpen = new Set(); Chat.sideDrafts = {}; }   // (the same paper reloaded keeps what was unfolded)
+    Object.assign(Chat, { pid, messages: j.messages || [], fresh: j.fresh !== false, model: j.model || 'opus', running: !!j.running, streaming: '', tool: '', error: '', loadedFor: pid,
+      side: j.side || [], sideRun: j.side_running ? { id: j.side_running, streaming: '' } : null });
+    if (j.side_running) Chat.sideOpen.add(j.side_running);
     chatEngineFrom(j);
     // an answer still being written from before a reload: check back until it's saved
     if (j.running) setTimeout(() => { if (Chat.pid === pid && Chat.running && !Chat.streaming) { Chat.loadedFor = null; chatOpen(); } }, 2000);
+    if (j.side_running) setTimeout(() => { if (Chat.pid === pid && Chat.sideRun && !Chat.sideRun.streaming) { Chat.loadedFor = null; chatOpen(); } }, 3000);   // (a side chat's too)
   } catch (e) { Chat.status = 'offline'; }
 }
 async function chatConnect() {
@@ -11985,14 +12010,18 @@ async function renderChatMessages(mode) {
     box.innerHTML = `<div class="chat-empty"><p>Ask anything about this paper. Claude sees the full text, your highlights and notes, and your research interests, and cites the passages it uses.</p><div class="chat-chips">${CHAT_STARTERS.map(([l, q]) => `<button class="rp-chip" onclick="chatSend(${escAttr(JSON.stringify(q))})">${esc(l)}</button>`).join('')}</div></div>`;
     return;
   }
-  box.innerHTML = Chat.messages.map((m, i) => chatMsgHTML(m, i)).join('')
+  const foc = sideFocus();
+  box.innerHTML = Chat.messages.map((m, i) => chatMsgHTML(m, i) + sideThreadsHTML(m)).join('')
     + (Chat.running ? `<div class="chat-msg claude" id="chatLive"><div class="md chat-md" id="chatLiveMd"></div><div class="chat-status" id="chatTool">${esc(chatToolLabel(Chat.tool) || 'Thinking…')}</div></div>` : '')
     + (Chat.error ? `<div class="chat-error">${esc(Chat.error)}</div>` : '');
+  box.querySelectorAll('.side-box textarea').forEach(sideGrow); sideRefocus(foc);
   const jobs = [...box.querySelectorAll('[data-md-chat]')].map(el => renderChatMarkdown(el, Chat.messages[+el.dataset.mdChat].text, +el.dataset.mdChat));
   const live = Chat.running && document.getElementById('chatLiveMd');
   if (live) jobs.push(renderChatMarkdown(live, Chat.streaming, null));
+  jobs.push(sideRenderMd(box));
   place();                          // right away (plain text)...
   await Promise.all(jobs); place(); // ...and once formatted, since the heights change
+  markSideWords();
 }
 function chatMsgHTML(m, i) {
   if (m.role === 'user') {
@@ -12002,7 +12031,7 @@ function chatMsgHTML(m, i) {
     if (m.auto) return '';   // the papers Claude asked for: already shown as "Reading … and your notes on it" 
     return `<div class="chat-msg you">${pills ? `<div class="chat-pills">${pills}</div>` : ''}${m.text ? `<div class="chat-you-text">${esc(m.text)}</div>` : ''}</div>`;
   }
-  return `<div class="chat-msg claude"><div class="md chat-md" data-md-chat="${i}"></div><div class="chat-acts"><button class="rp-icon-btn sm" onclick="chatCopy(${i})" title="Copy" aria-label="Copy">${ICON_COPY}</button><button class="rp-icon-btn sm" onclick="chatSaveAsNote(${i})" title="Save as a note" aria-label="Save as a note">${ICON_NOTE}</button></div></div>`;
+  return `<div class="chat-msg claude" data-ts="${m.ts || ''}"><div class="md chat-md" data-md-chat="${i}"></div><div class="chat-acts"><button class="rp-icon-btn sm" onclick="chatCopy(${i})" title="Copy" aria-label="Copy">${ICON_COPY}</button><button class="rp-icon-btn sm" onclick="chatSaveAsNote(${i})" title="Save as a note" aria-label="Save as a note">${ICON_NOTE}</button></div></div>`;
 }
 function chatToolLabel(t) { return { WebSearch: 'Searching the web…', WebFetch: 'Reading a web page…', Read: 'Looking at the PDF…', Grep: 'Looking through your library…', Glob: 'Looking through your library…',
   web_search: 'Searching the web…', web_fetch: 'Reading a web page…', view_pages: 'Looking at the PDF…', search_library: 'Looking through your library…' }[t] || (t ? 'Working…' : ''); }
@@ -12208,20 +12237,218 @@ document.addEventListener('copy', e => {
   e.clipboardData.setData('text/plain', t.text);
   e.clipboardData.setData('text/html', t.html);
 });
-document.addEventListener('mouseup', () => {
-  setTimeout(() => {
-    const btn = document.getElementById('chatAskSel');
-    const sel = window.getSelection(), box = document.getElementById('chatScroll');
-    const inReply = sel && !sel.isCollapsed && box && box.contains(sel.anchorNode) && sel.anchorNode.parentElement && sel.anchorNode.parentElement.closest('.chat-msg.claude');
-    if (!inReply) { if (btn) btn.remove(); return; }
-    const r = sel.getRangeAt(0).getBoundingClientRect();
-    const b = btn || Object.assign(document.createElement('button'), { id: 'chatAskSel', className: 'chat-ask-sel', innerHTML: ICON_ASK + '<span>Ask</span>' });
-    b.onmousedown = ev => ev.preventDefault();
-    b.onclick = () => { const s = window.getSelection(), m = selTextWithMath(s), t = (m ? m.text : s.toString()).replace(/\s+/g, ' ').trim(); if (t) { Chat.draft.quotes.push({ page: 0, text: t }); renderChatAttach(); } b.remove(); window.getSelection().removeAllRanges(); const i = document.getElementById('chatInput'); if (i) i.focus(); };
-    b.style.left = Math.min(window.innerWidth - 80, r.right - 30) + 'px'; b.style.top = (r.bottom + 6) + 'px';
-    if (!btn) document.body.appendChild(b);
-  }, 10);
+/* ===== SIDE CHAT =====
+   Select words in one of Claude's answers, then Side chat: a quick question about them to Haiku, in a thread under
+   that answer. It's its own conversation on the Mac (bridge v9, /chat/side), given the paper and the main conversation
+   up to that answer; the main chat never sees it. The words stay marked (a CSS highlight, so re-renders don't disturb
+   them); a thread folds to one line, and that line or the marked words open it again. */
+const SIDE_MIN_BRIDGE = 9;
+const ICON_SIDE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4v8a4 4 0 0 0 4 4h9"/><path d="M15 12l4 4-4 4"/></svg>';
+function sideOn() { return Chat.status === 'ready' && (Chat.bridgeVersion || 0) >= SIDE_MIN_BRIDGE; }
+function sideThread(id) { return Chat.side.find(t => t.id === id); }
+function sideThreadsHTML(m) { return m.role === 'assistant' && m.ts ? Chat.side.filter(t => t.anchor.ts === m.ts).map(sideThreadHTML).join('') : ''; }
+function sideThreadHTML(t) {
+  const run = Chat.sideRun && Chat.sideRun.id === t.id, n = t.messages.length;
+  if (!Chat.sideOpen.has(t.id)) return `<button class="side-folded" id="side-${t.id}" onclick="sideToggle('${t.id}')" aria-expanded="false" title="${dataAttr('About “' + shortQuote(t.anchor.text, 120) + '”')}">${ICON_SIDE}<span>Side chat with Haiku · ${n} message${n === 1 ? '' : 's'}</span></button>`;
+  const msgs = t.messages.map((m, i) => m.role === 'user' ? `<div class="side-q">${esc(m.text)}</div>` : `<div class="md chat-md side-a" data-side-md="${t.id}:${i}"></div>`).join('');
+  return `<div class="side-thread" id="side-${t.id}" role="group" aria-label="Side chat with Haiku">
+    <div class="side-head">${ICON_SIDE}<span>Side chat</span><span class="side-chip">Haiku</span><span class="grow"></span><button class="rp-icon-btn sm" onclick="sideToggle('${t.id}')" aria-expanded="true" title="Fold" aria-label="Fold the side chat">${ICON_FOLD}</button><button class="rp-icon-btn sm" onclick="sideDelete('${t.id}')" title="Delete this side chat" aria-label="Delete this side chat">${ICON_CLOSE}</button></div>
+    ${msgs}${run ? `<div class="side-a"><div class="md chat-md" id="sideLiveMd"></div>${Chat.sideRun.streaming ? '' : '<div class="chat-status" id="sideStatus">Thinking…</div>'}</div>` : ''}${t.error ? `<div class="chat-error">${esc(t.error)}</div>` : ''}
+    <div class="side-box"><textarea id="sideIn-${t.id}" rows="1" placeholder="${n ? 'Ask Haiku a follow-up…' : 'Ask Haiku about the marked words…'}" aria-label="Ask Haiku" oninput="sideInput(this,'${t.id}')" onkeydown="sideKey(event,'${t.id}')">${esc(Chat.sideDrafts[t.id] || '')}</textarea><button class="chat-send ${run ? 'stop' : ''}" onclick="sideSendOrStop('${t.id}')" title="${run ? 'Stop' : 'Send (Enter)'}" aria-label="${run ? 'Stop' : 'Send'}">${run ? ICON_STOP : ICON_SEND}</button></div></div>`;
+}
+function sideRenderMd(root) {
+  const jobs = [...root.querySelectorAll('[data-side-md]')].map(el => { const [id, i] = el.dataset.sideMd.split(':'), t = sideThread(id), m = t && t.messages[+i]; return m ? renderChatMarkdown(el, m.text, null) : null; });
+  const live = Chat.sideRun && root.querySelector('#sideLiveMd');
+  if (live && Chat.sideRun.streaming) jobs.push(renderChatMarkdown(live, Chat.sideRun.streaming, null));
+  return Promise.all(jobs);
+}
+/* the side box being typed in survives a redraw of the chat (an answer arriving in the main chat meanwhile) */
+function sideFocus() { const a = document.activeElement; return a && a.id && a.id.startsWith('sideIn-') ? { id: a.id, s: a.selectionStart, e: a.selectionEnd } : null; }
+function sideRefocus(f) { const t = f && document.getElementById(f.id); if (!t) return; t.focus({ preventScroll: true }); try { t.setSelectionRange(f.s, f.e); } catch (e) {} sideGrow(t); }
+function renderSideThread(id) {
+  const t = sideThread(id), el = document.getElementById('side-' + id);
+  if (!el) return t ? renderChatMessages() : null;
+  if (!t) { el.remove(); return markSideWords(); }
+  const foc = sideFocus(), had = el.contains(document.activeElement);
+  el.outerHTML = sideThreadHTML(t);
+  const now = document.getElementById('side-' + id);
+  now.querySelectorAll('textarea').forEach(sideGrow);
+  sideRefocus(foc);
+  if (had && !foc) (now.tagName === 'BUTTON' ? now : now.querySelector('.side-head button')).focus({ preventScroll: true });   // the fold button pressed: focus stays on what replaced it
+  return sideRenderMd(now);
+}
+function sideGrow(t) { t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 140) + 'px'; }
+function sideInput(t, id) { Chat.sideDrafts[id] = t.value; sideGrow(t); }
+function sideKey(e, id) {
+  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); sideSend(id); }
+  else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); e.target.blur(); }
+}
+/* The marked words, found again in their answer after every redraw (letters and digits only, math as shown) */
+function textKeyRange(root, key) {
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: n => n.parentElement.closest('.katex-mathml') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT });
+  let flat = ''; const map = [];
+  for (let n; (n = w.nextNode());) for (let i = 0; i < n.data.length; i++) for (const ch of quoteKey(n.data[i])) { flat += ch; map.push([n, i]); }
+  const at = key ? flat.indexOf(key) : -1;
+  if (at < 0) return null;
+  const s = map[at], e = map[at + key.length - 1], r = document.createRange();
+  r.setStart(s[0], s[1]); r.setEnd(e[0], e[1] + 1);
+  return r;
+}
+function markSideWords() {
+  Chat.side.forEach(t => { const md = document.querySelector(`#chatScroll .chat-msg.claude[data-ts="${t.anchor.ts}"] .chat-md`); t._range = md ? textKeyRange(md, t.anchor.key) : null; });
+  if (!window.CSS || !CSS.highlights || typeof Highlight === 'undefined') return;
+  CSS.highlights.set('side-mark', new Highlight(...Chat.side.map(t => t._range).filter(Boolean)));
+  CSS.highlights.delete('side-mark-hot'); _sideHot = null;
+}
+function sideAt(x, y) { return Chat.side.find(t => t._range && t._range.startContainer.isConnected && [...t._range.getClientRects()].some(r => x >= r.left - 1 && x <= r.right + 1 && y >= r.top - 1 && y <= r.bottom + 1)); }
+let _sideHot = null;   // the thread whose words are under the mouse: they deepen, and the pointer says they open it
+document.addEventListener('pointermove', e => {
+  if (e.pointerType !== 'mouse' || !Chat.side.length) return;
+  const md = e.target.closest && e.target.closest('#chatScroll .chat-md'), t = md ? sideAt(e.clientX, e.clientY) : null;
+  if ((t ? t.id : null) === _sideHot) return;
+  _sideHot = t ? t.id : null;
+  const box = document.getElementById('chatScroll'); if (box) box.classList.toggle('side-hot', !!t);
+  if (window.CSS && CSS.highlights && typeof Highlight !== 'undefined') t ? CSS.highlights.set('side-mark-hot', new Highlight(t._range)) : CSS.highlights.delete('side-mark-hot');
 });
+document.addEventListener('click', e => {   // the marked words open their side chat
+  if (!Chat.side.length || !e.target.closest || !e.target.closest('#chatScroll .chat-md') || e.target.closest('button, a, .cite-chip')) return;
+  if (!getSelection().isCollapsed) return;   // the end of a selection, not a tap
+  const t = sideAt(e.clientX, e.clientY);
+  if (!t) return;
+  if (!Chat.sideOpen.has(t.id)) sideToggle(t.id);
+  const el = document.getElementById('side-' + t.id);
+  if (el) el.scrollIntoView({ block: 'nearest', behavior: reduceMotion() ? 'auto' : 'smooth' });
+});
+/* Words selected in one of Claude's answers: Ask (this chat) or Side chat (Haiku). With the mouse it shows when the drag
+   ends; with a finger or the Pencil once the selection settles (no mouseup there). What's selected is read when it shows,
+   as a tap on it can clear the selection first (iOS). */
+let _chatSelDown = false, _chatSelTimer = 0;
+document.addEventListener('mousedown', () => { _chatSelDown = true; });
+document.addEventListener('mouseup', () => { _chatSelDown = false; setTimeout(showChatSelBar, 10); });
+document.addEventListener('selectionchange', () => { if (_chatSelDown) return; clearTimeout(_chatSelTimer); _chatSelTimer = setTimeout(showChatSelBar, 350); });
+function chatSelInfo() {
+  const sel = getSelection(), box = document.getElementById('chatScroll');
+  if (!sel || sel.isCollapsed || !sel.rangeCount || !box) return null;
+  const r = sel.getRangeAt(0), host = r.commonAncestorContainer.nodeType === 1 ? r.commonAncestorContainer : r.commonAncestorContainer.parentElement;
+  const msg = host && host.closest('.chat-msg.claude');
+  if (!msg || !box.contains(msg)) return null;
+  const m = selTextWithMath(sel), text = (m ? m.text : sel.toString()).replace(/\s+/g, ' ').trim();
+  const frag = r.cloneContents(); frag.querySelectorAll('.katex-mathml').forEach(x => x.remove());
+  return text ? { text, key: quoteKey(frag.textContent), ts: +msg.dataset.ts || null, rect: r.getBoundingClientRect() } : null;
+}
+function showChatSelBar() {
+  const old = document.getElementById('chatAskSel'), info = chatSelInfo();
+  if (!info) { if (old) old.remove(); return; }
+  const b = old || Object.assign(document.createElement('div'), { id: 'chatAskSel', className: 'chat-sel-bar' });
+  const side = sideOn() && info.ts && info.key;
+  b.innerHTML = `<button type="button" data-act="ask" title="Ask about these words in this chat">${ICON_ASK}<span>Ask</span></button>`
+    + (side ? `<button type="button" data-act="side" title="Ask Haiku about them in a side chat, apart from this one">${ICON_SIDE}<span>Side chat</span><span class="sub">Haiku</span></button>` : '');
+  b.onmousedown = ev => ev.preventDefault();
+  b.onclick = ev => { const a = ev.target.closest('button'); if (!a) return; b.remove(); if (a.dataset.act === 'side') sideStart(info); else chatAskAbout(info); };
+  if (!old) document.body.appendChild(b);
+  const r = info.rect;
+  b.style.left = Math.max(8, Math.min(innerWidth - b.offsetWidth - 8, r.right - b.offsetWidth / 2)) + 'px';
+  b.style.top = Math.min(innerHeight - b.offsetHeight - 8, r.bottom + 8) + 'px';
+}
+function chatAskAbout(info) {
+  Chat.draft.quotes.push({ page: 0, text: info.text }); renderChatAttach();
+  getSelection().removeAllRanges();
+  const i = document.getElementById('chatInput'); if (i) i.focus();
+}
+async function sideStart(info) {
+  if (!sideOn() || !info.ts) return;
+  getSelection().removeAllRanges();
+  let t = Chat.side.find(x => x.anchor.ts === info.ts && x.anchor.key === info.key);   // the same words again: their thread
+  if (!t) { t = { id: 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), anchor: { ts: info.ts, text: info.text, key: info.key }, messages: [], local: true }; Chat.side.push(t); }
+  Chat.sideOpen.add(t.id);
+  await renderChatMessages();
+  const el = document.getElementById('side-' + t.id), i = document.getElementById('sideIn-' + t.id);
+  if (i) i.focus({ preventScroll: true });
+  if (el) el.scrollIntoView({ block: 'nearest', behavior: reduceMotion() ? 'auto' : 'smooth' });
+}
+function sideToggle(id) {
+  const t = sideThread(id);
+  if (!t) return;
+  if (!Chat.sideOpen.has(id)) Chat.sideOpen.add(id);
+  else {
+    Chat.sideOpen.delete(id);
+    if (!t.messages.length && !(Chat.sideRun && Chat.sideRun.id === id)) Chat.side = Chat.side.filter(x => x !== t);   // folded before asking anything: nothing to keep
+  }
+  renderSideThread(id);
+}
+function sideSendOrStop(id) { if (Chat.sideRun && Chat.sideRun.id === id) sideStop(); else sideSend(id); }
+async function sideStop() { try { await bridgeFetch('/chat/stop', { method: 'POST', body: JSON.stringify({ paper: Chat.pid, side: true }) }); } catch (e) {} }
+let _sideLiveTimer = 0;
+function sideLiveSoon() {
+  if (_sideLiveTimer) return;
+  _sideLiveTimer = setTimeout(async () => {
+    _sideLiveTimer = 0;
+    const el = document.getElementById('sideLiveMd'), box = document.getElementById('chatScroll');
+    if (!el || !Chat.sideRun) return;
+    const s = document.getElementById('sideStatus'); if (s) s.remove();
+    const stick = box && chatAtBottom(box);
+    await renderChatMarkdown(el, Chat.sideRun.streaming, null);
+    if (stick) box.scrollTop = box.scrollHeight;
+  }, 70);
+}
+async function sideSend(id) {
+  const t = sideThread(id);
+  if (!t || !sideOn()) return;
+  if (Chat.sideRun) { toast(Chat.sideRun.id === id ? 'Haiku is still answering' : 'Haiku is still answering another side chat'); return; }
+  const input = document.getElementById('sideIn-' + id), typed = (input ? input.value : Chat.sideDrafts[id] || '').trim();
+  const text = typed || 'What does this mean?', pid = Chat.pid, q = { role: 'user', text, ts: Date.now() / 1000 };
+  Chat.sideDrafts[id] = ''; t.messages.push(q); t.error = '';
+  Chat.sideRun = { id, streaming: '' };
+  const box = document.getElementById('chatScroll'), stick = box && chatAtBottom(box);
+  await renderSideThread(id);
+  if (stick) box.scrollTop = box.scrollHeight;
+  let reply = '', err = '', ts = null, uts = null;
+  try {
+    const res = await bridgeFetch('/chat/side', { method: 'POST', body: JSON.stringify({ paper: pid, thread: id, anchor: t.anchor, message: text, profile: chatProfile() }) });
+    if (res.status === 401) { saveBridgeToken(''); Chat.status = 'unpaired'; throw new Error('This page needs to be connected to your Mac again.'); }
+    if (res.status === 409) throw new Error('Haiku is still answering another side chat on this paper.');
+    if (res.status === 404) throw new Error('That answer isn’t in this conversation on your Mac any more.');
+    if (!res.ok) throw new Error('The side chat failed (' + res.status + ').');
+    const reader = res.body.getReader(), dec = new TextDecoder(); let buf = '';
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let nl;
+      while ((nl = buf.indexOf('\n')) >= 0) {
+        const line = buf.slice(0, nl); buf = buf.slice(nl + 1);
+        if (!line.trim()) continue;
+        const e = JSON.parse(line);
+        if (e.t === 'text') { reply += e.v; if (Chat.sideRun && Chat.sideRun.id === id) { Chat.sideRun.streaming = reply; sideLiveSoon(); } }
+        else if (e.t === 'done') { ts = e.ts; uts = e.uts; if (e.error) err = /stopped|terminated|SIGTERM/i.test(e.error) ? 'Stopped.' : (e.engine === 'api' ? 'Claude API: ' : 'Claude Code: ') + e.error.slice(-200); }
+      }
+    }
+  } catch (e) { err = e.message === 'Failed to fetch' ? 'Lost the connection to your Mac.' : e.message; }
+  if (Chat.sideRun && Chat.sideRun.id === id) Chat.sideRun = null;
+  clearTimeout(_sideLiveTimer); _sideLiveTimer = 0;
+  if (Chat.pid !== pid) return;
+  if (reply) { if (uts) q.ts = uts; t.messages.push({ role: 'assistant', text: reply, ts: ts || Date.now() / 1000 }); t.local = false; t.error = err && reply ? err : ''; }
+  else { t.messages = t.messages.filter(m => m !== q); t.error = err || 'No answer came back.'; Chat.sideDrafts[id] = typed; }   // the question goes back in the box, to send again
+  const stick2 = box && chatAtBottom(box);
+  await renderSideThread(id);
+  if (stick2) box.scrollTop = box.scrollHeight;
+}
+async function sideDelete(id) {
+  const t = sideThread(id);
+  if (!t) return;
+  if (Chat.sideRun && Chat.sideRun.id === id) await sideStop();
+  const pid = Chat.pid, at = Chat.side.indexOf(t);
+  Chat.side = Chat.side.filter(x => x !== t); Chat.sideOpen.delete(id);
+  renderSideThread(id);
+  if (t.local || !t.messages.length) return;   // never asked: nothing on the Mac
+  try { await bridgeFetch('/chat/side/delete', { method: 'POST', body: JSON.stringify({ paper: pid, thread: id }) }); } catch (e) {}
+  toast('Side chat deleted', async () => {
+    try { await bridgeFetch('/chat/side/delete', { method: 'POST', body: JSON.stringify({ paper: pid, thread: id, undo: true }) }); } catch (e) {}
+    if (Chat.pid !== pid || sideThread(id)) return;
+    Chat.side.splice(Math.min(at, Chat.side.length), 0, t);
+    renderChatMessages();
+  });
+}
 
 /* Ask about a figure: drag a box on the page; the crop is sent as an image */
 function startFigureSelect() {
@@ -12411,7 +12638,7 @@ async function chatSend(text, auto) {
     if (_reader.local) { try { const blob = await localPdfGet(pid); if (blob) body.pdfBase64 = await blobToBase64(blob); } catch (e) {} }
     else body.pdfUrl = pdfSourceOf(p);
   }
-  let reply = '';
+  let reply = '', replyTs = null;
   try {
     const res = await bridgeFetch('/chat/send', { method: 'POST', body: JSON.stringify(body) });
     if (res.status === 401) { saveBridgeToken(''); Chat.status = 'unpaired'; throw new Error('This page needs to be connected to Claude Code again.'); }
@@ -12429,7 +12656,7 @@ async function chatSend(text, auto) {
         const e = JSON.parse(line);
         if (e.t === 'text') { reply += e.v; if (Chat.pid === pid) { Chat.streaming = reply; Chat.tool = ''; scheduleLive(); } }
         else if (e.t === 'tool') { if (Chat.pid === pid) { Chat.tool = e.v; scheduleLive(); } }
-        else if (e.t === 'done') { chatEngineFrom({ engine: e.engine, api: Chat.api || e.engine === 'api' }); if (e.error && !reply) throw new Error(/stopped|terminated|SIGTERM/i.test(e.error) ? 'Stopped.' : (e.engine === 'api' ? 'Claude API: ' : 'Claude Code: ') + e.error.slice(-200)); }
+        else if (e.t === 'done') { chatEngineFrom({ engine: e.engine, api: Chat.api || e.engine === 'api' }); if (e.uts) user.ts = e.uts; replyTs = e.ts || null; /* the Mac's own times: side chats are tied to them */ if (e.error && !reply) throw new Error(/stopped|terminated|SIGTERM/i.test(e.error) ? 'Stopped.' : (e.engine === 'api' ? 'Claude API: ' : 'Claude Code: ') + e.error.slice(-200)); }
       }
     }
     Chat.fresh = false;
@@ -12438,7 +12665,7 @@ async function chatSend(text, auto) {
   }
   if (Chat.pid !== pid) return;   // you moved to another paper meanwhile: its chat reloads from the bridge
   Chat.running = false; Chat.tool = '';
-  if (reply) Chat.messages.push({ role: 'assistant', text: reply, ts: Date.now() / 1000 });
+  if (reply) Chat.messages.push({ role: 'assistant', text: reply, ts: replyTs || Date.now() / 1000 });
   Chat.streaming = '';
   if (Chat.status !== 'ready') return renderChatPanel(true);
   renderChatMessages(); updateChatSend();
@@ -13856,7 +14083,7 @@ document.addEventListener('DOMContentLoaded', () => { loadPapers(); loadInterest
     'acWrite', 'acSaveHand', 'writeAnnoComment',
     // Claude on the laptop
     'chatOpen', 'chatSend', 'chatSendOrStop', 'chatNew', 'chatSwitch', 'chatConnect', 'chatSetRemote', 'chatForgetRemote', 'chatEngine', 'askAboutSelection', 'askAboutPassage', 'askAboutAnno',
-    'startFigureSelect', 'chatApplyBlock', 'chatSaveAsNote', 'chatAddPaper', 'chatRefresh', 'toggleLibPanel', 'startAddPaper', 'stopAddPaper', 'startTopicTag',
+    'startFigureSelect', 'chatApplyBlock', 'chatSaveAsNote', 'sideStart', 'sideSend', 'sideSendOrStop', 'sideStop', 'sideDelete', 'chatAddPaper', 'chatRefresh', 'toggleLibPanel', 'startAddPaper', 'stopAddPaper', 'startTopicTag',
     // private papers and PDFs
     'pickUploadPdf', 'uploadPdf', 'usePdfFile', 'openPdfChange', 'removeLocalPdf', 'removeUpload', 'renameUpload', 'startReview', 'saveUploads',
     'pickVideo', 'addVideo', 'removeVideo', 'macGetAll', 'macGetHere', 'macPullAll', 'macConnect', 'macConnectGo', 'rememberBridgeUrl',
